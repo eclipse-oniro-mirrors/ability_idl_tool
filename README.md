@@ -49,10 +49,10 @@ foundation/ability/idl_tool
 ## 相关仓
 元能力子系统
 
-ability_base
+[ability_base](https://gitee.com/openharmony/ability_ability_base)
 
-ability_runtime
+[ability_runtime](https://gitee.com/openharmony/ability_ability_runtime)
 
-form_fwk
+[form_fwk](https://gitee.com/openharmony/ability_form_fwk)
 
 [**idl_tool**](https://gitee.com/openharmony/ability_idl_tool)
