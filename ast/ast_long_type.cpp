@@ -31,5 +31,5 @@ String ASTLongType::ToString()
 {
     return "long";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

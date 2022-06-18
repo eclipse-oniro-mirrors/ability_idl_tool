@@ -484,5 +484,5 @@ TypeKind MetadataBuilder::Type2Kind(ASTType* type)
     }
     return TypeKind::Unknown;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

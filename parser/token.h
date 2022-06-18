@@ -57,7 +57,6 @@ enum class Token {
     COMMENT_LINE,
     END_OF_FILE,
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_TOKEN_H

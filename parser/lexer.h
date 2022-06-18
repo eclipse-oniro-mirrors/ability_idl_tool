@@ -107,7 +107,6 @@ private:
     bool havePeek_ = false;
     std::shared_ptr<File> currentFile_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_LEXER_H

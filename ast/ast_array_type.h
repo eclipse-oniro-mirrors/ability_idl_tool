@@ -41,7 +41,6 @@ public:
 private:
     AutoPtr<ASTType> elementType_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTARRAYTYPE_H

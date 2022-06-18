@@ -29,7 +29,6 @@ public:
 
     virtual String Dump(const String& prefix);
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTNODE_H

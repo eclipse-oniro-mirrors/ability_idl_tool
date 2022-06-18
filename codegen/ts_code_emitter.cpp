@@ -1139,5 +1139,5 @@ bool TsCodeEmitter::CheckInterfaceType()
     }
     return true;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

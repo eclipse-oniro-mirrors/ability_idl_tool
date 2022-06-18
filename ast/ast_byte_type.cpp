@@ -31,5 +31,5 @@ String ASTByteType::ToString()
 {
     return "byte";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

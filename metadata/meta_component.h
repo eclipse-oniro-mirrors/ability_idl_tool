@@ -28,19 +28,19 @@ namespace Idl {
 static constexpr int METADATA_MAGIC_NUMBER = 0x1DF02ED1;
 
 struct MetaComponent {
-    int                 magic_;
-    int                 size_;
-    char*               name_;
-    int                 namespaceNumber_;
-    int                 sequenceableNumber_;
-    int                 interfaceNumber_;
-    int                 typeNumber_;
-    MetaNamespace**     namespaces_;
-    MetaSequenceable**    sequenceables_;
-    MetaInterface**     interfaces_;
-    MetaType**          types_;
-    int                 stringPoolSize_;
-    char*               stringPool_;
+    int magic_;
+    int size_;
+    char* name_;
+    int namespaceNumber_;
+    int sequenceableNumber_;
+    int interfaceNumber_;
+    int typeNumber_;
+    MetaNamespace** namespaces_;
+    MetaSequenceable** sequenceables_;
+    MetaInterface** interfaces_;
+    MetaType** types_;
+    int stringPoolSize_;
+    char* stringPool_;
 };
 
 static constexpr unsigned int INTERFACE_PROPERTY_ONEWAY = 0x1;
@@ -50,7 +50,6 @@ static constexpr unsigned int METHOD_PROPERTY_ONEWAY = 0x1;
 static constexpr unsigned int ATTR_IN = 0x1;
 static constexpr unsigned int ATTR_OUT = 0x2;
 static constexpr unsigned int ATTR_MASK = 0x3;
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METADATA_H

@@ -76,7 +76,6 @@ private:
     std::vector<AutoPtr<ASTInterfaceType>> interfaces_;
     std::vector<AutoPtr<ASTSequenceableType>> sequenceables_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTNAMESPACE_H

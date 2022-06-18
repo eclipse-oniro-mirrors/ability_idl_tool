@@ -31,5 +31,5 @@ String ASTIntegerType::ToString()
 {
     return "int";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

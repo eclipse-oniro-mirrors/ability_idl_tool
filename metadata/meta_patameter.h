@@ -19,11 +19,10 @@
 namespace OHOS {
 namespace Idl {
 struct MetaParameter {
-    char*               name_;
-    unsigned int        attributes_;
-    int                 typeIndex_;
+    char* name_;
+    unsigned int attributes_;
+    int typeIndex_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METAPARAMETER_H

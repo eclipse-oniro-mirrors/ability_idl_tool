@@ -53,7 +53,6 @@ private:
     AutoPtr<ASTType> keyType_;
     AutoPtr<ASTType> valueType_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTMAPTYPE_H

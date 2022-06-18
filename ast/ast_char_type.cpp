@@ -31,5 +31,5 @@ String ASTCharType::ToString()
 {
     return "char";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

@@ -31,5 +31,5 @@ String ASTMapType::ToString()
 {
     return String::Format("Map<%s, %s>", keyType_->ToString().string(), valueType_->ToString().string());
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS
