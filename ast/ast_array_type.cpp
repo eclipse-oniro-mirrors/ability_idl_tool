@@ -31,5 +31,5 @@ String ASTArrayType::ToString()
 {
     return String::Format("%s[]", elementType_->ToString().string());
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

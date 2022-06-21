@@ -1074,5 +1074,5 @@ const std::string CppCodeEmitter::UnderlineAdded(const String& originName)
     std::string underline("_");
     return underline + std::string(originName.string());
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

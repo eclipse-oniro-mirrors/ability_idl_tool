@@ -50,7 +50,6 @@ private:
     static const char* TAB;
     MetaComponent* metaComponent_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METADATADUMPER_H

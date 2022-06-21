@@ -81,7 +81,6 @@ private:
     size_t size_ = 0;
     StringPool stringPool_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METADATABUILDER_H

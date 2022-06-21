@@ -28,6 +28,6 @@ public:
 
     String ToString() override;
 };
-}
-}
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTSTRINGTYPE_H

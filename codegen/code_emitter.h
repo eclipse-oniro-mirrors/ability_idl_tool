@@ -50,7 +50,6 @@ protected:
     String stubName_;
     String stubFullName_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_CODEEMITTER_H

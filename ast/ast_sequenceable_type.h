@@ -32,7 +32,6 @@ public:
 
     String Dump(const String& prefix) override;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTSEQUENCEABLETYPE_H

@@ -86,7 +86,6 @@ private:
     MetaComponent* metaComponent_;
     uintptr_t baseAddr_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METADATASERIALIZER_H

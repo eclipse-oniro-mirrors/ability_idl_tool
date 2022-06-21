@@ -701,5 +701,5 @@ AutoPtr<ASTNamespace> Parser::NameSpaceEmpty()
     }
     return currNspace;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

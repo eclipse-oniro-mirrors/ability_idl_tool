@@ -73,7 +73,6 @@ private:
     bool isInParameter_ = false;
     bool isOutParameter_ = false;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTPARAMETER_H

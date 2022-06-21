@@ -31,5 +31,5 @@ String ASTFloatType::ToString()
 {
     return "float";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

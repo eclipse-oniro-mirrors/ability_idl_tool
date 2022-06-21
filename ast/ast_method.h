@@ -78,7 +78,6 @@ private:
     AutoPtr<ASTType> returnType_;
     std::vector<AutoPtr<ASTParameter>> parameters_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTMETHOD_H

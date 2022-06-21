@@ -20,29 +20,6 @@
 
 namespace OHOS {
 namespace Idl {
-static struct Keywords {
-    String key_;
-    Token token_;
-} g_keywords[] = {
-    {String("boolean"), Token::BOOLEAN},
-    {String("byte"), Token::BYTE},
-    {String("char"), Token::CHAR},
-    {String("double"), Token::DOUBLE},
-    {String("float"), Token::FLOAT},
-    {String("in"), Token::IN},
-    {String("inout"), Token::INOUT},
-    {String("int"), Token::INTEGER},
-    {String("interface"), Token::INTERFACE},
-    {String("List"), Token::LIST},
-    {String("long"), Token::LONG},
-    {String("Map"), Token::MAP},
-    {String("oneway"), Token::ONEWAY},
-    {String("out"), Token::OUT},
-    {String("sequenceable"), Token::SEQUENCEABLE},
-    {String("short"), Token::SHORT},
-    {String("String"), Token::STRING},
-};
-
 Lexer::Lexer()
 {
     InitializeKeywords();
@@ -57,9 +34,23 @@ Lexer::~Lexer()
 
 void Lexer::InitializeKeywords()
 {
-    for (size_t i = 0; i < sizeof(g_keywords) / sizeof(struct Keywords); i++) {
-        keywords_[g_keywords[i].key_] = g_keywords[i].token_;
-    }
+    keywords_[String("boolean")] = Token::BOOLEAN;
+    keywords_[String("byte")] = Token::BYTE;
+    keywords_[String("char")] = Token::CHAR;
+    keywords_[String("double")] = Token::DOUBLE;
+    keywords_[String("float")] = Token::FLOAT;
+    keywords_[String("in")] = Token::IN;
+    keywords_[String("inout")] = Token::INOUT;
+    keywords_[String("int")] = Token::INTEGER;
+    keywords_[String("interface")] = Token::INTERFACE;
+    keywords_[String("List")] = Token::LIST;
+    keywords_[String("long")] = Token::LONG;
+    keywords_[String("Map")] = Token::MAP;
+    keywords_[String("oneway")] = Token::ONEWAY;
+    keywords_[String("out")] = Token::OUT;
+    keywords_[String("sequenceable")] = Token::SEQUENCEABLE;
+    keywords_[String("short")] = Token::SHORT;
+    keywords_[String("String")] = Token::STRING;
 }
 
 bool Lexer::OpenSourceFile(const String& filePath)
@@ -275,26 +266,6 @@ int Lexer::TokenToChar(Token token)
             return ')';
         case Token::SEMICOLON:
             return ';';
-        case Token::BOOLEAN:
-        case Token::BYTE:
-        case Token::CHAR:
-        case Token::COMMENT_BLOCK:
-        case Token::COMMENT_LINE:
-        case Token::DOUBLE:
-        case Token::END_OF_FILE:
-        case Token::FLOAT:
-        case Token::IDENTIFIER:
-        case Token::IN:
-        case Token::INOUT:
-        case Token::INTEGER:
-        case Token::LIST:
-        case Token::LONG:
-        case Token::MAP:
-        case Token::ONEWAY:
-        case Token::OUT:
-        case Token::SEQUENCEABLE:
-        case Token::SHORT:
-        case Token::STRING:
         default:
             return -1;
     }
@@ -368,5 +339,5 @@ String Lexer::DumpToken() const
             return "unknown token";
     }
 }
-}
-}
+} // namespace idl
+} // namespace OHOS

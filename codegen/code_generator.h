@@ -40,7 +40,6 @@ private:
     MetaComponent* metaComponent_;
     AutoPtr<CodeEmitter> emitter_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_CODEGENERATOR_H

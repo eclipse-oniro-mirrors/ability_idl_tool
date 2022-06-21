@@ -31,5 +31,5 @@ String ASTDoubleType::ToString()
 {
     return "double";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

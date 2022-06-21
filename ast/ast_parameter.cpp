@@ -39,5 +39,5 @@ String ASTParameter::Dump(const String& prefix)
 
     return sb.ToString();
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

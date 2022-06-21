@@ -94,6 +94,6 @@ private:
     Lexer lexer_;
     AutoPtr<ErrorInfo> errors_;
 };
-}
-}
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_PARSER_H

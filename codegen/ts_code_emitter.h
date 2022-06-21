@@ -151,7 +151,6 @@ private:
 
     std::vector<Method> methods_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_TSCODEEMITTER_H

@@ -135,7 +135,6 @@ private:
 
     String idlFilePath_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTMODULE_H

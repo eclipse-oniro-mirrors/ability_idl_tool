@@ -31,7 +31,7 @@ void ASTInterfaceType::AddMethod(ASTMethod* method)
     if (method == nullptr) {
         return;
     }
-    methods_.push_back(method);
+    methods_.emplace_back(method);
 }
 
 AutoPtr<ASTMethod> ASTInterfaceType::GetMethod(size_t index)
@@ -85,5 +85,5 @@ String ASTInterfaceType::Dump(const String& prefix)
 
     return sb.ToString();
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS
