@@ -19,15 +19,14 @@
 namespace OHOS {
 namespace Idl {
 struct MetaNamespace {
-    char*               name_;
-    int                 sequenceableNumber_;
-    int                 interfaceNumber_;
-    int                 namespaceNumber_;
-    int*                sequenceableIndexes_;
-    int*                interfaceIndexes_;
-    MetaNamespace**     namespaces_;
+    char* name_;
+    int sequenceableNumber_;
+    int interfaceNumber_;
+    int namespaceNumber_;
+    int* sequenceableIndexes_;
+    int* interfaceIndexes_;
+    MetaNamespace** namespaces_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METANAMESPACE_H

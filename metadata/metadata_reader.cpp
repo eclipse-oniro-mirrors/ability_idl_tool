@@ -72,5 +72,5 @@ std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const String
 
     return metadata;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

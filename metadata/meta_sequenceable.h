@@ -19,10 +19,9 @@
 namespace OHOS {
 namespace Idl {
 struct MetaSequenceable {
-    char*               name_;
-    char*               namespace_;
+    char* name_;
+    char* namespace_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METASEQUENCEABLE_H

@@ -21,14 +21,13 @@
 namespace OHOS {
 namespace Idl {
 struct MetaMethod {
-    char*               name_;
-    char*               signature_;
-    unsigned int        properties_;
-    int                 returnTypeIndex_;
-    int                 parameterNumber_;
-    MetaParameter**     parameters_;
+    char* name_;
+    char* signature_;
+    unsigned int properties_;
+    int returnTypeIndex_;
+    int parameterNumber_;
+    MetaParameter** parameters_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METAMETHOD_H

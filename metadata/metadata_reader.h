@@ -29,7 +29,6 @@ public:
 private:
     static const char* TAG;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METADATAREADER_H

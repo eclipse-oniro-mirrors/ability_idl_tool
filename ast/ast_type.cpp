@@ -121,5 +121,5 @@ String ASTType::ToString()
 {
     return namespace_ == nullptr ? name_ : namespace_->ToString() + name_;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

@@ -80,7 +80,6 @@ private:
     std::vector<AutoPtr<ASTMethod>> methods_;
     bool isExternal_ = false;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTINTERFACETYPE_H

@@ -271,5 +271,5 @@ String MetadataDumper::DumpMetaType(MetaType* mt)
             return "unknown";
     }
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

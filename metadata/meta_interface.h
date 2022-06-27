@@ -21,15 +21,14 @@
 namespace OHOS {
 namespace Idl {
 struct MetaInterface {
-    char*               license_;
-    char*               name_;
-    char*               namespace_;
-    unsigned int        properties_;
-    int                 methodNumber_;
-    MetaMethod**        methods_;
-    bool                external_;
+    char* license_;
+    char* name_;
+    char* namespace_;
+    unsigned int properties_;
+    int methodNumber_;
+    MetaMethod** methods_;
+    bool external_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_METAINTERFACE_H

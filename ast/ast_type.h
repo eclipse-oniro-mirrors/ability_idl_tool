@@ -73,7 +73,6 @@ protected:
     String name_;
     AutoPtr<ASTNamespace> namespace_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTTYPE_H

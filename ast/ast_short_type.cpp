@@ -31,5 +31,5 @@ String ASTShortType::ToString()
 {
     return "short";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

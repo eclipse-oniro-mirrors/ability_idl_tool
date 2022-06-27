@@ -31,5 +31,5 @@ String ASTVoidType::ToString()
 {
     return "void";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

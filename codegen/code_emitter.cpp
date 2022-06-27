@@ -24,6 +24,9 @@ CodeEmitter::CodeEmitter(MetaComponent* mc)
     metaInterface_ = nullptr;
     for (int i = 0; i < metaComponent_->interfaceNumber_; i++) {
         metaInterface_ = metaComponent_->interfaces_[i];
+        if (metaInterface_ == nullptr) {
+            continue;
+        }
         if (!metaInterface_->external_) {
             break;
         }
@@ -40,5 +43,5 @@ CodeEmitter::CodeEmitter(MetaComponent* mc)
         stubFullName_ = metaInterface_->namespace_ + stubName_;
     }
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

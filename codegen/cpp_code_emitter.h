@@ -139,6 +139,6 @@ private:
 
     const std::string UnderlineAdded(const String& name);
 };
-}
-}
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_CPPCODEEMITTER_H

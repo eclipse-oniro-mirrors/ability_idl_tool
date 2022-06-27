@@ -103,5 +103,5 @@ String ASTNamespace::ToString()
     }
     return nspaceStr;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

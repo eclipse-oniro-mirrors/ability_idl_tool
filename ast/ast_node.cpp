@@ -29,5 +29,5 @@ String ASTNode::Dump(const String& prefix)
 {
     return prefix + "ASTNode";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

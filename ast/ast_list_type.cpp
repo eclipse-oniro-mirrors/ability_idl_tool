@@ -31,5 +31,5 @@ String ASTListType::ToString()
 {
     return String::Format("List<%s>", elementType_->ToString().string());
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

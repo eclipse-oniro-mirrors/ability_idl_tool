@@ -31,5 +31,5 @@ String ASTBooleanType::ToString()
 {
     return "boolean";
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS

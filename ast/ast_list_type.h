@@ -42,7 +42,6 @@ public:
 private:
     AutoPtr<ASTType> elementType_;
 };
-}
-}
-
+} // namespace Idl
+} // namespace OHOS
 #endif // OHOS_IDL_ASTLISTTYPE_H

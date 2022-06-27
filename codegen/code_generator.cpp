@@ -82,5 +82,5 @@ bool CodeGenerator::Generate()
 
     return true;
 }
-}
-}
+} // namespace Idl
+} // namespace OHOS
