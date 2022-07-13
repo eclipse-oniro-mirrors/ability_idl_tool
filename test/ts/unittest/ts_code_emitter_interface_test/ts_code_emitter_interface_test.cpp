@@ -943,7 +943,7 @@ HWTEST_F(TsCodeEmitterInterfaceTest, EmitInterfaceMethodParameter_004, TestSize.
     EXPECT_NE(tsCodeGen_, nullptr);
     StringBuilder stringBuilder;
     MetaParameter mp = {0};
-    mp.name_ = new (std::nothrow) char[] {"name"};
+    mp.name_ = new (std::nothrow) char[5] {"name"};
     tsCodeGen_->EmitInterfaceMethodParameter(&mp, stringBuilder, CodeEmitter::TAB);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     if (mp.name_ != nullptr) {
