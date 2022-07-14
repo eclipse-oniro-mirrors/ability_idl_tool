@@ -16,6 +16,7 @@
 #include "util/file.h"
 
 #include <cstdlib>
+#include <cstring>
 #include "securec.h"
 
 namespace OHOS {

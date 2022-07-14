@@ -16,6 +16,7 @@
 #ifndef OHOS_IDL_METADATASERIALIZER_H
 #define OHOS_IDL_METADATASERIALIZER_H
 
+#include <cstddef>
 #include <cstdint>
 #include "bits/alltypes.h"
 #include "metadata/meta_component.h"
