@@ -18,6 +18,8 @@
 
 #include "ast/ast_type.h"
 
+#include "util/string.h"
+
 namespace OHOS {
 namespace Idl {
 class ASTShortType : public ASTType {

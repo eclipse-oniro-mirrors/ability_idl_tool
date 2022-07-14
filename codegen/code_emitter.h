@@ -17,6 +17,7 @@
 #define OHOS_IDL_CODEEMITTER_H
 
 #include "metadata/meta_component.h"
+#include "metadata/meta_interface.h"
 #include "util/light_refcount_base.h"
 #include "util/string.h"
 

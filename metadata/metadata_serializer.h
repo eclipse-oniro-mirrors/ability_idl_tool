@@ -16,9 +16,16 @@
 #ifndef OHOS_IDL_METADATASERIALIZER_H
 #define OHOS_IDL_METADATASERIALIZER_H
 
-#include <cstddef>
 #include <cstdint>
+#include "bits/alltypes.h"
 #include "metadata/meta_component.h"
+#include "metadata/meta_interface.h"
+#include "metadata/meta_method.h"
+#include "metadata/meta_namespace.h"
+#include "metadata/meta_patameter.h"
+#include "metadata/meta_sequenceable.h"
+#include "metadata/meta_type.h"
+
 
 namespace OHOS {
 namespace Idl {

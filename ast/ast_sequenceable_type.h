@@ -16,7 +16,9 @@
 #ifndef OHOS_IDL_ASTSEQUENCEABLETYPE_H
 #define OHOS_IDL_ASTSEQUENCEABLETYPE_H
 
+#include "ast/ast_namespace.h"
 #include "ast/ast_type.h"
+#include "util/string.h"
 
 namespace OHOS {
 namespace Idl {

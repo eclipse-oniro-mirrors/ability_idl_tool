@@ -16,10 +16,14 @@
 #ifndef OHOS_IDL_ASTINTERFACETYPE_H
 #define OHOS_IDL_ASTINTERFACETYPE_H
 
+#include <stddef.h>
 #include <vector>
+
 #include "ast/ast_method.h"
+#include "ast/ast_namespace.h"
 #include "ast/ast_type.h"
 #include "util/autoptr.h"
+#include "util/string.h"
 
 namespace OHOS {
 namespace Idl {

@@ -18,6 +18,7 @@
 
 #include "ast/ast_type.h"
 #include "util/autoptr.h"
+#include "util/string.h"
 
 namespace OHOS {
 namespace Idl {

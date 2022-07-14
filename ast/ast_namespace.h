@@ -16,9 +16,11 @@
 #ifndef OHOS_IDL_ASTNAMESPACE_H
 #define OHOS_IDL_ASTNAMESPACE_H
 
+#include <stddef.h>
 #include <vector>
 #include "ast/ast_node.h"
 #include "util/autoptr.h"
+#include "util/string.h"
 
 namespace OHOS {
 namespace Idl {

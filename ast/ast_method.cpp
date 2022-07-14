@@ -14,6 +14,7 @@
  */
 
 #include "ast/ast_method.h"
+
 #include "util/string_builder.h"
 
 namespace OHOS {

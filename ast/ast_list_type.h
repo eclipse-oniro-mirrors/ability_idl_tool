@@ -17,6 +17,7 @@
 #define OHOS_IDL_ASTLISTTYPE_H
 
 #include "ast/ast_type.h"
+#include "util/string.h"
 #include "util/autoptr.h"
 
 namespace OHOS {

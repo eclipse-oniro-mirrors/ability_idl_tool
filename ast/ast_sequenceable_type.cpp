@@ -14,6 +14,7 @@
  */
 
 #include "ast/ast_sequenceable_type.h"
+#include "util/autoptr.h"
 #include "util/string_builder.h"
 
 namespace OHOS {
