@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "bits/alltypes.h"
 #include "metadata/meta_component.h"
 #include "metadata/meta_interface.h"
 #include "metadata/meta_method.h"
