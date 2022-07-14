@@ -15,9 +15,6 @@
 
 #include "metadata/metadata_reader.h"
 
-#include <memory>
-#include <stdint.h>
-#include <stdlib.h>
 #include "metadata/metadata_serializer.h"
 #include "util/file.h"
 #include "util/logger.h"

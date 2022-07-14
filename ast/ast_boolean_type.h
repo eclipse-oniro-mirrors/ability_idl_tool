@@ -17,7 +17,7 @@
 #define OHOS_IDL_ASTBOOLEANTYPE_H
 
 #include "ast/ast_type.h"
-#include "util/string.h"   
+#include "util/string.h"  
 
 namespace OHOS {
 namespace Idl {

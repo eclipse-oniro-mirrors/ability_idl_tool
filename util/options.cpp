@@ -16,8 +16,6 @@
 #include "options.h"
 #include "util/string_builder.h"
 
-#include "stdio.h"
-
 namespace OHOS {
 namespace Idl {
 void Options::Parse(int argc, char** argv)

@@ -17,8 +17,6 @@
 
 #include <cstdlib>
 #include "securec.h"
-#include "stdio.h"
-#include "stdlib.h"
 
 namespace OHOS {
 namespace Idl {
