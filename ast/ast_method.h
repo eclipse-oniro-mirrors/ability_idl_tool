@@ -16,7 +16,7 @@
 #ifndef OHOS_IDL_ASTMETHOD_H
 #define OHOS_IDL_ASTMETHOD_H
 
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 
 #include "ast/ast_node.h"

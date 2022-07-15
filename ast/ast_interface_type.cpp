@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-#include "util/string_builder.h"
 #include "ast/ast_interface_type.h"
+
+#include "util/string_builder.h"
 
 namespace OHOS {
 namespace Idl {
