@@ -13,10 +13,11 @@
  * limitations under the License.
  */
 
+#include "options.h"
+
 #include <cstdio>
 #include <cstring>
 
-#include "options.h"
 #include "util/string_builder.h"
 
 namespace OHOS {
