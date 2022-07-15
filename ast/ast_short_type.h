@@ -17,7 +17,6 @@
 #define OHOS_IDL_ASTSHORTTYPE_H
 
 #include "ast/ast_type.h"
-
 #include "util/string.h"
 
 namespace OHOS {

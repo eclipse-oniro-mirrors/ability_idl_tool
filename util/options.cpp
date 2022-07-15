@@ -16,8 +16,8 @@
 #include <cstdio>
 #include <cstring>
 
-#include "util/string_builder.h"
 #include "options.h"
+#include "util/string_builder.h"
 
 namespace OHOS {
 namespace Idl {
