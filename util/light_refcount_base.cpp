@@ -15,8 +15,6 @@
 
 #include "util/light_refcount_base.h"
 
-#include "atomic"
-
 namespace OHOS {
 namespace Idl {
 int LightRefCountBase::AddRef()

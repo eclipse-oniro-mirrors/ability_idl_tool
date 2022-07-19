@@ -16,7 +16,7 @@
 #ifndef OHOS_IDL_ASTINTERFACETYPE_H
 #define OHOS_IDL_ASTINTERFACETYPE_H
 
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 
 #include "ast/ast_method.h"
