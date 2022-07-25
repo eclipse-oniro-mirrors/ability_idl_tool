@@ -18,7 +18,15 @@
 
 #include <cstddef>
 #include <cstdint>
+
 #include "metadata/meta_component.h"
+#include "metadata/meta_interface.h"
+#include "metadata/meta_method.h"
+#include "metadata/meta_namespace.h"
+#include "metadata/meta_patameter.h"
+#include "metadata/meta_sequenceable.h"
+#include "metadata/meta_type.h"
+
 
 namespace OHOS {
 namespace Idl {
