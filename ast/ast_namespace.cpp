@@ -14,6 +14,7 @@
  */
 
 #include "ast/ast_namespace.h"
+
 #include "ast/ast_interface_type.h"
 #include "ast/ast_sequenceable_type.h"
 
