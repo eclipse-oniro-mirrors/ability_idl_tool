@@ -308,9 +308,10 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
 {
     bool haveOutPara = false;
     stringBuilder.Append(prefix).Append("{\n");
-    stringBuilder.Append(prefix).Append(TAB).AppendFormat("let _option = new rpc.MessageOption(%s);\n",
-        ((metaMethod->properties_ & METHOD_PROPERTY_ONEWAY) || (metaInterface_->properties_ & METHOD_PROPERTY_ONEWAY))
-        != 0 ? "rpc.MessageOption.TF_ASYNC" : "rpc.MessageOption.TF_SYNC");
+    if((metaMethod->properties_ & METHOD_PROPERTY_ONEWAY) || (metaInterface_->properties_ & METHOD_PROPERTY_ONEWAY)){
+        stringBuilder.Append(prefix).Append(TAB).AppendFormat("let _option = new rpc.MessageOption();\n");
+        stringBuilder.Append(prefix).Append(TAB).AppendFormat("_option.setFlags(_option.TF_ASYNC);\n");
+    }
     stringBuilder.Append(prefix).Append(TAB).Append("let _data = new rpc.MessageParcel();\n");
     stringBuilder.Append(prefix).Append(TAB).Append("let _reply = new rpc.MessageParcel();\n");
 
