@@ -407,7 +407,7 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
         (mm->properties_ & METHOD_PROPERTY_ONEWAY) != 0 ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
     sb.Append("\n");
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
-    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_PERMISSION_DENIED;\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append("\n");
 
