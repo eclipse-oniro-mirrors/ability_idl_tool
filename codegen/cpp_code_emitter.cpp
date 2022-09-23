@@ -406,6 +406,10 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
     sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n",
         (mm->properties_ & METHOD_PROPERTY_ONEWAY) != 0 ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
     sb.Append("\n");
+    sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_PERMISSION_DENIED;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append("\n");
 
     for (int i = 0; i < mm->parameterNumber_; i++) {
         MetaParameter* mp = mm->parameters_[i];
@@ -542,6 +546,11 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& sb, const Strin
     sb.Append(prefix + TAB).Append("/* [out] */ MessageParcel& reply,\n");
     sb.Append(prefix + TAB).Append("/* [in] */ MessageOption& option)\n");
     sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + TAB).Append("std::u16string localDescriptor = GetDescriptor();\n");
+    sb.Append(prefix + TAB).Append("std::u16string remoteDescriptor = data.ReadInterfaceToken();\n");
+    sb.Append(prefix + TAB).Append("if (localDescriptor != remoteDescriptor) {\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_TRANSACTION_FAILED;\n");
+    sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).Append("switch (code) {\n");
     for (int i = 0; i < metaInterface_->methodNumber_; i++) {
         MetaMethod* mm = metaInterface_->methods_[i];
