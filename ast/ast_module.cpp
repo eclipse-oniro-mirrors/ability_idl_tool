@@ -117,7 +117,7 @@ void ASTModule::AddInterface(ASTInterfaceType* interface)
     }
 
     interfaces_.push_back(interface);
-    types_[interface->ToString()] = (ASTType*)interface;
+    types_[interface->ToString()] = interface;
 }
 
 AutoPtr<ASTInterfaceType> ASTModule::GetInterface(size_t index)
@@ -146,7 +146,7 @@ void ASTModule::AddSequenceable(ASTSequenceableType* sequenceable)
     }
 
     sequenceables_.push_back(sequenceable);
-    types_[sequenceable->ToString()] = (ASTType*)sequenceable;
+    types_[sequenceable->ToString()] = sequenceable;
 }
 
 AutoPtr<ASTSequenceableType> ASTModule::GetSequenceable(size_t index)

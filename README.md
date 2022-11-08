@@ -64,7 +64,7 @@ idl工具的获取和TS开发步骤可参考[开发指南](https://gitee.com/ope
 
 -d后的dir为目标输出目录，以输出文件夹名为IIdlTestServiceCpp为例，在idl可执行文件所在目录下执行`idl -gen-cpp -d IIdlTestServiceCpp -c IIdlTestServiceCpp/IIdlTestService.idl`，将会在执行环境的dir目录（即IIdlTestServiceCpp目录）中生成接口文件、Stub文件、Proxy文件。
 
- > **注意**：生成的接口类文件名称和.idl文件名称保持一致。
+ > **注意**：生成的接口类文件名称和.idl文件名称保持一致，否则会生成代码时会出现错误。
 
 以名为`IIdlTestService.idl`的.idl文件、目标输出文件夹为IIdlTestServiceCpp为例，其目录结构应类似于:
 
