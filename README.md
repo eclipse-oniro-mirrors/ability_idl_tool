@@ -39,7 +39,7 @@ foundation/ability/idl_tool
 ├── metadata                    # matedata自定义数据解析模块代码
 ├── parser                      # idl解析模块代码
 ├── test                        # 测试目录
-└── util					    # 公共方法代码
+└── util                        # 公共方法代码
 ```
 
 ## 开发步骤
@@ -355,17 +355,17 @@ import nativeMgr from 'nativeManager';
 
 function testIntTransactionCallback(errCode: number, returnValue: number)
 {
-	console.log('errCode: ' + errCode + '  returnValue: ' + returnValue);
+    console.log('errCode: ' + errCode + '  returnValue: ' + returnValue);
 }
 
 function testStringTransactionCallback(errCode: number)
 {
-	console.log('errCode: ' + errCode);
+    console.log('errCode: ' + errCode);
 }
 
 function jsProxyTriggerCppStub()
 {
-	let nativeObj = nativeMgr.GetNativeObject();
+    let nativeObj = nativeMgr.GetNativeObject();
     let tsProxy = new IdlTestServiceProxy(nativeObj);
     // invoke testIntTransaction
     tsProxy.testIntTransaction(10, testIntTransactionCallback);
