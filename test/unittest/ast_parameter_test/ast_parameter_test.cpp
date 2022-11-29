@@ -48,7 +48,7 @@ void AstParameterUnitTest::TearDown() {}
  * @tc.name: DumpTest_0100
  * @tc.desc: test if isInParameter in AstParameterUnitTest's Dump function is true.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstParameterUnitTest, DumpTest_0100, Function | MediumTest | Level1)
 {
@@ -75,7 +75,7 @@ HWTEST_F(AstParameterUnitTest, DumpTest_0100, Function | MediumTest | Level1)
  * @tc.name: DumpTest_0200
  * @tc.desc: test if isInParameter in AstParameterUnitTest's Dump function is false, isOutParameter is true.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstParameterUnitTest, DumpTest_0200, Function | MediumTest | Level1)
 {

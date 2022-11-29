@@ -50,7 +50,7 @@ void AstMethodUnitTest::TearDown() {}
  * @tc.name: GetParameterTest_0100
  * @tc.desc: test GetParameter in AstMethodUnitTest.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstMethodUnitTest, GetParameterTest_0100, Function | MediumTest | Level1)
 {

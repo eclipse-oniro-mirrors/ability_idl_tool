@@ -47,7 +47,7 @@ void AstNodeUnitTest::TearDown() {}
  * @tc.name: ToStringTest_0100
  * @tc.desc: test ToString in AstNodeUnitTest's ToString.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstNodeUnitTest, ToStringTest_0100, Function | MediumTest | Level1)
 {
@@ -64,7 +64,7 @@ HWTEST_F(AstNodeUnitTest, ToStringTest_0100, Function | MediumTest | Level1)
  * @tc.name: DumpTest_0100
  * @tc.desc: test ToString in AstNodeUnitTest's Dump.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstNodeUnitTest, DumpTest_0100, Function | MediumTest | Level1)
 {
