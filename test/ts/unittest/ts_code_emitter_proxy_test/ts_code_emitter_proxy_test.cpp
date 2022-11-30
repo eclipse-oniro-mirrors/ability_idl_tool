@@ -35,11 +35,7 @@ void TsCodeEmitterProxyTest::SetUpTestCase(void)
 void TsCodeEmitterProxyTest::TearDownTestCase(void)
 {}
 void TsCodeEmitterProxyTest::SetUp()
-{
-    String filePath = String::Format("%s/%s", "./", "idl_test_proxy.ts");
-    File file(filePath, File::READ);
-    file.Reset();
-}
+{}
 void TsCodeEmitterProxyTest::TearDown()
 {}
 
