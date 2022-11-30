@@ -47,7 +47,7 @@ void LexerUnitTest::TearDown() {}
  * @tc.name: OpenSourceFileTest_0100
  * @tc.desc: test Lexer's OpenSourceFile function return false.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, OpenSourceFileTest_0100, Function | MediumTest | Level1)
 {
@@ -63,7 +63,7 @@ HWTEST_F(LexerUnitTest, OpenSourceFileTest_0100, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0100
  * @tc.desc: test the token in Lexer's TokenToChar function is ANGLE_BRACKETS_LEFT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0100, Function | MediumTest | Level1)
 {
@@ -79,7 +79,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0100, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0200
  * @tc.desc: test the token in Lexer's TokenToChar function is ANGLE_BRACKETS_RIGHT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0200, Function | MediumTest | Level1)
 {
@@ -95,7 +95,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0200, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0300
  * @tc.desc: test the token in Lexer's TokenToChar function is BRACES_LEFT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0300, Function | MediumTest | Level1)
 {
@@ -111,7 +111,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0300, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0400
  * @tc.desc: test the token in Lexer's TokenToChar function is BRACES_RIGHT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0400, Function | MediumTest | Level1)
 {
@@ -127,7 +127,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0400, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0500
  * @tc.desc: test the token in Lexer's TokenToChar function is BRACKETS_LEFT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0500, Function | MediumTest | Level1)
 {
