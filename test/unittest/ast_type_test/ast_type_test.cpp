@@ -14,20 +14,18 @@
  */
 
 #include <gtest/gtest.h>
-#include "ast/ast_method.h"
+#include "ast/ast_type.h"
 #include "ast/ast_void_type.h"
 
 using namespace testing;
 using namespace testing::ext;
 using namespace OHOS::Idl;
 
-namespace OHOS {
-namespace idl {
-class AstMethodUnitTest : public testing::Test {
+class AstTypeUnitTest : public testing::Test {
 public:
-    AstMethodUnitTest() {}
+    AstTypeUnitTest() {}
 
-    virtual ~AstMethodUnitTest() {}
+    virtual ~AstTypeUnitTest() {}
 
     static void SetUpTestCase();
 
@@ -38,29 +36,29 @@ public:
     void TearDown();
 };
 
-void AstMethodUnitTest::SetUpTestCase() {}
+void AstTypeUnitTest::SetUpTestCase() {}
 
-void AstMethodUnitTest::TearDownTestCase() {}
+void AstTypeUnitTest::TearDownTestCase() {}
 
-void AstMethodUnitTest::SetUp() {}
+void AstTypeUnitTest::SetUp() {}
 
-void AstMethodUnitTest::TearDown() {}
+void AstTypeUnitTest::TearDown() {}
 
 /*
- * @tc.name: GetParameterTest_0100
- * @tc.desc: test GetParameter in AstMethodUnitTest.
+ * @tc.name: ToShortStringTest_0100
+ * @tc.desc: test ToShortString in AstTypeUnitTest.
  * @tc.type: FUNC
  * @tc.require:
  */
-HWTEST_F(AstMethodUnitTest, GetParameterTest_0100, Function | MediumTest | Level1)
+HWTEST_F(AstTypeUnitTest, ToShortStringTest_0100, Function | MediumTest | Level1)
 {
     GTEST_LOG_(INFO)
-        << "AstMethodUnitTest, GetParameterTest_0100, TestSize.Level1";
-    std::shared_ptr<ASTMethod> imageASTMethod = std::make_shared<ASTMethod>();
-    size_t index = 3;
-    AutoPtr<ASTParameter> result = imageASTMethod->GetParameter(index);
+        << "AstTypeUnitTest, ToShortStringTest_0100, TestSize.Level1";
+    ASTType *type = new ASTVoidType();
+    String name = "name";
+    type->SetName(name);
+    String result = type->ToShortString();
+    String expectString = "name";
 
-    EXPECT_EQ(result, nullptr);
+    ASSERT_STREQ(result, expectString);
 }
-} // namespace idl
-} // namespace OHOS

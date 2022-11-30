@@ -47,7 +47,7 @@ void AstNodeUnitTest::TearDown() {}
  * @tc.name: ToStringTest_0100
  * @tc.desc: test ToString in AstNodeUnitTest's ToString.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstNodeUnitTest, ToStringTest_0100, Function | MediumTest | Level1)
 {
@@ -56,7 +56,7 @@ HWTEST_F(AstNodeUnitTest, ToStringTest_0100, Function | MediumTest | Level1)
     std::shared_ptr<ASTNode> imageASTNode = std::make_shared<ASTNode>();
     String result = imageASTNode->ToString();
     String expectString = "ASTNode";
-    
+
     ASSERT_STREQ(result, expectString);
 }
 
@@ -64,7 +64,7 @@ HWTEST_F(AstNodeUnitTest, ToStringTest_0100, Function | MediumTest | Level1)
  * @tc.name: DumpTest_0100
  * @tc.desc: test ToString in AstNodeUnitTest's Dump.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(AstNodeUnitTest, DumpTest_0100, Function | MediumTest | Level1)
 {
@@ -74,6 +74,6 @@ HWTEST_F(AstNodeUnitTest, DumpTest_0100, Function | MediumTest | Level1)
     String prefix = "test";
     String result = imageASTNode->Dump(prefix);
     String expectString = prefix + "ASTNode";
-    
+
     ASSERT_STREQ(result, expectString);
 }
