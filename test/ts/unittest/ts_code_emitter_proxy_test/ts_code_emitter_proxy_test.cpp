@@ -37,7 +37,9 @@ void TsCodeEmitterProxyTest::TearDownTestCase(void)
 void TsCodeEmitterProxyTest::SetUp()
 {}
 void TsCodeEmitterProxyTest::TearDown()
-{}
+{
+    tsCodeGen_ = nullptr;
+}
 
 /*
  * Feature: idl
