@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "codegen/rust_code_emitter.h"
 #include "codegen/cpp_code_emitter.h"
 #include "codegen/ts_code_emitter.h"
 #include "util/logger.h"
@@ -29,10 +30,14 @@ CodeGenerator::CodeGenerator(MetaComponent* mc, const String& language, const St
       targetDirectory_(dir),
       metaComponent_(mc)
 {
-    if (language.Equals("cpp")) {
+    if (language.Equals("rust")) {
+        emitter_ = new RustCodeEmitter(metaComponent_);
+    } else if (language.Equals("cpp")) {
         emitter_ = new CppCodeEmitter(metaComponent_);
     } else if (language.Equals("ts")) {
         emitter_ = new TsCodeEmitter(metaComponent_);
+    } else {
+        Logger::E(TAG, "Unknown language: %s.", language.string());
     }
 }
 

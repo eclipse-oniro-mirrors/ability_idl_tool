@@ -43,6 +43,9 @@ void Options::Parse(int argc, char** argv)
         } else if (option.Equals("-s")) {
             doSaveMetadata_ = true;
             metadataFile_ = argv[i++];
+        } else if (option.Equals("-gen-rust")) {
+            doGenerateCode_ = true;
+            targetLanguage_ = "rust";
         } else if (option.Equals("-gen-cpp")) {
             doGenerateCode_ = true;
             targetLanguage_ = "cpp";
@@ -84,7 +87,7 @@ void Options::ShowVersion()
 
 void Options::ShowUsage()
 {
-    printf("Compile a .idl file and generate metadata, or generate C++ and Ts codes from metadata.\n"
+    printf("Compile a .idl file and generate metadata, or generate Rust/C++/Ts codes from metadata.\n"
            "Usage: idl [options] file\n"
            "Options:\n"
            "  --help            Display command line options\n"
@@ -93,6 +96,7 @@ void Options::ShowUsage()
            "  -dump-metadata    Display the metadata generated from the compiled file\n"
            "  -c                Compile the .idl file\n"
            "  -s <file>         Place the metadata into <file>\n"
+           "  -gen-rust          Generate Rust codes\n"
            "  -gen-cpp          Generate C++ codes\n"
            "  -gen-ts           Generate Ts codes\n"
            "  -d <directory>    Place generated codes into <directory>\n");
