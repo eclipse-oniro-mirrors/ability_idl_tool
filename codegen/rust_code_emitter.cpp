@@ -26,9 +26,26 @@ void RustCodeEmitter::EmitInterface()
 {
     String filePath = String::Format("%s/%s.rs", directory_.string(), FileName(interfaceName_).string());
     File file(filePath, File::WRITE);
-    
     StringBuilder sb;
+    EmitInterface(sb);
+    String data = sb.ToString();
+    file.WriteData(data.string(), data.GetLength());
+    file.Flush();
+    file.Close();
+}
 
+void RustCodeEmitter::EmitInterfaceProxy()
+{
+    return;
+}
+
+void RustCodeEmitter::EmitInterfaceStub()
+{
+    return;
+}
+
+void RustCodeEmitter::EmitInterface(StringBuilder& sb)
+{
     if (metaInterface_->license_) {
         EmitLicense(sb);
         sb.Append("\n");
@@ -48,21 +65,6 @@ void RustCodeEmitter::EmitInterface()
     sb.Append("\n");
     EmitProxy(sb);
     sb.Append("\n");
-
-    String data = sb.ToString();
-    file.WriteData(data.string(), data.GetLength());
-    file.Flush();
-    file.Close();
-}
-
-void RustCodeEmitter::EmitInterfaceProxy()
-{
-    return;
-}
-
-void RustCodeEmitter::EmitInterfaceStub()
-{
-    return;
 }
 
 String RustCodeEmitter::FileName(const String& name)
