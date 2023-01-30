@@ -35,6 +35,8 @@ public:
 
     void EmitInterfaceStub() override;
 private:
+    void EmitInterface(StringBuilder& sb);
+
     String FileName(const String& name);
 
     void EmitLicense(StringBuilder& sb);
