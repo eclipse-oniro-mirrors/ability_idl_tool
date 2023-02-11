@@ -464,8 +464,9 @@ AutoPtr<ASTType> Parser::ParseType()
         return nullptr;
     }
 
-    if (type == nullptr) {
+    if (type == nullptr || type.Get() == nullptr) {
         LogError(token, String::Format("Type \"%s\" was not declared in the module.", lexer_.DumpToken().string()));
+        return nullptr;
     }
 
     token = lexer_.PeekToken();
