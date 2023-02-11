@@ -22,9 +22,13 @@
 
 namespace OHOS {
 namespace Idl {
+namespace {
+const uint32_t WRAP_ANCHOR = 4;
+}
+
 void RustCodeEmitter::EmitInterface()
 {
-    String filePath = String::Format("%s/%s.rs", directory_.string(), FileName(interfaceName_).string());
+    String filePath = String::Format("%s/%s.rs", directory_.string(), interfaceName_.string());
     File file(filePath, File::WRITE);
     StringBuilder sb;
     EmitInterface(sb);
@@ -50,7 +54,7 @@ void RustCodeEmitter::EmitInterface(StringBuilder& sb)
         EmitLicense(sb);
         sb.Append("\n");
     }
-
+    EmitMacros(sb);
     EmitHeaders(sb);
     sb.Append("\n");
     EmitCommands(sb);
@@ -64,30 +68,6 @@ void RustCodeEmitter::EmitInterface(StringBuilder& sb)
     EmitStub(sb);
     sb.Append("\n");
     EmitProxy(sb);
-    sb.Append("\n");
-}
-
-String RustCodeEmitter::FileName(const String& name)
-{
-    if (name.IsEmpty()) {
-        return name;
-    }
-
-    StringBuilder sb;
-
-    for (int i = 0; i < name.GetLength(); i++) {
-        char c = name[i];
-        if (isupper(c) != 0) {
-            if (i > 1 && name[i - 1] != '.' && name[i - 2] != '.') {
-                sb.Append('_');
-            }
-            sb.Append(tolower(c));
-        } else {
-            sb.Append(c);
-        }
-    }
-
-    return sb.ToString().Replace('.', '/');
 }
 
 void RustCodeEmitter::EmitLicense(StringBuilder& sb)
@@ -95,12 +75,17 @@ void RustCodeEmitter::EmitLicense(StringBuilder& sb)
     sb.Append(metaInterface_->license_).Append("\n");
 }
 
+void RustCodeEmitter::EmitMacros(StringBuilder& sb)
+{
+    sb.Append("#![allow(missing_docs)]\n");
+    sb.Append("#![allow(unused_variables)]\n");
+    sb.Append("#![allow(unused_mut)]\n");
+    sb.Append("\n");
+}
 void RustCodeEmitter::EmitHeaders(StringBuilder& sb)
 {
     EmitCommonHeaders(sb);
-    sb.Append("\n");
     EmitIPCHeaders(sb);
-    sb.Append("\n");
     if (EmitCustomHeaders(sb)) {
         sb.Append("\n");
     }
@@ -109,11 +94,13 @@ void RustCodeEmitter::EmitHeaders(StringBuilder& sb)
 void RustCodeEmitter::EmitIPCHeaders(StringBuilder& sb)
 {
     sb.Append("extern crate ipc_rust;\n");
+    sb.Append("\n");
     sb.Append("use ipc_rust::{\n");
-    sb.Append("    IRemoteBroker, IRemoteObj, RemoteStub,\n");
+    sb.Append("    IRemoteBroker, IRemoteObj, RemoteStub, Result,\n");
     sb.Append("    RemoteObj, define_remote_object, FIRST_CALL_TRANSACTION\n");
     sb.Append("};\n");
-    sb.Append("use ipc_rust::{MsgParcel, BorrowedMsgParcel}; \n");
+    sb.Append("use ipc_rust::{MsgParcel, BorrowedMsgParcel};\n");
+    sb.Append("\n");
 }
 
 void RustCodeEmitter::EmitCommonHeaders(StringBuilder& sb)
@@ -128,12 +115,15 @@ void RustCodeEmitter::EmitCommonHeaders(StringBuilder& sb)
                     sb.Append("use std::collections::HashMap;\n");
                     useMap = true;
                 }
+                break;
             }
-            break;
-        
-        default:
-            break;
+
+            default:
+                break;
         }
+    }
+    if (useMap) {
+        sb.Append("\n");
     }
 }
 
@@ -192,19 +182,19 @@ String RustCodeEmitter::GeneratePath(const String& fpnp)
 bool RustCodeEmitter::AppendRealPath(StringBuilder& sb, const String& fpnpp)
 {
     String result = GeneratePath(fpnpp);
-    if (!result.IsEmpty()) {
-        sb.Append("use ").Append(result).Append(";\n");
-        return true;
+    if (result.IsEmpty()) {
+        return false;
     }
-    return false;
+    sb.Append("use ").Append(result).Append(";\n");
+    return true;
 }
 
 bool RustCodeEmitter::EmitCustomHeaders(StringBuilder& sb)
 {
     bool custom = false;
     for (int i = 0; i < metaComponent_->sequenceableNumber_; i++) {
-        MetaSequenceable* mp = metaComponent_->sequenceables_[i];
-        custom |= AppendRealPath(sb, String(mp->namespace_) + String(mp->name_));
+        MetaSequenceable* ms = metaComponent_->sequenceables_[i];
+        custom |= AppendRealPath(sb, String(ms->namespace_) + String(ms->name_));
     }
 
     for (int i = 0; i < metaComponent_->interfaceNumber_; i++) {
@@ -219,24 +209,65 @@ bool RustCodeEmitter::EmitCustomHeaders(StringBuilder& sb)
 void RustCodeEmitter::EmitCommands(StringBuilder& sb)
 {
     EmitCommandEnums(sb);
-    sb.Append("\n");
-    EmitCommandImpls(sb);
 }
 
 void RustCodeEmitter::AppendCommandEnums(StringBuilder& sb)
 {
-    for (int i = 0; i < metaInterface_->methodNumber_; i++) {
+    if (metaInterface_->methodNumber_ > 0) {
+        sb.AppendFormat("    %s  = FIRST_CALL_TRANSACTION,\n",
+            GetCodeFromMethod(metaInterface_->methods_[0]->name_).string());
+    }
+
+    for (int i = 1; i < metaInterface_->methodNumber_; i++) {
         MetaMethod* mm = metaInterface_->methods_[i];
-        sb.Append("    ");
-        sb.AppendFormat("%s = FIRST_CALL_TRANSACTION + %d", GetCodeFromMethod(mm->name_).string(), i);
-        sb.Append(",\n");
+        sb.AppendFormat("    %s,\n", GetCodeFromMethod(mm->name_).string(), i);
     }
 }
 
 String RustCodeEmitter::GetCodeFromMethod(const char* name)
 {
-    String code = "Code";
-    return code + name;
+    StringBuilder sb;
+    sb.Append("Code");
+    const char* p = name;
+    bool hasUpper = false;
+    while (p != nullptr && *p != '\0') {
+        if (*p != '_') {
+            if (!hasUpper) {
+                sb.Append(toupper(*p));
+                hasUpper = true;
+            } else {
+                sb.Append(*p);
+            }
+        } else {
+            hasUpper = false;
+        }
+        p++;
+    }
+    return sb.ToString();
+}
+
+String RustCodeEmitter::GetNameFromParameter(const char* name)
+{
+    StringBuilder sb;
+    const char* p = name;
+    bool start = true;
+    while (p != nullptr && *p != '\0') {
+        if (start) {
+            if (isupper(*p)) {
+                sb.Append('p');
+            }
+            start = false;
+        }
+
+        if (isupper(*p)) {
+            sb.Append('_');
+            sb.Append(tolower(*p));
+        } else {
+            sb.Append(*p);
+        }
+        p++;
+    }
+    return sb.ToString();
 }
 
 void RustCodeEmitter::EmitCommandEnums(StringBuilder& sb)
@@ -246,19 +277,14 @@ void RustCodeEmitter::EmitCommandEnums(StringBuilder& sb)
     sb.Append("}\n");
 }
 
-void RustCodeEmitter::EmitCommandImpls(StringBuilder& sb)
-{
-    sb.AppendFormat("impl %sCode {\n", interfaceName_.string());
-    sb.Append("    fn to_u32(self) -> u32 {\n");
-    sb.Append("        self as u32\n");
-    sb.Append("    }\n");
-    sb.Append("}\n");
-}
-
 void RustCodeEmitter::EmitRemoteObject(StringBuilder& sb)
 {
     sb.Append("define_remote_object!(\n");
-    sb.AppendFormat("    %s[\"%s\"] {\n", interfaceName_.string(), interfaceFullName_.string());
+    if (interfaceFullName_.StartsWith(".")) {
+        sb.AppendFormat("    %s[\"%s\"] {\n", interfaceName_.string(), interfaceName_.string());
+    } else {
+        sb.AppendFormat("    %s[\"%s\"] {\n", interfaceName_.string(), interfaceFullName_.string());
+    }
     sb.AppendFormat("        stub: %s(on_remote_request),\n", stubName_.string());
     sb.AppendFormat("        proxy: %s,\n", proxyName_.string());
     sb.Append("    }\n");
@@ -272,47 +298,44 @@ void RustCodeEmitter::EmitBrokers(StringBuilder& sb)
     sb.Append("}\n");
 }
 
+void RustCodeEmitter::WrapLine(StringBuilder& sb, int index, const String& prefix)
+{
+    if ((index + 1) % WRAP_ANCHOR == 0) {
+        sb.AppendFormat(",\n%s", prefix.string());
+    } else {
+        sb.Append(", ");
+    }
+}
+
 void RustCodeEmitter::AppendBrokerMethods(StringBuilder& sb)
 {
     for (int i = 0; i < metaInterface_->methodNumber_; i++) {
         MetaMethod* mm = metaInterface_->methods_[i];
         sb.AppendFormat("    fn %s(&self", mm->name_);
         for (int i = 0; i < mm->parameterNumber_; i++) {
-            sb.Append(", ");
+            WrapLine(sb, i, "        ");
             AppendBrokerParameters(sb, mm->parameters_[i]);
         }
-        
-        MetaType* mt = metaComponent_->types_[mm->returnTypeIndex_];
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.AppendFormat(", result: &mut %s", ConvertType(mt).string());
-        }
-        sb.Append(") -> u32");
-        sb.Append(";\n");
+        sb.AppendFormat(") -> Result<%s>;\n", ConvertType(metaComponent_->types_[mm->returnTypeIndex_]).string());
     }
 }
 
 void RustCodeEmitter::AppendBrokerParameters(StringBuilder& sb, MetaParameter* mp) {
-    sb.Append(mp->name_);
-    sb.Append(": ");
-    MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-    if (mp->attributes_ & ATTR_OUT) {
-        sb.Append("&mut ");
-    } else {
-        sb.Append("&");
-    }
-    sb.Append(ConvertType(mt).string());
+    sb.AppendFormat("%s: &%s",
+        GetNameFromParameter(mp->name_).string(), ConvertType(metaComponent_->types_[mp->typeIndex_], true).string());
 }
 
-String RustCodeEmitter::ConvertType(MetaType* mt) {
+String RustCodeEmitter::ConvertType(MetaType* mt, bool pt) {
     switch (mt->kind_) {
         case TypeKind::Unknown:
+        case TypeKind::Void:
             return "()";
         case TypeKind::Char:
             return "char";
         case TypeKind::Boolean:
             return "bool";
         case TypeKind::Byte:
-            return "u8";
+            return "i8";
         case TypeKind::Short:
             return "i16";
         case TypeKind::Integer:
@@ -324,30 +347,19 @@ String RustCodeEmitter::ConvertType(MetaType* mt) {
         case TypeKind::Double:
             return "f64";
         case TypeKind::String:
-            return "String";
-        case TypeKind::Void:
-            return "()";
-        case TypeKind::Sequenceable: {
-            MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
-            return mp->name_;
-        }
-        case TypeKind::Interface: {
-            MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
-            return mi->name_;
-        }
-        case TypeKind::List: {
-            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            return String::Format("Vec<%s>", ConvertType(elementType).string());
-        }
-        case TypeKind::Map: {
-            MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
-            return String::Format("HashMap<%s, %s>", ConvertType(keyType).string(), ConvertType(valueType).string());
-        }
-        case TypeKind::Array: {
-            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            return String::Format("Vec<%s>", ConvertType(elementType).string());
-        }
+            return pt ? "str" : "String";
+        case TypeKind::Sequenceable:
+            return  metaComponent_->sequenceables_[mt->index_]->name_;
+        case TypeKind::Interface:
+            return metaComponent_->interfaces_[mt->index_]->name_;
+        case TypeKind::Map:
+            return String::Format("HashMap<%s, %s>",
+                ConvertType(metaComponent_->types_[mt->nestedTypeIndexes_[0]]).string(),
+                ConvertType(metaComponent_->types_[mt->nestedTypeIndexes_[1]]).string());
+        case TypeKind::List:
+        case TypeKind::Array:
+            return  String::Format((pt ? "[%s]" : "Vec<%s>"),
+                ConvertType(metaComponent_->types_[mt->nestedTypeIndexes_[0]]).string());
         default:
             return "()";
     }
@@ -355,16 +367,92 @@ String RustCodeEmitter::ConvertType(MetaType* mt) {
 
 void RustCodeEmitter::EmitRemoteRequest(StringBuilder& sb)
 {
-    sb.Append("fn on_remote_request(");
-    sb.AppendFormat("stub: &dyn %s, ", interfaceName_.string());
-    sb.Append("code: u32, ");
-    sb.Append("data: &BorrowedMsgParcel,\n");
-    sb.Append("    reply: &mut BorrowedMsgParcel) -> i32 {\n");
+    sb.AppendFormat("fn on_remote_request(stub: &dyn %s, code: u32, data: &BorrowedMsgParcel,\n",
+        interfaceName_.string());
+    sb.Append("    reply: &mut BorrowedMsgParcel) -> Result<()> {\n");
     sb.Append("    match code {\n");
     AddRemoteRequestMethods(sb);
-    sb.Append("        _ => -1\n");
+    sb.Append("        _ => Err(-1)\n");
     sb.Append("    }\n");
     sb.Append("}\n");
+}
+
+void RustCodeEmitter::AddRemoteRequestParameters(StringBuilder& sb, MetaMethod* mm)
+{
+    for (int i = 0; i < mm->parameterNumber_; i++) {
+        MetaParameter* mp = mm->parameters_[i];
+        sb.AppendFormat("&%s", GetNameFromParameter(mp->name_).string());
+        if (i + 1 != mm->parameterNumber_) {
+            WrapLine(sb, i, "                ");
+        }
+    }
+}
+
+void RustCodeEmitter::ReadListFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("let %s : %s = %s.read()?;\n",
+        name.string(), ConvertType(mt).string(), result.string());
+}
+
+void RustCodeEmitter::ReadMapFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("let mut %s = HashMap::new();\n", name.string());
+    sb.Append(prefix).AppendFormat("let len = %s.read()?;\n", result.string());
+    sb.Append(prefix).Append("for i in 0..len {\n");
+    StringBuilder k;
+    StringBuilder v;
+    k.Append(name).Append("k");
+    v.Append(name).Append("v");
+    ReadFromParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[0]],
+        result, k.ToString().string(), prefix + "    ");
+    ReadFromParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[1]],
+        result, v.ToString().string(), prefix + "    ");
+    sb.Append(prefix + "    ").AppendFormat("%s.insert(%s, %s);\n",
+        name.string(), k.ToString().string(), v.ToString().string());
+    sb.Append(prefix).Append("}\n");
+}
+
+void RustCodeEmitter::ReadFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    if (mt->kind_ == TypeKind::Map) {
+        ReadMapFromParcel(sb, mt, result, name, prefix);
+    } else if (mt->kind_ == TypeKind::List || mt->kind_ == TypeKind::Array) {
+        ReadListFromParcel(sb, mt, result, name, prefix);
+    } else {
+        sb.Append(prefix).AppendFormat("let %s : %s = %s.read()?;\n",
+            name.string(), ConvertType(mt).string(), result.string());
+    }
+}
+
+void RustCodeEmitter::WriteListToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("%s.write(&%s)?;\n", result.string(), name.string());
+}
+
+void RustCodeEmitter::WriteMapToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("%s.write(&(%s.len() as u32))?;\n", result.string(), name.string());
+    sb.Append(prefix).AppendFormat("for (key, value) in %s.iter() {\n", name.string());
+    WriteToParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[0]], result, "key", prefix + "    ");
+    WriteToParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[1]], result, "value", prefix + "    ");
+     sb.Append(prefix).Append("}\n");
+}
+
+void RustCodeEmitter::WriteToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+    const String& name, const String& prefix)
+{
+    if (mt->kind_ == TypeKind::Map) {
+        WriteMapToParcel(sb, mt, result, name, prefix);
+    } else if (mt->kind_ == TypeKind::List || mt->kind_ == TypeKind::Array) {
+        WriteListToParcel(sb, mt, result, name, prefix);
+    } else {
+        sb.Append(prefix).AppendFormat("%s.write(&%s)?;\n", result.string(), name.string());
+    }
 }
 
 void RustCodeEmitter::AddRemoteRequestMethods(StringBuilder& sb)
@@ -373,56 +461,22 @@ void RustCodeEmitter::AddRemoteRequestMethods(StringBuilder& sb)
         MetaMethod* mm = metaInterface_->methods_[i];
         sb.AppendFormat("        %d => {\n", i + 1);
         for (int j = 0; j < mm->parameterNumber_; j++) {
-            MetaParameter* mp = mm->parameters_[j];
-            sb.Append("            let ");
-            if (mp->attributes_ & ATTR_OUT) {
-                sb.AppendFormat("mut ");
-            }
-            sb.Append(mp->name_);
-            sb.AppendFormat(" : %s", ConvertType(metaComponent_->types_[mp->typeIndex_]).string());
-            sb.Append(" = data.read();\n");
+            ReadFromParcel(sb, metaComponent_->types_[mm->parameters_[j]->typeIndex_], "data",
+                GetNameFromParameter(mm->parameters_[j]->name_), "            ");
         }
-
         MetaType* mt = metaComponent_->types_[mm->returnTypeIndex_];
         if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.AppendFormat("            let mut result : %s = data.read();\n", ConvertType(mt).string());
+            sb.AppendFormat("            let result = stub.%s(", mm->name_);
+        } else {
+            sb.AppendFormat("            stub.%s(", mm->name_);
         }
-
-        sb.AppendFormat("            let value = stub.%s(", mm->name_);
-        for (int j = 0; j < mm->parameterNumber_; j++) {
-            MetaParameter* mp = mm->parameters_[j];
-            if (mp->attributes_ & ATTR_OUT) {
-                sb.Append("&mut ");
-            } else {
-                sb.Append("&");
-            }
-            sb.Append(mp->name_);
-            if (j != mm->parameterNumber_ - 1) {
-                sb.Append(", ");
-            }
-        }
-    
+        AddRemoteRequestParameters(sb, mm);
+        sb.Append(")?;\n");
         if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.AppendFormat(", &mut result", ConvertType(mt).string());
+            WriteToParcel(sb, mt, "reply", "result", "            ");
         }
-
-        sb.Append(")\n");
-        for (int j = 0; j < mm->parameterNumber_; j++) {
-            MetaParameter* mp = mm->parameters_[j];
-            if (mp->attributes_ & ATTR_OUT) {
-                sb.AppendFormat("            reply.write(&%s);\n", mp->name_);
-            }
-        }
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.Append("            reply.write(&result);\n");
-        }
-        sb.Append("            reply.write(&value);\n");
-        sb.Append("            0\n");
+        sb.Append("            Ok(())\n");
         sb.Append("        }\n");
-
-        if (i != metaInterface_->methodNumber_ - 1) {
-            sb.Append("\n");
-        }
     }
 }
 
@@ -433,30 +487,30 @@ void RustCodeEmitter::EmitStub(StringBuilder& sb)
     sb.Append("}\n");
 }
 
+void RustCodeEmitter::AppendStubParameters(StringBuilder& sb, MetaMethod* mm)
+{
+    for (int i = 0; i < mm->parameterNumber_; i++) {
+        sb.Append(GetNameFromParameter(mm->parameters_[i]->name_));
+        if (i + 1 != mm->parameterNumber_) {
+            WrapLine(sb, i, "                ");
+        }
+    }
+}
+
 void RustCodeEmitter::AppendStubMethods(StringBuilder& sb)
 {
-     for (int i = 0; i < metaInterface_->methodNumber_; i++) {
+    for (int i = 0; i < metaInterface_->methodNumber_; i++) {
         MetaMethod* mm = metaInterface_->methods_[i];
         sb.AppendFormat("    fn %s(&self", mm->name_);
         for (int i = 0; i < mm->parameterNumber_; i++) {
-            sb.Append(", ");
+            WrapLine(sb, i, "        ");
             AppendBrokerParameters(sb, mm->parameters_[i]);
         }
-        MetaType* mt = metaComponent_->types_[mm->returnTypeIndex_];
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.AppendFormat(", result: &mut %s", ConvertType(mt).string());
-        }
-        sb.Append(") -> u32 {\n");
+
+        sb.AppendFormat(") -> Result<%s> {\n",
+            ConvertType(metaComponent_->types_[mm->returnTypeIndex_]).string());
         sb.AppendFormat("        self.0.%s(", mm->name_);
-        for (int j = 0; j < mm->parameterNumber_; j++) {
-            sb.Append(mm->parameters_[j]->name_);
-            if (j != mm->parameterNumber_ - 1) {
-                sb.Append(", ");
-            }
-        }
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.Append(", result");
-        }
+        AppendStubParameters(sb, mm);
         sb.Append(")\n");
         sb.Append("    }\n");
         if (i != metaInterface_->methodNumber_ - 1) {
@@ -467,7 +521,6 @@ void RustCodeEmitter::AppendStubMethods(StringBuilder& sb)
 
 void RustCodeEmitter::EmitProxy(StringBuilder& sb)
 {
-    sb.Append("// proxy\n");
     sb.AppendFormat("impl %s for %s {\n", interfaceName_.string(), proxyName_.string());
     AppendProxyMethods(sb);
     sb.Append("}\n");
@@ -479,51 +532,35 @@ void RustCodeEmitter::AppendProxyMethods(StringBuilder& sb)
         MetaMethod* mm = metaInterface_->methods_[i];
         sb.AppendFormat("    fn %s(&self", mm->name_);
         for (int i = 0; i < mm->parameterNumber_; i++) {
-            sb.Append(", ");
+            WrapLine(sb, i, "        ");
             AppendBrokerParameters(sb, mm->parameters_[i]);
         }
-        MetaType* mt = metaComponent_->types_[mm->returnTypeIndex_];
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.AppendFormat(", result: &mut %s", ConvertType(mt).string());
-        }
-        sb.Append(") -> u32 {\n");
-        sb.Append("        let mut data = MsgParcel::new();\n");
-
+        sb.AppendFormat(") -> Result<%s> {\n",
+            ConvertType(metaComponent_->types_[mm->returnTypeIndex_]).string());
+        sb.Append("        let mut data = MsgParcel::new().expect(\"MsgParcel should success\");\n");
         for (int j = 0; j < mm->parameterNumber_; j++) {
-            MetaParameter* mp = mm->parameters_[j];
-            // if (mp->attributes_ & ATTR_IN) {
-                sb.AppendFormat("        data.write(%s);\n", mp->name_);
-            // }
+            WriteToParcel(sb, metaComponent_->types_[mm->parameters_[j]->typeIndex_], "data",
+                GetNameFromParameter(mm->parameters_[j]->name_), "        ");
         }
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.Append("        data.write(result);\n");
+        MetaType* mt = metaComponent_->types_[mm->returnTypeIndex_];
+        if (mt->kind_ == TypeKind::Unknown || mt->kind_ == TypeKind::Void) {
+            sb.AppendFormat("        let _reply = self.remote.send_request(%sCode", interfaceName_.string());
+        } else {
+            sb.AppendFormat("        let reply = self.remote.send_request(%sCode", interfaceName_.string());
         }
-        sb.AppendFormat("        let reply = self.remote.send_request(%s", interfaceName_.string());
         sb.AppendFormat("::%s as u32, &data, ", GetCodeFromMethod(mm->name_).string());
         if ((mm->properties_ & METHOD_PROPERTY_ONEWAY) != 0) {
-            sb.Append("false");
-        } else {
             sb.Append("true");
+        } else {
+            sb.Append("false");
         }
-        sb.Append(");\n");
-        sb.Append("        match reply {\n");
-        sb.Append("            Ok(reply) => {\n");
-
-        for (int j = 0; j < mm->parameterNumber_; j++) {
-            MetaParameter* mp = mm->parameters_[j];
-            if (mp->attributes_ & ATTR_OUT) {
-                sb.AppendFormat("                %s:  = reply.read();\n", mp->name_);
-            }
+        sb.Append(")?;\n");
+        if (mt->kind_ == TypeKind::Unknown || mt->kind_ == TypeKind::Void) {
+            sb.Append("        ").Append("Ok(())\n");
+        } else {
+            ReadFromParcel(sb, mt, "reply", "result", "        ");
+            sb.Append("        ").Append("Ok(result)\n");
         }
-        if (mt->kind_ != TypeKind::Unknown && mt->kind_ != TypeKind::Void) {
-            sb.Append("                result:  = reply.read();\n");
-        }
-        sb.Append("                reply.read()\n");
-        sb.Append("            }\n");
-        sb.Append("            Err(error) => {\n");
-        sb.Append("                error\n");
-        sb.Append("            }\n");
-        sb.Append("        }\n");
         sb.Append("    }\n");
 
         if (i != metaInterface_->methodNumber_ - 1) {

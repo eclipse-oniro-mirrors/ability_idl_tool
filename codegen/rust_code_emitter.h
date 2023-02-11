@@ -34,12 +34,13 @@ public:
     void EmitInterfaceProxy() override;
 
     void EmitInterfaceStub() override;
+
 private:
     void EmitInterface(StringBuilder& sb);
 
-    String FileName(const String& name);
-
     void EmitLicense(StringBuilder& sb);
+
+    void EmitMacros(StringBuilder& sb);
 
     void EmitHeaders(StringBuilder& sb);
 
@@ -57,11 +58,11 @@ private:
 
     void AppendCommandEnums(StringBuilder& sb);
 
-    String GetCodeFromMethod(const char * name);
+    String GetCodeFromMethod(const char* name);
+
+    String GetNameFromParameter(const char* name);
 
     void EmitCommandEnums(StringBuilder& sb);
-
-    void EmitCommandImpls(StringBuilder& sb);
 
     void EmitCommands(StringBuilder& sb);
 
@@ -69,19 +70,43 @@ private:
 
     void EmitBrokers(StringBuilder& sb);
 
+    void WrapLine(StringBuilder& sb, int index, const String& prefix);
+
     void AppendBrokerMethods(StringBuilder& sb);
 
     void AppendBrokerParameters(StringBuilder& sb, MetaParameter* mp);
 
-    String ConvertType(MetaType* mt);
+    String ConvertType(MetaType* mt, bool pt = false);
 
     void EmitRemoteRequest(StringBuilder& sb);
 
+    void ReadListFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
+    void ReadMapFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
+    void ReadFromParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
+    void WriteListToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
+    void WriteMapToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
+    void WriteToParcel(StringBuilder& sb, MetaType* mt, const String& result,
+        const String& name, const String& prefix);
+
     void AddRemoteRequestMethods(StringBuilder& sb);
+
+    void AddRemoteRequestParameters(StringBuilder& sb, MetaMethod* mm);
 
     void EmitStub(StringBuilder& sb);
 
     void AppendStubMethods(StringBuilder& sb);
+
+    void AppendStubParameters(StringBuilder& sb, MetaMethod* mm);
 
     void EmitProxy(StringBuilder& sb);
 
