@@ -162,7 +162,7 @@ bool Parser::ParseInterface()
         LogError(Token::IDENTIFIER, String::Format("Interface name \"%s\" is illegal.", interfaceFullName.string()));
         return false;
     } else if (interfaceFullName.IndexOf(".") == -1) {
-        if (!(options_.GetTargetLanguage().Equals("ts"))) {
+        if (!(options_.GetTargetLanguage().Equals("ts")) && !(options_.GetTargetLanguage().Equals("rust"))) {
             LogError(Token::IDENTIFIER, String::Format("Interface name \"%s\" does not have namespace.",
             interfaceFullName.string()));
             return false;
