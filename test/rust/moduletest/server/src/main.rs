@@ -78,6 +78,54 @@ impl IIdlTestService for TestService {
         println!("idl_ipc_test_basic_002 start");
         Ok(())
     }
+
+    fn idl_ipc_test_basic_101(&self, i_bool: &bool) -> Result<bool>{
+        println!("idl_ipc_test_basic_101 start -> {}", i_bool);
+        Ok(!i_bool)
+    }
+
+    fn idl_ipc_test_basic_102(&self, i_byte: &i8) -> Result<i8>{
+        println!("idl_ipc_test_basic_102 start -> {}", i_byte);
+        Ok(i_byte * 2)
+    }
+
+    fn idl_ipc_test_basic_103(&self, i_short: &i16) -> Result<i16>{
+        println!("idl_ipc_test_basic_103 start -> {}", i_short);
+        Ok(i_short * 2)
+    }
+
+    fn idl_ipc_test_basic_104(&self, i_int: &i32) -> Result<i32>{
+        println!("idl_ipc_test_basic_104 start -> {}", i_int);
+        Ok(i_int * 2)
+    }
+
+    fn idl_ipc_test_basic_105(&self, i_long: &i64) -> Result<i64>{
+        println!("idl_ipc_test_basic_105 start -> {}", i_long);
+        Ok(i_long * 2)
+    }
+
+    fn idl_ipc_test_basic_106(&self, i_float: &f32) -> Result<f32>{
+        println!("idl_ipc_test_basic_106 start -> {}", i_float);
+        Ok(*i_float * 2.0)
+    }
+
+    fn idl_ipc_test_basic_107(&self, i_double: &f64) -> Result<f64>{
+        println!("idl_ipc_test_basic_107 start -> {}", i_double);
+        Ok(*i_double * 2.0)
+    }
+
+    fn idl_ipc_test_basic_108(&self, i_string: &str) -> Result<String>{
+        println!("idl_ipc_test_basic_108 start -> {}", i_string);
+        let mut result = String::from(i_string);
+        result.push_str(i_string);
+        Ok(result.to_string())
+    }
+
+    fn idl_ipc_test_basic_199(&self, i_bool: &bool, i_long: &i64, i_float: &f32,
+        i_double: &f64, i_string: &str) -> Result<bool>{
+        println!("idl_ipc_test_basic_199 start -> {} - {} - {} - {} - {}", i_bool, i_long, i_float, i_double, i_string);
+        Ok(true)
+    }
 }
 
 impl IRemoteBroker for TestService {}
