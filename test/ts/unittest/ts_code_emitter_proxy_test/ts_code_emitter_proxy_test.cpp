@@ -14,6 +14,7 @@
  */
 
 #include <cstring>
+#include <fstream>
 #include <gtest/gtest.h>
 #include "idl_common.h"
 
@@ -2167,13 +2168,16 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_002, TestSize.Level1)
     StringBuilder stringBuilder;
     tsCodeGen_->EmitInterface();
     tsCodeGen_->EmitInterfaceProxy();
-    String filePath = String::Format("%s/%s", "./", "idl_test_proxy.ts");
-    File file(filePath, File::READ);
-    MetaComponent header;
-    EXPECT_TRUE(file.ReadData((void*)&header, sizeof(MetaComponent)));
-    EXPECT_TRUE(file.Reset());
-    char* fileData = new char[header.size_];
-    file.ReadData(static_cast<void*>(fileData), header.size_);
+    std::string tsProxyStr;
+    std::ifstream tsProxyInputStream;
+    tsProxyInputStream.open("idl_test_proxy.ts");
+    std::stringstream tsProxyStrStream;
+    tsProxyStrStream << tsProxyInputStream.rdbuf();
+    tsProxyInputStream.close();
+    tsProxyStr = tsProxyStrStream.str();
+    tsProxyStrStream.clear();
+    tsProxyStrStream.str("");
+    const char* fileData = tsProxyStr.data();
     stringBuilder.Append(fileData);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
@@ -2197,7 +2201,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_002, TestSize.Level1)
     EXPECT_EQ(stringBuilder.ToString().IndexOf("readDoubleArray"), ERR_FAIL);
     EXPECT_EQ(stringBuilder.ToString().IndexOf("readStringArray"), ERR_FAIL);
     EXPECT_EQ(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
-    delete[] fileData;
 }
 
 /*
@@ -2273,13 +2276,16 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_004, TestSize.Level1)
     StringBuilder stringBuilder;
     tsCodeGen_->EmitInterface();
     tsCodeGen_->EmitInterfaceProxy();
-    String filePath = String::Format("%s/%s", "./", "idl_test_proxy.ts");
-    File file(filePath, File::READ);
-    MetaComponent header;
-    EXPECT_TRUE(file.ReadData((void*)&header, sizeof(MetaComponent)));
-    EXPECT_TRUE(file.Reset());
-    char* fileData = new char[header.size_];
-    file.ReadData(static_cast<void*>(fileData), header.size_);
+    std::string tsProxyStr;
+    std::ifstream tsProxyInputStream;
+    tsProxyInputStream.open("idl_test_proxy.ts");
+    std::stringstream tsProxyStrStream;
+    tsProxyStrStream << tsProxyInputStream.rdbuf();
+    tsProxyInputStream.close();
+    tsProxyStr = tsProxyStrStream.str();
+    tsProxyStrStream.clear();
+    tsProxyStrStream.str("");
+    const char* fileData = tsProxyStr.data();
     stringBuilder.Append(fileData);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("readBooleanArray"), ERR_FAIL);
@@ -2304,7 +2310,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_004, TestSize.Level1)
     EXPECT_EQ(stringBuilder.ToString().IndexOf("writeDoubleArray"), ERR_FAIL);
     EXPECT_EQ(stringBuilder.ToString().IndexOf("writeStringArray"), ERR_FAIL);
     EXPECT_EQ(stringBuilder.ToString().IndexOf("writeSequenceable"), ERR_FAIL);
-    delete[] fileData;
 }
 
 /*
