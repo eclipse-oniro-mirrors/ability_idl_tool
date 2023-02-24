@@ -90,3 +90,67 @@ fn idl_ipc_test_basic_002() {
     remote.idl_ipc_test_basic_002().expect("should success");
     assert_eq!(true, true);
 }
+
+#[test]
+fn idl_ipc_test_basic_101() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_101(&true).expect("should success");
+    assert!(!anchor);
+}
+
+#[test]
+fn idl_ipc_test_basic_102() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_102(&12).expect("should success");
+    println!("idl_ipc_test_basic_102: {}", anchor);
+    assert_eq!(anchor, 24);
+}
+
+#[test]
+fn idl_ipc_test_basic_103() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_103(&24).expect("should success");
+    assert_eq!(anchor, 48);
+}
+
+#[test]
+fn idl_ipc_test_basic_104() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_104(&48).expect("should success");
+    assert_eq!(anchor, 96);
+}
+
+#[test]
+fn idl_ipc_test_basic_105() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_105(&96).expect("should success");
+    assert_eq!(anchor, 192);
+}
+
+#[test]
+fn idl_ipc_test_basic_106() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_106(&1.7).expect("should success");
+    assert!((anchor - 1.7 * 2.0).abs() < 0.1);
+}
+
+#[test]
+fn idl_ipc_test_basic_107() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_107(&3.4).expect("should success");
+    assert!((anchor - 3.4 * 2.0).abs() < 0.1);
+}
+
+#[test]
+fn idl_ipc_test_basic_108() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_108("Basic").expect("should success");
+    assert_eq!(anchor, "BasicBasic");
+}
+
+#[test]
+fn idl_ipc_test_basic_199() {
+    let remote = get_test_service();
+    let anchor = remote.idl_ipc_test_basic_199(&true, &96, &1.7, &3.4, "Basic").expect("should success");
+    assert!(anchor);
+}
