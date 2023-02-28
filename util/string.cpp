@@ -86,7 +86,7 @@ void SharedData::AddRef(const void* handle)
     SharedData* data = GetHeader(handle);
     int before = data->refCount_.fetch_add(1);
     if (before + 1 <= 1) {
-        Logger::E(String::TAG, "The refCount %d of %p is error in AddRef.", before, data);
+        Logger::E(String::TAG, "The refCount is error in AddRef.");
     };
 }
 
@@ -101,7 +101,7 @@ void SharedData::Release(const void* handle)
     if (before - 1 == 0) {
         free(data);
     } else if (before - 1 < 0) {
-        Logger::E(String::TAG, "The refCount %d of %p is error in Release.", before - 1, data);
+        Logger::E(String::TAG, "The refCount is error in Release.");
     };
 }
 
