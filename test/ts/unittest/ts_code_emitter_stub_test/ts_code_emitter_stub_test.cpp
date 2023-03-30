@@ -310,7 +310,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStub_006, TestSize.Level1)
     EXPECT_NE(data.find("import SpecialNameTest"), std::string::npos);
     EXPECT_NE(data.find("extends rpc.RemoteObject implements SpecialNameTest"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
-    EXPECT_NE(data.find("onRemoteRequest"), std::string::npos);
+    EXPECT_NE(data.find("onRemoteMessageRequest"), std::string::npos);
     free(fileData);
 }
 
