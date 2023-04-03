@@ -479,7 +479,8 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& stringBuilder, c
     stringBuilder.Append(prefix).Append(NEWLINE);
     stringBuilder.Append(prefix).AppendFormat(
         "async onRemoteMessageRequest(code: number, data, reply, option): Promise<boolean> {\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("console.log(\"onRemoteMessageRequest called, code = \" + code);\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(
+        "console.log(\"onRemoteMessageRequest called, code = \" + code);\n");
     stringBuilder.Append(prefix).Append(TAB).Append("switch(code) {\n");
     for (int index = 0; index < metaInterface_->methodNumber_; index++) {
         MetaMethod* metaMethod = metaInterface_->methods_[index];
