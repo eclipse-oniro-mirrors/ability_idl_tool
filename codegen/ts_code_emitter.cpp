@@ -696,9 +696,7 @@ void TsCodeEmitter::EmitWriteArrayVariable(const String& parcelName, const std::
             stringBuilder.Append(prefix).AppendFormat("%s.writeCharArray(%s);\n", parcelName.string(), name.c_str());
             break;
         case TypeKind::Byte:
-            stringBuilder.Append(prefix).AppendFormat("let %sArray = new Int8Array(%s);\n", name.c_str(),
-                name.c_str());
-            stringBuilder.Append(prefix).AppendFormat("%s.writeByteArray(%sArray);\n",
+            stringBuilder.Append(prefix).AppendFormat("%s.writeByteArray(%s);\n",
                 parcelName.string(), name.c_str());
             break;
         case TypeKind::Short:
