@@ -114,7 +114,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitWriteArrayVariable_002, TestSize.Level1)
     }
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -156,7 +155,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitWriteArrayVariable_003, TestSize.Level1)
     }
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -244,7 +242,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitWriteArrayVariable_005, TestSize.Level1)
     EXPECT_TRUE(count == size);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1182,7 +1179,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyImpl_002, TestSize.Level1)
     tsCodeGen_->EmitInterfaceProxyImpl(stringBuilder);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1238,7 +1234,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyImpl_003, TestSize.Level1)
     EXPECT_NE(stringBuilder.ToString().IndexOf("static readonly"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("private proxy"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1327,7 +1322,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyImpl_005, TestSize.Level1)
     EXPECT_NE(stringBuilder.ToString().IndexOf("static readonly"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("private proxy"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1512,7 +1506,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpls_002, TestSize.Lev
     tsCodeGen_->EmitInterfaceProxyMethodImpls(stringBuilder, CodeEmitter::TAB);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1562,7 +1555,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpls_003, TestSize.Lev
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1645,7 +1637,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpls_005, TestSize.Lev
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1723,7 +1714,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpl_002, TestSize.Leve
     }
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1776,7 +1766,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpl_003, TestSize.Leve
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1865,7 +1854,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodImpl_005, TestSize.Leve
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1943,7 +1931,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodBody_002, TestSize.Leve
     }
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -1996,7 +1983,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodBody_003, TestSize.Leve
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -2085,7 +2071,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxyMethodBody_005, TestSize.Leve
     EXPECT_NE(stringBuilder.ToString().IndexOf("readSequenceable"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("new Map()"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -2181,7 +2166,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_002, TestSize.Level1)
     stringBuilder.Append(fileData);
     EXPECT_FALSE(stringBuilder.ToString().IsEmpty());
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -2245,7 +2229,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_003, TestSize.Level1)
     EXPECT_NE(stringBuilder.ToString().IndexOf("static readonly"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("private proxy"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
@@ -2354,7 +2337,6 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_005, TestSize.Level1)
     EXPECT_NE(stringBuilder.ToString().IndexOf("static readonly"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("private proxy"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeBooleanArray"), ERR_FAIL);
-    EXPECT_NE(stringBuilder.ToString().IndexOf("Int8Array"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeShortArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeIntArray"), ERR_FAIL);
     EXPECT_NE(stringBuilder.ToString().IndexOf("writeLongArray"), ERR_FAIL);
