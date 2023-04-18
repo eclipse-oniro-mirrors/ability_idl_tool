@@ -19,6 +19,7 @@
 #include <memory>
 #include "metadata/meta_component.h"
 #include "util/string.h"
+#include <stdlib.h>
 
 namespace OHOS {
 namespace Idl {
