@@ -19,8 +19,6 @@
 #include "util/file.h"
 #include "util/logger.h"
 
-#include <malloc.h>
-
 namespace OHOS {
 namespace Idl {
 const char* MetadataReader::TAG = "MetadataReader";
