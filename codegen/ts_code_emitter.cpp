@@ -325,7 +325,7 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
         }
     }
     stringBuilder.Append(prefix).Append(TAB).AppendFormat(
-        "%s.sendRequest(%s.COMMAND_%s, _data, _reply, _option).then(function(result) {\n", THIS_PROXY.c_str(),
+        "%s.sendMessageRequest(%s.COMMAND_%s, _data, _reply, _option).then(function(result) {\n", THIS_PROXY.c_str(),
         proxyName_.string(), ConstantName(metaMethod->name_).string());
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).AppendFormat("if (result.errCode === 0) {\n");
     MetaType* returnType = metaComponent_->types_[metaMethod->returnTypeIndex_];
@@ -412,7 +412,7 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
     stringBuilder.Append(");\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("} else {\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(
-        "console.log(\"sendRequest failed, errCode: \" + result.errCode);\n");
+        "console.log(\"sendMessageRequest failed, errCode: \" + result.errCode);\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("}\n");
     stringBuilder.Append(prefix).Append(TAB).Append("})\n");
     stringBuilder.Append(prefix).Append("}\n");

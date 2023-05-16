@@ -305,7 +305,7 @@ export default class IdlTestServiceProxy implements IIdlTestService {
         let _data = new rpc.MessageParcel();
         let _reply = new rpc.MessageParcel();
         _data.writeInt(data);
-        this.proxy.sendRequest(IdlTestServiceProxy.COMMAND_TEST_INT_TRANSACTION, _data, _reply, _option).then(function(result) {
+        this.proxy.sendMessageRequest(IdlTestServiceProxy.COMMAND_TEST_INT_TRANSACTION, _data, _reply, _option).then(function(result) {
             if (result.errCode == 0) {
                 let _errCode = result.reply.readInt();
                 if (_errCode != 0) {
@@ -316,7 +316,7 @@ export default class IdlTestServiceProxy implements IIdlTestService {
                 let _returnValue = result.reply.readInt();
                 callback(_errCode, _returnValue);
             } else {
-                console.log('sendRequest failed, errCode: ' + result.errCode);
+                console.log('sendMessageRequest failed, errCode: ' + result.errCode);
             }
         })
     }
@@ -327,12 +327,12 @@ export default class IdlTestServiceProxy implements IIdlTestService {
         let _data = new rpc.MessageParcel();
         let _reply = new rpc.MessageParcel();
         _data.writeString(data);
-        this.proxy.sendRequest(IdlTestServiceProxy.COMMAND_TEST_STRING_TRANSACTION, _data, _reply, _option).then(function(result) {
+        this.proxy.sendMessageRequest(IdlTestServiceProxy.COMMAND_TEST_STRING_TRANSACTION, _data, _reply, _option).then(function(result) {
             if (result.errCode == 0) {
                 let _errCode = result.reply.readInt();
                 callback(_errCode);
             } else {
-                console.log('sendRequest failed, errCode: ' + result.errCode);
+                console.log('sendMessageRequest failed, errCode: ' + result.errCode);
             }
         })
     }

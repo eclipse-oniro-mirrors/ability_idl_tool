@@ -2382,7 +2382,7 @@ HWTEST_F(TsCodeEmitterProxyTest, EmitInterfaceProxy_006, TestSize.Level1)
     EXPECT_NE(data.find("import SpecialNameTest"), std::string::npos);
     EXPECT_NE(data.find("class SpecialNameTestProxy implements SpecialNameTest"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
-    EXPECT_NE(data.find("this.proxy.sendRequest"), std::string::npos);
+    EXPECT_NE(data.find("this.proxy.sendMessageRequest"), std::string::npos);
     free(fileData);
 }
 
