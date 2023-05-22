@@ -1,0 +1,51 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//build/test.gni")
+import("//foundation/ability/idl_tool/idl_tool.gni")
+
+module_output_path = "idl/unittest"
+
+IDL_DIR = "../../.."
+
+common_sources = [
+  "${IDL_DIR}/util/file.cpp",
+  "${IDL_DIR}/util/light_refcount_base.cpp",
+  "${IDL_DIR}/util/logger.cpp",
+  "${IDL_DIR}/util/options.cpp",
+  "${IDL_DIR}/util/string.cpp",
+  "${IDL_DIR}/util/string_builder.cpp",
+  "${IDL_DIR}/util/string_pool.cpp",
+]
+
+ohos_unittest("util_string_test") {
+  module_out_path = module_output_path
+  include_dirs = [ "${IDL_TOOL_DIR}" ]
+
+  sources = [ "util_string_test.cpp" ]
+
+  sources += common_sources
+
+  deps = []
+
+  external_deps = [ "c_utils:utils" ]
+
+  part_name = "idl_tool"
+  subsystem_name = "ability"
+}
+
+group("unittest") {
+  testonly = true
+  deps = [ ":util_string_test" ]
+}
