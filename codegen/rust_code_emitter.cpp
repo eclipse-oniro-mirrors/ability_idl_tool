@@ -108,8 +108,7 @@ void RustCodeEmitter::EmitCommonHeaders(StringBuilder& sb)
     bool useMap = false;
     for (int i = 0; i < metaComponent_->typeNumber_; i++) {
         MetaType* mt = metaComponent_->types_[i];
-        switch (mt->kind_)
-        {
+        switch (mt->kind_) {
             case TypeKind::Map: {
                 if (!useMap) {
                     sb.Append("use std::collections::HashMap;\n");
@@ -135,11 +134,11 @@ String RustCodeEmitter::TrimDot(const String& fpnp)
 
     int left = 0;
     int right = fpnp.GetLength() - 1;
-    while(fpnp[left] == ' ' || fpnp[left] == '.') {
+    while (fpnp[left] == ' ' || fpnp[left] == '.') {
         left++;
     }
 
-    while(fpnp[right] == ' ' || fpnp[right] == '.') {
+    while (fpnp[right] == ' ' || fpnp[right] == '.') {
         right--;
     }
 
@@ -320,12 +319,14 @@ void RustCodeEmitter::AppendBrokerMethods(StringBuilder& sb)
     }
 }
 
-void RustCodeEmitter::AppendBrokerParameters(StringBuilder& sb, MetaParameter* mp) {
+void RustCodeEmitter::AppendBrokerParameters(StringBuilder& sb, MetaParameter* mp)
+{
     sb.AppendFormat("%s: &%s",
         GetNameFromParameter(mp->name_).string(), ConvertType(metaComponent_->types_[mp->typeIndex_], true).string());
 }
 
-String RustCodeEmitter::ConvertType(MetaType* mt, bool pt) {
+String RustCodeEmitter::ConvertType(MetaType* mt, bool pt)
+{
     switch (mt->kind_) {
         case TypeKind::Unknown:
         case TypeKind::Void:
@@ -440,7 +441,7 @@ void RustCodeEmitter::WriteMapToParcel(StringBuilder& sb, MetaType* mt, const St
     sb.Append(prefix).AppendFormat("for (key, value) in %s.iter() {\n", name.string());
     WriteToParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[0]], result, "key", prefix + "    ");
     WriteToParcel(sb, metaComponent_->types_[mt->nestedTypeIndexes_[1]], result, "value", prefix + "    ");
-     sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("}\n");
 }
 
 void RustCodeEmitter::WriteToParcel(StringBuilder& sb, MetaType* mt, const String& result,
