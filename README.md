@@ -275,11 +275,10 @@ void TestClient::StartStringTransaction()
 C++需要通过napi的方式，把C++服务对象提供给TS端，例如：C++端提供一个GetNativeObject方法，方法里创建IdlTestServiceImpl实例，通过NAPI_ohos_rpc_CreateJsRemoteObject方法，创建出一个JS远程对象供TS应用使用，如下：
 
 ```cpp
-NativeValue* GetNativeObject(NativeEngine& engine, NativeCallbackInfo& info)
+napi_value GetNativeObject(napi_env engine, napi_callback_info info)
 {
     sptr<IdlTestServiceImpl> impl = new IdlTestServiceImpl();
-    napi_value napiRemoteObject = NAPI_ohos_rpc_CreateJsRemoteObject(reinterpret_cast<napi_env>(&engine), impl);
-    NativeValue* nativeRemoteObject = reinterpret_cast<NativeValue*>(napiRemoteObject);
+    napi_value napiRemoteObject = NAPI_ohos_rpc_CreateJsRemoteObject(engine, impl);
     return nativeRemoteObject;
 }
 ```
