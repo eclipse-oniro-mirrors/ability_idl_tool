@@ -149,6 +149,8 @@ private:
 
     const std::string UnderlineAdded(const String& name);
 
+    const std::string SuffixAdded(const String& name);
+
     std::vector<Method> methods_;
 };
 } // namespace Idl
