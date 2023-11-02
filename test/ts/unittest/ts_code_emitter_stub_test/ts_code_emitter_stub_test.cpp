@@ -580,7 +580,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStubMethodImpls_001, TestSize.Level
     tsCodeGen_->EmitInterfaceStubMethodImpls(stringBuilder, CodeEmitter::TAB);
     std::string data(stringBuilder.ToString().string());
     EXPECT_TRUE(data.length());
-    EXPECT_NE(data.find("onRemoteMessageRequest(code: number, data, reply, option)"), std::string::npos);
+    EXPECT_NE(data.find("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeVoid"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeByte"), std::string::npos);
@@ -616,7 +616,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStubMethodImpls_002, TestSize.Level
     tsCodeGen_->EmitInterfaceStubMethodImpls(stringBuilder, CodeEmitter::TAB);
     std::string data(stringBuilder.ToString().string());
     EXPECT_TRUE(data.length());
-    EXPECT_NE(data.find("onRemoteMessageRequest(code: number, data, reply, option)"), std::string::npos);
+    EXPECT_NE(data.find("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeVoid"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeByte"), std::string::npos);
@@ -652,7 +652,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStubMethodImpls_003, TestSize.Level
     tsCodeGen_->EmitInterfaceStubMethodImpls(stringBuilder, CodeEmitter::TAB);
     std::string data(stringBuilder.ToString().string());
     EXPECT_TRUE(data.length());
-    EXPECT_NE(data.find("onRemoteMessageRequest(code: number, data, reply, option)"), std::string::npos);
+    EXPECT_NE(data.find("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeVoid"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeByte"), std::string::npos);
@@ -688,7 +688,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStubMethodImpls_004, TestSize.Level
     tsCodeGen_->EmitInterfaceStubMethodImpls(stringBuilder, CodeEmitter::TAB);
     std::string data(stringBuilder.ToString().string());
     EXPECT_TRUE(data.length());
-    EXPECT_NE(data.find("onRemoteMessageRequest(code: number, data, reply, option)"), std::string::npos);
+    EXPECT_NE(data.find("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeVoid"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeByte"), std::string::npos);
@@ -723,7 +723,7 @@ HWTEST_F(TsCodeEmitterStubTest, EmitInterfaceStubMethodImpls_005, TestSize.Level
     tsCodeGen_->EmitInterfaceStubMethodImpls(stringBuilder, CodeEmitter::TAB);
     std::string data(stringBuilder.ToString().string());
     EXPECT_TRUE(data.length());
-    EXPECT_NE(data.find("onRemoteMessageRequest(code: number, data, reply, option)"), std::string::npos);
+    EXPECT_NE(data.find("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeShort"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeByte"), std::string::npos);
     EXPECT_NE(data.find("voidParameterTypeInt"), std::string::npos);
