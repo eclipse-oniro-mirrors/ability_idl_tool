@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,8 @@
 namespace OHOS {
 namespace Idl {
 const char* CodeGenerator::TAG = "CodeGenerator";
-CodeGenerator::CodeGenerator(MetaComponent* mc, const String& language, const String& dir)
+CodeGenerator::CodeGenerator(
+    MetaComponent* mc, const String& language, const String& dir, const Options::Attribute& att)
     : targetLanguage_(language),
       targetDirectory_(dir),
       metaComponent_(mc)
@@ -38,6 +39,14 @@ CodeGenerator::CodeGenerator(MetaComponent* mc, const String& language, const St
         emitter_ = new TsCodeEmitter(metaComponent_);
     } else {
         Logger::E(TAG, "Unknown language: %s.", language.string());
+    }
+
+    if (emitter_ != nullptr) {
+        emitter_->SetHitraceOn(att.doHitrace);
+        emitter_->SetLogOn(att.doLog);
+        emitter_->SetHitraceTag(att.hitraceTag);
+        emitter_->SetLogTag(att.logTag);
+        emitter_->SetDomainId(att.domainId);
     }
 }
 

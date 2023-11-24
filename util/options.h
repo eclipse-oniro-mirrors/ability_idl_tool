@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,6 +28,14 @@ public:
     }
 
     ~Options() = default;
+
+struct Attribute {
+        String hitraceTag;
+        String logTag;
+        String domainId;
+        bool doHitrace;
+        bool doLog;
+    };
 
     bool DoShowUsage() const
     {
@@ -64,9 +72,50 @@ public:
         return doGenerateCode_;
     }
 
+    bool DoHitraceState() const
+    {
+        return doHitrace_;
+    }
+
+    bool DoSearchKeywords() const
+    {
+        return doKeywords_;
+    }
+
+    bool DoLogOn() const
+    {
+        if (!domainId_.IsNull() && !logTag_.IsNull()) {
+            return true;
+        }
+        return false;
+    }
+
+    bool DoIllegalParameter(const String argv) const
+    {
+        if (argv.IsEmpty() || argv.Equals("-t") || argv.Equals("-log-domainid") ||
+            argv.Equals("-log-tag")) {
+            return true;
+        }
+        return false;
+    }
+
+    bool DoLegalLog() const
+    {
+        if (targetLanguage_.Equals("cpp")) {
+            if (!domainId_.IsNull() && !logTag_.IsNull()) {
+                return true;
+            } else if (domainId_.IsNull() && logTag_.IsNull()) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool HasErrors() const
     {
-        return !illegalOptions_.IsEmpty() || sourceFile_.IsEmpty();
+        return !illegalOptions_.IsEmpty() || sourceFile_.IsEmpty() || !DoLegalLog() || !doLegalParameters_;
     }
 
     String GetSourceFile() const
@@ -89,11 +138,33 @@ public:
         return generationDirectory_;
     }
 
+    String GetGenerateHitraceTag() const
+    {
+        return hitraceTag_;
+    }
+
+    String GetDomainId() const
+    {
+        return domainId_;
+    }
+
+    String GetLogTag() const
+    {
+        return logTag_;
+    }
+
+    Attribute GetAttribute() const
+    {
+        return attribute_;
+    }
+
     void ShowErrors();
 
     void ShowVersion();
 
     void ShowUsage();
+
+    void ShowWarning();
 
 private:
     void Parse(int argc, char** argv);
@@ -107,6 +178,10 @@ private:
     String targetLanguage_;
     String generationDirectory_;
     String illegalOptions_;
+    String hitraceTag_;
+    String domainId_;
+    String logTag_;
+    Attribute attribute_;
 
     bool doShowUsage_ = false;
     bool doShowVersion_ = false;
@@ -115,6 +190,9 @@ private:
     bool doDumpMetadata_ = false;
     bool doSaveMetadata_ = false;
     bool doGenerateCode_ = false;
+    bool doHitrace_ = false;
+    bool doKeywords_ = false;
+    bool doLegalParameters_ = true;
 };
 }
 }

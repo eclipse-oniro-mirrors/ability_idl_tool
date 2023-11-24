@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,12 +20,13 @@
 #include "metadata/meta_component.h"
 #include "util/autoptr.h"
 #include "util/string.h"
+#include "util/options.h"
 
 namespace OHOS {
 namespace Idl {
 class CodeGenerator {
 public:
-    CodeGenerator(MetaComponent* mc, const String& language, const String& dir);
+    CodeGenerator(MetaComponent* mc, const String& language, const String& dir, const Options::Attribute& att);
 
     ~CodeGenerator() = default;
 

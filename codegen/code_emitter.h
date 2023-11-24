@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,6 +38,31 @@ public:
 
     virtual void EmitInterfaceStub() = 0;
 
+    void SetHitraceOn(const bool& hitraceOn)
+    {
+        hitraceOn_ = hitraceOn;
+    }
+
+    void SetLogOn(const bool& logOn)
+    {
+        logOn_ = logOn;
+    }
+
+    void SetHitraceTag(const String& setHitraceTag)
+    {
+        hitraceTag_ = setHitraceTag;
+    }
+
+    void SetLogTag(const String& logTag)
+    {
+        logTag_ = logTag;
+    }
+
+    void SetDomainId(const String& domainId)
+    {
+        domainId_ = domainId;
+    }
+
 protected:
     static const char* TAB;
 
@@ -50,6 +75,14 @@ protected:
     String proxyFullName_;
     String stubName_;
     String stubFullName_;
+    String domainId_;
+    String logTag_;
+    String hitraceTag_;
+    bool hitraceOn_ = false;
+    bool logOn_ = false;
+    bool enteredVector_ = false;
+    bool readSequenceable_ = false;
+    bool createSequenceableForOut_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

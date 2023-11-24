@@ -45,6 +45,13 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    if (options.GetTargetLanguage().Equals("rust") ||
+        options.GetTargetLanguage().Equals("ts")) {
+        if (options.DoSearchKeywords()) {
+            options.ShowWarning();
+        }
+    }
+
     std::shared_ptr<MetaComponent> metadata;
 
     if (options.DoCompile()) {
@@ -95,7 +102,7 @@ int main(int argc, char** argv)
         }
 
         CodeGenerator codeGen(metadata.get(), options.GetTargetLanguage(),
-                options.GetGenerationDirectory());
+                options.GetGenerationDirectory(), options.GetAttribute());
         if (!codeGen.Generate()) {
             Logger::E(TAG, "Generate \"%s\" codes failed.", options.GetTargetLanguage().string());
             return -1;

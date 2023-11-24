@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -104,6 +104,9 @@ void CppCodeEmitter::EmitInterfaceStdlibInclusions(StringBuilder& sb)
 void CppCodeEmitter::EmitInterfaceDBinderInclusions(StringBuilder& sb)
 {
     sb.Append("#include <iremote_broker.h>\n");
+    if (logOn_) {
+        sb.Append("#include \"hilog/log.h\"\n");
+    }
 }
 
 String CppCodeEmitter::GetFilePath(const String& fpnp)
@@ -113,6 +116,16 @@ String CppCodeEmitter::GetFilePath(const String& fpnp)
         return String();
     }
     String res = fpnp.Substring(0, pos + 1);
+    return res;
+}
+
+String CppCodeEmitter::GetFilePathNoPoint(const String& fpnp)
+{
+    int pos = fpnp.IndexOf("..");
+    if (pos == -1) {
+        return String();
+    }
+    String res = fpnp.Substring(0, pos);
     return res;
 }
 
@@ -130,8 +143,13 @@ void CppCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(StringBuilder& sb)
 {
     for (int i = 0; i < metaComponent_->sequenceableNumber_; i++) {
         MetaSequenceable* mp = metaComponent_->sequenceables_[i];
-        String filePath = GetFilePath(String(mp->namespace_));
-        String fileName = FileName(filePath + mp->name_);
+        if (mp == nullptr) {
+            continue;
+        }
+        String filePath = GetFilePathNoPoint(String(mp->namespace_));
+        String fileName;
+        String sequenceName = mp->name_;
+        filePath.IsEmpty() ? fileName = FileName(sequenceName) : fileName = FileName(filePath);
         sb.Append("#include ").AppendFormat("\"%s.h\"\n", fileName.string());
     }
 
@@ -180,6 +198,7 @@ void CppCodeEmitter::EmitInterfaceDefinition(StringBuilder& sb)
     sb.AppendFormat("class %s : public IRemoteBroker {\n", metaInterface_->name_);
     sb.Append("public:\n");
     EmitInterfaceBody(sb, TAB);
+    EmitInterfaceMemberVariables(sb, TAB);
     sb.Append("};\n");
     EmitEndNamespace(sb);
 }
@@ -228,22 +247,29 @@ void CppCodeEmitter::EmitInterfaceMethod(MetaMethod* mm, StringBuilder& sb, cons
 
 void CppCodeEmitter::EmitInterfaceMethodParameter(MetaParameter* mp, StringBuilder& sb, const String& prefix)
 {
-    if ((mp->attributes_ & ATTR_MASK) == (ATTR_IN | ATTR_OUT)) {
-        sb.Append(prefix).Append("/* [in, out] */ ");
-    } else if (mp->attributes_ & ATTR_IN) {
-        sb.Append(prefix).Append("/* [in] */ ");
-    } else {
-        sb.Append(prefix).Append("/* [out] */ ");
-    }
+    sb.Append(prefix);
 
     MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-    const std::string name = UnderlineAdded(mp->name_);
+    const std::string name = mp->name_;
     sb.AppendFormat("%s %s", EmitType(mt, mp->attributes_, false).string(), name.c_str());
 }
 
 void CppCodeEmitter::EmitInterfaceMethodReturn(MetaType* mt, StringBuilder& sb, const String& prefix)
 {
-    sb.Append(prefix).AppendFormat("/* [out] */ %s result", EmitType(mt, ATTR_OUT, false).string());
+    sb.Append(prefix).AppendFormat("%s result", EmitType(mt, ATTR_OUT, false).string());
+}
+
+void CppCodeEmitter::EmitInterfaceMemberVariables(StringBuilder& sb, const String& prefix)
+{
+    sb.Append("protected:\n");
+    if (!domainId_.IsNull() && !logTag_.IsNull()) {
+        sb.Append(prefix).AppendFormat(
+            "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
+            domainId_.string(), logTag_.string());
+    }
+    sb.Append(prefix).Append("const int VECTOR_MAX_SIZE = 102400;\n");
+    sb.Append(prefix).Append("const int LIST_MAX_SIZE = 102400;\n");
+    sb.Append(prefix).Append("const int MAP_MAX_SIZE = 102400;\n");
 }
 
 void CppCodeEmitter::EmitInterfaceProxy()
@@ -293,7 +319,7 @@ void CppCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder& sb)
 void CppCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder& sb, const String& prefix)
 {
     sb.Append(prefix).AppendFormat("explicit %s(\n", proxyName_.string());
-    sb.Append(prefix + TAB).Append("/* [in] */ const sptr<IRemoteObject>& remote)\n");
+    sb.Append(prefix + TAB).Append("const sptr<IRemoteObject>& remote)\n");
     sb.Append(prefix + TAB).AppendFormat(": IRemoteProxy<%s>(remote)\n", interfaceName_.string());
     sb.Append(prefix).Append("{}\n");
     sb.Append("\n");
@@ -352,7 +378,16 @@ void CppCodeEmitter::EmitInterfaceProxyCppFile()
     EmitLicense(sb);
     sb.Append("\n");
     sb.AppendFormat("#include \"%s.h\"\n", FileName(proxyName_).string());
+    if (logOn_) {
+        sb.Append("#include \"hilog/log.h\"\n");
+    }
+    if (hitraceOn_) {
+        sb.Append("#include \"hitrace_meter.h\"\n");
+    }
     sb.Append("\n");
+    if (logOn_) {
+        sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
+    }
     EmitBeginNamespace(sb);
     EmitInterfaceProxyMethodImpls(sb, "");
     EmitEndNamespace(sb);
@@ -401,12 +436,19 @@ void CppCodeEmitter::EmitInterfaceProxyMethodImpl(MetaMethod* mm, StringBuilder&
 void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder& sb, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
+    if (hitraceOn_) {
+        sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n",
+            hitraceTag_.string());
+    }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
     sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n",
         (mm->properties_ & METHOD_PROPERTY_ONEWAY) != 0 ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
     sb.Append("\n");
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");
+    }
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append("\n");
@@ -418,16 +460,29 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
         }
     }
     sb.Append("\n");
-    sb.Append(prefix + TAB).AppendFormat("int32_t st = Remote()->SendRequest(COMMAND_%s, data, reply, option);\n",
+    sb.Append(prefix + TAB).Append("sptr<IRemoteObject> remote = Remote();\n");
+    sb.Append(prefix + TAB).Append("if (remote == nullptr) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Remote is nullptr!\");\n");
+    }
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).AppendFormat("int32_t result = remote->SendRequest(COMMAND_%s, data, reply, option);\n",
         ConstantName(mm->name_).string());
-    sb.Append(prefix + TAB).Append("if (st != ERR_NONE) {\n");
-    sb.Append(prefix + TAB).Append("    return st;\n");
+    sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");
+    }
+    sb.Append(prefix + TAB).Append("    return result;\n");
     sb.Append(prefix + TAB).Append("}\n");
     if ((mm->properties_ & METHOD_PROPERTY_ONEWAY) == 0) {
         sb.Append("\n");
-        sb.Append(prefix + TAB).Append("ErrCode ec = reply.ReadInt32();\n");
-        sb.Append(prefix + TAB).Append("if (FAILED(ec)) {\n");
-        sb.Append(prefix + TAB).Append("    return ec;\n");
+        sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
+        sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
+        if (logOn_) {
+            sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read Int32 failed!\");\n");
+        }
+        sb.Append(prefix + TAB).Append("    return errCode;\n");
         sb.Append(prefix + TAB).Append("}\n");
         sb.Append("\n");
         for (int i = 0; i < mm->parameterNumber_; i++) {
@@ -449,7 +504,7 @@ void CppCodeEmitter::EmitWriteMethodParameter(MetaParameter* mp, const String& p
     const String& prefix)
 {
     MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-    const std::string name = UnderlineAdded(mp->name_);
+    const std::string name = mp->name_;
     EmitWriteVariable(parcelName, name, mt, sb, prefix);
 }
 
@@ -457,7 +512,7 @@ void CppCodeEmitter::EmitReadMethodParameter(MetaParameter* mp, const String& pa
     const String& prefix)
 {
     MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-    const std::string name = UnderlineAdded(mp->name_);
+    const std::string name = mp->name_;
     EmitReadVariable(parcelName, name, mt, sb, prefix, false);
 }
 
@@ -505,11 +560,11 @@ void CppCodeEmitter::EmitInterfaceStubInHeaderFile(StringBuilder& sb)
 
 void CppCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder& sb, const String& prefix)
 {
-    sb.Append(prefix).Append("int OnRemoteRequest(\n");
-    sb.Append(prefix + TAB).Append("/* [in] */ uint32_t code,\n");
-    sb.Append(prefix + TAB).Append("/* [in] */ MessageParcel& data,\n");
-    sb.Append(prefix + TAB).Append("/* [out] */ MessageParcel& reply,\n");
-    sb.Append(prefix + TAB).Append("/* [in] */ MessageOption& option) override;\n");
+    sb.Append(prefix).Append("int32_t OnRemoteRequest(\n");
+    sb.Append(prefix + TAB).Append("uint32_t code,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
+    sb.Append(prefix + TAB).Append("MessageOption& option) override;\n");
 }
 
 void CppCodeEmitter::EmitInterfaceStubConstants(StringBuilder& sb, const String& prefix)
@@ -527,7 +582,16 @@ void CppCodeEmitter::EmitInterfaceStubCppFile()
     EmitLicense(sb);
     sb.Append("\n");
     sb.AppendFormat("#include \"%s.h\"\n", FileName(stubName_).string());
+    if (logOn_) {
+        sb.Append("#include \"hilog/log.h\"\n");
+    }
+    if (hitraceOn_) {
+        sb.Append("#include \"hitrace_meter.h\"\n");
+    }
     sb.Append("\n");
+    if (logOn_) {
+        sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
+    }
     EmitBeginNamespace(sb);
     EmitInterfaceStubMethodImpls(sb, "");
     EmitEndNamespace(sb);
@@ -540,12 +604,16 @@ void CppCodeEmitter::EmitInterfaceStubCppFile()
 
 void CppCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& sb, const String& prefix)
 {
-    sb.Append(prefix).AppendFormat("int %s::OnRemoteRequest(\n", stubName_.string());
-    sb.Append(prefix + TAB).Append("/* [in] */ uint32_t code,\n");
-    sb.Append(prefix + TAB).Append("/* [in] */ MessageParcel& data,\n");
-    sb.Append(prefix + TAB).Append("/* [out] */ MessageParcel& reply,\n");
-    sb.Append(prefix + TAB).Append("/* [in] */ MessageOption& option)\n");
+    sb.Append(prefix).AppendFormat("int32_t %s::OnRemoteRequest(\n", stubName_.string());
+    sb.Append(prefix + TAB).Append("uint32_t code,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
+    sb.Append(prefix + TAB).Append("MessageOption& option)\n");
     sb.Append(prefix).Append("{\n");
+    if (hitraceOn_) {
+    sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n",
+        hitraceTag_.string());
+    }
     sb.Append(prefix + TAB).Append("std::u16string localDescriptor = GetDescriptor();\n");
     sb.Append(prefix + TAB).Append("std::u16string remoteDescriptor = data.ReadInterfaceToken();\n");
     sb.Append(prefix + TAB).Append("if (localDescriptor != remoteDescriptor) {\n");
@@ -571,7 +639,7 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         MetaParameter* mp = mm->parameters_[i];
         if ((mp->attributes_ & ATTR_IN) != 0) {
             MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-            const std::string name = UnderlineAdded(mp->name_);
+            const std::string name = mp->name_;
             EmitReadVariable("data.", name, mt, sb, prefix + TAB);
         } else if ((mp->attributes_ & ATTR_OUT) != 0) {
             EmitLocalVariable(mp, sb, prefix + TAB);
@@ -587,13 +655,23 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         }
     }
     if (mm->parameterNumber_ == 0 && returnType->kind_ == TypeKind::Void) {
-        sb.Append(prefix + TAB).AppendFormat("ErrCode ec = %s();\n", mm->name_);
+        sb.Append(prefix + TAB).AppendFormat("ErrCode errCode = %s();\n", mm->name_);
     } else {
-        sb.Append(prefix + TAB).AppendFormat("ErrCode ec = %s(", mm->name_);
+        sb.Append(prefix + TAB).AppendFormat("ErrCode errCode = %s(", mm->name_);
         for (int i = 0; i < mm->parameterNumber_; i++) {
             MetaParameter* mp = mm->parameters_[i];
-            const std::string name = UnderlineAdded(mp->name_);
-            sb.Append(name.c_str());
+            if (mp == nullptr) {
+                continue;
+            }
+            const std::string name = mp->name_;
+            MetaType* mGetType = metaComponent_->types_[mp->typeIndex_];
+            if (mGetType != nullptr && mGetType->kind_ == TypeKind::Sequenceable && !mp->isSequenceableForOut_) {
+                const std::string parameterName = "*" + name;
+                sb.Append(parameterName.c_str());
+            } else {
+                sb.Append(name.c_str());
+            }
+
             if (i != mm->parameterNumber_ - 1 || returnType->kind_ != TypeKind::Void) {
                 sb.Append(", ");
             }
@@ -603,7 +681,12 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         }
         sb.AppendFormat(");\n", mm->name_);
     }
-    sb.Append(prefix + TAB).Append("reply.WriteInt32(ec);\n");
+    sb.Append(prefix + TAB).Append("if (!reply.WriteInt32(errCode)) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Write Int32 failed!\");\n");
+    }
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_VALUE;\n");
+    sb.Append(prefix + TAB).Append("}\n");
     bool hasOutParameter = false;
     for (int i = 0; i < mm->parameterNumber_; i++) {
         MetaParameter* mp = mm->parameters_[i];
@@ -612,7 +695,7 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         }
     }
     if (hasOutParameter || returnType->kind_ != TypeKind::Void) {
-        sb.Append(prefix + TAB).Append("if (SUCCEEDED(ec)) {\n");
+        sb.Append(prefix + TAB).Append("if (SUCCEEDED(errCode)) {\n");
         for (int i = 0; i < mm->parameterNumber_; i++) {
             MetaParameter* mp = mm->parameters_[i];
             if ((mp->attributes_ & ATTR_OUT) != 0) {
@@ -632,7 +715,7 @@ void CppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder& sb, const String
 {
     for (int i = 0; i < metaInterface_->methodNumber_; i++) {
         MetaMethod* mm = metaInterface_->methods_[i];
-        sb.Append(prefix).AppendFormat("static constexpr int COMMAND_%s = MIN_TRANSACTION_ID + %d;\n",
+        sb.Append(prefix).AppendFormat("static constexpr int32_t COMMAND_%s = MIN_TRANSACTION_ID + %d;\n",
             ConstantName(mm->name_).string(), i);
     }
 }
@@ -683,34 +766,95 @@ void CppCodeEmitter::EmitWriteVariable(const String& parcelName, const std::stri
 {
     switch (mt->kind_) {
         case TypeKind::Boolean:
-            sb.Append(prefix).AppendFormat("%sWriteInt32(%s ? 1 : 0);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteInt32(%s ? 1 : 0)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Char:
         case TypeKind::Byte:
         case TypeKind::Short:
         case TypeKind::Integer:
-            sb.Append(prefix).AppendFormat("%sWriteInt32(%s);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteInt32(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Long:
-            sb.Append(prefix).AppendFormat("%sWriteInt64(%s);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteInt64(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Float:
-            sb.Append(prefix).AppendFormat("%sWriteFloat(%s);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteFloat(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Double:
-            sb.Append(prefix).AppendFormat("%sWriteDouble(%s);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteDouble(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::String:
-            sb.Append(prefix).AppendFormat("%sWriteString16(Str8ToStr16(%s));\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteString16(Str8ToStr16(%s))) {\n", parcelName.string(),
+                name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Sequenceable:
-            sb.Append(prefix).AppendFormat("%sWriteParcelable(%s);\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Interface:
-            sb.Append(prefix).AppendFormat("%sWriteRemoteObject(%s->AsObject());\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Array:
         case TypeKind::List: {
+            sb.Append(prefix).AppendFormat("if (%s.size() > VECTOR_MAX_SIZE) {\n", name.c_str());
+            if (logOn_) {
+                if (mt != nullptr && mt->kind_ == TypeKind::Array) {
+                    sb.Append(prefix).Append(TAB).Append(
+                        "HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
+                } else {
+                    sb.Append(prefix).Append(TAB).AppendFormat(
+                        "HiLog::Error(LABEL, \"The list size exceeds the security limit!\");\n");
+                }
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
             sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.string(), name.c_str());
             sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n",
                 name.c_str(), name.c_str());
@@ -720,6 +864,14 @@ void CppCodeEmitter::EmitWriteVariable(const String& parcelName, const std::stri
             break;
         }
         case TypeKind::Map: {
+            sb.Append(prefix).AppendFormat("if (%s.size() > MAP_MAX_SIZE) {\n", name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat(
+                    "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            sb.Append("\n");
             sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.string(), name.c_str());
             sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n",
                 name.c_str(), name.c_str());
@@ -802,20 +954,42 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
             break;
         case TypeKind::Sequenceable: {
             MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
+            if (mp == nullptr) {
+                break;
+            }
             if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s = %sReadParcelable<%s>();\n",
+                readSequenceable_ = true;
+                sb.Append(prefix).AppendFormat("if ((!%sReadParcelable<%s>())) {\n",
+                    parcelName.string(), mp->name_);
+                if (logOn_) {
+                    sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n",
+                        mp->name_);
+                }
+                sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+                sb.Append(prefix).Append("}\n");
+                sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %s(%sReadParcelable<%s>());\n\n",
                     EmitType(mt, ATTR_IN, true).string(), name.c_str(), parcelName.string(), mp->name_);
             } else {
-                sb.Append(prefix).AppendFormat("%s = %sReadParcelable<%s>();\n",
-                    name.c_str(), parcelName.string(), mp->name_);
+                sb.Append(prefix).AppendFormat("std::unique_ptr<%s> info(%sReadParcelable<%s>());\n",
+                    mp->name_, parcelName.string(), mp->name_);
+                sb.Append(prefix).Append("if (info != nullptr) {\n");
+                sb.Append(prefix).Append(TAB).AppendFormat("%s = *info;\n", name.c_str());
+                sb.Append(prefix).Append("}\n\n");
             }
             break;
         }
         case TypeKind::Interface: {
             MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
             if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s = iface_cast<%s>(%sReadRemoteObject());\n",
-                    EmitType(mt, ATTR_IN, true).string(), name.c_str(),  mi->name_, parcelName.string());
+                sb.Append(prefix).AppendFormat("%s %s = %sReadRemoteObject();\n",
+                    EmitType(mt, ATTR_IN, true).string(), name.c_str(), parcelName.string());
+                sb.Append(prefix).AppendFormat("if (%s == nullptr) {\n", name.c_str());
+                if (logOn_) {
+                    sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n",
+                        name.c_str());
+                }
+                sb.Append(prefix).Append(TAB).AppendFormat("return ERR_INVALID_DATA;\n");
+                sb.Append(prefix).Append("}\n\n");
             } else {
                 sb.Append(prefix).AppendFormat("%s = iface_cast<%s>(%sReadRemoteObject());\n",
                     name.c_str(),  mi->name_, parcelName.string());
@@ -827,11 +1001,15 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
             if (emitType) {
                 sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
             }
-            sb.Append(prefix).AppendFormat("int %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("for (int i = 0; i < %sSize; ++i) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
+            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
             MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
-            sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+            if (innerType->kind_ == TypeKind::Sequenceable) {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
+            } else {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+            }
             sb.Append(prefix).Append("}\n");
             break;
         }
@@ -839,8 +1017,8 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
             if (emitType) {
                 sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
             }
-            sb.Append(prefix).AppendFormat("int %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("for (int i = 0; i < %sSize; ++i) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
+            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
             MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
             EmitReadVariable(parcelName, "key", keyType, sb, prefix + TAB);
@@ -857,9 +1035,11 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
 void CppCodeEmitter::EmitLocalVariable(MetaParameter* mp, StringBuilder& sb, const String& prefix)
 {
     MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-    const std::string name = UnderlineAdded(mp->name_);
+    const std::string name = mp->name_;
     if ((mt->kind_ == TypeKind::Sequenceable) || (mt->kind_ == TypeKind::Interface)) {
-        sb.Append(prefix).AppendFormat("%s %s = nullptr;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
+        createSequenceableForOut_ = true;
+        mp->isSequenceableForOut_ = true;
+        sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
     } else {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
     }
@@ -893,54 +1073,63 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
 {
     switch (mt->kind_) {
         case TypeKind::Char:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "zchar";
             } else {
                 return "zchar&";
             }
         case TypeKind::Boolean:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "bool";
             } else {
                 return "bool&";
             }
         case TypeKind::Byte:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "int8_t";
             } else {
                 return "int8_t&";
             }
         case TypeKind::Short:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "short";
             } else {
                 return "short&";
             }
         case TypeKind::Integer:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
-                return "int";
+                return "int32_t";
             } else {
-                return "int&";
+                return "int32_t&";
             }
         case TypeKind::Long:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "long";
             } else {
                 return "long&";
             }
         case TypeKind::Float:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "float";
             } else {
                 return "float&";
             }
         case TypeKind::Double:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 return "double";
             } else {
                 return "double&";
             }
         case TypeKind::String:
+            enteredVector_ = false;
             if (attributes & ATTR_IN) {
                 if (!isInnerType) {
                     return "const std::string&";
@@ -951,22 +1140,41 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
                 return "std::string&";
             }
         case TypeKind::Void:
+            enteredVector_ = false;
             return "void";
         case TypeKind::Sequenceable: {
             MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
+            if (mp == nullptr) {
+                return "unknown type";
+            }
+            if (enteredVector_) {
+                enteredVector_ = false;
+                return String::Format("%s", mp->name_);
+            }
+            if (readSequenceable_) {
+                readSequenceable_ = false;
+                return String::Format("%s", mp->name_);
+            }
+            if (createSequenceableForOut_) {
+                createSequenceableForOut_ = false;
+                return String::Format("%s", mp->name_);
+            }
             if ((attributes & ATTR_MASK) == (ATTR_IN | ATTR_OUT)) {
                 return String::Format("%s*", mp->name_);
             } else if (attributes & ATTR_IN) {
-                return String::Format("%s*", mp->name_);
+                return String::Format("const %s&", mp->name_);
             } else {
-                return String::Format("%s*", mp->name_);
+                return String::Format("%s&", mp->name_);
             }
         }
         case TypeKind::Interface: {
             MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
+            if (mi == nullptr) {
+                return "unknown type";
+            }
             if (attributes & ATTR_IN) {
                 if (!isInnerType) {
-                    return String::Format("sptr<%s>", mi->name_);
+                    return String::Format("const sptr<%s>&", mi->name_);
                 } else {
                     return String::Format("sptr<%s>", mi->name_);
                 }
@@ -976,6 +1184,7 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
         }
         case TypeKind::Array:
         case TypeKind::List: {
+            enteredVector_ = true;
             MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             if (attributes & ATTR_OUT) {
                 return String::Format("std::vector<%s>&",

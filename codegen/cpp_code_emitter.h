@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -53,6 +53,8 @@ private:
     void EmitInterfaceDefinition(StringBuilder& sb);
 
     void EmitInterfaceBody(StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceMemberVariables(StringBuilder& sb, const String& prefix);
 
     void EmitInterfaceMethods(StringBuilder& sb, const String& prefix);
 
@@ -128,6 +130,8 @@ private:
     String FileName(const String& name);
 
     String GetFilePath(const String& fpnp);
+
+    String GetFilePathNoPoint(const String& fpnp);
 
     String GetNamespace(const String& fpnp);
 
