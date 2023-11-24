@@ -22,6 +22,7 @@ struct MetaParameter {
     char* name_;
     unsigned int attributes_;
     int typeIndex_;
+    bool isSequenceableForOut_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

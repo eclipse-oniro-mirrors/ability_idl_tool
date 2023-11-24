@@ -201,7 +201,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_002, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Char };
-    std::string expectStr("const ParcelNameWriteInt32(Name);\n");
+    std::string expectStr("const if (!ParcelNameWriteInt32(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -226,7 +226,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_003, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Long };
-    std::string expectStr("const ParcelNameWriteInt64(Name);\n");
+    std::string expectStr("const if (!ParcelNameWriteInt64(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -251,7 +251,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_004, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Float };
-    std::string expectStr("const ParcelNameWriteFloat(Name);\n");
+    std::string expectStr("const if (!ParcelNameWriteFloat(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -276,7 +276,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_005, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Double };
-    std::string expectStr("const ParcelNameWriteDouble(Name);\n");
+    std::string expectStr("const if (!ParcelNameWriteDouble(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -301,7 +301,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_006, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::String };
-    std::string expectStr("const ParcelNameWriteString16(Str8ToStr16(Name));\n");
+    std::string expectStr(
+        "const if (!ParcelNameWriteString16(Str8ToStr16(Name))) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -326,7 +327,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_007, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Sequenceable };
-    std::string expectStr("const ParcelNameWriteParcelable(Name);\n");
+    std::string expectStr(
+        "const if (!ParcelNameWriteParcelable(&Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -476,7 +478,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitReadVariable_test_005, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Integer };
-    std::string expectStr("const int Name = ParcelNameReadInt32();\n");
+    std::string expectStr("const int32_t Name = ParcelNameReadInt32();\n");
     codeEmitter.EmitReadVariable(parcelName, name, &mt, sb, prefix, true);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -882,8 +884,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitType_test_005, TestSize.Level1)
     String retStr1 = codeEmitter.EmitType(&mt, ATTR_IN, true);
     String retStr2 = codeEmitter.EmitType(&mt, 0, true);
 
-    EXPECT_STREQ(retStr1, String("int"));
-    EXPECT_STREQ(retStr2, String("int&"));
+    EXPECT_STREQ(retStr1, String("int32_t"));
+    EXPECT_STREQ(retStr2, String("int32_t&"));
 }
 
 /**
@@ -1037,8 +1039,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitType_test_012, TestSize.Level1)
     String retStr3 = codeEmitter.EmitType(&mt, 0, false);
 
     EXPECT_STREQ(retStr1, String("MetaSequenceable*"));
-    EXPECT_STREQ(retStr2, String("MetaSequenceable*"));
-    EXPECT_STREQ(retStr3, String("MetaSequenceable*"));
+    EXPECT_STREQ(retStr2, String("MetaSequenceable&"));
+    EXPECT_STREQ(retStr3, String("MetaSequenceable&"));
 
     delete []mc.sequenceables_;
 }
