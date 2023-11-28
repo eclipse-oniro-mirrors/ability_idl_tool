@@ -15,10 +15,12 @@
 
 #include <gtest/gtest.h>
 #define private public
+#define protected public
 #include "codegen/cpp_code_emitter.h"
 #include "metadata/meta_component.h"
 #include "metadata/meta_type.h"
 #include "util/string_builder.h"
+#undef protected
 #undef private
 
 using namespace testing;
@@ -176,7 +178,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_001, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Boolean };
-    std::string expectStr("const ParcelNameWriteInt32(Name ? 1 : 0);\n");
+    std::string expectStr(
+        "const if (!ParcelNameWriteInt32(Name ? 1 : 0)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -353,7 +356,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_008, TestSize.Level1)
 
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Interface };
-    std::string expectStr("const ParcelNameWriteRemoteObject(Name->AsObject());\n");
+    std::string expectStr(
+        "const if (!ParcelNameWriteRemoteObject(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
@@ -1039,7 +1043,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitType_test_012, TestSize.Level1)
     String retStr3 = codeEmitter.EmitType(&mt, 0, false);
 
     EXPECT_STREQ(retStr1, String("MetaSequenceable*"));
-    EXPECT_STREQ(retStr2, String("MetaSequenceable&"));
+    EXPECT_STREQ(retStr2, String("const MetaSequenceable&"));
     EXPECT_STREQ(retStr3, String("MetaSequenceable&"));
 
     delete []mc.sequenceables_;
@@ -1070,8 +1074,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitType_test_013, TestSize.Level1)
     String retStr2 = codeEmitter.EmitType(&mt, ATTR_IN, false);
     String retStr3 = codeEmitter.EmitType(&mt, 0, false);
 
-    EXPECT_STREQ(retStr1.string(), "sptr<MetaInterface>");
-    EXPECT_STREQ(retStr2.string(), "sptr<MetaInterface>");
+    EXPECT_STREQ(retStr1.string(), "const sptr<MetaInterface>&");
+    EXPECT_STREQ(retStr2.string(), "const sptr<MetaInterface>&");
     EXPECT_STREQ(retStr3.string(), "sptr<MetaInterface>&");
 
     delete []mc.interfaces_;
@@ -1099,5 +1103,297 @@ HWTEST_F(CppCodeEmitterUnitTest, CppFullName_test_001, TestSize.Level1)
     EXPECT_STREQ(codeEmitter.CppFullName(inputStr1).string(), expectStr1.string());
 }
 
+/**
+ * @tc.name: EmitInterfaceProxyCppFile_test_001
+ * @tc.desc: Verify the EmitInterfaceProxyCppFile function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceProxyCppFile_test_001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    char name = 'n';
+    const String directory = "Idl";
+    String HitraceTag = "HITRACE_TAG_DLSM";
+    String logTag = "DISP_SEED";
+    String domainId = "0xb0d2d4";
+
+    /**
+     * @tc.steps: step2. Initialize pointers in functions.
+     */
+    codeEmitter.metaInterface_ = new MetaInterface[13];
+    ASSERT_NE(codeEmitter.metaInterface_, nullptr);
+    codeEmitter.metaInterface_->license_ = &name;
+    ASSERT_NE(codeEmitter.metaInterface_->license_, nullptr);
+    codeEmitter.metaInterface_->namespace_ = &name;
+    codeEmitter.metaInterface_->methods_ = new MetaMethod *[6];
+    for (int j = 0; j < 6; ++j) {
+        codeEmitter.metaInterface_->methods_[j] = new MetaMethod();
+        ASSERT_NE(codeEmitter.metaInterface_->methods_[j], nullptr);
+    }
+    codeEmitter.metaInterface_->methodNumber_ = 2;
+    codeEmitter.metaComponent_->types_ = new MetaType *[3];
+    for (int i = 0; i < 3; ++i) {
+        codeEmitter.metaComponent_->types_[i] = new MetaType();
+        ASSERT_NE(codeEmitter.metaComponent_->types_[i], nullptr);
+    }
+
+    /**
+     * @tc.steps: step3. Assigning parameters to a function.
+     */
+    codeEmitter.SetDirectory(directory);
+    codeEmitter.proxyName_ = "ability_proxy";
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetHitraceTag(HitraceTag);
+    codeEmitter.SetHitraceOn(true);
+    codeEmitter.SetLogTag(logTag);
+
+    /**
+     * @tc.steps: step4. Execute functions that require validation.
+     * @tc.expected: Can obtain the correct hitraceOn_.
+     */
+    codeEmitter.EmitInterfaceProxyCppFile();
+    EXPECT_TRUE(codeEmitter.hitraceOn_);
+
+    for (int i = 0; i < 6; i++) {
+        delete codeEmitter.metaInterface_->methods_[i];
+    }
+    delete[] codeEmitter.metaInterface_->methods_;
+    for (int j = 0; j < 3; j++) {
+        delete codeEmitter.metaComponent_->types_[j];
+    }
+    delete[] codeEmitter.metaComponent_->types_;
+    delete[] codeEmitter.metaInterface_;
+}
+
+/**
+ * @tc.name: EmitInterfaceMemberVariables_test_001
+ * @tc.desc: Verify the EmitInterfaceMemberVariables function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceMemberVariables_test_001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    String logTag = "HITRACE_TAG_ABILITY_MANAGER";
+    String domainId = "0xb0d2d4";
+    StringBuilder sb;
+    String prefix = "const";
+    codeEmitter.proxyName_ = "ability_proxy";
+
+    /**
+     * @tc.steps: step2. Set domainId and logTag.
+     */
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetLogTag(logTag);
+
+    /**
+     * @tc.steps: step3. Execute functions that require validation.
+     * @tc.expected: Can obtain the correct logTag_.
+     */
+    codeEmitter.EmitInterfaceMemberVariables(sb, prefix);
+    std::string expectStr("HITRACE_TAG_ABILITY_MANAGER");
+    EXPECT_STREQ(codeEmitter.logTag_, expectStr.c_str());
+}
+
+/**
+ * @tc.name: EmitInterfaceDBinderInclusions_test_001
+ * @tc.desc: Verify the EmitInterfaceDBinderInclusions function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceDBinderInclusions_test_001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    String logTag = "HITRACE_TAG_ABILITY_MANAGER";
+    String domainId = "0xb0d2d4";
+    StringBuilder sb;
+
+    /**
+     * @tc.steps: step2. Set domainId and logTag.
+     */
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetLogTag(logTag);
+
+    /**
+     * @tc.steps: step3. Execute functions that require validation.
+     * @tc.expected: Can obtain the correct logTag_.
+     */
+    codeEmitter.EmitInterfaceDBinderInclusions(sb);
+    std::string expectStr("HITRACE_TAG_ABILITY_MANAGER");
+    EXPECT_STREQ(codeEmitter.logTag_, expectStr.c_str());
+}
+
+/**
+ * @tc.name: EmitInterfaceStubCppFile_test_001
+ * @tc.desc: Verify the EmitInterfaceStubCppFile function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceStubCppFile_test_001, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    String logTag = "HITRACE_TAG_ABILITY_MANAGER";
+    String domainId = "0xb0d2d4";
+    StringBuilder sb;
+    char name = 'n';
+
+    /**
+     * @tc.steps: step2. Initialize pointers in functions.
+     */
+    codeEmitter.metaInterface_ = new MetaInterface[13];
+    ASSERT_NE(codeEmitter.metaInterface_, nullptr);
+    codeEmitter.metaInterface_->license_ = &name;
+    ASSERT_NE(codeEmitter.metaInterface_->license_, nullptr);
+    codeEmitter.metaInterface_->namespace_ = &name;
+    ASSERT_NE(codeEmitter.metaInterface_->namespace_, nullptr);
+    codeEmitter.metaInterface_->methods_ = new MetaMethod *[6];
+    for (int j = 0; j < 6; ++j) {
+        codeEmitter.metaInterface_->methods_[j] = new MetaMethod();
+        ASSERT_NE(codeEmitter.metaInterface_->methods_[j], nullptr);
+    }
+    codeEmitter.metaInterface_->methodNumber_ = 2;
+    codeEmitter.metaComponent_->types_ = new MetaType *[4];
+    for (int i = 0; i < 4; ++i) {
+        codeEmitter.metaComponent_->types_[i] = new MetaType();
+        ASSERT_NE(codeEmitter.metaComponent_->types_[i], nullptr);
+    }
+
+    /**
+     * @tc.steps: step3. Set domainId and logTag.
+     */
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetLogTag(logTag);
+
+    /**
+     * @tc.steps: step4. Execute functions that require validation.
+     * @tc.expected: Can obtain the correct hitraceOn_.
+     */
+    codeEmitter.EmitInterfaceStubCppFile();
+    EXPECT_FALSE(codeEmitter.hitraceOn_);
+
+    for (int i = 0; i < 6; i++) {
+        delete codeEmitter.metaInterface_->methods_[i];
+    }
+    delete[] codeEmitter.metaInterface_->methods_;
+    for (int j = 0; j < 4; j++) {
+        delete codeEmitter.metaComponent_->types_[j];
+    }
+    delete[] codeEmitter.metaComponent_->types_;
+    delete [] codeEmitter.metaInterface_;
+}
+
+/**
+ * @tc.name: EmitWriteVariable_test_009
+ * @tc.desc: Verify the EmitWriteVariable function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_009, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    String logTag = "HITRACE_TAG_ABILITY_MANAGER";
+    String domainId = "0xb0d2d4";
+    StringBuilder sb;
+    String parcelName = "parcelName";
+    std::string name = "name";
+    String prefix = "const";
+
+    /**
+     * @tc.steps: step2. When kind_ Validate functions when taking different values.
+     * @tc.expected: Can obtain the correct logTag_.
+     */
+    MetaType mt;
+    mt.kind_ = TypeKind::Integer;
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetLogTag(logTag);
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+
+    mt.kind_ = TypeKind::Long;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+
+    mt.kind_ = TypeKind::Float;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+
+    mt.kind_ = TypeKind::Double;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+
+    mt.kind_ = TypeKind::String;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+
+    mt.kind_ = TypeKind::Sequenceable;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+    std::string expectStr("HITRACE_TAG_ABILITY_MANAGER");
+    EXPECT_STREQ(codeEmitter.logTag_, expectStr.c_str());
+}
+
+/**
+ * @tc.name: EmitWriteVariable_test_0010
+ * @tc.desc: Verify the EmitWriteVariable function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_0010, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+    String logTag = "HITRACE_TAG_ABILITY_MANAGER";
+    String domainId = "0xb0d2d4";
+    StringBuilder sb;
+    String parcelName = "parcelName";
+    std::string name = "name";
+    String prefix = "const";
+    int32_t indexes = 1;
+
+    /**
+     * @tc.steps: step2. When kind_ Validate functions when taking different values.
+     * @tc.expected: Can obtain the correct logTag_.
+     */
+    MetaType mt;
+    mt.kind_ = TypeKind::Integer;
+    codeEmitter.SetDomainId(domainId);
+    codeEmitter.SetLogTag(logTag);
+    codeEmitter.metaComponent_->types_ = new MetaType *[3];
+    for (int i = 0; i < 3; ++i) {
+        codeEmitter.metaComponent_->types_[i] = new MetaType();
+        ASSERT_NE(codeEmitter.metaComponent_->types_[i], nullptr);
+    }
+    mt.nestedTypeIndexes_ = &indexes;
+    mt.kind_ = TypeKind::List;
+
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+    mt.kind_ = TypeKind::Array;
+    codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
+    std::string expectStr("HITRACE_TAG_ABILITY_MANAGER");
+    EXPECT_STREQ(codeEmitter.logTag_, expectStr.c_str());
+
+    for (int j = 0; j < 3; j++) {
+        delete codeEmitter.metaComponent_->types_[j];
+    }
+    delete[] codeEmitter.metaComponent_->types_;
+}
 } // namespace idl
 } // namespace OHOS
