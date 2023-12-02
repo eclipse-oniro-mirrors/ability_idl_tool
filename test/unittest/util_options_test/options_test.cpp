@@ -51,13 +51,11 @@ HWTEST_F(OptionsUnitTest, OptionsUnitTest_0100, Function | MediumTest | Level1)
     /**
      * @tc.steps: step1. Initialization parameters.
      */
-    const char *const strings[] = {"-t", "-log-domainid", "-log-tag"};
+    std::string strings[] = {"-t", "-log-domainid", "-log-tag"};
     int32_t count = sizeof(strings) / sizeof(strings[0]);
     char **argv = new char *[count];
     for (int32_t i = 0; i < count; i++) {
-        argv[i] = new char[strlen(strings[i]) + 1];
-        ASSERT_NE(argv[i], nullptr);
-        std::strncpy(argv[i], strings[i], strlen(strings[i]) + 1);
+        argv[i] = const_cast<char*>(strings[i].c_str());
     }
 
     /**
@@ -75,9 +73,6 @@ HWTEST_F(OptionsUnitTest, OptionsUnitTest_0100, Function | MediumTest | Level1)
     options.ShowWarning();
     EXPECT_FALSE(doHitrace);
     EXPECT_FALSE(logOn);
-    for (int32_t i = 0; i < count; i++) {
-        delete[] argv[i];
-    }
     delete[] argv;
 }
 }
