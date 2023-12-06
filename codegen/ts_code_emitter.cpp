@@ -328,6 +328,18 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).AppendFormat(
         "%s.sendMessageRequest(%s.COMMAND_%s, dataSequence, replySequence, option).then(function(result) {\n",
         THIS_PROXY.c_str(), proxyName_.string(), ConstantName(metaMethod->name_).string());
+    EmitInterfaceMethodCallback(metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("})\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("} finally ").Append("{\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("dataSequence.reclaim();").Append("\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("replySequence.reclaim();").Append("\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("}").Append("\n");
+    stringBuilder.Append(prefix).Append("}\n");
+}
+
+void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder,
+    const String& prefix, bool haveOutPara)
+{
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).AppendFormat("if (result.errCode === 0) {\n");
     MetaType* returnType = metaComponent_->types_[metaMethod->returnTypeIndex_];
     // emit errCode
@@ -416,12 +428,6 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(
         "console.log(\"sendMessageRequest failed, errCode: \" + result.errCode);\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append("}\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("})\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("} finally ").Append("{\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("dataSequence.reclaim();").Append("\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("replySequence.reclaim();").Append("\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("}").Append("\n");
-    stringBuilder.Append(prefix).Append("}\n");
 }
 
 void TsCodeEmitter::EmitWriteMethodParameter(MetaParameter* mp, const String& parcelName, StringBuilder& stringBuilder,
@@ -544,6 +550,16 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* metaMethod, int meth
         }
     }
     stringBuilder.Append(prefix).Append(TAB).Append("let promise = new Promise<void>((resolve,reject) => { \n");
+    EmitInterfaceStubMethodPromiseImpl(metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
+    stringBuilder.Append(prefix).Append(TAB).Append("}").Append(");\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("await promise;\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("return true;\n");
+    stringBuilder.Append(prefix).Append("}\n");
+}
+
+void TsCodeEmitter::EmitInterfaceStubMethodPromiseImpl(
+    MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara)
+{
     stringBuilder.Append(prefix).Append(TAB).Append(TAB)
         .AppendFormat("this.%s(", MethodName(metaMethod->name_).string());
     bool isLastParaTypeIn = false;
@@ -583,7 +599,6 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* metaMethod, int meth
             }
         }
     }
-
     stringBuilder.Append(") => {\n");
     MetaType errCode;
     errCode.kind_ = TypeKind::Integer;
@@ -608,10 +623,6 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* metaMethod, int meth
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append("resolve();\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("}");
     stringBuilder.Append(");\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("}").Append(");\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("await promise;\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("return true;\n");
-    stringBuilder.Append(prefix).Append("}\n");
 }
 
 void TsCodeEmitter::EmitInterfaceMethodCommands(StringBuilder& stringBuilder)

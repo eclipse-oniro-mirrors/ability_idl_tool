@@ -72,6 +72,9 @@ private:
 
     void EmitInterfaceMethod(MetaMethod* metaMethod, StringBuilder& stringBuilder, const String& prefix);
 
+    void EmitInterfaceMethodCallback(
+        MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara);
+
     void EmitInterfaceMethodParameter(MetaParameter* mp, StringBuilder& stringBuilder, const String& prefix);
 
     void EmitMethodInParameter(StringBuilder& stringBuilder, const std::string& name, const std::string& type,
@@ -105,6 +108,9 @@ private:
 
     void EmitInterfaceStubMethodImpl(MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder,
         const String& prefix);
+
+    void EmitInterfaceStubMethodPromiseImpl(MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder,
+        const String& prefix, bool haveOutPara);
 
     void EmitInterfaceMethodCommands(StringBuilder& stringBuilder);
 
