@@ -813,34 +813,16 @@ void CppCodeEmitter::EmitWriteVariable(const String& parcelName, const std::stri
             sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
             sb.Append(prefix).Append("}\n");
             break;
-        case TypeKind::String:
-            sb.Append(prefix).AppendFormat("if (!%sWriteString16(Str8ToStr16(%s))) {\n", parcelName.string(),
-                name.c_str());
-            if (logOn_) {
-                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
-                    name.c_str());
-            }
-            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
-            sb.Append(prefix).Append("}\n");
+        default:
+            EmitWriteVariableComplex(parcelName, name, mt, sb, prefix);
             break;
-        case TypeKind::Sequenceable:
-            sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.string(), name.c_str());
-            if (logOn_) {
-                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
-                    name.c_str());
-            }
-            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
-            sb.Append(prefix).Append("}\n");
-            break;
-        case TypeKind::Interface:
-            sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.string(), name.c_str());
-            if (logOn_) {
-                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
-                    name.c_str());
-            }
-            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
-            sb.Append(prefix).Append("}\n");
-            break;
+    }
+}
+
+void CppCodeEmitter::EmitWriteVariableComplex(
+    const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb, const String& prefix)
+{
+    switch (mt->kind_) {
         case TypeKind::Array:
         case TypeKind::List: {
             sb.Append(prefix).AppendFormat("if (%s.size() > VECTOR_MAX_SIZE) {\n", name.c_str());
@@ -882,6 +864,44 @@ void CppCodeEmitter::EmitWriteVariable(const String& parcelName, const std::stri
             sb.Append(prefix).Append("}\n");
             break;
         }
+        default:
+            EmitWriteVariableObject(parcelName, name, mt, sb, prefix);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitWriteVariableObject(
+    const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb, const String& prefix)
+{
+    switch (mt->kind_) {
+        case TypeKind::String:
+            sb.Append(prefix).AppendFormat("if (!%sWriteString16(Str8ToStr16(%s))) {\n", parcelName.string(),
+                name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            break;
+        case TypeKind::Sequenceable:
+            sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            break;
+        case TypeKind::Interface:
+            sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.string(), name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+                    name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            break;
         default:
             break;
     }
@@ -943,6 +963,16 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
                 sb.Append(prefix).AppendFormat("%s = %sReadDouble();\n", name.c_str(), parcelName.string());
             }
             break;
+        default:
+            EmitReadVariableComplex(parcelName, name, mt, sb, prefix, emitType);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitReadVariableComplex(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& sb, const String& prefix, bool emitType)
+{
+    switch (mt->kind_) {
         case TypeKind::String:
             if (emitType) {
                 sb.Append(prefix).AppendFormat("%s %s = Str16ToStr8(%sReadString16());\n",
@@ -952,6 +982,47 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
                     name.c_str(), parcelName.string());
             }
             break;
+        case TypeKind::Array:
+        case TypeKind::List: {
+            if (emitType) {
+                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
+            }
+            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
+            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
+            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
+            if (innerType->kind_ == TypeKind::Sequenceable) {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
+            } else {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+            }
+            sb.Append(prefix).Append("}\n");
+            break;
+        }
+        case TypeKind::Map: {
+            if (emitType) {
+                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
+            }
+            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
+            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
+            MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
+            EmitReadVariable(parcelName, "key", keyType, sb, prefix + TAB);
+            EmitReadVariable(parcelName, "value", valueType, sb, prefix + TAB);
+            sb.Append(prefix + TAB).AppendFormat("%s[key] = value;\n", name.c_str());
+            sb.Append(prefix).Append("}\n");
+            break;
+        }
+        default:
+            EmitReadVariableObject(parcelName, name, mt, sb, prefix, emitType);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& sb, const String& prefix, bool emitType)
+{
+    switch (mt->kind_) {
         case TypeKind::Sequenceable: {
             MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
             if (mp == nullptr) {
@@ -994,37 +1065,6 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
                 sb.Append(prefix).AppendFormat("%s = iface_cast<%s>(%sReadRemoteObject());\n",
                     name.c_str(),  mi->name_, parcelName.string());
             }
-            break;
-        }
-        case TypeKind::Array:
-        case TypeKind::List: {
-            if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
-            }
-            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
-            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
-            if (innerType->kind_ == TypeKind::Sequenceable) {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
-            } else {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
-            }
-            sb.Append(prefix).Append("}\n");
-            break;
-        }
-        case TypeKind::Map: {
-            if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
-            }
-            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
-            MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
-            EmitReadVariable(parcelName, "key", keyType, sb, prefix + TAB);
-            EmitReadVariable(parcelName, "value", valueType, sb, prefix + TAB);
-            sb.Append(prefix + TAB).AppendFormat("%s[key] = value;\n", name.c_str());
-            sb.Append(prefix).Append("}\n");
             break;
         }
         default:
@@ -1128,6 +1168,17 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
             } else {
                 return "double&";
             }
+        case TypeKind::Void:
+            enteredVector_ = false;
+            return "void";
+        default:
+            return EmitComplexType(mt, attributes, isInnerType);
+    }
+}
+
+String CppCodeEmitter::EmitComplexType(MetaType* mt, unsigned int attributes, bool isInnerType)
+{
+    switch (mt->kind_) {
         case TypeKind::String:
             enteredVector_ = false;
             if (attributes & ATTR_IN) {
@@ -1139,9 +1190,48 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
             } else {
                 return "std::string&";
             }
-        case TypeKind::Void:
-            enteredVector_ = false;
-            return "void";
+        case TypeKind::Array:
+        case TypeKind::List: {
+            enteredVector_ = true;
+            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            if (attributes & ATTR_OUT) {
+                return String::Format("std::vector<%s>&",
+                    EmitType(elementType, ATTR_IN, true).string());
+            } else {
+                if (!isInnerType) {
+                    return String::Format("const std::vector<%s>&",
+                        EmitType(elementType, ATTR_IN, true).string());
+                } else {
+                    return String::Format("std::vector<%s>",
+                        EmitType(elementType, ATTR_IN, true).string());
+                }
+            }
+        }
+        case TypeKind::Map: {
+            MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
+            if (attributes & ATTR_OUT) {
+                return String::Format("std::unordered_map<%s, %s>&",
+                    EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
+            } else {
+                if (!isInnerType) {
+                    return String::Format("const std::unordered_map<%s, %s>&",
+                        EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
+                } else {
+                    return String::Format("std::unordered_map<%s, %s>",
+                        EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
+                }
+            }
+            break;
+        }
+        default:
+            return EmitObjectType(mt, attributes, isInnerType);
+    }
+}
+
+String CppCodeEmitter::EmitObjectType(MetaType* mt, unsigned int attributes, bool isInnerType)
+{
+    switch (mt->kind_) {
         case TypeKind::Sequenceable: {
             MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
             if (mp == nullptr) {
@@ -1181,40 +1271,6 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
             } else {
                 return String::Format("sptr<%s>&", mi->name_);
             }
-        }
-        case TypeKind::Array:
-        case TypeKind::List: {
-            enteredVector_ = true;
-            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            if (attributes & ATTR_OUT) {
-                return String::Format("std::vector<%s>&",
-                    EmitType(elementType, ATTR_IN, true).string());
-            } else {
-                if (!isInnerType) {
-                    return String::Format("const std::vector<%s>&",
-                        EmitType(elementType, ATTR_IN, true).string());
-                } else {
-                    return String::Format("std::vector<%s>",
-                        EmitType(elementType, ATTR_IN, true).string());
-                }
-            }
-        }
-        case TypeKind::Map: {
-            MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
-            if (attributes & ATTR_OUT) {
-                return String::Format("std::unordered_map<%s, %s>&",
-                    EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
-            } else {
-                if (!isInnerType) {
-                    return String::Format("const std::unordered_map<%s, %s>&",
-                        EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
-                } else {
-                    return String::Format("std::unordered_map<%s, %s>",
-                        EmitType(keyType, ATTR_IN, true).string(), EmitType(valueType, ATTR_IN, true).string());
-                }
-            }
-            break;
         }
         default:
             return "unknown type";

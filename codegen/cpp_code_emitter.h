@@ -118,7 +118,19 @@ private:
     void EmitWriteVariable(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix);
 
+    void EmitWriteVariableComplex(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix);
+
+    void EmitWriteVariableObject(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix);
+
     void EmitReadVariable(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix, bool emitType = true);
+
+    void EmitReadVariableComplex(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix, bool emitType = true);
+
+    void EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix, bool emitType = true);
 
     void EmitLocalVariable(MetaParameter* mp, StringBuilder& sb, const String& prefix);
@@ -126,6 +138,10 @@ private:
     void EmitReturnParameter(const String& name, MetaType* mt, StringBuilder& sb);
 
     String EmitType(MetaType* mt, unsigned int attributes, bool isInnerType);
+
+    String EmitComplexType(MetaType* mt, unsigned int attributes, bool isInnerType);
+
+    String EmitObjectType(MetaType* mt, unsigned int attributes, bool isInnerType);
 
     String FileName(const String& name);
 
