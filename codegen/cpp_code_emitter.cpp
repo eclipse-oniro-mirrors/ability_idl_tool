@@ -1190,23 +1190,6 @@ String CppCodeEmitter::EmitComplexType(MetaType* mt, unsigned int attributes, bo
             } else {
                 return "std::string&";
             }
-        case TypeKind::Array:
-        case TypeKind::List: {
-            enteredVector_ = true;
-            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            if (attributes & ATTR_OUT) {
-                return String::Format("std::vector<%s>&",
-                    EmitType(elementType, ATTR_IN, true).string());
-            } else {
-                if (!isInnerType) {
-                    return String::Format("const std::vector<%s>&",
-                        EmitType(elementType, ATTR_IN, true).string());
-                } else {
-                    return String::Format("std::vector<%s>",
-                        EmitType(elementType, ATTR_IN, true).string());
-                }
-            }
-        }
         case TypeKind::Map: {
             MetaType* keyType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             MetaType* valueType = metaComponent_->types_[mt->nestedTypeIndexes_[1]];
@@ -1223,6 +1206,31 @@ String CppCodeEmitter::EmitComplexType(MetaType* mt, unsigned int attributes, bo
                 }
             }
             break;
+        }
+        default:
+            return EmitListType(mt, attributes, isInnerType);
+    }
+}
+
+String CppCodeEmitter::EmitListType(MetaType* mt, unsigned int attributes, bool isInnerType)
+{
+    switch (mt->kind_) {
+        case TypeKind::Array:
+        case TypeKind::List: {
+            enteredVector_ = true;
+            MetaType* elementType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            if (attributes & ATTR_OUT) {
+                return String::Format("std::vector<%s>&",
+                                      EmitType(elementType, ATTR_IN, true).string());
+            } else {
+                if (!isInnerType) {
+                    return String::Format("const std::vector<%s>&",
+                                          EmitType(elementType, ATTR_IN, true).string());
+                } else {
+                    return String::Format("std::vector<%s>",
+                                          EmitType(elementType, ATTR_IN, true).string());
+                }
+            }
         }
         default:
             return EmitObjectType(mt, attributes, isInnerType);

@@ -141,6 +141,8 @@ private:
 
     String EmitComplexType(MetaType* mt, unsigned int attributes, bool isInnerType);
 
+    String EmitListType(MetaType* mt, unsigned int attributes, bool isInnerType);
+
     String EmitObjectType(MetaType* mt, unsigned int attributes, bool isInnerType);
 
     String FileName(const String& name);
