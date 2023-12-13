@@ -475,6 +475,11 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
     }
     sb.Append(prefix + TAB).Append("    return result;\n");
     sb.Append(prefix + TAB).Append("}\n");
+    EmitInterfaceProxyMethodRetValue(mm, sb, prefix);
+}
+
+void CppCodeEmitter::EmitInterfaceProxyMethodRetValue(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+{
     if ((mm->properties_ & METHOD_PROPERTY_ONEWAY) == 0) {
         sb.Append("\n");
         sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
