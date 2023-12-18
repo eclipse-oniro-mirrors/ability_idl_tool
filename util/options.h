@@ -169,6 +169,8 @@ struct Attribute {
 private:
     void Parse(int argc, char** argv);
 
+    bool ParseSub(const String& option, int& i, char** argv);
+
     static constexpr int VERSION_MAJOR = 0;
     static constexpr int VERSION_MINOR = 1;
 

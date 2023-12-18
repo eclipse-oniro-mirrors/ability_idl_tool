@@ -30,56 +30,28 @@ void Options::Parse(int argc, char** argv)
     int i = 1;
     while (i < argc) {
         String option(argv[i++]);
-        if (option.Equals("--help")) {
-            doShowUsage_ = true;
-        } else if (option.Equals("--version")) {
-            doShowVersion_ = true;
-        } else if (option.Equals("-c")) {
-            doCompile_ = true;
-        } else if (option.Equals("-dump-ast")) {
-            doDumpAST_ = true;
-        } else if (option.Equals("-dump-metadata")) {
-            doDumpMetadata_ = true;
-        } else if (option.Equals("-s")) {
-            doSaveMetadata_ = true;
-            metadataFile_ = argv[i++];
-        } else if (option.Equals("-gen-rust")) {
-            doGenerateCode_ = true;
-            targetLanguage_ = "rust";
-        } else if (option.Equals("-gen-cpp")) {
-            doGenerateCode_ = true;
-            targetLanguage_ = "cpp";
-        } else if (option.Equals("-gen-ts")) {
-            doGenerateCode_ = true;
-            targetLanguage_ = "ts";
-        } else if (option.Equals("-d")) {
-            generationDirectory_ = argv[i++];
+        if (ParseSub(option, i, argv)) {
+            continue;
         } else if (option.Equals("-t")) {
             doKeywords_ = true;
-            if (targetLanguage_.Equals("cpp")) {
-                if (DoIllegalParameter(argv[i])) {
+            if (targetLanguage_.Equals("cpp") && DoIllegalParameter(argv[i])) {
                 doLegalParameters_ = false;
                 return;
-                }
             }
             hitraceTag_ = argv[i++];
             doHitrace_ = true;
         } else if (option.Equals("-log-domainid")) {
             doKeywords_ = true;
-            if (targetLanguage_.Equals("cpp")) {
-                if (DoIllegalParameter(argv[i])) {
+            if (targetLanguage_.Equals("cpp") && DoIllegalParameter(argv[i])) {
                 doLegalParameters_ = false;
                 return;
-                }
             }
             domainId_ = argv[i++];
         } else if (option.Equals("-log-tag")) {
             doKeywords_ = true;
-            if (targetLanguage_.Equals("cpp")) {
-                if (DoIllegalParameter(argv[i])) {
+            if (targetLanguage_.Equals("cpp") && DoIllegalParameter(argv[i])) {
                 doLegalParameters_ = false;
                 return;
-                }
             }
             logTag_ = argv[i++];
         } else if (!option.StartsWith("-")) {
@@ -97,6 +69,46 @@ void Options::Parse(int argc, char** argv)
     attribute_.logTag = logTag_;
     attribute_.domainId = domainId_;
     attribute_.doLog = DoLogOn();
+}
+
+bool Options::ParseSub(const String& option, int& i, char** argv)
+{
+    if (option.Equals("--help")) {
+        doShowUsage_ = true;
+        return true;
+    } else if (option.Equals("--version")) {
+        doShowVersion_ = true;
+        return true;
+    } else if (option.Equals("-c")) {
+        doCompile_ = true;
+        return true;
+    } else if (option.Equals("-dump-ast")) {
+        doDumpAST_ = true;
+        return true;
+    } else if (option.Equals("-dump-metadata")) {
+        doDumpMetadata_ = true;
+        return true;
+    } else if (option.Equals("-s")) {
+        doSaveMetadata_ = true;
+        metadataFile_ = argv[i++];
+        return true;
+    } else if (option.Equals("-gen-rust")) {
+        doGenerateCode_ = true;
+        targetLanguage_ = "rust";
+        return true;
+    } else if (option.Equals("-gen-cpp")) {
+        doGenerateCode_ = true;
+        targetLanguage_ = "cpp";
+        return true;
+    } else if (option.Equals("-gen-ts")) {
+        doGenerateCode_ = true;
+        targetLanguage_ = "ts";
+        return true;
+    } else if (option.Equals("-d")) {
+        generationDirectory_ = argv[i++];
+        return true;
+    }
+    return false;
 }
 
 void Options::ShowErrors()

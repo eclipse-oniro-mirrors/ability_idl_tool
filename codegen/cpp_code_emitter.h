@@ -84,6 +84,8 @@ private:
 
     void EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder& sb, const String& prefix);
 
+    void EmitInterfaceProxyMethodRetValue(MetaMethod* mm, StringBuilder& sb, const String& prefix);
+
     void EmitWriteMethodParameter(MetaParameter* mp, const String& parcelName, StringBuilder& sb,
         const String& prefix);
 
