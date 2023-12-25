@@ -75,6 +75,9 @@ private:
     void EmitInterfaceMethodCallback(
         MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara);
 
+    void EmitInterfaceMethodCallbackInner(MetaType* returnType,
+        MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara);
+
     void EmitInterfaceMethodParameter(MetaParameter* mp, StringBuilder& stringBuilder, const String& prefix);
 
     void EmitMethodInParameter(StringBuilder& stringBuilder, const std::string& name, const std::string& type,

@@ -35,6 +35,7 @@ import subprocess
 import platform
 import argparse
 
+
 def  parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--src-idl', help='idl source file')
@@ -46,10 +47,12 @@ def  parse_args():
     arguments = parser.parse_args()
     return arguments
 
+
 def  run_command(cmd, execution_path, input_arguments):
     print(" ".join(cmd) + " | execution_path: " + execution_path)
     proc = subprocess.Popen(cmd, cwd=execution_path, stdout=subprocess.PIPE)
     proc.wait()
+
 
 def  idl_gen_interface(input_arguments):
     (path, name) = os.path.split(input_arguments.idl_tool_path)

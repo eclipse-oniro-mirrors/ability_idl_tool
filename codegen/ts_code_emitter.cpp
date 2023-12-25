@@ -389,6 +389,12 @@ void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int meth
         stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append("return;\n");
         stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append("}\n");
     }
+    EmitInterfaceMethodCallbackInner(returnType, metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
+}
+
+void TsCodeEmitter::EmitInterfaceMethodCallbackInner(MetaType* returnType, MetaMethod* metaMethod,
+    int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara)
+{
     // emit return
     for (int index = 0; index < metaMethod->parameterNumber_; index++) {
         MetaParameter* mp = metaMethod->parameters_[index];
@@ -550,16 +556,6 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* metaMethod, int meth
         }
     }
     stringBuilder.Append(prefix).Append(TAB).Append("let promise = new Promise<void>((resolve,reject) => { \n");
-    EmitInterfaceStubMethodPromiseImpl(metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
-    stringBuilder.Append(prefix).Append(TAB).Append("}").Append(");\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("await promise;\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("return true;\n");
-    stringBuilder.Append(prefix).Append("}\n");
-}
-
-void TsCodeEmitter::EmitInterfaceStubMethodPromiseImpl(
-    MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara)
-{
     stringBuilder.Append(prefix).Append(TAB).Append(TAB)
         .AppendFormat("this.%s(", MethodName(metaMethod->name_).string());
     bool isLastParaTypeIn = false;
@@ -579,6 +575,16 @@ void TsCodeEmitter::EmitInterfaceStubMethodPromiseImpl(
     } else {
         stringBuilder.Append(", (");
     }
+    EmitInterfaceStubMethodPromiseImpl(metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
+    stringBuilder.Append(prefix).Append(TAB).Append("}").Append(");\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("await promise;\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("return true;\n");
+    stringBuilder.Append(prefix).Append("}\n");
+}
+
+void TsCodeEmitter::EmitInterfaceStubMethodPromiseImpl(
+    MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara)
+{
     stringBuilder.Append(ERR_CODE);
     if (methods_[methodIndex].retParameter_.name_.size() > 0) {
         if (!haveOutPara) {
