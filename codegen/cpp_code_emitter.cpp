@@ -987,23 +987,6 @@ void CppCodeEmitter::EmitReadVariableComplex(const String& parcelName, const std
                     name.c_str(), parcelName.string());
             }
             break;
-        case TypeKind::Array:
-        case TypeKind::List: {
-            if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
-            }
-            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
-            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
-            if (innerType->kind_ == TypeKind::Sequenceable) {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
-            } else {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
-            }
-            sb.Append(prefix).Append("}\n");
-            break;
-        }
         case TypeKind::Map: {
             if (emitType) {
                 sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
@@ -1015,6 +998,38 @@ void CppCodeEmitter::EmitReadVariableComplex(const String& parcelName, const std
             EmitReadVariable(parcelName, "key", keyType, sb, prefix + TAB);
             EmitReadVariable(parcelName, "value", valueType, sb, prefix + TAB);
             sb.Append(prefix + TAB).AppendFormat("%s[key] = value;\n", name.c_str());
+            sb.Append(prefix).Append("}\n");
+            break;
+        }
+        default:
+            EmitReadVariableList(parcelName, name, mt, sb, prefix, emitType);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitReadVariableList(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& sb, const String& prefix, bool emitType)
+{
+    switch (mt->kind_) {
+        case TypeKind::Array:
+        case TypeKind::List: {
+            if (emitType) {
+                sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
+            }
+            sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
+            sb.Append(prefix).AppendFormat("if (%sSize > VECTOR_MAX_SIZE) {\n", name.c_str());
+            sb.Append(prefix + TAB).Append(
+                "HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
+            sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
+            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+            EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
+            if (innerType->kind_ == TypeKind::Sequenceable) {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
+            } else {
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+            }
             sb.Append(prefix).Append("}\n");
             break;
         }

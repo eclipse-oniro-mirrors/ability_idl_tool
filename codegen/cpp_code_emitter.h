@@ -132,6 +132,9 @@ private:
     void EmitReadVariableComplex(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix, bool emitType = true);
 
+    void EmitReadVariableList(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix, bool emitType = true);
+
     void EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix, bool emitType = true);
 
