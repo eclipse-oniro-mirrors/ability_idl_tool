@@ -314,56 +314,57 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
     }
     stringBuilder.Append(prefix).Append(TAB).Append("let dataSequence = rpc.MessageSequence.create();\n");
     stringBuilder.Append(prefix).Append(TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("try").Append("{\n");
 
     for (int index = 0; index < metaMethod->parameterNumber_; index++) {
         MetaParameter* mp = metaMethod->parameters_[index];
         if ((mp->attributes_ & ATTR_IN) != 0) {
-            EmitWriteMethodParameter(mp, "dataSequence", stringBuilder, prefix + TAB + TAB);
+            EmitWriteMethodParameter(mp, "dataSequence", stringBuilder, prefix + TAB);
         }
         if ((mp->attributes_ & ATTR_OUT) != 0) {
             haveOutPara = true;
         }
     }
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).AppendFormat(
-        "%s.sendMessageRequest(%s.COMMAND_%s, dataSequence, replySequence, option).then(function(result) {\n",
+    stringBuilder.Append(prefix).Append(TAB).AppendFormat(
+        "%s.sendMessageRequest(%s.COMMAND_%s, dataSequence, replySequence, option).",
         THIS_PROXY.c_str(), proxyName_.string(), ConstantName(metaMethod->name_).string());
+    stringBuilder.Append("then((result: rpc.RequestResult) => {\n");
     EmitInterfaceMethodCallback(metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("})\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("} finally ").Append("{\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("}).catch((e: Error) => ").Append("{\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB)
+        .Append("console.log(\'sendMessageRequest failed, message: \' + e.message);\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("}).finally(() => ").Append("{\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("dataSequence.reclaim();").Append("\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("replySequence.reclaim();").Append("\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("}").Append("\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("});").Append("\n");
     stringBuilder.Append(prefix).Append("}\n");
 }
 
 void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder,
     const String& prefix, bool haveOutPara)
 {
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).AppendFormat("if (result.errCode === 0) {\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).AppendFormat("if (result.errCode === 0) {\n");
     MetaType* returnType = metaComponent_->types_[metaMethod->returnTypeIndex_];
     // emit errCode
     MetaType errCode;
     errCode.kind_ = TypeKind::Integer;
     EmitReadOutVariable("result.reply", SuffixAdded(ERR_CODE).c_str(), &errCode, stringBuilder,
-        prefix + TAB + TAB + TAB + TAB);
+        prefix + TAB + TAB + TAB);
 
     if (returnType->kind_ != TypeKind::Void || haveOutPara) {
-        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
+        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
             "if (%s != 0) {\n", SuffixAdded(ERR_CODE).c_str());
         for (size_t index = 0; index < methods_[methodIndex].parameters_.size(); index++) {
             if ((methods_[methodIndex].parameters_[index].attr_ & ATTR_OUT) != 0) {
-                stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
+                stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
                     "let %s = undefined;\n", SuffixAdded(
                         methods_[methodIndex].parameters_[index].name_.c_str()).c_str());
             }
         }
         if (returnType->kind_ != TypeKind::Void) {
-            stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
+            stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat(
                 "let %s = undefined;\n", SuffixAdded(RETURN_VALUE).c_str());
         }
-        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(TAB)
-            .AppendFormat("callback(");
+        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat("callback(");
         stringBuilder.AppendFormat("%s", SuffixAdded(ERR_CODE).c_str());
         if (methods_[methodIndex].retParameter_.name_.size() > 0) {
             if (haveOutPara) {
@@ -386,8 +387,8 @@ void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int meth
             }
         }
         stringBuilder.Append(");\n");
-        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append("return;\n");
-        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append("}\n");
+        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append("return;\n");
+        stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append("}\n");
     }
     EmitInterfaceMethodCallbackInner(returnType, metaMethod, methodIndex, stringBuilder, prefix, haveOutPara);
 }
@@ -399,15 +400,15 @@ void TsCodeEmitter::EmitInterfaceMethodCallbackInner(MetaType* returnType, MetaM
     for (int index = 0; index < metaMethod->parameterNumber_; index++) {
         MetaParameter* mp = metaMethod->parameters_[index];
         if ((mp->attributes_ & ATTR_OUT) != 0) {
-            EmitReadMethodParameter(mp, "result.reply", stringBuilder, prefix + TAB + TAB + TAB + TAB);
+            EmitReadMethodParameter(mp, "result.reply", stringBuilder, prefix + TAB + TAB + TAB);
         }
     }
     if (returnType->kind_ != TypeKind::Void) {
         String parcelName = "result.reply";
         EmitReadOutVariable(parcelName, SuffixAdded(RETURN_VALUE), returnType, stringBuilder,
-            prefix + TAB + TAB + TAB + TAB);
+            prefix + TAB + TAB + TAB);
     }
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).AppendFormat("callback(");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).AppendFormat("callback(");
     stringBuilder.AppendFormat("%s", SuffixAdded(ERR_CODE).c_str());
     if (methods_[methodIndex].retParameter_.name_.size() > 0) {
         if (haveOutPara) {
@@ -430,10 +431,10 @@ void TsCodeEmitter::EmitInterfaceMethodCallbackInner(MetaType* returnType, MetaM
         }
     }
     stringBuilder.Append(");\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append("} else {\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(TAB).Append(
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("} else {\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append(
         "console.log(\"sendMessageRequest failed, errCode: \" + result.errCode);\n");
-    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(TAB).Append("}\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("}\n");
 }
 
 void TsCodeEmitter::EmitWriteMethodParameter(MetaParameter* mp, const String& parcelName, StringBuilder& stringBuilder,
