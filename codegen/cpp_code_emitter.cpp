@@ -899,7 +899,14 @@ void CppCodeEmitter::EmitWriteVariableObject(
             sb.Append(prefix).Append("}\n");
             break;
         case TypeKind::Interface:
-            sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.string(), name.c_str());
+            sb.Append(prefix).AppendFormat("if (%s == nullptr) {\n", name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"%s is nullptr!\");\n", name.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n");
+            sb.Append(prefix).AppendFormat(
+                "if (!%sWriteRemoteObject(%s->AsObject())) {\n", parcelName.string(), name.c_str());
             if (logOn_) {
                 sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
                     name.c_str());
@@ -1018,8 +1025,10 @@ void CppCodeEmitter::EmitReadVariableList(const String& parcelName, const std::s
             }
             sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
             sb.Append(prefix).AppendFormat("if (%sSize > VECTOR_MAX_SIZE) {\n", name.c_str());
-            sb.Append(prefix + TAB).Append(
-                "HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
+            if (logOn_) {
+                sb.Append(prefix + TAB)
+                    .Append("HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
+            }
             sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
             sb.Append(prefix).Append("}\n");
             sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
@@ -1072,8 +1081,8 @@ void CppCodeEmitter::EmitReadVariableObject(const String& parcelName, const std:
         case TypeKind::Interface: {
             MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
             if (emitType) {
-                sb.Append(prefix).AppendFormat("%s %s = %sReadRemoteObject();\n",
-                    EmitType(mt, ATTR_IN, true).string(), name.c_str(), parcelName.string());
+                sb.Append(prefix).AppendFormat("%s %s = iface_cast<%s>(%sReadRemoteObject());\n",
+                    EmitType(mt, ATTR_IN, true).string(), name.c_str(), mi->name_, parcelName.string());
                 sb.Append(prefix).AppendFormat("if (%s == nullptr) {\n", name.c_str());
                 if (logOn_) {
                     sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n",
