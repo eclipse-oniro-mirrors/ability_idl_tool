@@ -357,7 +357,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_008, TestSize.Level1)
     StringBuilder sb;
     MetaType mt { .kind_ = TypeKind::Interface };
     std::string expectStr(
-        "const if (!ParcelNameWriteRemoteObject(Name)) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
+        "const if (Name == nullptr) {\nconst     return ERR_INVALID_DATA;\nconst }\nconst if "
+        "(!ParcelNameWriteRemoteObject(Name->AsObject())) {\nconst     return ERR_INVALID_DATA;\nconst }\n");
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
     EXPECT_STREQ(sb.buffer_, expectStr.c_str());
 }
