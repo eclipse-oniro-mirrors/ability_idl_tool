@@ -1059,16 +1059,15 @@ void CppCodeEmitter::EmitReadVariableObject(const String& parcelName, const std:
             }
             if (emitType) {
                 readSequenceable_ = true;
-                sb.Append(prefix).AppendFormat("if ((!%sReadParcelable<%s>())) {\n",
-                    parcelName.string(), mp->name_);
+                sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %s(%sReadParcelable<%s>());\n\n",
+                    EmitType(mt, ATTR_IN, true).string(), name.c_str(), parcelName.string(), mp->name_);
+                sb.Append(prefix).AppendFormat("if (!%s) {\n", name.c_str());
                 if (logOn_) {
-                    sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n",
-                        mp->name_);
+                    sb.Append(prefix).Append(TAB).AppendFormat(
+                        "HiLog::Error(LABEL, \"Read [%s] failed!\");\n", mp->name_);
                 }
                 sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
                 sb.Append(prefix).Append("}\n");
-                sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %s(%sReadParcelable<%s>());\n\n",
-                    EmitType(mt, ATTR_IN, true).string(), name.c_str(), parcelName.string(), mp->name_);
             } else {
                 sb.Append(prefix).AppendFormat("std::unique_ptr<%s> info(%sReadParcelable<%s>());\n",
                     mp->name_, parcelName.string(), mp->name_);
