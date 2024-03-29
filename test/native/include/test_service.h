@@ -20,13 +20,15 @@
 #include "log_tags.h"
 #include "idl_test_service_stub.h"
 
+#define LOG_ID_IPC 0xD003900
+
 namespace OHOS {
 class TestService : public IdlTestServiceStub {
 public:
     TestService();
     ~TestService();
     static int Instantiate();
-    ErrCode TestIntTransaction(int data, int &rep) override;
+    ErrCode TestIntTransaction(int data) override;
     ErrCode TestStringTransaction(const std::string& data) override;
 private:
     static constexpr HiviewDFX::HiLogLabel LABEL = { LOG_CORE, LOG_ID_IPC, "TestService" };

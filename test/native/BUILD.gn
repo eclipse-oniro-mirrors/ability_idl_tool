@@ -13,10 +13,27 @@
 
 import("//build/ohos.gni")
 import("//foundation/ability/idl_tool/idl_tool.gni")
+import("//foundation/ability/idl_tool/idl_config.gni")
+
+idl_gen_interface("native_idl_test_service") {
+  sources = [
+    "IIdlTestService.idl",
+  ]
+  sanitize = {
+    cfi = false
+    cfi_cross_dso = false
+    debug = false
+  }
+  innerapi_tags = [ "platformsdk" ]
+  subsystem_name = "ability"
+  part_name = "idl_tool"
+  log_domainid = "0xD003900"
+  log_tag = "NativeIdlTestService"
+}
 
 config("ipc_test_config") {
   include_dirs = [
-    "${IDL_TEST_DIR}/include",
+    "include",
     "${IPC_SUBSYSTEM_DIR}/utils/include",
     "${IPC_SUBSYSTEM_DIR}/ipc/native/src/mock/include",
   ]
@@ -24,12 +41,16 @@ config("ipc_test_config") {
 
 ohos_executable("idl_server_test") {
   sources = [
-    "./src/idl_test_service_stub.cpp",
+    # "./src/idl_test_service_stub.cpp",
     "./src/main_server.cpp",
     "./src/test_service.cpp",
   ]
 
   configs = [ ":ipc_test_config" ]
+
+  deps = [
+    ":libnative_idl_test_service_stub"
+  ]
 
   external_deps = [
     "c_utils:utils",
@@ -44,12 +65,16 @@ ohos_executable("idl_server_test") {
 
 ohos_executable("idl_client_test") {
   sources = [
-    "./src/idl_test_service_proxy.cpp",
+    # "./src/idl_test_service_proxy.cpp",
     "./src/main_client.cpp",
     "./src/test_client.cpp",
   ]
 
   configs = [ ":ipc_test_config" ]
+
+  deps = [
+    ":libnative_idl_test_service_proxy"
+  ]
 
   external_deps = [
     "c_utils:utils",
@@ -61,3 +86,13 @@ ohos_executable("idl_client_test") {
   subsystem_name = "ability"
   part_name = "idl_tool"
 }
+
+group("unittest") {
+  testonly = true
+
+  deps = [
+    ":idl_server_test",
+    ":idl_client_test",
+  ]
+}
+

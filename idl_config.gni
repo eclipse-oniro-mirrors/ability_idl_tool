@@ -41,21 +41,74 @@ if (host_toolchain == toolchain_mac) {
 idl_build_path = idl_out_root + "/ability/idl_tool"
 
 template("idl_gen_interface") {
-  assert(defined(invoker.src_idl), "src-idl is required!")
-  assert(defined(invoker.dst_file), "dst-file is required!")
+  # 处理idl源文件
+  idl_list = []
+  if (defined(invoker.sources)) {
+    idl_list += invoker.sources
+    not_needed(invoker, ["src_idl", "dst_file"])
+  } else {
+    assert(defined(invoker.src_idl), "src-idl is required!")
+    # assert(defined(invoker.dst_file), "dst-file is required!")
+    not_needed(invoker, ["dst_file"])
+    idl_list += [get_path_info(invoker.src_idl, "file")]
+  }
+
+  # 处理language，默认是cpp，支持c/cpp/rust
+  language = "cpp"
+  if (defined(invoker.language)) {
+    assert(invoker.language == "c" || invoker.language == "cpp" || invoker.language == "rust",
+    "the language must be set to 'c' or 'cpp' or 'rust', default 'cpp'")
+    language = invoker.language
+  }
+
+  # idl文件名转换
+  str_upper = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z"
+  str_lower = "a b c d e f g h i j k l m n o p q r s t u v w x y z"
+  str_upper_list = string_split(str_upper, " ")
+  str_lower_list = string_split(str_lower, " ")
+  store = []
+  src_idl_fullpath = []
+  dst_file_list = []
+  print("idl config idl_list: ", idl_list)
+  foreach(idl_name, idl_list) {
+    i = 0
+    src_idl_fullpath += [ rebase_path(idl_name) ]
+    name = string_replace(idl_name, ".idl", "")
+    foreach(s, str_upper_list) {
+      name = string_replace(name, s, "_"+str_lower_list[i])
+      i = i+1
+    }
+    # 处理首字母i的问题
+    name_split = []
+    name_split = string_split(name, "_i_")
+    if (name_split[0] == "") {
+      name = string_replace(name, "_i_", "", 1)
+    }
+    dst_file_list += [ name ]
+    store += [
+      "${target_gen_dir}/" + name + "_proxy.cpp",
+      "${target_gen_dir}/" + name + "_stub.cpp",
+    ]
+  }
+  arg_src_idl = string_join(",", src_idl_fullpath)
+  arg_dst_file = string_join(",", dst_file_list)
+  print("idl config store: ", store)
 
   action("$target_name") {
+    inputs = idl_list
     deps = idl_build_deps
     script = "${idl_root}/scripts/idl.py"
     args = [
       "--src-idl",
-      invoker.src_idl,
+      arg_src_idl,
       "--dst-path",
       rebase_path("${target_gen_dir}"),
       "--idl-tool-path",
       rebase_path("${idl_build_path}"),
       "--dst-file",
-      invoker.dst_file,
+      arg_dst_file,
+      "--language",
+      language,
     ]
     if (defined(invoker.log_domainid)) {
       args += [
@@ -75,6 +128,140 @@ template("idl_gen_interface") {
         invoker.hitrace,
       ]
     }
-    outputs = string_split(invoker.dst_file, ",")
+    outputs = store
+  }
+  
+  # 批量处理cpp，编译为so
+  if ((language == "c" || language == "cpp") && defined(invoker.sources)) {
+    idl_headers_config = target_name + "_idl_headers_config"
+    config("$idl_headers_config") {
+      include_dirs = [
+        "${target_gen_dir}"
+      ]
+      if (defined(invoker.sub_include)) {
+        include_dirs += invoker.sub_include
+      }
+    }
+    lib_client = "lib" + target_name + "_proxy"
+    action_target_name = ":" + target_name
+    ohos_shared_library(lib_client) {
+      sources = []
+      output_values = get_target_outputs(action_target_name)
+      sources += filter_include(output_values, ["*_proxy.cpp"])
+      if (defined(invoker.sources_cpp)) {
+        sources += invoker.sources_cpp
+      }
+      if (defined(invoker.configs)) {
+        configs = invoker.configs
+      }
+      public_configs = [ ":$idl_headers_config" ]
+      deps = [ action_target_name ]
+      if (is_standard_system) {
+        public_deps = []
+        if (defined(invoker.sequenceable_pub_deps)) {
+          public_deps += invoker.sequenceable_pub_deps
+        } 
+        external_deps = [
+          "c_utils:utils",
+          # "ipc:ipc_single",
+        ]
+        if (defined(invoker.hitrace)) {
+          external_deps += [ "hitrace:hitrace_meter" ]
+        }
+        if (defined(invoker.log_domainid)) {
+          external_deps += [ "hilog:libhilog" ]
+        }
+        if (defined(invoker.sequenceable_ext_deps)) {
+          external_deps += invoker.sequenceable_ext_deps
+        } 
+        if (language == "c") {
+          external_deps += [ "hdf_core:libhdf_ipc_adapter" ]
+        } else if (language == "cpp") {
+          external_deps += [ "ipc:ipc_single" ]
+        }
+      } else {
+        external_deps = [ "hilog:libhilog" ]
+      } 
+      if (defined(invoker.subsystem_name)) {
+        subsystem_name = invoker.subsystem_name
+      }
+      if (defined(invoker.part_name)) {
+        part_name = invoker.part_name
+      } 
+      if (defined(invoker.innerapi_tags)) {
+        innerapi_tags = invoker.innerapi_tags
+      } 
+      if (defined(invoker.sanitize)) {
+        sanitize = invoker.sanitize
+      } else {
+        sanitize = {
+          cfi = true
+          cfi_cross_dso = true
+          debug = false
+        }
+      }
+    } 
+    lib_server = "lib" + target_name + "_stub"
+    ohos_shared_library(lib_server) {
+      sources = []
+      output_values = get_target_outputs(action_target_name)
+      sources += filter_include(output_values, ["*_stub.cpp"])
+      if (defined(invoker.sources_cpp)) {
+        sources += invoker.sources_cpp
+      }
+      if (defined(invoker.configs)) {
+        configs = invoker.configs
+      }
+      public_configs = [ ":$idl_headers_config" ]
+      deps = [ action_target_name ]
+      if (is_standard_system) {
+        public_deps = []
+        if (defined(invoker.sequenceable_pub_deps)) {
+          public_deps += invoker.sequenceable_pub_deps
+        } 
+        external_deps = [
+          "c_utils:utils",
+          # "ipc:ipc_single",
+        ]
+        if (defined(invoker.hitrace)) {
+          external_deps += [ "hitrace:hitrace_meter" ]
+        }
+        if (defined(invoker.log_domainid)) {
+          external_deps += [ "hilog:libhilog" ]
+        }
+        if (defined(invoker.sequenceable_ext_deps)) {
+          external_deps += invoker.sequenceable_ext_deps
+        } 
+        if (language == "c") {
+          external_deps += [ "hdf_core:libhdf_ipc_adapter" ]
+        } else if (language == "cpp") {
+          external_deps += [ "ipc:ipc_single" ]
+        }
+      } else {
+        external_deps = [ "hilog:libhilog" ]
+      } 
+      if (defined(invoker.subsystem_name)) {
+        subsystem_name = invoker.subsystem_name
+      }
+      if (defined(invoker.part_name)) {
+        part_name = invoker.part_name
+      } 
+      if (defined(invoker.sanitize)) {
+        sanitize = invoker.sanitize
+      } else {
+        sanitize = {
+          cfi = true
+          cfi_cross_dso = true
+          debug = false
+        }
+      }
+    } 
+    # generate code and shared library
+    group("$target_name" + "_idl_target") {
+      deps = [
+        ":$lib_client",
+        ":$lib_server",
+      ]
+    }
   }
 }

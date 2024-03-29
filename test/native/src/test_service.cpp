@@ -49,10 +49,9 @@ TestService::~TestService()
 {
 }
 
-ErrCode TestService::TestIntTransaction(int data, int &rep)
+ErrCode TestService::TestIntTransaction(int data)
 {
     ZLOGE(LABEL, " TestService:read from client data = %{public}d", data);
-    rep = data + data;
     return ERR_NONE;
 }
 

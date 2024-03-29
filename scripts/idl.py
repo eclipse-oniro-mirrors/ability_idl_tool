@@ -29,6 +29,7 @@ def  parse_args():
     parser.add_argument('--log-domainid', help='hilog domain id')
     parser.add_argument('--log-tag', help='hilog tag')
     parser.add_argument('--hitrace', help='hitrace switch, default off')
+    parser.add_argument('--language', help='language switch, default cpp')
     arguments = parser.parse_args()
     return arguments
 
@@ -43,16 +44,17 @@ def  idl_gen_interface(input_arguments):
     (path, name) = os.path.split(input_arguments.idl_tool_path)
     is_exists = os.path.exists(input_arguments.dst_path)
     if is_exists:
-        paths = input_arguments.dst_file.split(',')
-        first_path = paths[0].strip()
-        filename = os.path.basename(first_path)
-        prefix = filename.rsplit('_', maxsplit=1)[0]
-        i_prefix = 'i' + prefix
-        for file_name in os.listdir(input_arguments.dst_path):
-                if ((file_name.startswith(prefix) or file_name.startswith(i_prefix)) and
-                    (file_name.endswith('.cpp') or file_name.endswith('.h'))):
-                    file_path = os.path.join(input_arguments.dst_path, file_name)
-                    os.remove(file_path)
+       print("idl_gen_interface run os.remove start")
+       dst_file_list = input_arguments.dst_file.split(',')
+       for dst_file in dst_file_list:
+           i_dst_file = 'i' + dst_file
+           for file_name in os.listdir(input_arguments.dst_path):
+               if ((file_name.startswith(dst_file) or file_name.startswith(i_dst_file)) and
+                   (file_name.endswith('.cpp') or file_name.endswith('.h'))):
+                   file_path = os.path.join(input_arguments.dst_path, file_name)
+                   os.remove(file_path)
+                   print("idl_gen_interface run os.remove", i_dst_file)
+
     is_exists = os.path.exists(input_arguments.dst_path)
 
     if not is_exists:
@@ -63,16 +65,23 @@ def  idl_gen_interface(input_arguments):
         finally:
             pass
 
-    cmd = [os.path.join("./", name, "idl"),
-           "-gen-cpp", "-d", input_arguments.dst_path, "-c",
-           input_arguments.src_idl]
-    if input_arguments.log_domainid:
-        cmd += ['-log-domainid', input_arguments.log_domainid]
-    if input_arguments.log_tag:
-        cmd += ['-log-tag', input_arguments.log_tag]
-    if input_arguments.hitrace:
-        cmd += ['-t', input_arguments.hitrace]
-    run_command(cmd, path, input_arguments)
+    gen_language = "-gen-cpp"
+    if input_arguments.language == "rust":
+        gen_language = "-gen-rust"
+    elif input_arguments.language == "ts":
+        gen_language = "-gen-ts"
+
+    src_idls = input_arguments.src_idl.split(",")
+    for src_idl in src_idls:
+        cmd = [os.path.join("./", name, "idl"),
+            gen_language, "-d", input_arguments.dst_path, "-c", src_idl]
+        if input_arguments.log_domainid:
+            cmd += ['-log-domainid', input_arguments.log_domainid]
+        if input_arguments.log_tag:
+            cmd += ['-log-tag', input_arguments.log_tag]
+        if input_arguments.hitrace:
+            cmd += ['-t', input_arguments.hitrace]
+        run_command(cmd, path, input_arguments)
 
 if __name__ == '__main__':
     idl_gen_interface(parse_args())

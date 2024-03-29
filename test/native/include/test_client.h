@@ -20,6 +20,8 @@
 #include "log_tags.h"
 #include "idl_test_service_proxy.h"
 
+#define LOG_ID_IPC 0xD003900
+
 namespace OHOS {
 class TestClient {
 public:
