@@ -41,7 +41,7 @@ if (host_toolchain == toolchain_mac) {
 idl_build_path = idl_out_root + "/ability/idl_tool"
 
 template("idl_gen_interface") {
-  # 处理idl源文件
+  # idl sources
   idl_list = []
   if (defined(invoker.sources)) {
     idl_list += invoker.sources
@@ -53,7 +53,7 @@ template("idl_gen_interface") {
     idl_list += [get_path_info(invoker.src_idl, "file")]
   }
 
-  # 处理language，默认是cpp，支持c/cpp/rust
+  # language, default cpp, support c/cpp/rust
   language = "cpp"
   if (defined(invoker.language)) {
     assert(invoker.language == "c" || invoker.language == "cpp" || invoker.language == "rust",
@@ -61,7 +61,7 @@ template("idl_gen_interface") {
     language = invoker.language
   }
 
-  # idl文件名转换
+  # idl name transform
   str_upper = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z"
   str_lower = "a b c d e f g h i j k l m n o p q r s t u v w x y z"
   str_upper_list = string_split(str_upper, " ")
@@ -78,7 +78,7 @@ template("idl_gen_interface") {
       name = string_replace(name, s, "_"+str_lower_list[i])
       i = i+1
     }
-    # 处理首字母i的问题
+    # first letter
     name_split = []
     name_split = string_split(name, "_i_")
     if (name_split[0] == "") {
@@ -131,7 +131,7 @@ template("idl_gen_interface") {
     outputs = store
   }
   
-  # 批量处理cpp，编译为so
+  # multip cpp, build as so
   if ((language == "c" || language == "cpp") && defined(invoker.sources)) {
     idl_headers_config = target_name + "_idl_headers_config"
     config("$idl_headers_config") {
