@@ -45,18 +45,23 @@ template("idl_gen_interface") {
   idl_list = []
   if (defined(invoker.sources)) {
     idl_list += invoker.sources
-    not_needed(invoker, ["src_idl", "dst_file"])
+    not_needed(invoker,
+               [
+                 "src_idl",
+                 "dst_file",
+               ])
   } else {
     assert(defined(invoker.src_idl), "src-idl is required!")
-    not_needed(invoker, ["dst_file"])
-    idl_list += [get_path_info(invoker.src_idl, "file")]
+    not_needed(invoker, [ "dst_file" ])
+    idl_list += [ get_path_info(invoker.src_idl, "file") ]
   }
 
   # language, default cpp, support c/cpp/rust
   language = "cpp"
   if (defined(invoker.language)) {
-    assert(invoker.language == "c" || invoker.language == "cpp" || invoker.language == "rust",
-    "the language must be set to 'c' or 'cpp' or 'rust', default 'cpp'")
+    assert(invoker.language == "c" || invoker.language == "cpp" ||
+               invoker.language == "rust",
+           "the language must be set to 'c' or 'cpp' or 'rust', default 'cpp'")
     language = invoker.language
   }
 
@@ -74,9 +79,10 @@ template("idl_gen_interface") {
     src_idl_fullpath += [ rebase_path(idl_name) ]
     name = string_replace(idl_name, ".idl", "")
     foreach(s, str_upper_list) {
-      name = string_replace(name, s, "_"+str_lower_list[i])
-      i = i+1
+      name = string_replace(name, s, "_" + str_lower_list[i])
+      i = i + 1
     }
+
     # first letter
     name_split = []
     name_split = string_split(name, "_i_")
@@ -134,9 +140,7 @@ template("idl_gen_interface") {
   if ((language == "c" || language == "cpp") && defined(invoker.sources)) {
     idl_headers_config = target_name + "_idl_headers_config"
     config("$idl_headers_config") {
-      include_dirs = [
-        "${target_gen_dir}"
-      ]
+      include_dirs = [ "${target_gen_dir}" ]
       if (defined(invoker.sub_include)) {
         include_dirs += invoker.sub_include
       }
@@ -146,7 +150,7 @@ template("idl_gen_interface") {
     ohos_shared_library(lib_client) {
       sources = []
       output_values = get_target_outputs(action_target_name)
-      sources += filter_include(output_values, ["*_proxy.cpp"])
+      sources += filter_include(output_values, [ "*_proxy.cpp" ])
       if (defined(invoker.sources_cpp)) {
         sources += invoker.sources_cpp
       }
@@ -160,9 +164,7 @@ template("idl_gen_interface") {
         if (defined(invoker.sequenceable_pub_deps)) {
           public_deps += invoker.sequenceable_pub_deps
         }
-        external_deps = [
-          "c_utils:utils",
-        ]
+        external_deps = [ "c_utils:utils" ]
         if (defined(invoker.hitrace)) {
           external_deps += [ "hitrace:hitrace_meter" ]
         }
@@ -203,7 +205,7 @@ template("idl_gen_interface") {
     ohos_shared_library(lib_server) {
       sources = []
       output_values = get_target_outputs(action_target_name)
-      sources += filter_include(output_values, ["*_stub.cpp"])
+      sources += filter_include(output_values, [ "*_stub.cpp" ])
       if (defined(invoker.sources_cpp)) {
         sources += invoker.sources_cpp
       }
@@ -217,9 +219,7 @@ template("idl_gen_interface") {
         if (defined(invoker.sequenceable_pub_deps)) {
           public_deps += invoker.sequenceable_pub_deps
         }
-        external_deps = [
-          "c_utils:utils",
-        ]
+        external_deps = [ "c_utils:utils" ]
         if (defined(invoker.hitrace)) {
           external_deps += [ "hitrace:hitrace_meter" ]
         }
@@ -253,6 +253,7 @@ template("idl_gen_interface") {
         }
       }
     }
+
     # generate code and shared library
     group("$target_name" + "_idl_target") {
       deps = [

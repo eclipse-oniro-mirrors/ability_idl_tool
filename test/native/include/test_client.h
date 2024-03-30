@@ -17,7 +17,6 @@
 #define OHOS_IPC_TEST_SERVICE_CLIENT_H
 
 #include "ipc_debug.h"
-#include "log_tags.h"
 #include "idl_test_service_proxy.h"
 
 #define LOG_ID_IPC 0xD003900
