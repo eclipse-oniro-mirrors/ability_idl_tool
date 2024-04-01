@@ -15,7 +15,6 @@
 
 #include "ipc_debug.h"
 #include "ipc_skeleton.h"
-#include "log_tags.h"
 #include "test_service.h"
 
 using namespace OHOS;

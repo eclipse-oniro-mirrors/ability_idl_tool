@@ -49,7 +49,7 @@ void TestClient::StartIntTransaction()
     if (testService_ != nullptr) {
         ZLOGE(LABEL, "StartIntTransaction");
         [[maybe_unused]] int result = 0;
-        testService_->TestIntTransaction(1234, result); // 1234 : test number
+        testService_->TestIntTransaction(1234); // 1234 : test number
         ZLOGE(LABEL, "Rec result from server %{public}d.", result);
     }
 }
