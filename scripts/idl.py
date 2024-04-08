@@ -42,6 +42,7 @@ def  run_command(cmd, execution_path, input_arguments):
 def  idl_gen_interface(input_arguments):
     (path, name) = os.path.split(input_arguments.idl_tool_path)
     is_exists = os.path.exists(input_arguments.dst_path)
+    print("idl_gen_interface run exist check")
     if not is_exists:
         try:
             os.makedirs(input_arguments.dst_path, 0o750, exist_ok=True)
@@ -53,7 +54,7 @@ def  idl_gen_interface(input_arguments):
     print("idl_gen_interface run os.remove start")
     dst_file_list = input_arguments.dst_file.split(',')
     for dst_file in dst_file_list:
-        i_dst_file = 'i' + dst_file
+        i_dst_file = 'i{0}'.format(dst_file)
         for file_name in os.listdir(input_arguments.dst_path):
             if ((file_name.startswith(dst_file) or file_name.startswith(i_dst_file)) and
                 (file_name.endswith('.cpp') or file_name.endswith('.h'))):
