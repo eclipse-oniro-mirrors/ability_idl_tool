@@ -43,6 +43,7 @@ idl_build_path = idl_out_root + "/ability/idl_tool"
 template("idl_gen_interface") {
   # idl sources
   idl_list = []
+  src_idl_fullpath = []
   if (defined(invoker.sources)) {
     idl_list += invoker.sources
     not_needed(invoker,
@@ -54,6 +55,7 @@ template("idl_gen_interface") {
     assert(defined(invoker.src_idl), "src-idl is required!")
     not_needed(invoker, [ "dst_file" ])
     idl_list += [ get_path_info(invoker.src_idl, "file") ]
+    src_idl_fullpath += [ invoker.src_idl ]
   }
 
   # language, default cpp, support c/cpp/rust
@@ -71,12 +73,13 @@ template("idl_gen_interface") {
   str_upper_list = string_split(str_upper, " ")
   str_lower_list = string_split(str_lower, " ")
   store = []
-  src_idl_fullpath = []
   dst_file_list = []
   print("idl config idl_list: ", idl_list)
   foreach(idl_name, idl_list) {
     i = 0
-    src_idl_fullpath += [ rebase_path(idl_name) ]
+    if (defined(invoker.sources)) {
+      src_idl_fullpath += [ rebase_path(idl_name) ]
+    }
     name = string_replace(idl_name, ".idl", "")
     foreach(s, str_upper_list) {
       name = string_replace(name, s, "_" + str_lower_list[i])
@@ -89,6 +92,11 @@ template("idl_gen_interface") {
     if (name_split[0] == "") {
       name = string_replace(name, "_i_", "", 1)
     }
+    name_split = []
+    name_split = string_split(name, "_")
+    if (name_split[0] == "") {
+      name = string_replace(name, "_", "", 1)
+    }
     dst_file_list += [ name ]
     store += [
       "${target_gen_dir}/" + name + "_proxy.cpp",
@@ -97,10 +105,10 @@ template("idl_gen_interface") {
   }
   arg_src_idl = string_join(",", src_idl_fullpath)
   arg_dst_file = string_join(",", dst_file_list)
-  print("idl config store: ", store)
+  print("idl config store: ", store, dst_file_list)
 
   action("$target_name") {
-    inputs = idl_list
+    inputs = src_idl_fullpath
     deps = idl_build_deps
     script = "${idl_root}/scripts/idl.py"
     args = [
