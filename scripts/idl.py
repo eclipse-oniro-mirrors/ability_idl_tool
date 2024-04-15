@@ -42,7 +42,6 @@ def  run_command(cmd, execution_path, input_arguments):
 def  idl_gen_interface(input_arguments):
     (path, name) = os.path.split(input_arguments.idl_tool_path)
     is_exists = os.path.exists(input_arguments.dst_path)
-    print("idl_gen_interface run exist check")
     if not is_exists:
         try:
             os.makedirs(input_arguments.dst_path, 0o750, exist_ok=True)
