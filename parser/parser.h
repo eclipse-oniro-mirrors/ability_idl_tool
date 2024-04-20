@@ -61,7 +61,17 @@ private:
 
     bool ParseMethod(ASTInterfaceType* interface);
 
+    void ParseMethodPeek(Token& token, bool& oneway, bool& ret);
+
+    bool ParseMethodName(Token& token, ASTType* type, ASTInterfaceType* interface);
+
+    bool ParseMethodBrackets(Token& token, ASTMethod* method, bool& ret);
+
     bool ParseParameter(ASTMethod* method);
+
+    bool ParseParameterPeek(Token& token);
+
+    bool ParseParameterInOut(Token& token, ASTParameter* parameter);
 
     AutoPtr<ASTNamespace> NameSpaceEmpty();
 

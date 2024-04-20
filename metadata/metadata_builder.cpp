@@ -60,10 +60,10 @@ size_t MetadataBuilder::CalculateMetadataSize()
 
 void MetadataBuilder::CalculateMetaComponent(ASTModule* module)
 {
-    int namespaceNumber = module->GetNamespaceNumber();
-    int sequenceableNumber = module->GetSequenceableNumber();
-    int interfaceNumber = module->GetInterfaceNumber();
-    int typeNumber = module->GetTypeNumber();
+    size_t namespaceNumber = module->GetNamespaceNumber();
+    size_t sequenceableNumber = module->GetSequenceableNumber();
+    size_t interfaceNumber = module->GetInterfaceNumber();
+    size_t typeNumber = module->GetTypeNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -79,15 +79,15 @@ void MetadataBuilder::CalculateMetaComponent(ASTModule* module)
     // stringPool_'s address
     baseAddr_ = baseAddr_ + sizeof(MetaType*) * typeNumber;
 
-    for (int i = 0; i < namespaceNumber; i++) {
+    for (size_t i = 0; i < namespaceNumber; i++) {
         CalculateMetaNamespace(module->GetNamespace(i));
     }
 
-    for (int i = 0; i < sequenceableNumber; i++) {
+    for (size_t i = 0; i < sequenceableNumber; i++) {
         CalculateMetaSequenceable(module->GetSequenceable(i));
     }
 
-    for (int i = 0; i < interfaceNumber; i++) {
+    for (size_t i = 0; i < interfaceNumber; i++) {
         CalculateMetaInterface(module->GetInterface(i));
     }
 
@@ -102,9 +102,9 @@ void MetadataBuilder::CalculateMetaComponent(ASTModule* module)
 
 void MetadataBuilder::CalculateMetaNamespace(ASTNamespace* nspace)
 {
-    int sequenceableNumber = nspace->GetSequenceableNumber();
-    int interfaceNumber = nspace->GetInterfaceNumber();
-    int namespaceNumber = nspace->GetNamespaceNumber();
+    size_t sequenceableNumber = nspace->GetSequenceableNumber();
+    size_t interfaceNumber = nspace->GetInterfaceNumber();
+    size_t namespaceNumber = nspace->GetNamespaceNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -118,7 +118,7 @@ void MetadataBuilder::CalculateMetaNamespace(ASTNamespace* nspace)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber;
 
-    for (int i = 0; i < namespaceNumber; i++) {
+    for (size_t i = 0; i < namespaceNumber; i++) {
         CalculateMetaNamespace(nspace->GetNamespace(i));
     }
 }
@@ -135,7 +135,7 @@ void MetadataBuilder::CalculateMetaSequenceable(ASTSequenceableType* sequenceabl
 
 void MetadataBuilder::CalculateMetaInterface(ASTInterfaceType* interface)
 {
-    int methodNumber = interface->GetMethodNumber();
+    size_t methodNumber = interface->GetMethodNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -147,14 +147,14 @@ void MetadataBuilder::CalculateMetaInterface(ASTInterfaceType* interface)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaMethod*) * methodNumber;
 
-    for (int i = 0; i < methodNumber; i++) {
+    for (size_t i = 0; i < methodNumber; i++) {
         CalculateMetaMethod(interface->GetMethod(i));
     }
 }
 
 void MetadataBuilder::CalculateMetaMethod(ASTMethod* method)
 {
-    int parameterNumber = method->GetParameterNumber();
+    size_t parameterNumber = method->GetParameterNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -165,7 +165,7 @@ void MetadataBuilder::CalculateMetaMethod(ASTMethod* method)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaParameter*) * parameterNumber;
 
-    for (int i = 0; i < parameterNumber; i++) {
+    for (size_t i = 0; i < parameterNumber; i++) {
         CalculateMetaParameter(method->GetParameter(i));
     }
 }
@@ -191,7 +191,7 @@ void MetadataBuilder::CalculateMetaType(ASTType* type)
         baseAddr_ = baseAddr_ + sizeof(int*);
     } else if (type->IsMapType()) {
         // end address
-        int typeNumber = 2;
+        size_t typeNumber = 2;
         baseAddr_ = baseAddr_ + sizeof(int*) * typeNumber;
     } else if (type->IsArrayType()) {
         baseAddr_ = baseAddr_ + sizeof(int*);
@@ -214,16 +214,16 @@ void MetadataBuilder::WriteMetadata(uintptr_t base)
 
 void MetadataBuilder::WriteMetaComponent(ASTModule* module)
 {
-    int namespaceNumber = module->GetNamespaceNumber();
-    int sequenceableNumber = module->GetSequenceableNumber();
-    int interfaceNumber = module->GetInterfaceNumber();
-    int typeNumber = module->GetTypeNumber();
+    size_t namespaceNumber = module->GetNamespaceNumber();
+    size_t sequenceableNumber = module->GetSequenceableNumber();
+    size_t interfaceNumber = module->GetInterfaceNumber();
+    size_t typeNumber = module->GetTypeNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
     MetaComponent* mc = reinterpret_cast<MetaComponent*>(baseAddr_);
     mc->magic_ = METADATA_MAGIC_NUMBER;
-    mc->size_ = size_;
+    mc->size_ = static_cast<int>(size_);
     mc->namespaceNumber_ = namespaceNumber;
     mc->sequenceableNumber_ = sequenceableNumber;
     mc->interfaceNumber_ = interfaceNumber;
@@ -250,15 +250,15 @@ void MetadataBuilder::WriteMetaComponent(ASTModule* module)
 
     mc->name_ = WriteString(module->GetName());
 
-    for (int i = 0; i < namespaceNumber; i++) {
+    for (size_t i = 0; i < namespaceNumber; i++) {
         mc->namespaces_[i] = WriteMetaNamespace(module->GetNamespace(i));
     }
 
-    for (int i = 0; i < sequenceableNumber; i++) {
+    for (size_t i = 0; i < sequenceableNumber; i++) {
         mc->sequenceables_[i] = WriteMetaSequenceable(module->GetSequenceable(i));
     }
 
-    for (int i = 0; i < interfaceNumber; i++) {
+    for (size_t i = 0; i < interfaceNumber; i++) {
         mc->interfaces_[i] = WriteMetaInterface(module->GetInterface(i));
     }
 
@@ -271,9 +271,9 @@ void MetadataBuilder::WriteMetaComponent(ASTModule* module)
 
 MetaNamespace* MetadataBuilder::WriteMetaNamespace(ASTNamespace* nspace)
 {
-    int sequenceableNumber = nspace->GetSequenceableNumber();
-    int interfaceNumber = nspace->GetInterfaceNumber();
-    int namespaceNumber = nspace->GetNamespaceNumber();
+    size_t sequenceableNumber = nspace->GetSequenceableNumber();
+    size_t interfaceNumber = nspace->GetInterfaceNumber();
+    size_t namespaceNumber = nspace->GetNamespaceNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -294,17 +294,17 @@ MetaNamespace* MetadataBuilder::WriteMetaNamespace(ASTNamespace* nspace)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber;
 
-    for (int i = 0; i < sequenceableNumber; i++) {
+    for (size_t i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> sequenceable = nspace->GetSequenceable(i);
         mn->sequenceableIndexes_[i] = module_->IndexOf(sequenceable);
     }
 
-    for (int i = 0; i < interfaceNumber; i++) {
+    for (size_t i = 0; i < interfaceNumber; i++) {
         AutoPtr<ASTInterfaceType> interface = nspace->GetInterface(i);
         mn->interfaceIndexes_[i] = module_->IndexOf(interface);
     }
 
-    for (int i = 0; i < namespaceNumber; i++) {
+    for (size_t i = 0; i < namespaceNumber; i++) {
         AutoPtr<ASTNamespace> inner = nspace->GetNamespace(i);
         mn->namespaces_[i] = WriteMetaNamespace(inner);
     }
@@ -327,7 +327,7 @@ MetaSequenceable* MetadataBuilder::WriteMetaSequenceable(ASTSequenceableType* pa
 
 MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
 {
-    int methodNumber = interface->GetMethodNumber();
+    size_t methodNumber = interface->GetMethodNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -344,7 +344,7 @@ MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaMethod*) * methodNumber;
 
-    for (int i = 0; i < methodNumber; i++) {
+    for (size_t i = 0; i < methodNumber; i++) {
         mi->methods_[i] = WriteMetaMethod(interface->GetMethod(i));
     }
 
@@ -353,7 +353,7 @@ MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
 
 MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
 {
-    int parameterNumber = method->GetParameterNumber();
+    size_t parameterNumber = method->GetParameterNumber();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -369,7 +369,7 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaParameter*) * parameterNumber;
 
-    for (int i = 0; i < parameterNumber; i++) {
+    for (size_t i = 0; i < parameterNumber; i++) {
         mm->parameters_[i] = WriteMetaParameter(method->GetParameter(i));
     }
 
@@ -419,7 +419,7 @@ MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
         // end address
         baseAddr_ = baseAddr_ + sizeof(int*);
     } else if (type->IsMapType()) {
-        int typeNumber = 2;
+        size_t typeNumber = 2;
         mt->nestedTypeNumber_ = typeNumber;
         // nestedTypeIndexes_'s address
         baseAddr_ = ALIGN8(baseAddr_);

@@ -151,6 +151,15 @@ void TsCodeEmitter::EmitInterfaceMethod(MetaMethod* metaMethod, StringBuilder& s
         method.parameters_.emplace_back(para);
     }
 
+    EmitInterfaceMethodLastPara(metaMethod, prefix, method, methodStr, haveOutPara);
+    methodStr.Append("): void;\n");
+    stringBuilder.Append(methodStr.ToString());
+    methods_.emplace_back(method);
+}
+
+void TsCodeEmitter::EmitInterfaceMethodLastPara(MetaMethod* metaMethod, const String& prefix, Method& method,
+    StringBuilder& methodStr, bool haveOutPara)
+{
     bool isLastParaTypeIn = false;
     for (size_t index = 0; index < method.parameters_.size(); index++) {
         if ((method.parameters_[index].attr_ & ATTR_IN) != 0) {
@@ -192,9 +201,6 @@ void TsCodeEmitter::EmitInterfaceMethod(MetaMethod* metaMethod, StringBuilder& s
             }
         }
     }
-    methodStr.Append("): void;\n");
-    stringBuilder.Append(methodStr.ToString());
-    methods_.emplace_back(method);
 }
 
 void TsCodeEmitter::EmitInterfaceMethodParameter(MetaParameter* mp, StringBuilder& stringBuilder, const String& prefix)
@@ -522,13 +528,14 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& stringBuilder, c
         stringBuilder.Append(prefix).AppendFormat("%s(", MethodName(metaMethod->name_).string());
         for (int index = 0; index < metaMethod->parameterNumber_; index++) {
             MetaParameter* mp = metaMethod->parameters_[index];
-            if ((mp->attributes_ & ATTR_IN) != 0) {
-                EmitInterfaceMethodParameter(mp, stringBuilder, prefix + TAB);
-                if (index != metaMethod->parameterNumber_ - 1) {
-                    stringBuilder.Append(", ");
-                } else {
-                    isLastParaTypeIn = true;
-                }
+            if ((mp->attributes_ & ATTR_IN) == 0) {
+                continue;
+            }
+            EmitInterfaceMethodParameter(mp, stringBuilder, prefix + TAB);
+            if (index != metaMethod->parameterNumber_ - 1) {
+                stringBuilder.Append(", ");
+            } else {
+                isLastParaTypeIn = true;
             }
         }
         if (!isLastParaTypeIn) {
@@ -647,8 +654,7 @@ void TsCodeEmitter::EmitLicense(StringBuilder& stringBuilder)
 }
 
 void TsCodeEmitter::EmitWriteVariable(const String& parcelName, const std::string& name, MetaType* mt,
-    StringBuilder& stringBuilder,
-    const String& prefix)
+    StringBuilder& stringBuilder, const String& prefix)
 {
     switch (mt->kind_) {
         case TypeKind::Boolean:
@@ -669,6 +675,16 @@ void TsCodeEmitter::EmitWriteVariable(const String& parcelName, const std::strin
         case TypeKind::Double:
             stringBuilder.Append(prefix).AppendFormat("%s.writeDouble(%s);\n", parcelName.string(), name.c_str());
             break;
+        default:
+            EmitWriteVariableObject(parcelName, name, mt, stringBuilder, prefix);
+            break;
+    }
+}
+
+void TsCodeEmitter::EmitWriteVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& stringBuilder, const String& prefix)
+{
+    switch (mt->kind_) {
         case TypeKind::String:
             stringBuilder.Append(prefix).AppendFormat("%s.writeString(%s);\n", parcelName.string(), name.c_str());
             break;
@@ -792,6 +808,16 @@ void TsCodeEmitter::EmitReadVariable(const String& parcelName, const std::string
         case TypeKind::Double:
             stringBuilder.Append(prefix).AppendFormat("let %s = %s.readDouble();\n", name.c_str(), parcelName.string());
             break;
+        default:
+            EmitReadVariableObject(parcelName, name, mt, attributes, stringBuilder, prefix);
+            break;
+    }
+}
+
+void TsCodeEmitter::EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+    unsigned int attributes, StringBuilder& stringBuilder, const String& prefix)
+{
+    switch (mt->kind_) {
         case TypeKind::String:
             stringBuilder.Append(prefix).AppendFormat("let %s = %s.readString();\n", name.c_str(), parcelName.string());
             break;
@@ -844,40 +870,16 @@ void TsCodeEmitter::EmitReadArrayVariable(const String& parcelName, const std::s
     MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
     switch (innerType->kind_) {
         case TypeKind::Boolean:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readBooleanArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Char:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readCharArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Byte:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readByteArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Short:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readShortArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Integer:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readIntArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Long:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readLongArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Float:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readFloatArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Double:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readDoubleArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::String:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readStringArray();\n", name.c_str(),
-                parcelName.string());
+            stringBuilder.Append(prefix).AppendFormat("let %s = %s.%s();\n", name.c_str(),
+                parcelName.string(), typekind_read_array_[innerType->kind_].c_str());
             break;
         case TypeKind::Sequenceable: {
             String typeName = EmitType(mt).EndsWith("]") ?
@@ -908,40 +910,16 @@ void TsCodeEmitter::EmitReadOutArrayVariable(const String& parcelName, const std
     MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
     switch (innerType->kind_) {
         case TypeKind::Boolean:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readBooleanArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Char:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readCharArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Byte:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readByteArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Short:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readShortArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Integer:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readIntArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Long:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readLongArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Float:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readFloatArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::Double:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readDoubleArray();\n", name.c_str(),
-                parcelName.string());
-            break;
         case TypeKind::String:
-            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readStringArray();\n", name.c_str(),
-                parcelName.string());
+            stringBuilder.Append(prefix).AppendFormat("let %s = %s.%s();\n", name.c_str(),
+                parcelName.string(), typekind_read_array_[innerType->kind_].c_str());
             break;
         case TypeKind::Sequenceable: {
             stringBuilder.Append(prefix).AppendFormat("let %sSize = %s.readInt();\n", name.c_str(),

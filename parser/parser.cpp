@@ -216,12 +216,8 @@ bool Parser::ParseInterface()
     }
 }
 
-bool Parser::ParseMethod(ASTInterfaceType* interface)
+void Parser::ParseMethodPeek(Token& token, bool& oneway, bool& ret)
 {
-    bool ret = true;
-    bool oneway = false;
-    Token token;
-
     token = lexer_.PeekToken();
     if (token == Token::BRACKETS_LEFT) {
         lexer_.GetToken();
@@ -247,7 +243,10 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
             lexer_.GetToken();
         }
     }
-    AutoPtr<ASTType> type = ParseType();
+}
+
+bool Parser::ParseMethodName(Token& token, ASTType* type, ASTInterfaceType* interface)
+{
     if (type == nullptr) {
         token = lexer_.PeekToken();
         if (token != Token::BRACES_RIGHT) {
@@ -285,12 +284,11 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
         }
         return false;
     }
-    token = lexer_.GetToken();
+    return true;
+}
 
-    AutoPtr<ASTMethod> method = new ASTMethod();
-    method->SetName(lexer_.GetIdentifier());
-    method->SetOneway(oneway);
-    method->SetReturnType(type);
+bool Parser::ParseMethodBrackets(Token& token, ASTMethod* method, bool& ret)
+{
     if (method->IsOneway()) {
         if (!method->GetReturnType()->IsVoidType()) {
             LogError(token, String("void return type expected in oneway method."));
@@ -300,16 +298,17 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
     token = lexer_.PeekToken();
     if (token != Token::PARENTHESES_LEFT) {
         LogError(token, String("\"(\" is expected."));
-        if (token != Token::BRACES_RIGHT) {
-            // jump over colon
-            lexer_.GetToken();
-            while (token != Token::SEMICOLON && token != Token::END_OF_FILE) {
-                token = lexer_.PeekToken();
-                if (token == Token::BRACES_RIGHT) {
-                    break;
-                }
-                lexer_.GetToken();
+        if (token == Token::BRACES_RIGHT) {
+            return false;
+        }
+        // jump over colon
+        lexer_.GetToken();
+        while (token != Token::SEMICOLON && token != Token::END_OF_FILE) {
+            token = lexer_.PeekToken();
+            if (token == Token::BRACES_RIGHT) {
+                break;
             }
+            lexer_.GetToken();
         }
         return false;
     }
@@ -323,6 +322,29 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
             lexer_.GetToken();
             token = lexer_.PeekToken();
         }
+    }
+    return true;
+}
+
+bool Parser::ParseMethod(ASTInterfaceType* interface)
+{
+    bool ret = true;
+    bool oneway = false;
+    Token token;
+    ParseMethodPeek(token, oneway, ret);
+
+    AutoPtr<ASTType> type = ParseType();
+    if (!ParseMethodName(token, type, interface)) {
+        return false;
+    }
+
+    token = lexer_.GetToken();
+    AutoPtr<ASTMethod> method = new ASTMethod();
+    method->SetName(lexer_.GetIdentifier());
+    method->SetOneway(oneway);
+    method->SetReturnType(type);
+    if (!ParseMethodBrackets(token, method, ret)) {
+        return false;
     }
 
     if (interface->IsOneway() || method->IsOneway()) {
@@ -355,9 +377,8 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
     return ret;
 }
 
-bool Parser::ParseParameter(ASTMethod* method)
+bool Parser::ParseParameterPeek(Token& token)
 {
-    Token token = lexer_.PeekToken();
     if (token != Token::BRACKETS_LEFT) {
         LogError(token, String("\"[\" is expected."));
         // jump to ',' or ')'
@@ -367,10 +388,11 @@ bool Parser::ParseParameter(ASTMethod* method)
         }
         return false;
     }
-    lexer_.GetToken();
+    return true;
+}
 
-    AutoPtr<ASTParameter> parameter = new ASTParameter();
-
+bool Parser::ParseParameterInOut(Token& token, ASTParameter* parameter)
+{
     token = lexer_.PeekToken();
     while (token != Token::BRACKETS_RIGHT && token != Token::END_OF_FILE) {
         switch (token) {
@@ -407,6 +429,23 @@ bool Parser::ParseParameter(ASTMethod* method)
             return false;
         }
     }
+    return true;
+}
+
+bool Parser::ParseParameter(ASTMethod* method)
+{
+    Token token = lexer_.PeekToken();
+    if (!ParseParameterPeek(token)) {
+        return false;
+    }
+    lexer_.GetToken();
+
+    AutoPtr<ASTParameter> parameter = new ASTParameter();
+
+    if (!ParseParameterInOut(token, parameter)) {
+        return false;
+    }
+
     // read ']'
     lexer_.GetToken();
 
@@ -629,8 +668,8 @@ bool Parser::ParseSequenceable()
 bool Parser::CheckIntegrity()
 {
     bool definedInterface = false;
-    int interfaceNumber = module_->GetInterfaceNumber();
-    for (int i = 0; i < interfaceNumber; i++) {
+    size_t interfaceNumber = module_->GetInterfaceNumber();
+    for (size_t i = 0; i < interfaceNumber; i++) {
         if (!module_->GetInterface(i)->IsExternal()) {
             definedInterface = true;
             break;

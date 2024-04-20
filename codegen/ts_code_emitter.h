@@ -18,6 +18,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "codegen/code_emitter.h"
 #include "util/string_builder.h"
@@ -72,6 +73,9 @@ private:
 
     void EmitInterfaceMethod(MetaMethod* metaMethod, StringBuilder& stringBuilder, const String& prefix);
 
+    void EmitInterfaceMethodLastPara(MetaMethod* metaMethod, const String& prefix, Method& method,
+        StringBuilder& methodStr, bool haveOutPara);
+
     void EmitInterfaceMethodCallback(
         MetaMethod* metaMethod, int methodIndex, StringBuilder& stringBuilder, const String& prefix, bool haveOutPara);
 
@@ -120,12 +124,16 @@ private:
     void EmitLicense(StringBuilder& stringBuilder);
 
     void EmitWriteVariable(const String& parcelName, const std::string& name, MetaType* mt,
-        StringBuilder& stringBuilder,
-        const String& prefix);
+        StringBuilder& stringBuilder, const String& prefix);
+
+    void EmitWriteVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+        StringBuilder& stringBuilder, const String& prefix);
 
     void EmitReadVariable(const String& parcelName, const std::string& name, MetaType* mt, unsigned int attributes,
-        StringBuilder& stringBuilder,
-        const String& prefix);
+        StringBuilder& stringBuilder, const String& prefix);
+
+    void EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt, unsigned int attributes,
+        StringBuilder& stringBuilder, const String& prefix);
 
     void EmitReadOutVariable(const String& parcelName, const std::string& name, MetaType* mt,
         StringBuilder& stringBuilder,
@@ -161,6 +169,18 @@ private:
     const std::string SuffixAdded(const String& name);
 
     std::vector<Method> methods_;
+
+    std::unordered_map<TypeKind, std::string> typekind_read_array_ = {
+        {TypeKind::Boolean, "readBooleanArray"},
+        {TypeKind::Char, "readCharArray"},
+        {TypeKind::Byte, "readByteArray"},
+        {TypeKind::Short, "readShortArray"},
+        {TypeKind::Integer, "readIntArray"},
+        {TypeKind::Long, "readLongArray"},
+        {TypeKind::Float, "readFloatArray"},
+        {TypeKind::Double, "readDoubleArray"},
+        {TypeKind::String, "readStringArray"},
+    };
 };
 } // namespace Idl
 } // namespace OHOS
