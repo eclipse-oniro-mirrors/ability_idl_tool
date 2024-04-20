@@ -113,7 +113,10 @@ String::String(const char* string)
     if (string != nullptr) {
         string_ = SharedData::ToString(SharedData::Allocate(strlen(string)));
         if (string_ != nullptr) {
-            (void)strcpy_s(string_, strlen(string) + 1, string);
+            errno_t ret = strcpy_s(string_, strlen(string) + 1, string);
+            if (ret != EOK) {
+                Logger::E(String::TAG, "The String::String is error in strcpy_s.");
+            }
         }
     }
 }
@@ -127,7 +130,6 @@ String::String(const char* string, size_t length)
             if (ret == EOK) {
                 string_[length] = '\0';
             } else {
-                free(string_);
                 string_ = nullptr;
             }
         }
@@ -392,8 +394,8 @@ bool String::StartsWith(const String& other) const
         return true;
     }
 
-    size_t count = other.GetLength();
-    if (count > (size_t)GetLength()) {
+    int count = other.GetLength();
+    if (count > GetLength()) {
         return false;
     }
 
@@ -429,8 +431,8 @@ bool String::EndsWith(const String& other) const
         return true;
     }
 
-    size_t count = other.GetLength();
-    size_t len = GetLength();
+    int count = other.GetLength();
+    int len = GetLength();
     if (count > len) {
         return false;
     }
@@ -444,11 +446,11 @@ String String::ToLowerCase() const
         return *this;
     }
 
-    size_t size = GetLength();
-    for (size_t i = 0; i < size; i++) {
+    int size = GetLength();
+    for (int i = 0; i < size; i++) {
         if (isupper(string_[i])) {
             String newStr(string_);
-            for (size_t j = i; j < size; j++) {
+            for (int j = i; j < size; j++) {
                 newStr.string_[j] = tolower(newStr.string_[j]);
             }
             return newStr;
@@ -463,11 +465,11 @@ String String::ToUpperCase() const
         return *this;
     }
 
-    size_t size = GetLength();
-    for (size_t i = 0; i < size; i++) {
+    int size = GetLength();
+    for (int i = 0; i < size; i++) {
         if (islower(string_[i])) {
             String newStr(string_);
-            for (size_t j = i; j < size; j++) {
+            for (int j = i; j < size; j++) {
                 newStr.string_[j] = toupper(newStr.string_[j]);
             }
             return newStr;
@@ -500,11 +502,11 @@ String String::Replace(char oldChar, char newChar) const
         return *this;
     }
 
-    size_t size = GetLength();
-    for (size_t i = 0; i < size; i++) {
+    int size = GetLength();
+    for (int i = 0; i < size; i++) {
         if (string_[i] == oldChar) {
             String newStr(string_);
-            for (size_t j = i; j < size; j++) {
+            for (int j = i; j < size; j++) {
                 if (newStr.string_[j] == oldChar) {
                     newStr.string_[j] = newChar;
                 }
@@ -574,7 +576,10 @@ String& String::operator=(const char* string)
 
     string_ = SharedData::ToString(SharedData::Allocate(strlen(string)));
     if (string_ != nullptr) {
-        (void)strcpy_s(string_, strlen(string) + 1, string);
+        errno_t ret = strcpy_s(string_, strlen(string) + 1, string);
+        if (ret != EOK) {
+            Logger::E(String::TAG, "The operator= is error in strcpy_s.");
+        }
     }
     return *this;
 }
@@ -626,7 +631,10 @@ String String::operator+=(const String& other) const
     String newString(newSize);
     if (newString.string_ != nullptr) {
         (void)memcpy_s(newString.string_, newSize + 1, string_, thisSize);
-        (void)strcpy_s(newString.string_ + thisSize, newSize + 1 - thisSize, other.string_);
+        errno_t ret = strcpy_s(newString.string_ + thisSize, newSize + 1 - thisSize, other.string_);
+        if (ret != EOK) {
+            Logger::E(String::TAG, "The operator+= is error in strcpy_s.");
+        }
     }
     return newString;
 }

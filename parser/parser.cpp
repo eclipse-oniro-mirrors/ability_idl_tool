@@ -629,8 +629,8 @@ bool Parser::ParseSequenceable()
 bool Parser::CheckIntegrity()
 {
     bool definedInterface = false;
-    int interfaceNumber = module_->GetInterfaceNumber();
-    for (int i = 0; i < interfaceNumber; i++) {
+    size_t interfaceNumber = module_->GetInterfaceNumber();
+    for (size_t i = 0; i < interfaceNumber; i++) {
         if (!module_->GetInterface(i)->IsExternal()) {
             definedInterface = true;
             break;

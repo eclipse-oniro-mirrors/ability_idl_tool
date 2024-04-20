@@ -845,6 +845,9 @@ void CppCodeEmitter::EmitWriteVariableComplex(
             sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.string(), name.c_str());
             sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n",
                 name.c_str(), name.c_str());
+            if (mt == nullptr) {
+                break;
+            }
             MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             EmitWriteVariable(parcelName, "(*it)", innerType, sb, prefix + TAB);
             sb.Append(prefix).Append("}\n");
