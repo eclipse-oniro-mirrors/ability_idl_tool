@@ -62,7 +62,7 @@ String ASTMethod::Dump(const String& prefix)
     sb.Append(prefix);
     sb.Append(returnType_->ToString()).Append(' ');
     sb.Append(name_).Append('(');
-    if (parameters_.size() != 0) {
+    if (parameters_.size() > 0) {
         sb.Append('\n');
         for (auto parameter : parameters_) {
             String info = parameter->Dump(prefix + "  ");

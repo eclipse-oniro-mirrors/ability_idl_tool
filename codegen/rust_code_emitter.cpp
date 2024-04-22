@@ -190,7 +190,7 @@ bool RustCodeEmitter::AppendRealPath(StringBuilder& sb, const String& fpnpp)
 
 bool RustCodeEmitter::EmitCustomHeaders(StringBuilder& sb)
 {
-    bool custom = false;
+    uint32_t custom = false;
     for (int i = 0; i < metaComponent_->sequenceableNumber_; i++) {
         MetaSequenceable* ms = metaComponent_->sequenceables_[i];
         custom |= AppendRealPath(sb, String(ms->namespace_) + String(ms->name_));
@@ -202,7 +202,7 @@ bool RustCodeEmitter::EmitCustomHeaders(StringBuilder& sb)
             custom |= AppendRealPath(sb, String(mi->namespace_) + String(mi->name_));
         }
     }
-    return custom;
+    return static_cast<bool>(custom);
 }
 
 void RustCodeEmitter::EmitCommands(StringBuilder& sb)

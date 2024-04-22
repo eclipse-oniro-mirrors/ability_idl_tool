@@ -103,6 +103,9 @@ private:
 
     void EmitInterfaceStubMethodImpls(StringBuilder& sb, const String& prefix);
 
+    void EmitInterfaceStubMethodImplReturn(MetaMethod* mm, StringBuilder& sb, const String& prefix,
+        MetaType* returnType);
+
     void EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& sb, const String& prefix);
 
     void EmitInterfaceMethodCommands(StringBuilder& sb, const String& prefix);
@@ -119,6 +122,9 @@ private:
 
     void EmitWriteVariable(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix);
+        
+    void EmitWriteVariableFloat(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix);
 
     void EmitWriteVariableComplex(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix);
@@ -127,6 +133,9 @@ private:
         const String& prefix);
 
     void EmitReadVariable(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
+        const String& prefix, bool emitType = true);
+
+    void EmitReadVariableFloat(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
         const String& prefix, bool emitType = true);
 
     void EmitReadVariableComplex(const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb,
@@ -143,6 +152,8 @@ private:
     void EmitReturnParameter(const String& name, MetaType* mt, StringBuilder& sb);
 
     String EmitType(MetaType* mt, unsigned int attributes, bool isInnerType);
+
+    String EmitFloatType(MetaType* mt, unsigned int attributes, bool isInnerType);
 
     String EmitComplexType(MetaType* mt, unsigned int attributes, bool isInnerType);
 

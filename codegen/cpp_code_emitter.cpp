@@ -637,20 +637,9 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& sb, const Strin
     sb.Append(prefix).Append("}\n");
 }
 
-void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+void CppCodeEmitter::EmitInterfaceStubMethodImplReturn(MetaMethod* mm,
+    StringBuilder& sb, const String& prefix, MetaType* returnType)
 {
-    sb.Append(prefix).AppendFormat("case COMMAND_%s: {\n", ConstantName(mm->name_).string());
-    for (int i = 0; i < mm->parameterNumber_; i++) {
-        MetaParameter* mp = mm->parameters_[i];
-        if ((mp->attributes_ & ATTR_IN) != 0) {
-            MetaType* mt = metaComponent_->types_[mp->typeIndex_];
-            const std::string name = mp->name_;
-            EmitReadVariable("data.", name, mt, sb, prefix + TAB);
-        } else if ((mp->attributes_ & ATTR_OUT) != 0) {
-            EmitLocalVariable(mp, sb, prefix + TAB);
-        }
-    }
-    MetaType* returnType = metaComponent_->types_[mm->returnTypeIndex_];
     if (returnType->kind_ != TypeKind::Void) {
         if ((returnType->kind_ == TypeKind::Sequenceable) || (returnType->kind_ == TypeKind::Interface)) {
             sb.Append(prefix + TAB).AppendFormat("%s result = nullptr;\n",
@@ -686,6 +675,24 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         }
         sb.AppendFormat(");\n", mm->name_);
     }
+}
+
+void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("case COMMAND_%s: {\n", ConstantName(mm->name_).string());
+    for (int i = 0; i < mm->parameterNumber_; i++) {
+        MetaParameter* mp = mm->parameters_[i];
+        if ((mp->attributes_ & ATTR_IN) != 0) {
+            MetaType* mt = metaComponent_->types_[mp->typeIndex_];
+            const std::string name = mp->name_;
+            EmitReadVariable("data.", name, mt, sb, prefix + TAB);
+        } else if ((mp->attributes_ & ATTR_OUT) != 0) {
+            EmitLocalVariable(mp, sb, prefix + TAB);
+        }
+    }
+    MetaType* returnType = metaComponent_->types_[mm->returnTypeIndex_];
+    EmitInterfaceStubMethodImplReturn(mm, sb, prefix, returnType);
+
     sb.Append(prefix + TAB).Append("if (!reply.WriteInt32(errCode)) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Write Int32 failed!\");\n");
@@ -800,6 +807,16 @@ void CppCodeEmitter::EmitWriteVariable(const String& parcelName, const std::stri
             sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
             sb.Append(prefix).Append("}\n");
             break;
+        default:
+            EmitWriteVariableFloat(parcelName, name, mt, sb, prefix);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitWriteVariableFloat(
+    const String& parcelName, const std::string& name, MetaType* mt, StringBuilder& sb, const String& prefix)
+{
+    switch (mt->kind_) {
         case TypeKind::Float:
             sb.Append(prefix).AppendFormat("if (!%sWriteFloat(%s)) {\n", parcelName.string(), name.c_str());
             if (logOn_) {
@@ -845,9 +862,11 @@ void CppCodeEmitter::EmitWriteVariableComplex(
             sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.string(), name.c_str());
             sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n",
                 name.c_str(), name.c_str());
-            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            EmitWriteVariable(parcelName, "(*it)", innerType, sb, prefix + TAB);
-            sb.Append(prefix).Append("}\n");
+            if (mt != nullptr) {
+                MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+                EmitWriteVariable(parcelName, "(*it)", innerType, sb, prefix + TAB);
+                sb.Append(prefix).Append("}\n");
+            }
             break;
         }
         case TypeKind::Map: {
@@ -959,6 +978,16 @@ void CppCodeEmitter::EmitReadVariable(const String& parcelName, const std::strin
                 sb.Append(prefix).AppendFormat("%s = %sReadInt64();\n", name.c_str(), parcelName.string());
             }
             break;
+        default:
+            EmitReadVariableFloat(parcelName, name, mt, sb, prefix, emitType);
+            break;
+    }
+}
+
+void CppCodeEmitter::EmitReadVariableFloat(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& sb, const String& prefix, bool emitType)
+{
+    switch (mt->kind_) {
         case TypeKind::Float:
             if (emitType) {
                 sb.Append(prefix).AppendFormat("%s %s = %sReadFloat();\n",
@@ -1182,6 +1211,15 @@ String CppCodeEmitter::EmitType(MetaType* mt, unsigned int attributes, bool isIn
             } else {
                 return "long&";
             }
+        default:
+            return EmitFloatType(mt, attributes, isInnerType);
+    }
+}
+
+
+String CppCodeEmitter::EmitFloatType(MetaType* mt, unsigned int attributes, bool isInnerType)
+{
+    switch (mt->kind_) {
         case TypeKind::Float:
             enteredVector_ = false;
             if (attributes & ATTR_IN) {

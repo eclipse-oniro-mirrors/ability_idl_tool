@@ -94,25 +94,17 @@ Token Lexer::ReadToken(bool skipComment)
         }
         switch (c) {
             case '<':
-                currentToken_ = Token::ANGLE_BRACKETS_LEFT;
-                return currentToken_;
             case '>':
-                currentToken_ = Token::ANGLE_BRACKETS_RIGHT;
-                return currentToken_;
             case '{':
-                currentToken_ = Token::BRACES_LEFT;
-                return currentToken_;
             case '}':
-                currentToken_ = Token::BRACES_RIGHT;
-                return currentToken_;
             case '[':
-                currentToken_ = Token::BRACKETS_LEFT;
-                return currentToken_;
             case ']':
-                currentToken_ = Token::BRACKETS_RIGHT;
-                return currentToken_;
             case ',':
-                currentToken_ = Token::COMMA;
+            case '(':
+            case ')':
+            case '.':
+            case ';':
+                currentToken_ = token_map_[c];
                 return currentToken_;
             case '/':
                 if (currentFile_->PeekChar() == '/') {
@@ -129,18 +121,6 @@ Token Lexer::ReadToken(bool skipComment)
                     continue;
                 }
                 currentToken_ = Token::UNKNOWN;
-                return currentToken_;
-            case '(':
-                currentToken_ = Token::PARENTHESES_LEFT;
-                return currentToken_;
-            case ')':
-                currentToken_ = Token::PARENTHESES_RIGHT;
-                return currentToken_;
-            case '.':
-                currentToken_ = Token::DOT;
-                return currentToken_;
-            case ';':
-                currentToken_ = Token::SEMICOLON;
                 return currentToken_;
             default:
                 currentToken_ = Token::UNKNOWN;

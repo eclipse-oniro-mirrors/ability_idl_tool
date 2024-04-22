@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <climits>
 #include "securec.h"
 
 namespace OHOS {
@@ -109,6 +110,9 @@ int File::Read()
     if (count < BUFFER_SIZE - 1) {
         isError_ = ferror(fd_) != 0;
         buffer_[count] = -1;
+    }
+    if (count > INT_MAX) {
+        count = INT_MAX - 1;
     }
     size_ = count;
     position_ = 0;

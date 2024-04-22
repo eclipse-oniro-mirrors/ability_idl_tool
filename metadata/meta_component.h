@@ -39,7 +39,7 @@ struct MetaComponent {
     MetaSequenceable** sequenceables_;
     MetaInterface** interfaces_;
     MetaType** types_;
-    int stringPoolSize_;
+    size_t stringPoolSize_;
     char* stringPool_;
 };
 

@@ -106,6 +106,19 @@ private:
     String comment_;
     bool havePeek_ = false;
     std::shared_ptr<File> currentFile_;
+    std::unordered_map<char, Token> token_map_ = {
+        {'<', Token::ANGLE_BRACKETS_LEFT},
+        {'>', Token::ANGLE_BRACKETS_RIGHT},
+        {'{', Token::BRACES_LEFT},
+        {'}', Token::BRACES_RIGHT},
+        {'[', Token::BRACKETS_LEFT},
+        {']', Token::BRACKETS_RIGHT},
+        {',', Token::COMMA},
+        {'(', Token::PARENTHESES_LEFT},
+        {')', Token::PARENTHESES_RIGHT},
+        {'.', Token::DOT},
+        {';', Token::SEMICOLON},
+    };
 };
 } // namespace Idl
 } // namespace OHOS
