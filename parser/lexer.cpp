@@ -109,23 +109,15 @@ Token Lexer::ReadToken(bool skipComment)
             case '/':
                 if (currentFile_->PeekChar() == '/') {
                     ReadLineComment(c);
+                    if (!skipComment) {
+                        return currentToken_;
+                    }
+                    continue;
                 } else if (currentFile_->PeekChar() == '*') {
                     ReadBlockComment(c);
                     if (!skipComment) {
                         return currentToken_;
                     }
-                    continue;
-                }
-                if (currentFile_->PeekChar() == '/' && !skipComment) {
-                    return currentToken_;
-                }
-                if (currentFile_->PeekChar() == '/' && skipComment) {
-                    continue;
-                }
-                if (currentFile_->PeekChar() == '*' && !skipComment) {
-                    return currentToken_;
-                }
-                if (currentFile_->PeekChar() == '*' && skipComment) {
                     continue;
                 }
                 currentToken_ = Token::UNKNOWN;

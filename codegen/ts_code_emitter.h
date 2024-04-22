@@ -132,8 +132,8 @@ private:
     void EmitReadVariable(const String& parcelName, const std::string& name, MetaType* mt, unsigned int attributes,
         StringBuilder& stringBuilder, const String& prefix);
 
-    void EmitReadVariableObject(const String& parcelName, const std::string& name, MetaType* mt, unsigned int attributes,
-        StringBuilder& stringBuilder, const String& prefix);
+    void EmitReadVariableObject(const String& parcelName, const std::string& name,MetaType* mt,
+        unsigned int attributes, StringBuilder& stringBuilder, const String& prefix);
 
     void EmitReadOutVariable(const String& parcelName, const std::string& name, MetaType* mt,
         StringBuilder& stringBuilder,

@@ -637,7 +637,8 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& sb, const Strin
     sb.Append(prefix).Append("}\n");
 }
 
-void CppCodeEmitter::EmitInterfaceStubMethodImplReturn(MetaMethod* mm, StringBuilder& sb, const String& prefix, MetaType* returnType)
+void CppCodeEmitter::EmitInterfaceStubMethodImplReturn(MetaMethod* mm,
+    StringBuilder& sb, const String& prefix, MetaType* returnType)
 {
     if (returnType->kind_ != TypeKind::Void) {
         if ((returnType->kind_ == TypeKind::Sequenceable) || (returnType->kind_ == TypeKind::Interface)) {
@@ -861,12 +862,11 @@ void CppCodeEmitter::EmitWriteVariableComplex(
             sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.string(), name.c_str());
             sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n",
                 name.c_str(), name.c_str());
-            if (mt == nullptr) {
-                break;
+            if (mt != nullptr) {
+                MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
+                EmitWriteVariable(parcelName, "(*it)", innerType, sb, prefix + TAB);
+                sb.Append(prefix).Append("}\n");
             }
-            MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            EmitWriteVariable(parcelName, "(*it)", innerType, sb, prefix + TAB);
-            sb.Append(prefix).Append("}\n");
             break;
         }
         case TypeKind::Map: {
@@ -1008,7 +1008,6 @@ void CppCodeEmitter::EmitReadVariableFloat(const String& parcelName, const std::
             EmitReadVariableComplex(parcelName, name, mt, sb, prefix, emitType);
             break;
     }
-    
 }
 
 void CppCodeEmitter::EmitReadVariableComplex(const String& parcelName, const std::string& name, MetaType* mt,
@@ -1241,7 +1240,6 @@ String CppCodeEmitter::EmitFloatType(MetaType* mt, unsigned int attributes, bool
         default:
             return EmitComplexType(mt, attributes, isInnerType);
     }
-
 }
 
 String CppCodeEmitter::EmitComplexType(MetaType* mt, unsigned int attributes, bool isInnerType)
