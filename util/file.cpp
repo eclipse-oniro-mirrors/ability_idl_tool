@@ -18,7 +18,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <climits>
-#include <memory>
 #include "securec.h"
 
 namespace OHOS {
