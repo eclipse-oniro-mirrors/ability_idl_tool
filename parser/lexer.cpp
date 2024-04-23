@@ -138,7 +138,6 @@ bool Lexer::ReadTokenPeek(bool skipComment, char c)
     }
     currentToken_ = Token::UNKNOWN;
     return true;
-
 }
 
 Token Lexer::ReadIdentifier(char c)
