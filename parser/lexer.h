@@ -38,6 +38,8 @@ public:
 
     Token PeekToken(bool skipComment = true);
 
+    bool ReadTokenPeek(bool skipComment, char c);
+
     String GetIdentifier() const
     {
         return identifier_;

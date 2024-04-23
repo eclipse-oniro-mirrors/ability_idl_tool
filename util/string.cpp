@@ -130,7 +130,6 @@ String::String(const char* string, size_t length)
             if (ret == EOK) {
                 string_[length] = '\0';
             } else {
-                free(string_);
                 string_ = nullptr;
             }
         }
