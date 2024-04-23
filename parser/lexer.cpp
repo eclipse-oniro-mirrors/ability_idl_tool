@@ -107,21 +107,26 @@ Token Lexer::ReadToken(bool skipComment)
                 currentToken_ = token_map_[c];
                 return currentToken_;
             case '/':
-                if (currentFile_->PeekChar() == '/') {
-                    ReadLineComment(c);
-                    if (!skipComment) {
-                        return currentToken_;
-                    }
-                    continue;
-                } else if (currentFile_->PeekChar() == '*') {
-                    ReadBlockComment(c);
-                    if (!skipComment) {
-                        return currentToken_;
-                    }
+                if (ReadTokenPeek(skipComment, c)) {
+                    return currentToken_;
+                } else {
                     continue;
                 }
-                currentToken_ = Token::UNKNOWN;
-                return currentToken_;
+                // if (currentFile_->PeekChar() == '/') {
+                //     ReadLineComment(c);
+                //     if (!skipComment) {
+                //         return currentToken_;
+                //     }
+                //     continue;
+                // } else if (currentFile_->PeekChar() == '*') {
+                //     ReadBlockComment(c);
+                //     if (!skipComment) {
+                //         return currentToken_;
+                //     }
+                //     continue;
+                // }
+                // currentToken_ = Token::UNKNOWN;
+                // return currentToken_;
             default:
                 currentToken_ = Token::UNKNOWN;
                 return currentToken_;
@@ -129,6 +134,26 @@ Token Lexer::ReadToken(bool skipComment)
     }
     currentToken_ = Token::END_OF_FILE;
     return currentToken_;
+}
+
+bool Lexer::ReadTokenPeek(bool skipComment, char c)
+{
+    if (currentFile_->PeekChar() == '/') {
+        ReadLineComment(c);
+        if (!skipComment) {
+            return true;
+        }
+        return false;
+    } else if (currentFile_->PeekChar() == '*') {
+        ReadBlockComment(c);
+        if (!skipComment) {
+            return true;
+        }
+        return false;
+    }
+    currentToken_ = Token::UNKNOWN;
+    return true;
+
 }
 
 Token Lexer::ReadIdentifier(char c)
