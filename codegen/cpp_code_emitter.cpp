@@ -691,6 +691,9 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
         }
     }
     MetaType* returnType = metaComponent_->types_[mm->returnTypeIndex_];
+    if (returnType == nullptr) {
+        return;
+    }
     EmitInterfaceStubMethodImplReturn(mm, sb, prefix, returnType);
 
     sb.Append(prefix + TAB).Append("if (!reply.WriteInt32(errCode)) {\n");

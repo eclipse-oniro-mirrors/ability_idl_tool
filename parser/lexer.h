@@ -38,7 +38,7 @@ public:
 
     Token PeekToken(bool skipComment = true);
 
-    bool ReadTokenPeek(bool skipComment, char c);
+    bool ReadTokenPeek(bool skipComment, char letter);
 
     String GetIdentifier() const
     {

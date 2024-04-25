@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <climits>
+#include <memory>
 #include "securec.h"
 
 namespace OHOS {
@@ -36,7 +37,14 @@ File::File(const String& path, int mode)
     }
 
     if (mode_ & READ) {
-        fd_ = fopen(path.string(), "r");
+        auto realFileName = std::make_unique<char[]>(PATH_MAX);
+        if (realFileName == nullptr) {
+            return;
+        }
+        if (realpath(path.string(), realFileName.get()) == nullptr) {
+            return;
+        }
+        fd_ = fopen(realFileName.get(), "r");
     } else if (mode_ & WRITE) {
         fd_ = fopen(path.string(), "w+");
     } else if (mode_ & APPEND) {
@@ -111,11 +119,11 @@ int File::Read()
         isError_ = ferror(fd_) != 0;
         buffer_[count] = -1;
     }
-    if (count > INT_MAX) {
-        count = INT_MAX - 1;
-    }
     size_ = count;
     position_ = 0;
+    if (count > INT_MAX) {
+        return -1;
+    }
     return count != 0 ? count : -1;
 }
 
