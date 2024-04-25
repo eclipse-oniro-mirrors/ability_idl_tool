@@ -121,16 +121,16 @@ Token Lexer::ReadToken(bool skipComment)
     return currentToken_;
 }
 
-bool Lexer::ReadTokenPeek(bool skipComment, char c)
+bool Lexer::ReadTokenPeek(bool skipComment, char letter)
 {
     if (currentFile_->PeekChar() == '/') {
-        ReadLineComment(c);
+        ReadLineComment(letter);
         if (!skipComment) {
             return true;
         }
         return false;
     } else if (currentFile_->PeekChar() == '*') {
-        ReadBlockComment(c);
+        ReadBlockComment(letter);
         if (!skipComment) {
             return true;
         }

@@ -136,8 +136,10 @@ private:
         unsigned int attributes, StringBuilder& stringBuilder, const String& prefix);
 
     void EmitReadOutVariable(const String& parcelName, const std::string& name, MetaType* mt,
-        StringBuilder& stringBuilder,
-        const String& prefix);
+        StringBuilder& stringBuilder, const String& prefix);
+        
+    void EmitReadOutVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+        StringBuilder& stringBuilder, const String& prefix);
 
     void EmitReadArrayVariable(const String& parcelName, const std::string& name, MetaType* mt,
         unsigned int attributes,

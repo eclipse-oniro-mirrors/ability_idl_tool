@@ -111,11 +111,11 @@ int File::Read()
         isError_ = ferror(fd_) != 0;
         buffer_[count] = -1;
     }
-    if (count > INT_MAX) {
-        count = INT_MAX - 1;
-    }
     size_ = count;
     position_ = 0;
+    if (count > INT_MAX) {
+        return -1;
+    }
     return count != 0 ? count : -1;
 }
 
