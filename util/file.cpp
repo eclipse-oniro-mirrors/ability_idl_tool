@@ -35,30 +35,29 @@ File::File(const String& path, int mode)
         return;
     }
 
-    String pathTmp;
+    String pathTmp = "";
 #ifndef __MINGW32__
         char* absolutePath = realpath(path.string(), nullptr);
         if (absolutePath != nullptr) {
             pathTmp = absolutePath;
             free(absolutePath);
-        } else {
-            pathTmp = path;
         }
 #else
         char absolutePath[_MAX_PATH];
         if (_fullpath(absolutePath, path.string(), _MAX_PATH) == nullptr) {
             pathTmp = absolutePath;
-        } else {
-            pathTmp = path;
         }
 #endif
 
     if (mode_ & READ) {
+        if (pathTmp.empty()) {
+            pathTmp = path;
+        }
         fd_ = fopen(pathTmp.string(), "r");
     } else if (mode_ & WRITE) {
-        fd_ = fopen(pathTmp.string(), "w+");
+        fd_ = fopen(path.string(), "w+");
     } else if (mode_ & APPEND) {
-        fd_ = fopen(pathTmp.string(), "a+");
+        fd_ = fopen(path.string(), "a+");
     }
 
     if (fd_ != nullptr) {
