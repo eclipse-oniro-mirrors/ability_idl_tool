@@ -50,10 +50,9 @@ File::File(const String& path, int mode)
 #endif
 
     if (mode_ & READ) {
-        if (pathTmp.empty()) {
-            pathTmp = path;
+        if (!pathTmp.IsEmpty()) {
+            fd_ = fopen(pathTmp.string(), "r");
         }
-        fd_ = fopen(pathTmp.string(), "r");
     } else if (mode_ & WRITE) {
         fd_ = fopen(path.string(), "w+");
     } else if (mode_ & APPEND) {
