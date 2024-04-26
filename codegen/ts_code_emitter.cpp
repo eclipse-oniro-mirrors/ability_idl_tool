@@ -970,6 +970,19 @@ void TsCodeEmitter::EmitReadOutVariable(const String& parcelName, const std::str
         case TypeKind::String:
             stringBuilder.Append(prefix).AppendFormat("let %s = %s.readString();\n", name.c_str(), parcelName.string());
             break;
+        default:
+            EmitReadOutVariableObject(parcelName, name, mt, stringBuilder, prefix);
+            break;
+    }
+}
+
+void TsCodeEmitter::EmitReadOutVariableObject(const String& parcelName, const std::string& name, MetaType* mt,
+    StringBuilder& stringBuilder, const String& prefix)
+{
+    switch (mt->kind_) {
+        case TypeKind::String:
+            stringBuilder.Append(prefix).AppendFormat("let %s = %s.readString();\n", name.c_str(), parcelName.string());
+            break;
         case TypeKind::Sequenceable:
             if (EmitType(mt).Equals("IRemoteObject")) {
                 stringBuilder.Append(prefix).AppendFormat("%s = %s.readRemoteObject();\n", name.c_str(),

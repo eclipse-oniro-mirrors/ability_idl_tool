@@ -224,10 +224,10 @@ void MetadataBuilder::WriteMetaComponent(ASTModule* module)
     MetaComponent* mc = reinterpret_cast<MetaComponent*>(baseAddr_);
     mc->magic_ = METADATA_MAGIC_NUMBER;
     mc->size_ = static_cast<int>(size_);
-    mc->namespaceNumber_ = namespaceNumber;
-    mc->sequenceableNumber_ = sequenceableNumber;
-    mc->interfaceNumber_ = interfaceNumber;
-    mc->typeNumber_ = typeNumber;
+    mc->namespaceNumber_ = static_cast<int>(namespaceNumber);
+    mc->sequenceableNumber_ = static_cast<int>(sequenceableNumber);
+    mc->interfaceNumber_ = static_cast<int>(interfaceNumber);
+    mc->typeNumber_ = static_cast<int>(typeNumber);
     mc->stringPoolSize_ = stringPool_.GetSize();
     // namespaces_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
@@ -279,9 +279,9 @@ MetaNamespace* MetadataBuilder::WriteMetaNamespace(ASTNamespace* nspace)
     baseAddr_ = ALIGN8(baseAddr_);
     MetaNamespace* mn = reinterpret_cast<MetaNamespace*>(baseAddr_);
     mn->name_ = WriteString(nspace->GetName());
-    mn->sequenceableNumber_ = sequenceableNumber;
-    mn->interfaceNumber_ = interfaceNumber;
-    mn->namespaceNumber_ = namespaceNumber;
+    mn->sequenceableNumber_ = static_cast<int>(sequenceableNumber);
+    mn->interfaceNumber_ = static_cast<int>(interfaceNumber);
+    mn->namespaceNumber_ = static_cast<int>(namespaceNumber);
     // sequenceables_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace));
     mn->sequenceableIndexes_ = reinterpret_cast<int*>(baseAddr_);
@@ -336,7 +336,7 @@ MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
     mi->name_ = WriteString(interface->GetName());
     mi->namespace_ = WriteString(interface->GetNamespace()->ToString());
     mi->properties_ = interface->IsOneway() ? INTERFACE_PROPERTY_ONEWAY : 0;
-    mi->methodNumber_ = methodNumber;
+    mi->methodNumber_ = static_cast<int>(methodNumber);
     mi->external_ = interface->IsExternal();
     // methods_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface));
@@ -362,7 +362,7 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
     mm->signature_ = WriteString(method->GetSignature());
     mm->properties_ = method->IsOneway() ? METHOD_PROPERTY_ONEWAY : 0;
     mm->returnTypeIndex_ = module_->IndexOf(method->GetReturnType());
-    mm->parameterNumber_ = parameterNumber;
+    mm->parameterNumber_ = static_cast<int>(parameterNumber);
     // parameters_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaMethod));
     mm->parameters_ = reinterpret_cast<MetaParameter**>(baseAddr_);
@@ -420,7 +420,7 @@ MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
         baseAddr_ = baseAddr_ + sizeof(int*);
     } else if (type->IsMapType()) {
         size_t typeNumber = 2;
-        mt->nestedTypeNumber_ = typeNumber;
+        mt->nestedTypeNumber_ = static_cast<int>(typeNumber);
         // nestedTypeIndexes_'s address
         baseAddr_ = ALIGN8(baseAddr_);
         mt->nestedTypeIndexes_ = reinterpret_cast<int*>(baseAddr_);

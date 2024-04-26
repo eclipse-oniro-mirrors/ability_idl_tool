@@ -130,6 +130,7 @@ String::String(const char* string, size_t length)
             if (ret == EOK) {
                 string_[length] = '\0';
             } else {
+                free(string_);
                 string_ = nullptr;
             }
         }
@@ -616,7 +617,10 @@ String String::operator+=(const char* string) const
     String newString(newSize);
     if (newString.string_ != nullptr) {
         (void)memcpy_s(newString.string_, newSize + 1, string_, thisSize);
-        (void)strcpy_s(newString.string_ + thisSize, newSize + 1 - thisSize,  string);
+        errno_t ret = strcpy_s(newString.string_ + thisSize, newSize + 1 - thisSize,  string);
+        if (ret != EOK) {
+            Logger::E(String::TAG, "The operator+= char* is error in strcpy_s.");
+        }
     }
     return newString;
 }
