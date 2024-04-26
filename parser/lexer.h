@@ -73,6 +73,7 @@ public:
 
     static int TokenToChar(Token token);
 
+    bool ParseCacheable(int& cacheTime);
 private:
     void InitializeKeywords();
 
@@ -98,6 +99,8 @@ private:
     {
         return isspace(c);
     }
+
+    static bool strToInt(const char *str, int strLen, int& number);
 
     static const char* TAG;
     std::unordered_map<String, Token, StringHashFunc, StringEqualFunc> keywords_;

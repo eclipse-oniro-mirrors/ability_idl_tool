@@ -16,6 +16,8 @@
 #include "parser/lexer.h"
 
 #include <utility>
+#include <cstdlib>
+#include <limits>
 #include "util/string_builder.h"
 
 namespace OHOS {
@@ -51,6 +53,7 @@ void Lexer::InitializeKeywords()
     keywords_[String("sequenceable")] = Token::SEQUENCEABLE;
     keywords_[String("short")] = Token::SHORT;
     keywords_[String("String")] = Token::STRING;
+    keywords_[String("cacheable")] = Token::CACHEABLE;
 }
 
 bool Lexer::OpenSourceFile(const String& filePath)
@@ -328,5 +331,62 @@ String Lexer::DumpToken() const
             return "unknown token";
     }
 }
+
+bool Lexer::strToInt(const char *str, int strLen, int& number)
+{
+    int result = 0;
+    int positionWeight = 1;
+    int digit;
+    const int ten = 10;
+
+    for (int i = strLen - 1; i >= 0; i--) {
+        if (str[i] < '0' || str[i] > '9') {
+            return false;
+        }
+        digit = str[i] - '0';
+        if (static_cast<int64_t>(digit * positionWeight) > std::numeric_limits<int32_t>::max() - result) {
+            return false;
+        }
+        result += digit * positionWeight;
+        positionWeight *= ten;
+    }
+    number = result;
+    return true;
+}
+
+bool Lexer::ParseCacheable(int& cacheTime)
+{
+    bool ret = true;
+    StringBuilder numbersb;
+    char c;
+
+    while (!currentFile_->IsEof()) {
+        c = currentFile_->PeekChar();
+        if (IsSpace(c)) {
+            currentFile_->GetChar();
+            continue;
+        }
+        if (!IsDecimalDigital(c)) {
+            if (c != ']' && c != ',') {
+                ret = false;
+            }
+            break;
+        }
+        numbersb.Append(c);
+        currentFile_->GetChar();
+    }
+
+    if (ret == false) {
+        return ret;
+    }
+    String numberStr = numbersb.ToString();
+    if (numberStr.IsNull()) {
+        return false;
+    }
+
+    ret = strToInt(numberStr.string(), numberStr.GetLength(), cacheTime);
+    return ret;
+}
+
 } // namespace idl
 } // namespace OHOS

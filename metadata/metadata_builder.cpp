@@ -67,16 +67,16 @@ void MetadataBuilder::CalculateMetaComponent(ASTModule* module)
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
-    stringPool_.Add(module_->GetName());
-    // namespaces_'s address
-    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
-    // sequenceables_'s address
-    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
-    // interfaces_'s address
-    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
-    // types_'s address
-    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
     // stringPool_'s address
+    stringPool_.Add(module_->GetName());
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
+    // namespaces_'s address
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
+    // sequenceables_'s address
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
+    // interfaces_'s address
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
+    // types_'s address
     baseAddr_ = baseAddr_ + sizeof(MetaType*) * typeNumber;
 
     for (size_t i = 0; i < namespaceNumber; i++) {
@@ -218,6 +218,7 @@ void MetadataBuilder::WriteMetaComponent(ASTModule* module)
     size_t sequenceableNumber = module->GetSequenceableNumber();
     size_t interfaceNumber = module->GetInterfaceNumber();
     size_t typeNumber = module->GetTypeNumber();
+    bool hasCacheableProxyMethods = module->GetHasCacheableProxyMethods();
 
     // begin address
     baseAddr_ = ALIGN8(baseAddr_);
@@ -228,6 +229,7 @@ void MetadataBuilder::WriteMetaComponent(ASTModule* module)
     mc->sequenceableNumber_ = static_cast<int>(sequenceableNumber);
     mc->interfaceNumber_ = static_cast<int>(interfaceNumber);
     mc->typeNumber_ = static_cast<int>(typeNumber);
+    mc->hasCacheableProxyMethods_ = hasCacheableProxyMethods;
     mc->stringPoolSize_ = stringPool_.GetSize();
     // namespaces_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
@@ -362,6 +364,11 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
     mm->signature_ = WriteString(method->GetSignature());
     mm->properties_ = method->IsOneway() ? METHOD_PROPERTY_ONEWAY : 0;
     mm->returnTypeIndex_ = module_->IndexOf(method->GetReturnType());
+    // cacheable time
+    mm->cacheable_ = method->GetCacheable();
+    if (mm->cacheable_ == true) {
+        mm->cacheabletime_ = method->GetCacheableTime();
+    }
     mm->parameterNumber_ = static_cast<int>(parameterNumber);
     // parameters_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaMethod));

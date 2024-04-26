@@ -35,6 +35,7 @@ struct MetaComponent {
     int sequenceableNumber_;
     int interfaceNumber_;
     int typeNumber_;
+    bool hasCacheableProxyMethods_;
     MetaNamespace** namespaces_;
     MetaSequenceable** sequenceables_;
     MetaInterface** interfaces_;

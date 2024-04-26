@@ -68,7 +68,15 @@ private:
 
     void EmitInterfaceProxyInHeaderFile(StringBuilder& sb);
 
+    void EmitInterfaceProxyAddCacheAbleAPI(StringBuilder& sb, const String& prefix);
+
     void EmitInterfaceProxyConstructor(StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyDeathRecipient(StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyRegisterDeathRecipient(StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyUnRegisterDeathRecipient(StringBuilder& sb, const String& prefix);
 
     void EmitInterfaceProxyMethodDecls(StringBuilder& sb, const String& prefix);
 
@@ -80,9 +88,17 @@ private:
 
     void EmitInterfaceProxyMethodImpls(StringBuilder& sb, const String& prefix);
 
+    void EmitInterfaceProxyMethodPreSendRequest(MetaMethod* mm, StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyMethodPostSendRequest(MetaMethod* mm, StringBuilder& sb, const String& prefix);
+
     void EmitInterfaceProxyMethodImpl(MetaMethod* mm, StringBuilder& sb, const String& prefix);
 
     void EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyMethodErrCode(StringBuilder& sb, const String& prefix);
+
+    void EmitInterfaceProxyMethodReply(MetaMethod* mm, StringBuilder& sb, const String& prefix);
 
     void EmitInterfaceProxyMethodRetValue(MetaMethod* mm, StringBuilder& sb, const String& prefix);
 

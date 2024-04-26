@@ -291,6 +291,9 @@ void CppCodeEmitter::EmitInterfaceProxyHeaderFile()
     sb.Append("\n");
     sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).string());
     sb.Append("#include <iremote_proxy.h>\n");
+    if (metaComponent_->hasCacheableProxyMethods_ == true) {
+        sb.Append("#include \"api_cache_manager.h\"\n");
+    }
     sb.Append("\n");
     EmitInterfaceProxyInHeaderFile(sb);
     EmitTailMacro(sb, proxyFullName_);
@@ -316,15 +319,95 @@ void CppCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder& sb)
     EmitEndNamespace(sb);
 }
 
+void CppCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix).Append("if (remote != nullptr) {\n");
+    sb.Append(prefix + TAB).Append("if (!remote->IsProxyObject()) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"remote is not proxy object!\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).AppendFormat("deathRecipient_ = new (std::nothrow) %s(*this);\n",
+        deathRecipientName_.string());
+    sb.Append(prefix + TAB).Append("if (deathRecipient_ == nullptr) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"deathRecipient_ is nullptr!\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("if (!remote->AddDeathRecipient(deathRecipient_)) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"AddDeathRecipient failed!\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("remote_ = remote;\n");
+    sb.Append(prefix).Append("}\n");
+}
+
+void CppCodeEmitter::EmitInterfaceProxyAddCacheAbleAPI(StringBuilder& sb, const String& prefix)
+{
+    sb.Append("\n");
+    if (metaComponent_->hasCacheableProxyMethods_ == false) {
+        return;
+    }
+    for (int i = 0; i < metaInterface_->methodNumber_; i++) {
+        MetaMethod* mm = metaInterface_->methods_[i];
+        if (mm->cacheable_ == false) {
+            continue;
+        }
+        if (mm->cacheabletime_ != 0) {
+            sb.Append(prefix + TAB).AppendFormat(
+                "ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_%s, %d000);\n",
+                ConstantName(mm->name_).string(), mm->cacheabletime_);
+        } else {
+            sb.Append(prefix + TAB).AppendFormat(
+                "ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_%s, 0);\n",
+                ConstantName(mm->name_).string());
+        }
+    }
+    sb.Append("\n");
+    EmitInterfaceProxyRegisterDeathRecipient(sb, prefix + TAB);
+}
+
+void CppCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix).Append("if (remote_ == nullptr) {\n");
+    sb.Append(prefix).Append(TAB).Append("return;\n");
+    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("if (deathRecipient_ == nullptr) {\n");
+    sb.Append(prefix).Append(TAB).Append("return;\n");
+    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("remote_->RemoveDeathRecipient(deathRecipient_);\n");
+    sb.Append(prefix).Append("remote_ = nullptr;\n");
+    if (metaInterface_->methodNumber_ > 0) {
+        sb.Append("\n");
+        for (int i = 0; i < metaInterface_->methodNumber_; i++) {
+            MetaMethod* mm = metaInterface_->methods_[i];
+            if (mm->cacheable_) {
+                sb.Append(prefix).AppendFormat(
+                    "ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_%s);\n",
+                    ConstantName(mm->name_).string());
+            }
+        }
+    }
+}
+
 void CppCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder& sb, const String& prefix)
 {
     sb.Append(prefix).AppendFormat("explicit %s(\n", proxyName_.string());
     sb.Append(prefix + TAB).Append("const sptr<IRemoteObject>& remote)\n");
     sb.Append(prefix + TAB).AppendFormat(": IRemoteProxy<%s>(remote)\n", interfaceName_.string());
-    sb.Append(prefix).Append("{}\n");
-    sb.Append("\n");
+    sb.Append(prefix).Append("{");
+    EmitInterfaceProxyAddCacheAbleAPI(sb, prefix);
+    sb.Append(prefix).Append("}\n\n");
     sb.Append(prefix).AppendFormat("virtual ~%s()\n", proxyName_.string());
-    sb.Append(prefix).Append("{}\n");
+    sb.Append(prefix).Append("{\n");
+    if (metaComponent_->hasCacheableProxyMethods_) {
+        EmitInterfaceProxyUnRegisterDeathRecipient(sb, prefix + TAB);
+    }
+    sb.Append(prefix).Append("}\n");
 }
 
 void CppCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder& sb, const String& prefix)
@@ -361,8 +444,35 @@ void CppCodeEmitter::EmitInterfaceProxyMethodDecl(MetaMethod* mm, StringBuilder&
     }
 }
 
+void CppCodeEmitter::EmitInterfaceProxyDeathRecipient(StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix).AppendFormat("class %s : public IRemoteObject::DeathRecipient {\n", deathRecipientName_.string());
+    sb.Append(prefix).Append("public:\n");
+    sb.Append(prefix + TAB).AppendFormat("explicit %s(%s &client) : client_(client) {}\n", deathRecipientName_.string(),
+        proxyName_.string());
+    sb.Append(prefix + TAB).AppendFormat("~%s() override = default;\n", deathRecipientName_.string());
+    sb.Append(prefix + TAB).Append("void OnRemoteDied(const wptr<IRemoteObject> &remote) override\n");
+    sb.Append(prefix + TAB).Append("{\n");
+    sb.Append(prefix + TAB + TAB).Append("client_.OnRemoteDied(remote);\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix).Append("private:\n");
+    sb.Append(prefix + TAB).AppendFormat("%s &client_;\n", proxyName_.string());
+    sb.Append(prefix).Append("};\n\n");
+
+    sb.Append(prefix).Append("void OnRemoteDied(const wptr<IRemoteObject> &remoteObject)\n");
+    sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + TAB).Append("(void)remoteObject;\n");
+    sb.Append(prefix + TAB).Append("ApiCacheManager::GetInstance().ClearCache(GetDescriptor());\n");
+    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("sptr<IRemoteObject> remote_ = nullptr;\n");
+    sb.Append(prefix).Append("sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;\n");
+}
+
 void CppCodeEmitter::EmitInterfaceProxyConstants(StringBuilder& sb, const String& prefix)
 {
+    if (metaComponent_->hasCacheableProxyMethods_) {
+        EmitInterfaceProxyDeathRecipient(sb, prefix);
+    }
     EmitInterfaceMethodCommands(sb, prefix);
     sb.Append("\n");
     sb.Append(prefix).AppendFormat("static inline BrokerDelegator<%s> delegator_;\n", proxyName_.string());
@@ -433,6 +543,29 @@ void CppCodeEmitter::EmitInterfaceProxyMethodImpl(MetaMethod* mm, StringBuilder&
     EmitInterfaceProxyMethodBody(mm, sb, prefix);
 }
 
+void CppCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+{
+    if ((mm->cacheable_ == true) && ((mm->properties_ & METHOD_PROPERTY_ONEWAY) == 0)) {
+        sb.Append("\n");
+        sb.Append(prefix + TAB).AppendFormat(
+            "bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_%s, data, reply);",
+            ConstantName(mm->name_).string());
+        sb.Append("\n");
+        sb.Append(prefix + TAB).Append("if (hitCache == true) {\n");
+        EmitInterfaceProxyMethodErrCode(sb, prefix + TAB);
+        EmitInterfaceProxyMethodReply(mm, sb, prefix + TAB);
+        sb.Append(prefix + TAB + TAB).Append("return ERR_OK;\n");
+        sb.Append(prefix + TAB).Append("}\n\n");
+    }
+}
+
+void CppCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix + TAB).AppendFormat(
+        "ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_%s, data, reply);\n",
+        ConstantName(mm->name_).string());
+}
+
 void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder& sb, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
@@ -459,14 +592,14 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
             EmitWriteMethodParameter(mp, "data.", sb, prefix + TAB);
         }
     }
-    sb.Append("\n");
+    EmitInterfaceProxyMethodPreSendRequest(mm, sb, prefix);
     sb.Append(prefix + TAB).Append("sptr<IRemoteObject> remote = Remote();\n");
     sb.Append(prefix + TAB).Append("if (remote == nullptr) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Remote is nullptr!\");\n");
     }
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
-    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("}\n\n");
     sb.Append(prefix + TAB).AppendFormat("int32_t result = remote->SendRequest(COMMAND_%s, data, reply, option);\n",
         ConstantName(mm->name_).string());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
@@ -476,33 +609,45 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
     sb.Append(prefix + TAB).Append("    return result;\n");
     sb.Append(prefix + TAB).Append("}\n");
     EmitInterfaceProxyMethodRetValue(mm, sb, prefix);
+    sb.Append(prefix).Append("}\n");
+}
+
+void CppCodeEmitter::EmitInterfaceProxyMethodErrCode(StringBuilder& sb, const String& prefix)
+{
+    sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
+    sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read Int32 failed!\");\n");
+    }
+    sb.Append(prefix + TAB).Append("    return errCode;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+}
+
+void CppCodeEmitter::EmitInterfaceProxyMethodReply(MetaMethod* mm, StringBuilder& sb, const String& prefix)
+{
+    for (int i = 0; i < mm->parameterNumber_; i++) {
+        MetaParameter* mp = mm->parameters_[i];
+        if ((mp->attributes_ & ATTR_OUT) != 0) {
+            EmitReadMethodParameter(mp, "reply.", sb, prefix + TAB);
+        }
+    }
+    MetaType* returnType = metaComponent_->types_[mm->returnTypeIndex_];
+    if (returnType->kind_ != TypeKind::Void) {
+        EmitReadVariable("reply.", "result", returnType, sb, prefix + TAB, false);
+    }
 }
 
 void CppCodeEmitter::EmitInterfaceProxyMethodRetValue(MetaMethod* mm, StringBuilder& sb, const String& prefix)
 {
     if ((mm->properties_ & METHOD_PROPERTY_ONEWAY) == 0) {
+        EmitInterfaceProxyMethodErrCode(sb, prefix);
         sb.Append("\n");
-        sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
-        sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
-        if (logOn_) {
-            sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read Int32 failed!\");\n");
+        if (mm->cacheable_ == true) {
+            EmitInterfaceProxyMethodPostSendRequest(mm, sb, prefix);
         }
-        sb.Append(prefix + TAB).Append("    return errCode;\n");
-        sb.Append(prefix + TAB).Append("}\n");
-        sb.Append("\n");
-        for (int i = 0; i < mm->parameterNumber_; i++) {
-            MetaParameter* mp = mm->parameters_[i];
-            if ((mp->attributes_ & ATTR_OUT) != 0) {
-                EmitReadMethodParameter(mp, "reply.", sb, prefix + TAB);
-            }
-        }
-        MetaType* returnType = metaComponent_->types_[mm->returnTypeIndex_];
-        if (returnType->kind_ != TypeKind::Void) {
-            EmitReadVariable("reply.", "result", returnType, sb, prefix + TAB, false);
-        }
+        EmitInterfaceProxyMethodReply(mm, sb, prefix);
     }
     sb.Append(prefix + TAB).Append("return ERR_OK;\n");
-    sb.Append(prefix).Append("}\n");
 }
 
 void CppCodeEmitter::EmitWriteMethodParameter(MetaParameter* mp, const String& parcelName, StringBuilder& sb,

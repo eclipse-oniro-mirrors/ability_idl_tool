@@ -75,6 +75,7 @@ protected:
     String proxyFullName_;
     String stubName_;
     String stubFullName_;
+    String deathRecipientName_;
     String domainId_;
     String logTag_;
     String hitraceTag_;

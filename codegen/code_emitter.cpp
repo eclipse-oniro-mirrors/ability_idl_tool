@@ -41,6 +41,8 @@ CodeEmitter::CodeEmitter(MetaComponent* mc)
         stubName_ = interfaceName_.StartsWith("I") ?
                 interfaceName_.Substring(1) + "Stub" : interfaceName_ + "Stub";
         stubFullName_ = metaInterface_->namespace_ + stubName_;
+        deathRecipientName_ = interfaceName_.StartsWith("I") ?
+                interfaceName_.Substring(1) + "Recipient" : interfaceName_ + "Recipient";
     }
 }
 } // namespace Idl

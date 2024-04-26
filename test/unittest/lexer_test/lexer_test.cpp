@@ -14,11 +14,14 @@
  */
 
 #include <gtest/gtest.h>
+#define private public
+#define protected public
 #include "parser/lexer.h"
 
 using namespace testing;
 using namespace testing::ext;
-using namespace OHOS::Idl;
+namespace OHOS {
+namespace Idl {
 
 class LexerUnitTest : public testing::Test {
 public:
@@ -143,7 +146,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0500, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0600
  * @tc.desc: test the token in Lexer's TokenToChar function is BRACKETS_RIGHT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0600, Function | MediumTest | Level1)
 {
@@ -159,7 +162,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0600, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0700
  * @tc.desc: test the token in Lexer's TokenToChar function is COMMA.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0700, Function | MediumTest | Level1)
 {
@@ -175,7 +178,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0700, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0800
  * @tc.desc: test the token in Lexer's TokenToChar function is DOT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0800, Function | MediumTest | Level1)
 {
@@ -191,7 +194,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0800, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_0900
  * @tc.desc: test the token in Lexer's TokenToChar function is PARENTHESES_LEFT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_0900, Function | MediumTest | Level1)
 {
@@ -207,7 +210,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_0900, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_1000
  * @tc.desc: test the token in Lexer's TokenToChar function is PARENTHESES_RIGHT.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_1000, Function | MediumTest | Level1)
 {
@@ -223,7 +226,7 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_1000, Function | MediumTest | Level1)
  * @tc.name: TokenToCharTest_1100
  * @tc.desc: test the token in Lexer's TokenToChar function is other.
  * @tc.type: FUNC
- * @tc.require: 
+ * @tc.require:
  */
 HWTEST_F(LexerUnitTest, TokenToCharTest_1100, Function | MediumTest | Level1)
 {
@@ -234,3 +237,72 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_1100, Function | MediumTest | Level1)
     int result = imageLexer.TokenToChar(token);
     EXPECT_EQ(result, -1);
 }
+
+/*
+ * @tc.name: strToIntTest_0100
+ * @tc.desc: test str to int
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(LexerUnitTest, strToIntTest_0100, Function | MediumTest | Level1)
+{
+    GTEST_LOG_(INFO) << "LexerUnitTest, strToIntTest_0100, TestSize.Level1";
+    Lexer imageLexer;
+    int number;
+    {
+        const char *str = "100";
+        bool result = imageLexer.strToInt(str, 3, number);
+        EXPECT_EQ(result, true);
+        EXPECT_EQ(number, 100);
+    }
+
+    {
+        const char *str = "0000100";
+        bool result = imageLexer.strToInt(str, 7, number);
+        EXPECT_EQ(result, true);
+        EXPECT_EQ(number, 100);
+    }
+
+    {
+        const char *str = "0";
+        bool result = imageLexer.strToInt(str, 1, number);
+        EXPECT_EQ(result, true);
+        EXPECT_EQ(number, 0);
+    }
+
+    {
+        const char *str = "-1";
+        bool result = imageLexer.strToInt(str, 2, number);
+        EXPECT_EQ(result, false);
+    }
+
+    // exceed the upper limit of int
+    {
+        const char *str = "2147483647";
+        bool result = imageLexer.strToInt(str, 10, number);
+        EXPECT_EQ(result, true);
+        EXPECT_EQ(number, 2147483647);
+    }
+
+    // exceed the upper limit of int
+    {
+        const char *str = "2147483648";
+        bool result = imageLexer.strToInt(str, 10, number);
+        EXPECT_EQ(result, false);
+    }
+
+    {
+        const char *str = "abdc";
+        bool result = imageLexer.strToInt(str, 4, number);
+        EXPECT_EQ(result, false);
+    }
+
+    {
+        const char *str = "0000";
+        bool result = imageLexer.strToInt(str, 4, number);
+        EXPECT_EQ(result, true);
+        EXPECT_EQ(number, 0);
+    }
+}
+} // namespace idl
+} // namespace OHOS
