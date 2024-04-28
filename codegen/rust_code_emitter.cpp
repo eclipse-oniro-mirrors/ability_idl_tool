@@ -193,15 +193,13 @@ bool RustCodeEmitter::EmitCustomHeaders(StringBuilder& sb)
     uint32_t custom = false;
     for (int i = 0; i < metaComponent_->sequenceableNumber_; i++) {
         MetaSequenceable* ms = metaComponent_->sequenceables_[i];
-        bool addPathMsRes = AppendRealPath(sb, String(ms->namespace_) + String(ms->name_));
-        custom |= static_cast<uint32_t>(addPathMsRes);
+        custom |= AppendRealPath(sb, String(ms->namespace_) + String(ms->name_));
     }
 
     for (int i = 0; i < metaComponent_->interfaceNumber_; i++) {
         MetaInterface* mi = metaComponent_->interfaces_[i];
         if (mi->external_) {
-            bool addPathMiRes = AppendRealPath(sb, String(mi->namespace_) + String(mi->name_));
-            custom |= static_cast<uint32_t>(addPathMiRes);
+            custom |= AppendRealPath(sb, String(mi->namespace_) + String(mi->name_));
         }
     }
     return static_cast<bool>(custom);

@@ -183,7 +183,7 @@ private:
     String hitraceTag_;
     String domainId_;
     String logTag_;
-    Attribute attribute_ = {"", "", "", false, false};
+    Attribute attribute_;
 
     bool doShowUsage_ = false;
     bool doShowVersion_ = false;

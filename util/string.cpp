@@ -124,14 +124,13 @@ String::String(const char* string)
 String::String(const char* string, size_t length)
 {
     if (string !=  nullptr) {
-        SharedData* sharedData = SharedData::Allocate(length);
-        string_ = SharedData::ToString(sharedData);
+        string_ = SharedData::ToString(SharedData::Allocate(length));
         if (string_ != nullptr) {
             errno_t ret = memcpy_s(string_, length + 1, string, length);
             if (ret == EOK) {
                 string_[length] = '\0';
             } else {
-                free(sharedData);
+                free(string_);
                 string_ = nullptr;
             }
         }

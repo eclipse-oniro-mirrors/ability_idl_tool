@@ -249,17 +249,16 @@ bool Parser::ParseMethodName(Token& token, ASTType* type, ASTInterfaceType* inte
 {
     if (type == nullptr) {
         token = lexer_.PeekToken();
-        if (token == Token::BRACES_RIGHT) {
-            return false;
-        }
-        // jump over colon
-        lexer_.GetToken();
-        while (token != Token::SEMICOLON && token != Token::END_OF_FILE) {
-            token = lexer_.PeekToken();
-            if (token == Token::BRACES_RIGHT) {
-                break;
-            }
+        if (token != Token::BRACES_RIGHT) {
+            // jump over colon
             lexer_.GetToken();
+            while (token != Token::SEMICOLON && token != Token::END_OF_FILE) {
+                token = lexer_.PeekToken();
+                if (token == Token::BRACES_RIGHT) {
+                    break;
+                }
+                lexer_.GetToken();
+            }
         }
         return false;
     }
