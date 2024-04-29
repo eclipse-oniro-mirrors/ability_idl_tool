@@ -125,6 +125,9 @@ String::String(const char* string, size_t length)
 {
     if (string !=  nullptr) {
         SharedData* sharedData = SharedData::Allocate(length);
+        if (sharedData == nullptr) {
+            return;
+        }
         string_ = SharedData::ToString(sharedData);
         if (string_ != nullptr) {
             errno_t ret = memcpy_s(string_, length + 1, string, length);

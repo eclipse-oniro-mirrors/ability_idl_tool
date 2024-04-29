@@ -129,10 +129,10 @@ int File::Read()
     }
     size_ = count;
     position_ = 0;
-    if (count > INT_MAX) {
+    if (count <= 0 || count >= BUFFER_SIZE) {
         return -1;
     }
-    return count != 0 ? count : -1;
+    return count;
 }
 
 bool File::ReadData(void* data, size_t size)
