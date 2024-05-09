@@ -39,6 +39,7 @@ enum class Token {
     OUT,
     INOUT,
     SEQUENCEABLE,
+    CACHEABLE,
     // symbols
     DOT,   // '.'
     COMMA,   // ','

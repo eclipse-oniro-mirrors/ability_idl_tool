@@ -27,6 +27,8 @@ struct MetaMethod {
     int returnTypeIndex_;
     int parameterNumber_;
     MetaParameter** parameters_;
+    int cacheabletime_;
+    bool cacheable_;
 };
 } // namespace Idl
 } // namespace OHOS

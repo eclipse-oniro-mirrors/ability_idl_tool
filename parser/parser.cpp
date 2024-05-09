@@ -216,33 +216,63 @@ bool Parser::ParseInterface()
     }
 }
 
-void Parser::ParseMethodPeek(Token& token, bool& oneway, bool& ret)
+bool Parser::ParseMethodProperties(bool& oneway, bool& cacheable, int& cacheTime)
 {
+    Token token;
+    bool isParseOneway = false;
+
+    oneway = false;
+    cacheable = false;
+    lexer_.GetToken();
     token = lexer_.PeekToken();
-    if (token == Token::BRACKETS_LEFT) {
+    while (token != Token::BRACKETS_RIGHT && token != Token::END_OF_FILE) {
         lexer_.GetToken();
-        token = lexer_.PeekToken();
-        if (token != Token::ONEWAY) {
+        if (token != Token::ONEWAY && token != Token::CACHEABLE) {
             LogError(Token::IDENTIFIER, String::Format("\"%s\" is an illegal method property.",
                 lexer_.DumpToken().string()));
-
-            if (token != Token::BRACKETS_RIGHT) {
-                lexer_.SkipCurrentLine(Lexer::TokenToChar(Token::BRACKETS_RIGHT));
-            }
-            ret = false;
+            break;
         }
-        lexer_.GetToken();
 
-        oneway = true;
+        if (token == Token::ONEWAY && isParseOneway == false) {
+            oneway = true;
+            isParseOneway = true;
+        } else if (token == Token::CACHEABLE && cacheable == false) {
+            if (!lexer_.ParseCacheable(cacheTime)) {
+                LogError(Token::CACHEABLE, "cacheable time format is incorrect.");
+                return false;
+            }
+            cacheable = true;
+        } else {
+            return false;
+        }
 
         token = lexer_.PeekToken();
-        if (token != Token::BRACKETS_RIGHT) {
-            LogError(Token::IDENTIFIER, String("\"]\" is expected."));
-            ret = false;
-        } else {
+        if (token == Token::COMMA) {
             lexer_.GetToken();
+            token = lexer_.PeekToken();
         }
     }
+
+    if (token != Token::BRACKETS_RIGHT) {
+        LogError(Token::IDENTIFIER, String("\"]\" is expected."));
+        return false;
+    } else {
+        lexer_.GetToken();
+    }
+    return true;
+}
+
+void Parser::SetMethodAttr(ASTMethod* method, ASTType *returnType, bool oneway, bool cacheable, int cacheTime)
+{
+    method->SetName(lexer_.GetIdentifier());
+    method->SetOneway(oneway);
+    method->SetReturnType(returnType);
+    if (cacheable == true) {
+        method->SetCacheable(cacheTime);
+        module_->SetHasCacheableProxyMethods(true);
+    }
+
+    return;
 }
 
 bool Parser::ParseMethodName(Token& token, ASTType* type, ASTInterfaceType* interface)
@@ -332,8 +362,12 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
 {
     bool ret = true;
     bool oneway = false;
-    Token token;
-    ParseMethodPeek(token, oneway, ret);
+    bool cacheable = false;
+    int cacheTime;
+    Token token = lexer_.PeekToken();
+    if ((token == Token::BRACKETS_LEFT) && (ParseMethodProperties(oneway, cacheable, cacheTime) == false)) {
+        return false;
+    }
 
     AutoPtr<ASTType> type = ParseType();
     if (!ParseMethodName(token, type, interface)) {
@@ -342,9 +376,7 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
 
     token = lexer_.GetToken();
     AutoPtr<ASTMethod> method = new ASTMethod();
-    method->SetName(lexer_.GetIdentifier());
-    method->SetOneway(oneway);
-    method->SetReturnType(type);
+    SetMethodAttr(method, type, oneway, cacheable, cacheTime);
     if (!ParseMethodBrackets(token, method, ret)) {
         return false;
     }

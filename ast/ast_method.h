@@ -72,6 +72,21 @@ public:
 
     String Dump(const String& prefix) override;
 
+    void SetCacheable(int cacheTime)
+    {
+        cacheable_ = true;
+        cacheTime_ = cacheTime;
+    }
+
+    int GetCacheableTime() const
+    {
+        return cacheTime_;
+    }
+
+    bool GetCacheable() const
+    {
+        return cacheable_;
+    }
 private:
     void BuildSignature();
 
@@ -80,6 +95,8 @@ private:
     bool oneway_ = false;
     AutoPtr<ASTType> returnType_;
     std::vector<AutoPtr<ASTParameter>> parameters_;
+    int cacheTime_ = 0;
+    bool cacheable_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

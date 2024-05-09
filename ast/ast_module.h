@@ -114,6 +114,15 @@ public:
 
     String Dump(const String& prefix) override;
 
+    void SetHasCacheableProxyMethods(const bool cacheableProxyMethod)
+    {
+        hasCacheableProxyMethods_ = cacheableProxyMethod;
+    }
+
+    bool GetHasCacheableProxyMethods() const
+    {
+        return hasCacheableProxyMethods_;
+    }
 private:
     String name_;
     String license_;
@@ -134,6 +143,7 @@ private:
     AutoPtr<ASTVoidType> voidType_;
 
     String idlFilePath_;
+    bool hasCacheableProxyMethods_;
 };
 } // namespace Idl
 } // namespace OHOS
