@@ -86,6 +86,13 @@ const std::string CACHEABLE_TIME_TEST009_IDL_CONTENT =
 "interface idl.OHOS.CacheTimeTest009 {\n"
 "   [cacheable 8233, cacheable 2332323]void test001([in] short param1);\n"
 "}";
+
+const std::string CACHE_TIME_010_IDL_NAME = "CacheTimeTest010.idl";
+
+const std::string CACHEABLE_TIME_TEST010_IDL_CONTENT =
+"interface idl.OHOS.CacheTimeTest010 {\n"
+"   [cacheable 1.23456]void test001([in] short param1);\n"
+"}";
 }
 }
 }
