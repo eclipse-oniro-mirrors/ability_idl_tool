@@ -1,0 +1,453 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/effect_control_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    effect_control_stub
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);
+
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)
+{
+    const void * dataPtr = NULL;
+    void *memPtr = NULL;
+    uint32_t elementCount = 0;
+    if (count == NULL || data == NULL || elementSize == 0) {
+        HDF_LOGE("%{public}s: invalid param", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read element count", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        *count = elementCount;
+        return true;
+    }
+
+    dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        return false;
+    }
+
+    memPtr = OsalMemCalloc(elementSize * elementCount);
+    if (memPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc buffer", __func__);
+        return false;
+    }
+
+    if (memcpy_s(memPtr, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy buffer", __func__);
+        OsalMemFree(memPtr);
+        return false;
+    }
+
+    *data = memPtr;
+    *count = elementCount;
+    return true;
+}
+static int32_t SerStubEffectProcess(struct IEffectControl *serviceImpl, struct HdfSBuf *effectControlData, struct HdfSBuf *effectControlReply)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+    struct AudioEffectBuffer* input = NULL;
+    struct AudioEffectBuffer* output = NULL;
+
+    input = (struct AudioEffectBuffer*)OsalMemCalloc(sizeof(struct AudioEffectBuffer));
+    if (input == NULL) {
+        HDF_LOGE("%{public}s: malloc input failed", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!AudioEffectBufferBlockUnmarshalling(effectControlData, input)) {
+        HDF_LOGE("%{public}s: read input failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    output = (struct AudioEffectBuffer*)OsalMemCalloc(sizeof(struct AudioEffectBuffer));
+    if (output == NULL) {
+        HDF_LOGE("%{public}s: malloc output failed", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->EffectProcess == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function EffectProcess ", __func__);
+        effectControlRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectControlRet = serviceImpl->EffectProcess(serviceImpl, input, output);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockMarshalling(effectControlReply, output)) {
+        HDF_LOGE("%{public}s: write output failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (input != NULL) {
+        AudioEffectBufferFree(input, true);
+        input = NULL;
+    }
+    if (output != NULL) {
+        AudioEffectBufferFree(output, true);
+        output = NULL;
+    }
+    return effectControlRet;
+}
+
+static int32_t SerStubSendCommand(struct IEffectControl *serviceImpl, struct HdfSBuf *effectControlData, struct HdfSBuf *effectControlReply)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+    bool effectControlMemSet = false;
+    uint32_t cmdId = 0;
+    int8_t* cmdData = NULL;
+    uint32_t cmdDataLen = 0;
+    int8_t* replyData = NULL;
+    uint32_t replyDataLen = 0;
+
+    if (!HdfSbufReadUint8(effectControlData, (uint8_t *)&effectControlMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(effectControlData, &cmdId)) {
+        HDF_LOGE("%{public}s: read &cmdId failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(effectControlData, (void **)&cmdData, sizeof(int8_t), &cmdDataLen)) {
+        HDF_LOGE("%{public}s: failed to read cmdData", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (effectControlMemSet) {
+        if (!HdfSbufReadUint32(effectControlData, &replyDataLen)) {
+            HDF_LOGE("%{public}s: read replyData size failed!", __func__);
+            effectControlRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(replyDataLen, >, HDI_BUFF_MAX_SIZE / sizeof(int8_t), effectControlRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (replyDataLen > 0) {
+            replyData = (int8_t*)OsalMemCalloc(sizeof(int8_t) * (replyDataLen));
+            if (replyData == NULL) {
+                HDF_LOGE("%{public}s: malloc replyData failed", __func__);
+                effectControlRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        replyData = (int8_t*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (replyData == NULL) {
+            HDF_LOGE("%{public}s: malloc replyData failed", __func__);
+            effectControlRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        replyDataLen = (HDI_BUFF_MAX_SIZE / sizeof(int8_t));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SendCommand == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SendCommand ", __func__);
+        effectControlRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectControlRet = serviceImpl->SendCommand(serviceImpl, cmdId, cmdData, cmdDataLen, replyData, &replyDataLen);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(effectControlReply, replyData, sizeof(int8_t), replyDataLen)) {
+        HDF_LOGE("%{public}s: failed to write replyData", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (cmdData != NULL) {
+        OsalMemFree(cmdData);
+    }
+    if (replyData != NULL) {
+        OsalMemFree(replyData);
+    }
+    return effectControlRet;
+}
+
+static int32_t SerStubGetEffectDescriptor(struct IEffectControl *serviceImpl, struct HdfSBuf *effectControlData, struct HdfSBuf *effectControlReply)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+    struct EffectControllerDescriptor* desc = NULL;
+
+    desc = (struct EffectControllerDescriptor*)OsalMemCalloc(sizeof(struct EffectControllerDescriptor));
+    if (desc == NULL) {
+        HDF_LOGE("%{public}s: malloc desc failed", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetEffectDescriptor == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetEffectDescriptor ", __func__);
+        effectControlRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectControlRet = serviceImpl->GetEffectDescriptor(serviceImpl, desc);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!EffectControllerDescriptorBlockMarshalling(effectControlReply, desc)) {
+        HDF_LOGE("%{public}s: write desc failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (desc != NULL) {
+        EffectControllerDescriptorFree(desc, true);
+        desc = NULL;
+    }
+    return effectControlRet;
+}
+
+static int32_t SerStubEffectReverse(struct IEffectControl *serviceImpl, struct HdfSBuf *effectControlData, struct HdfSBuf *effectControlReply)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+    struct AudioEffectBuffer* input = NULL;
+    struct AudioEffectBuffer* output = NULL;
+
+    input = (struct AudioEffectBuffer*)OsalMemCalloc(sizeof(struct AudioEffectBuffer));
+    if (input == NULL) {
+        HDF_LOGE("%{public}s: malloc input failed", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!AudioEffectBufferBlockUnmarshalling(effectControlData, input)) {
+        HDF_LOGE("%{public}s: read input failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    output = (struct AudioEffectBuffer*)OsalMemCalloc(sizeof(struct AudioEffectBuffer));
+    if (output == NULL) {
+        HDF_LOGE("%{public}s: malloc output failed", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->EffectReverse == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function EffectReverse ", __func__);
+        effectControlRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectControlRet = serviceImpl->EffectReverse(serviceImpl, input, output);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockMarshalling(effectControlReply, output)) {
+        HDF_LOGE("%{public}s: write output failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (input != NULL) {
+        AudioEffectBufferFree(input, true);
+        input = NULL;
+    }
+    if (output != NULL) {
+        AudioEffectBufferFree(output, true);
+        output = NULL;
+    }
+    return effectControlRet;
+}
+
+static int32_t SerStubGetVersion(struct IEffectControl *serviceImpl, struct HdfSBuf *effectControlData, struct HdfSBuf *effectControlReply)
+{
+    int32_t effectControlRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(effectControlReply, IEFFECT_CONTROL_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IEFFECT_CONTROL_MAJOR_VERSION failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(effectControlReply, IEFFECT_CONTROL_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IEFFECT_CONTROL_MINOR_VERSION failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return effectControlRet;
+}
+
+static struct HdfRemoteService *EffectControlStubAsObject(struct IEffectControl *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct EffectControlStub *stub = CONTAINER_OF(self, struct EffectControlStub, interface);
+    return stub->remote;
+}
+
+static int32_t EffectControlOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct EffectControlStub *stub = (struct EffectControlStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_EFFECT_CONTROL_EFFECT_PROCESS:
+            return SerStubEffectProcess(stub->interface, data, reply);
+        case CMD_EFFECT_CONTROL_SEND_COMMAND:
+            return SerStubSendCommand(stub->interface, data, reply);
+        case CMD_EFFECT_CONTROL_GET_EFFECT_DESCRIPTOR:
+            return SerStubGetEffectDescriptor(stub->interface, data, reply);
+        case CMD_EFFECT_CONTROL_EFFECT_REVERSE:
+            return SerStubEffectReverse(stub->interface, data, reply);
+        case CMD_EFFECT_CONTROL_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteService **EffectControlStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IEffectControl *serviceImpl = (struct IEffectControl *)impl;
+    struct EffectControlStub *stub = OsalMemCalloc(sizeof(struct EffectControlStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &stub->dispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IEFFECTCONTROL_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = EffectControlOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = EffectControlStubAsObject;
+    return &stub->remote;
+}
+
+static void EffectControlStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct EffectControlStub *stub = CONTAINER_OF(remote, struct EffectControlStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_effectcontrolConstructor = {
+    .constructor = EffectControlStubNewInstance,
+    .destructor = EffectControlStubRelease,
+};
+
+__attribute__((constructor)) static void EffectControlStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IEFFECTCONTROL_INTERFACE_DESC);
+    StubConstructorRegister(IEFFECTCONTROL_INTERFACE_DESC, &g_effectcontrolConstructor);
+}

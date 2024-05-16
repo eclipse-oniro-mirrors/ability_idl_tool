@@ -1,0 +1,407 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/model_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V2_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool TensorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Tensor& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.dataType))) {
+        HDF_LOGE("%{public}s: write dataBlock.dataType failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.dims)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.dims", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.format))) {
+        HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+        return false;
+    }
+
+    if (!SharedBufferBlockMarshalling(data, dataBlock.data)) {
+        HDF_LOGE("%{public}s: write dataBlock.data failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.quantParams)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.quantParams", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool TensorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Tensor& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.dataType failed!", __func__);
+            return false;
+        }
+        dataBlock.dataType = static_cast<enum DataType>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.dims)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.dims", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+            return false;
+        }
+        dataBlock.format = static_cast<enum Format>(enumTmp);
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::SharedBufferBlockUnmarshalling(data, dataBlock.data)) {
+        HDF_LOGE("%{public}s: read dataBlock.data failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.quantParams)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.quantParams", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool NodeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Node& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.nodeType))) {
+        HDF_LOGE("%{public}s: write dataBlock.nodeType failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.nodeAttr)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.nodeAttr", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.inputIndex)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.inputIndex", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.outputIndex)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.outputIndex", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.quantType))) {
+        HDF_LOGE("%{public}s: write dataBlock.quantType failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool NodeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Node& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.nodeType failed!", __func__);
+            return false;
+        }
+        dataBlock.nodeType = static_cast<enum NodeType>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.nodeAttr)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.nodeAttr", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.inputIndex)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.inputIndex", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.outputIndex)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.outputIndex", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.quantType failed!", __func__);
+            return false;
+        }
+        dataBlock.quantType = static_cast<enum QuantType>(enumTmp);
+    }
+    return true;
+}
+
+bool SubGraphBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::SubGraph& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.inputIndices)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.inputIndices", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.outputIndices)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.outputIndices", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.nodeIndices)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.nodeIndices", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SubGraphBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::SubGraph& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    if (!ReadPodArray(data, dataBlock.inputIndices)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.inputIndices", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.outputIndices)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.outputIndices", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.nodeIndices)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.nodeIndices", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ModelBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Model& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.inputIndex)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.inputIndex", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.outputIndex)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.outputIndex", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.nodes.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.nodes.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.nodes) {
+        if (!NodeBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.allTensors.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.allTensors.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.allTensors) {
+        if (!TensorBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.subGraph.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.subGraph.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.subGraph) {
+        if (!SubGraphBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ModelBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Model& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    if (!ReadPodArray(data, dataBlock.inputIndex)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.inputIndex", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.outputIndex)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.outputIndex", __func__);
+        return false;
+    }
+
+    uint32_t nodesSize = 0;
+    if (!data.ReadUint32(nodesSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(nodesSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Nnrt::V2_0::Node), false);
+    dataBlock.nodes.clear();
+    dataBlock.nodes.reserve(nodesSize);
+    for (uint32_t i0 = 0; i0 < nodesSize; ++i0) {
+        OHOS::HDI::Nnrt::V2_0::Node value0;
+        if (!OHOS::HDI::Nnrt::V2_0::NodeBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.nodes.push_back(value0);
+    }
+
+    uint32_t allTensorsSize = 0;
+    if (!data.ReadUint32(allTensorsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(allTensorsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Nnrt::V2_0::Tensor), false);
+    dataBlock.allTensors.clear();
+    dataBlock.allTensors.reserve(allTensorsSize);
+    for (uint32_t i0 = 0; i0 < allTensorsSize; ++i0) {
+        OHOS::HDI::Nnrt::V2_0::Tensor value0;
+        if (!OHOS::HDI::Nnrt::V2_0::TensorBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.allTensors.push_back(value0);
+    }
+
+    uint32_t subGraphSize = 0;
+    if (!data.ReadUint32(subGraphSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(subGraphSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Nnrt::V2_0::SubGraph), false);
+    dataBlock.subGraph.clear();
+    dataBlock.subGraph.reserve(subGraphSize);
+    for (uint32_t i0 = 0; i0 < subGraphSize; ++i0) {
+        OHOS::HDI::Nnrt::V2_0::SubGraph value0;
+        if (!OHOS::HDI::Nnrt::V2_0::SubGraphBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.subGraph.push_back(value0);
+    }
+    return true;
+}
+
+} // V2_0
+} // Nnrt
+} // HDI
+} // OHOS

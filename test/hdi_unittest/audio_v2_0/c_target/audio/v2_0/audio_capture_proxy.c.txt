@@ -1,0 +1,1760 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include "v2_0/iaudio_capture.h"
+
+#define HDF_LOG_TAG    audio_capture_proxy
+
+struct AudioCaptureProxy {
+    struct IAudioCapture impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count);
+
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count)
+{
+    uint32_t elementCount = 0;
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read array size", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        goto FINISHED;
+    }
+
+    const void * dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read array", __func__);
+        return false;
+    }
+
+    if (memcpy_s(data, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to copy array data", __func__);
+        return false;
+    }
+
+FINISHED:
+    *count = elementCount;
+    return true;
+}
+
+static int32_t AudioCaptureProxyCall(struct IAudioCapture *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t AudioCaptureProxyCaptureFrame(struct IAudioCapture *self, int8_t* frame, uint32_t* frameLen,
+     uint64_t* replyBytes)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(audioCaptureData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (frame == NULL || frameLen == NULL || *frameLen == 0) {
+        HDF_LOGE("%{public}s: frame is invalid", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioCaptureData, *frameLen)) {
+        HDF_LOGE("%{public}s: write frameLen failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_CAPTURE_FRAME, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(audioCaptureReply, frame, sizeof(int8_t), frameLen)) {
+        HDF_LOGE("%{public}s: failed to read frame", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, replyBytes)) {
+        HDF_LOGE("%{public}s: read replyBytes failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetCapturePosition(struct IAudioCapture *self, uint64_t* frames,
+     struct AudioTimeStamp* time)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_CAPTURE_POSITION, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyCheckSceneCapability(struct IAudioCapture *self,
+     const struct AudioSceneDescriptor* scene, bool* supported)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSceneDescriptorBlockMarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_CHECK_SCENE_CAPABILITY, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioCaptureReply, (int8_t *)supported)) {
+        HDF_LOGE("%{public}s: read supported failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySelectScene(struct IAudioCapture *self, const struct AudioSceneDescriptor* scene)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSceneDescriptorBlockMarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SELECT_SCENE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySetMute(struct IAudioCapture *self, bool mute)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioCaptureData, mute ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write mute failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SET_MUTE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetMute(struct IAudioCapture *self, bool* mute)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_MUTE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioCaptureReply, (int8_t *)mute)) {
+        HDF_LOGE("%{public}s: read mute failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySetVolume(struct IAudioCapture *self, float volume)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioCaptureData, volume)) {
+        HDF_LOGE("%{public}s: write volume failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SET_VOLUME, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetVolume(struct IAudioCapture *self, float* volume)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_VOLUME, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioCaptureReply, volume)) {
+        HDF_LOGE("%{public}s: read volume failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetGainThreshold(struct IAudioCapture *self, float* min, float* max)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_GAIN_THRESHOLD, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioCaptureReply, min)) {
+        HDF_LOGE("%{public}s: read min failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioCaptureReply, max)) {
+        HDF_LOGE("%{public}s: read max failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetGain(struct IAudioCapture *self, float* gain)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_GAIN, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioCaptureReply, gain)) {
+        HDF_LOGE("%{public}s: read gain failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySetGain(struct IAudioCapture *self, float gain)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioCaptureData, gain)) {
+        HDF_LOGE("%{public}s: write gain failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SET_GAIN, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetFrameSize(struct IAudioCapture *self, uint64_t* size)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_FRAME_SIZE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, size)) {
+        HDF_LOGE("%{public}s: read size failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetFrameCount(struct IAudioCapture *self, uint64_t* count)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_FRAME_COUNT, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, count)) {
+        HDF_LOGE("%{public}s: read count failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySetSampleAttributes(struct IAudioCapture *self,
+     const struct AudioSampleAttributes* attrs)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSampleAttributesBlockMarshalling(audioCaptureData, attrs)) {
+        HDF_LOGE("%{public}s: write attrs failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SET_SAMPLE_ATTRIBUTES, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetSampleAttributes(struct IAudioCapture *self, struct AudioSampleAttributes* attrs)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_SAMPLE_ATTRIBUTES, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!AudioSampleAttributesBlockUnmarshalling(audioCaptureReply, attrs)) {
+        HDF_LOGE("%{public}s: read attrs failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetCurrentChannelId(struct IAudioCapture *self, uint32_t* channelId)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_CURRENT_CHANNEL_ID, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioCaptureReply, channelId)) {
+        HDF_LOGE("%{public}s: read channelId failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxySetExtraParams(struct IAudioCapture *self, const char* keyValueList)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(audioCaptureData, keyValueList)) {
+        HDF_LOGE("%{public}s: write keyValueList failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_SET_EXTRA_PARAMS, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetExtraParams(struct IAudioCapture *self, char* keyValueList, uint32_t keyValueListLen)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(audioCaptureData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (keyValueList == NULL || keyValueListLen == 0) {
+        HDF_LOGE("%{public}s: keyValueList is invalid", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioCaptureData, keyValueListLen)) {
+        HDF_LOGE("%{public}s: write keyValueListLen failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_EXTRA_PARAMS, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    const char *keyValueListCopy = HdfSbufReadString(audioCaptureReply);
+    if (keyValueListCopy == NULL) {
+        HDF_LOGE("%{public}s: read keyValueListCopy failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(keyValueList, keyValueListLen, keyValueListCopy) != EOK) {
+        HDF_LOGE("%{public}s: read keyValueList failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyReqMmapBuffer(struct IAudioCapture *self, int32_t reqSize,
+     struct AudioMmapBufferDescriptor* desc)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioCaptureData, reqSize)) {
+        HDF_LOGE("%{public}s: write reqSize failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_REQ_MMAP_BUFFER, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!AudioMmapBufferDescriptorBlockUnmarshalling(audioCaptureReply, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetMmapPosition(struct IAudioCapture *self, uint64_t* frames,
+     struct AudioTimeStamp* time)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_MMAP_POSITION, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyAddAudioEffect(struct IAudioCapture *self, uint64_t effectid)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioCaptureData, effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_ADD_AUDIO_EFFECT, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyRemoveAudioEffect(struct IAudioCapture *self, uint64_t effectid)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioCaptureData, effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_REMOVE_AUDIO_EFFECT, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetFrameBufferSize(struct IAudioCapture *self, uint64_t* bufferSize)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_FRAME_BUFFER_SIZE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioCaptureReply, bufferSize)) {
+        HDF_LOGE("%{public}s: read bufferSize failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyStart(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_START, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyStop(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_STOP, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyPause(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_PAUSE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyResume(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_RESUME, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyFlush(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_FLUSH, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyTurnStandbyMode(struct IAudioCapture *self)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_TURN_STANDBY_MODE, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyAudioDevDump(struct IAudioCapture *self, int32_t range, int32_t fd)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioCaptureData, range)) {
+        HDF_LOGE("%{public}s: write range failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioCaptureData, fd)) {
+        HDF_LOGE("%{public}s: write fd failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_AUDIO_DEV_DUMP, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyIsSupportsPauseAndResume(struct IAudioCapture *self, bool* supportPause,
+     bool* supportResume)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_IS_SUPPORTS_PAUSE_AND_RESUME, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioCaptureReply, (int8_t *)supportPause)) {
+        HDF_LOGE("%{public}s: read supportPause failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioCaptureReply, (int8_t *)supportResume)) {
+        HDF_LOGE("%{public}s: read supportResume failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static int32_t AudioCaptureProxyGetVersion(struct IAudioCapture *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t audioCaptureRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioCaptureData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioCaptureReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioCaptureData == NULL || audioCaptureReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioCaptureRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioCaptureData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioCaptureRet = AudioCaptureProxyCall(self, CMD_AUDIO_CAPTURE_GET_VERSION, audioCaptureData, audioCaptureReply, false);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioCaptureRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioCaptureReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioCaptureReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        audioCaptureRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioCaptureData != NULL) {
+        HdfSbufRecycle(audioCaptureData);
+    }
+    if (audioCaptureReply != NULL) {
+        HdfSbufRecycle(audioCaptureReply);
+    }
+    return audioCaptureRet;
+}
+
+static struct HdfRemoteService *AudioCaptureProxyAsObject(struct IAudioCapture *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct AudioCaptureProxy *proxy = CONTAINER_OF(self, struct AudioCaptureProxy, impl);
+    return proxy->remote;
+}
+
+static void AudioCaptureProxyConstruct(struct IAudioCapture *impl)
+{
+    impl->CaptureFrame = AudioCaptureProxyCaptureFrame;
+    impl->GetCapturePosition = AudioCaptureProxyGetCapturePosition;
+    impl->CheckSceneCapability = AudioCaptureProxyCheckSceneCapability;
+    impl->SelectScene = AudioCaptureProxySelectScene;
+    impl->SetMute = AudioCaptureProxySetMute;
+    impl->GetMute = AudioCaptureProxyGetMute;
+    impl->SetVolume = AudioCaptureProxySetVolume;
+    impl->GetVolume = AudioCaptureProxyGetVolume;
+    impl->GetGainThreshold = AudioCaptureProxyGetGainThreshold;
+    impl->GetGain = AudioCaptureProxyGetGain;
+    impl->SetGain = AudioCaptureProxySetGain;
+    impl->GetFrameSize = AudioCaptureProxyGetFrameSize;
+    impl->GetFrameCount = AudioCaptureProxyGetFrameCount;
+    impl->SetSampleAttributes = AudioCaptureProxySetSampleAttributes;
+    impl->GetSampleAttributes = AudioCaptureProxyGetSampleAttributes;
+    impl->GetCurrentChannelId = AudioCaptureProxyGetCurrentChannelId;
+    impl->SetExtraParams = AudioCaptureProxySetExtraParams;
+    impl->GetExtraParams = AudioCaptureProxyGetExtraParams;
+    impl->ReqMmapBuffer = AudioCaptureProxyReqMmapBuffer;
+    impl->GetMmapPosition = AudioCaptureProxyGetMmapPosition;
+    impl->AddAudioEffect = AudioCaptureProxyAddAudioEffect;
+    impl->RemoveAudioEffect = AudioCaptureProxyRemoveAudioEffect;
+    impl->GetFrameBufferSize = AudioCaptureProxyGetFrameBufferSize;
+    impl->Start = AudioCaptureProxyStart;
+    impl->Stop = AudioCaptureProxyStop;
+    impl->Pause = AudioCaptureProxyPause;
+    impl->Resume = AudioCaptureProxyResume;
+    impl->Flush = AudioCaptureProxyFlush;
+    impl->TurnStandbyMode = AudioCaptureProxyTurnStandbyMode;
+    impl->AudioDevDump = AudioCaptureProxyAudioDevDump;
+    impl->IsSupportsPauseAndResume = AudioCaptureProxyIsSupportsPauseAndResume;
+    impl->GetVersion = AudioCaptureProxyGetVersion;
+    impl->AsObject = AudioCaptureProxyAsObject;
+}
+
+struct IAudioCapture *IAudioCaptureGet(struct HdfRemoteService *remote)
+{
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: remote is null", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IAUDIOCAPTURE_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct AudioCaptureProxy *proxy = (struct AudioCaptureProxy *)OsalMemCalloc(sizeof(struct AudioCaptureProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IAudioCapture proxy failed!", __func__);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    AudioCaptureProxyConstruct(&proxy->impl);
+    struct IAudioCapture *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t audioCaptureRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IAudioCaptureRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IAUDIO_CAPTURE_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IAUDIO_CAPTURE_MAJOR_VERSION, IAUDIO_CAPTURE_MINOR_VERSION);
+        IAudioCaptureRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IAudioCaptureImplRelease(struct IAudioCapture *instance) __attribute__((weak));
+void IAudioCaptureRelease(struct IAudioCapture *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+    if (isStub) {
+        if (IAudioCaptureImplRelease != NULL) {
+            IAudioCaptureImplRelease(instance);
+        }
+        return;
+    }
+    struct AudioCaptureProxy *proxy = CONTAINER_OF(instance, struct AudioCaptureProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

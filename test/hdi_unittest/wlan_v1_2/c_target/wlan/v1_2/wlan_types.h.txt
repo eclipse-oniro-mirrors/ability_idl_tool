@@ -1,0 +1,319 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef WLANTYPES_H
+#define WLANTYPES_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfSBuf;
+
+struct HdfFeatureInfo {
+    char* ifName;
+    int32_t type;
+};
+
+struct HdfStaInfo {
+    uint8_t* mac;
+    uint32_t macLen;
+};
+
+struct HdfWifiDriverScanSsid {
+    char* ssid;
+    int32_t ssidLen;
+};
+
+struct HdfWifiScan {
+    struct HdfWifiDriverScanSsid* ssids;
+    uint32_t ssidsLen;
+    int32_t* freqs;
+    uint32_t freqsLen;
+    uint8_t* extraIes;
+    uint32_t extraIesLen;
+    uint8_t* bssid;
+    uint32_t bssidLen;
+    uint8_t prefixSsidScanFlag;
+    uint8_t fastConnectFlag;
+};
+
+struct HdfNetDeviceInfo {
+    uint32_t index;
+    char* ifName;
+    uint32_t ifNameLen;
+    uint8_t iftype;
+    uint8_t* mac;
+    uint32_t macLen;
+};
+
+struct HdfNetDeviceInfoResult {
+    struct HdfNetDeviceInfo* deviceInfos;
+    uint32_t deviceInfosLen;
+};
+
+struct HdfWifiScanResult {
+    uint32_t flags;
+    uint8_t* bssid;
+    uint32_t bssidLen;
+    uint16_t caps;
+    uint32_t freq;
+    uint16_t beaconInt;
+    int32_t qual;
+    int32_t level;
+    uint32_t age;
+    uint8_t* variable;
+    uint32_t variableLen;
+    uint8_t* ie;
+    uint32_t ieLen;
+    uint8_t* beaconIe;
+    uint32_t beaconIeLen;
+};
+
+struct HdfWifiScanResultExt {
+    uint32_t flags;
+    uint8_t* bssid;
+    uint32_t bssidLen;
+    uint16_t caps;
+    uint32_t freq;
+    uint16_t beaconInt;
+    int32_t qual;
+    int32_t level;
+    uint32_t age;
+    uint64_t tsf;
+    uint8_t* variable;
+    uint32_t variableLen;
+    uint8_t* ie;
+    uint32_t ieLen;
+    uint8_t* beaconIe;
+    uint32_t beaconIeLen;
+};
+
+struct HdfWifiScanResults {
+    struct HdfWifiScanResultExt* res;
+    uint32_t resLen;
+};
+
+struct HdfWifiInfo {
+    int32_t band;
+    uint32_t size;
+} __attribute__ ((aligned(8)));
+
+struct MeasChannelParam {
+    int32_t channelId;
+    int32_t measTime;
+} __attribute__ ((aligned(8)));
+
+struct MeasChannelResult {
+    int32_t channelId;
+    int32_t chload;
+    int32_t noise;
+} __attribute__ ((aligned(8)));
+
+struct ProjectionScreenCmdParam {
+    int32_t cmdId;
+    int8_t* buf;
+    uint32_t bufLen;
+};
+
+struct WifiStationInfo {
+    uint32_t rxRate;
+    uint32_t txRate;
+    uint32_t flags;
+    uint8_t rxVhtmcs;
+    uint8_t txVhtmcs;
+    uint8_t rxMcs;
+    uint8_t txMcs;
+    uint8_t rxVhtNss;
+    uint8_t txVhtNss;
+} __attribute__ ((aligned(8)));
+
+struct AdjustChannelInfo {
+    int32_t msgId;
+    uint8_t chanNumber;
+    uint8_t bandwidth;
+    uint8_t switchType;
+    uint8_t statusCode;
+} __attribute__ ((aligned(8)));
+
+struct PnoNetwork {
+    bool isHidden;
+    int32_t* freqs;
+    uint32_t freqsLen;
+    struct HdfWifiDriverScanSsid ssid;
+};
+
+struct PnoSettings {
+    int32_t min2gRssi;
+    int32_t min5gRssi;
+    int32_t scanIntervalMs;
+    int32_t scanIterations;
+    struct PnoNetwork* pnoNetworks;
+    uint32_t pnoNetworksLen;
+};
+
+struct SignalPollResult {
+    int32_t currentRssi;
+    int32_t associatedFreq;
+    int32_t txBitrate;
+    int32_t rxBitrate;
+    int32_t currentNoise;
+    int32_t currentSnr;
+    int32_t currentChload;
+    int32_t currentUlDelay;
+    int32_t currentTxBytes;
+    int32_t currentRxBytes;
+    int32_t currentTxFailed;
+    int32_t currentTxPackets;
+    int32_t currentRxPackets;
+} __attribute__ ((aligned(8)));
+
+bool HdfFeatureInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfFeatureInfo *dataBlock);
+
+bool HdfFeatureInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfFeatureInfo *dataBlock);
+
+void HdfFeatureInfoFree(struct HdfFeatureInfo *dataBlock, bool freeSelf);
+
+bool HdfStaInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfStaInfo *dataBlock);
+
+bool HdfStaInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfStaInfo *dataBlock);
+
+void HdfStaInfoFree(struct HdfStaInfo *dataBlock, bool freeSelf);
+
+bool HdfWifiDriverScanSsidBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiDriverScanSsid *dataBlock);
+
+bool HdfWifiDriverScanSsidBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiDriverScanSsid *dataBlock);
+
+void HdfWifiDriverScanSsidFree(struct HdfWifiDriverScanSsid *dataBlock, bool freeSelf);
+
+bool HdfWifiScanBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScan *dataBlock);
+
+bool HdfWifiScanBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScan *dataBlock);
+
+void HdfWifiScanFree(struct HdfWifiScan *dataBlock, bool freeSelf);
+
+bool HdfNetDeviceInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfNetDeviceInfo *dataBlock);
+
+bool HdfNetDeviceInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfNetDeviceInfo *dataBlock);
+
+void HdfNetDeviceInfoFree(struct HdfNetDeviceInfo *dataBlock, bool freeSelf);
+
+bool HdfNetDeviceInfoResultBlockMarshalling(struct HdfSBuf *data, const struct HdfNetDeviceInfoResult *dataBlock);
+
+bool HdfNetDeviceInfoResultBlockUnmarshalling(struct HdfSBuf *data, struct HdfNetDeviceInfoResult *dataBlock);
+
+void HdfNetDeviceInfoResultFree(struct HdfNetDeviceInfoResult *dataBlock, bool freeSelf);
+
+bool HdfWifiScanResultBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResult *dataBlock);
+
+bool HdfWifiScanResultBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResult *dataBlock);
+
+void HdfWifiScanResultFree(struct HdfWifiScanResult *dataBlock, bool freeSelf);
+
+bool HdfWifiScanResultExtBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResultExt *dataBlock);
+
+bool HdfWifiScanResultExtBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResultExt *dataBlock);
+
+void HdfWifiScanResultExtFree(struct HdfWifiScanResultExt *dataBlock, bool freeSelf);
+
+bool HdfWifiScanResultsBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResults *dataBlock);
+
+bool HdfWifiScanResultsBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResults *dataBlock);
+
+void HdfWifiScanResultsFree(struct HdfWifiScanResults *dataBlock, bool freeSelf);
+
+bool HdfWifiInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiInfo *dataBlock);
+
+bool HdfWifiInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiInfo *dataBlock);
+
+void HdfWifiInfoFree(struct HdfWifiInfo *dataBlock, bool freeSelf);
+
+bool MeasChannelParamBlockMarshalling(struct HdfSBuf *data, const struct MeasChannelParam *dataBlock);
+
+bool MeasChannelParamBlockUnmarshalling(struct HdfSBuf *data, struct MeasChannelParam *dataBlock);
+
+void MeasChannelParamFree(struct MeasChannelParam *dataBlock, bool freeSelf);
+
+bool MeasChannelResultBlockMarshalling(struct HdfSBuf *data, const struct MeasChannelResult *dataBlock);
+
+bool MeasChannelResultBlockUnmarshalling(struct HdfSBuf *data, struct MeasChannelResult *dataBlock);
+
+void MeasChannelResultFree(struct MeasChannelResult *dataBlock, bool freeSelf);
+
+bool ProjectionScreenCmdParamBlockMarshalling(struct HdfSBuf *data, const struct ProjectionScreenCmdParam *dataBlock);
+
+bool ProjectionScreenCmdParamBlockUnmarshalling(struct HdfSBuf *data, struct ProjectionScreenCmdParam *dataBlock);
+
+void ProjectionScreenCmdParamFree(struct ProjectionScreenCmdParam *dataBlock, bool freeSelf);
+
+bool WifiStationInfoBlockMarshalling(struct HdfSBuf *data, const struct WifiStationInfo *dataBlock);
+
+bool WifiStationInfoBlockUnmarshalling(struct HdfSBuf *data, struct WifiStationInfo *dataBlock);
+
+void WifiStationInfoFree(struct WifiStationInfo *dataBlock, bool freeSelf);
+
+bool AdjustChannelInfoBlockMarshalling(struct HdfSBuf *data, const struct AdjustChannelInfo *dataBlock);
+
+bool AdjustChannelInfoBlockUnmarshalling(struct HdfSBuf *data, struct AdjustChannelInfo *dataBlock);
+
+void AdjustChannelInfoFree(struct AdjustChannelInfo *dataBlock, bool freeSelf);
+
+bool PnoNetworkBlockMarshalling(struct HdfSBuf *data, const struct PnoNetwork *dataBlock);
+
+bool PnoNetworkBlockUnmarshalling(struct HdfSBuf *data, struct PnoNetwork *dataBlock);
+
+void PnoNetworkFree(struct PnoNetwork *dataBlock, bool freeSelf);
+
+bool PnoSettingsBlockMarshalling(struct HdfSBuf *data, const struct PnoSettings *dataBlock);
+
+bool PnoSettingsBlockUnmarshalling(struct HdfSBuf *data, struct PnoSettings *dataBlock);
+
+void PnoSettingsFree(struct PnoSettings *dataBlock, bool freeSelf);
+
+bool SignalPollResultBlockMarshalling(struct HdfSBuf *data, const struct SignalPollResult *dataBlock);
+
+bool SignalPollResultBlockUnmarshalling(struct HdfSBuf *data, struct SignalPollResult *dataBlock);
+
+void SignalPollResultFree(struct SignalPollResult *dataBlock, bool freeSelf);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // WLANTYPES_H

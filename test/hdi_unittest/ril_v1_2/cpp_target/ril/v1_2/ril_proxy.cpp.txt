@@ -1,0 +1,951 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/ril_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    ril_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_2 {
+
+
+template<typename ChildType, typename ParentType>
+static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
+{
+    if (parent == nullptr) {
+        HDF_LOGE("%{public}s:parent is nullptr!", __func__);
+        return nullptr;
+    }
+
+    if (!parent->IsProxy()) {
+        HDF_LOGE("%{public}s:not proxy, not support castfrom!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = OHOS::HDI::hdi_objcast<ParentType>(parent);
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:hdi_objcast failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<ChildType> proxy = OHOS::HDI::hdi_facecast<ChildType>(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:hdi_facecast failed!", __func__);
+        return nullptr;
+    }
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t rilRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+sptr<OHOS::HDI::Ril::V1_2::IRil> OHOS::HDI::Ril::V1_2::IRil::Get(bool isStub)
+{
+    return IRil::Get("ril_service", isStub);
+}
+
+sptr<OHOS::HDI::Ril::V1_2::IRil> OHOS::HDI::Ril::V1_2::IRil::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "ril_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Ril::V1_2::IRil *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Ril::V1_2::RilProxy> proxy = new OHOS::HDI::Ril::V1_2::RilProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Ril::V1_2::RilProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t rilRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::Reconnect(
+    sptr<OHOS::HDI::Ril::V1_2::RilProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Ril::V1_2::RilProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+sptr<OHOS::HDI::Ril::V1_2::IRil> OHOS::HDI::Ril::V1_2::IRil::CastFrom(const sptr<OHOS::HDI::Ril::V1_1::IRil> &parent)
+{
+    return CastFromTemplate<OHOS::HDI::Ril::V1_2::IRil, OHOS::HDI::Ril::V1_1::IRil>(parent);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallback1_2(const sptr<OHOS::HDI::Ril::V1_2::IRilCallback>& rilCallback)
+{
+    return OHOS::HDI::Ril::V1_2::RilProxy::SetCallback1_2_(rilCallback, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendSimMatchedOperatorInfo(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_2::NcfgOperatorInfo& ncfgOperatorInfo)
+{
+    return OHOS::HDI::Ril::V1_2::RilProxy::SendSimMatchedOperatorInfo_(slotId, serialId, ncfgOperatorInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::CleanAllConnections(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_2::RilProxy::CleanAllConnections_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNrSsbId(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_2::RilProxy::GetNrSsbId_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallback(const sptr<OHOS::HDI::Ril::V1_1::IRilCallback>& rilCallback)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCallback_(rilCallback, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetEmergencyCallList(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::EmergencyInfoList& emergencyInfoList)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetEmergencyCallList_(slotId, serialId, emergencyInfoList, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetEmergencyCallList(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetEmergencyCallList_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallList(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallList_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::Dial(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DialInfo& dialInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::Dial_(slotId, serialId, dialInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::Reject(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::Reject_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::Hangup(int32_t slotId, int32_t serialId, int32_t callId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::Hangup_(slotId, serialId, callId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::Answer(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::Answer_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::HoldCall(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::HoldCall_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnHoldCall(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnHoldCall_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SwitchCall(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SwitchCall_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::CombineConference(int32_t slotId, int32_t serialId, int32_t callType)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::CombineConference_(slotId, serialId, callType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SeparateConference(int32_t slotId, int32_t serialId, int32_t callId,
+     int32_t callType)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SeparateConference_(slotId, serialId, callId, callType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallWaiting(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallWaiting_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallWaiting(int32_t slotId, int32_t serialId, int32_t activate)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCallWaiting_(slotId, serialId, activate, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallTransferInfo(int32_t slotId, int32_t serialId, int32_t reason)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallTransferInfo_(slotId, serialId, reason, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallTransferInfo(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::CallForwardSetInfo& callForwardSetInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCallTransferInfo_(slotId, serialId, callForwardSetInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallRestriction(int32_t slotId, int32_t serialId, const std::string& fac)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallRestriction_(slotId, serialId, fac, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallRestriction(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::CallRestrictionInfo& callRestrictionInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCallRestriction_(slotId, serialId, callRestrictionInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetClip(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetClip_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetClip(int32_t slotId, int32_t serialId, int32_t action)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetClip_(slotId, serialId, action, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetClir(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetClir_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetClir(int32_t slotId, int32_t serialId, int32_t action)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetClir_(slotId, serialId, action, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallPreferenceMode(int32_t slotId, int32_t serialId, int32_t mode)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCallPreferenceMode_(slotId, serialId, mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallPreferenceMode(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallPreferenceMode_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetUssd(int32_t slotId, int32_t serialId, const std::string& str)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetUssd_(slotId, serialId, str, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::CloseUnFinishedUssd(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::CloseUnFinishedUssd_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetUssd(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetUssd_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetMute(int32_t slotId, int32_t serialId, int32_t mute)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetMute_(slotId, serialId, mute, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetMute(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetMute_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCallFailReason(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCallFailReason_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::CallSupplement(int32_t slotId, int32_t serialId, int32_t type)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::CallSupplement_(slotId, serialId, type, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendDtmf(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendDtmf_(slotId, serialId, dtmfInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::StartDtmf(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::StartDtmf_(slotId, serialId, dtmfInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::StopDtmf(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::StopDtmf_(slotId, serialId, dtmfInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetBarringPassword(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SetBarringInfo& setBarringInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetBarringPassword_(slotId, serialId, setBarringInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetVonrSwitch(int32_t slotId, int32_t serialId, int32_t status)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetVonrSwitch_(slotId, serialId, status, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::ActivatePdpContext(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataCallInfo& dataCallInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::ActivatePdpContext_(slotId, serialId, dataCallInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::DeactivatePdpContext(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::UniInfo& uniInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::DeactivatePdpContext_(slotId, serialId, uniInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetPdpContextList(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::UniInfo& uniInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetPdpContextList_(slotId, serialId, uniInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetInitApnInfo(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataProfileDataInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetInitApnInfo_(slotId, serialId, dataProfileDataInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetLinkBandwidthInfo(int32_t slotId, int32_t serialId, int32_t cid)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetLinkBandwidthInfo_(slotId, serialId, cid, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetLinkCapability(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetLinkCapability_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetLinkBandwidthReportingRule(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataLinkBandwidthReportingRule)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetLinkBandwidthReportingRule_(slotId, serialId, dataLinkBandwidthReportingRule, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetDataPermitted(int32_t slotId, int32_t serialId, int32_t dataPermitted)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetDataPermitted_(slotId, serialId, dataPermitted, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetDataProfileInfo(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataProfilesInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetDataProfileInfo_(slotId, serialId, dataProfilesInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendDataPerformanceMode(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataPerformanceInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendDataPerformanceMode_(slotId, serialId, dataPerformanceInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendDataSleepMode(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::DataSleepInfo& dataSleepInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendDataSleepMode_(slotId, serialId, dataSleepInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetRadioState(int32_t slotId, int32_t serialId, int32_t fun, int32_t rst)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetRadioState_(slotId, serialId, fun, rst, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetRadioState(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetRadioState_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetImei(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetImei_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetMeid(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetMeid_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetVoiceRadioTechnology(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetVoiceRadioTechnology_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetBasebandVersion(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetBasebandVersion_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::ShutDown(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::ShutDown_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetSimIO(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SimIoRequestInfo& simIO)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetSimIO_(slotId, serialId, simIO, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetSimStatus(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetSimStatus_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetImsi(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetImsi_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetSimLockStatus(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SimLockInfo& simLockInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetSimLockStatus_(slotId, serialId, simLockInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetSimLock(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SimLockInfo& simLockInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetSimLock_(slotId, serialId, simLockInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::ChangeSimPassword(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SimPasswordInfo& simPassword)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::ChangeSimPassword_(slotId, serialId, simPassword, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnlockPin(int32_t slotId, int32_t serialId, const std::string& pin)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnlockPin_(slotId, serialId, pin, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnlockPuk(int32_t slotId, int32_t serialId, const std::string& puk,
+     const std::string& pin)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnlockPuk_(slotId, serialId, puk, pin, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnlockPin2(int32_t slotId, int32_t serialId, const std::string& pin2)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnlockPin2_(slotId, serialId, pin2, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnlockPuk2(int32_t slotId, int32_t serialId, const std::string& puk2,
+     const std::string& pin2)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnlockPuk2_(slotId, serialId, puk2, pin2, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetActiveSim(int32_t slotId, int32_t serialId, int32_t index, int32_t enable)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetActiveSim_(slotId, serialId, index, enable, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimStkSendTerminalResponse(int32_t slotId, int32_t serialId,
+     const std::string& strCmd)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimStkSendTerminalResponse_(slotId, serialId, strCmd, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimStkSendEnvelope(int32_t slotId, int32_t serialId, const std::string& strCmd)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimStkSendEnvelope_(slotId, serialId, strCmd, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimStkSendCallSetupRequestResult(int32_t slotId, int32_t serialId,
+     int32_t accept)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimStkSendCallSetupRequestResult_(slotId, serialId, accept, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimStkIsReady(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimStkIsReady_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetRadioProtocol(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetRadioProtocol_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetRadioProtocol(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::RadioProtocol& radioProtocol)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetRadioProtocol_(slotId, serialId, radioProtocol, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimOpenLogicalChannel(int32_t slotId, int32_t serialId,
+     const std::string& appID, int32_t p2)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimOpenLogicalChannel_(slotId, serialId, appID, p2, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimCloseLogicalChannel(int32_t slotId, int32_t serialId, int32_t channelId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimCloseLogicalChannel_(slotId, serialId, channelId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimTransmitApduLogicalChannel(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& apduSimIO)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimTransmitApduLogicalChannel_(slotId, serialId, apduSimIO, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimTransmitApduBasicChannel(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& apduSimIO)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimTransmitApduBasicChannel_(slotId, serialId, apduSimIO, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SimAuthentication(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& simAuthInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SimAuthentication_(slotId, serialId, simAuthInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UnlockSimLock(int32_t slotId, int32_t serialId, int32_t lockType,
+     const std::string& key)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UnlockSimLock_(slotId, serialId, lockType, key, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetSignalStrength(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetSignalStrength_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCsRegStatus(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCsRegStatus_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetPsRegStatus(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetPsRegStatus_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetOperatorInfo(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetOperatorInfo_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNetworkSearchInformation(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetNetworkSearchInformation_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNetworkSelectionMode(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetNetworkSelectionMode_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetNetworkSelectionMode(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& networkModeInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetNetworkSelectionMode_(slotId, serialId, networkModeInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNeighboringCellInfoList(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetNeighboringCellInfoList_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCurrentCellInfo(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCurrentCellInfo_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetPreferredNetwork(int32_t slotId, int32_t serialId,
+     int32_t preferredNetworkType)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetPreferredNetwork_(slotId, serialId, preferredNetworkType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetPreferredNetwork(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetPreferredNetwork_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetPhysicalChannelConfig(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetPhysicalChannelConfig_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetLocateUpdates(int32_t slotId, int32_t serialId,
+     OHOS::HDI::Ril::V1_1::RilRegNotifyMode mode)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetLocateUpdates_(slotId, serialId, mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetNotificationFilter(int32_t slotId, int32_t serialId, int32_t newFilter)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetNotificationFilter_(slotId, serialId, newFilter, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetDeviceState(int32_t slotId, int32_t serialId, int32_t deviceStateType,
+     int32_t deviceStateOn)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetDeviceState_(slotId, serialId, deviceStateType, deviceStateOn, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendGsmSms(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& gsmSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendGsmSms_(slotId, serialId, gsmSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendCdmaSms(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& cdmaSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendCdmaSms_(slotId, serialId, cdmaSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::AddSimMessage(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& gsmSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::AddSimMessage_(slotId, serialId, gsmSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::DelSimMessage(int32_t slotId, int32_t serialId, int32_t index)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::DelSimMessage_(slotId, serialId, index, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UpdateSimMessage(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& gsmSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UpdateSimMessage_(slotId, serialId, gsmSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::AddCdmaSimMessage(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& cdmaSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::AddCdmaSimMessage_(slotId, serialId, cdmaSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::DelCdmaSimMessage(int32_t slotId, int32_t serialId, int32_t index)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::DelCdmaSimMessage_(slotId, serialId, index, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::UpdateCdmaSimMessage(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& cdmaSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::UpdateCdmaSimMessage_(slotId, serialId, cdmaSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetSmscAddr(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::ServiceCenterAddress& serviceCenterAddress)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetSmscAddr_(slotId, serialId, serviceCenterAddress, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetSmscAddr(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetSmscAddr_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCBConfig(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::CBConfigInfo& cellBroadcastInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCBConfig_(slotId, serialId, cellBroadcastInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCBConfig(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCBConfig_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCdmaCBConfig(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& cdmaCBConfigInfoList)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetCdmaCBConfig_(slotId, serialId, cdmaCBConfigInfoList, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetCdmaCBConfig(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetCdmaCBConfig_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendSmsMoreMode(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& gsmSmsMessageInfo)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendSmsMoreMode_(slotId, serialId, gsmSmsMessageInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendSmsAck(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_1::ModeData& modeData)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendSmsAck_(slotId, serialId, modeData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendRilAck()
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SendRilAck_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetRrcConnectionState(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetRrcConnectionState_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetNrOptionMode(int32_t slotId, int32_t serialId, int32_t mode)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::SetNrOptionMode_(slotId, serialId, mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNrOptionMode(int32_t slotId, int32_t serialId)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetNrOptionMode_(slotId, serialId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Ril::V1_1::RilProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SetCallback1_2_(const sptr<OHOS::HDI::Ril::V1_2::IRilCallback>& rilCallback,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel rilData;
+    MessageParcel rilReply;
+    MessageOption rilOption(MessageOption::TF_ASYNC);
+
+    if (!rilData.WriteInterfaceToken(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (rilCallback == nullptr) {
+        HDF_LOGE("%{public}s: parameter rilCallback is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(rilCallback, OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write rilCallback failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t rilRet = remote->SendRequest(CMD_RIL_SET_CALLBACK1_2, rilData, rilReply, rilOption);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::SendSimMatchedOperatorInfo_(int32_t slotId, int32_t serialId,
+     const OHOS::HDI::Ril::V1_2::NcfgOperatorInfo& ncfgOperatorInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel rilData;
+    MessageParcel rilReply;
+    MessageOption rilOption(MessageOption::TF_ASYNC);
+
+    if (!rilData.WriteInterfaceToken(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(slotId)) {
+        HDF_LOGE("%{public}s: write slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(serialId)) {
+        HDF_LOGE("%{public}s: write serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Ril::V1_2::NcfgOperatorInfoBlockMarshalling(rilData, ncfgOperatorInfo)) {
+        HDF_LOGE("%{public}s: write ncfgOperatorInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t rilRet = remote->SendRequest(CMD_RIL_SEND_SIM_MATCHED_OPERATOR_INFO, rilData, rilReply, rilOption);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::CleanAllConnections_(int32_t slotId, int32_t serialId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel rilData;
+    MessageParcel rilReply;
+    MessageOption rilOption(MessageOption::TF_ASYNC);
+
+    if (!rilData.WriteInterfaceToken(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(slotId)) {
+        HDF_LOGE("%{public}s: write slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(serialId)) {
+        HDF_LOGE("%{public}s: write serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t rilRet = remote->SendRequest(CMD_RIL_CLEAN_ALL_CONNECTIONS, rilData, rilReply, rilOption);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilProxy::GetNrSsbId_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel rilData;
+    MessageParcel rilReply;
+    MessageOption rilOption(MessageOption::TF_ASYNC);
+
+    if (!rilData.WriteInterfaceToken(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(slotId)) {
+        HDF_LOGE("%{public}s: write slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilData.WriteInt32(serialId)) {
+        HDF_LOGE("%{public}s: write serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t rilRet = remote->SendRequest(CMD_RIL_GET_NR_SSB_ID, rilData, rilReply, rilOption);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+    return rilRet;
+}
+
+} // V1_2
+} // Ril
+} // HDI
+} // OHOS

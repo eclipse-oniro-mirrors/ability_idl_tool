@@ -1,0 +1,152 @@
+AST[name: ISensorInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/sensor_v2_0/foo/sensor/v2_0/ISensorInterface.idl]
+package ohos.hdi.sensor.v2_0;
+
+import ohos.hdi.sensor.v2_0.ISensorCallback;
+import ohos.hdi.sensor.v2_0.SensorTypes;
+
+[mini, lite, full] interface ISensorInterface {
+    [mini, lite, full] GetAllSensorInfo(
+      [out] ohos.hdi.sensor.v2_0.HdfSensorInformation[] info);
+
+    [mini, lite, full] Enable(
+      [in] int sensorId);
+
+    [mini, lite, full] Disable(
+      [in] int sensorId);
+
+    [mini, lite, full] SetBatch(
+      [in] int sensorId,
+      [in] long samplingInterval,
+      [in] long reportInterval);
+
+    [mini, lite, full] SetMode(
+      [in] int sensorId,
+      [in] int mode);
+
+    [mini, lite, full] SetOption(
+      [in] int sensorId,
+      [in] unsigned int option);
+
+    [mini, lite, full] Register(
+      [in] int groupId,
+      [in] ohos.hdi.sensor.v2_0.ISensorCallback callbackObj);
+
+    [mini, lite, full] Unregister(
+      [in] int groupId,
+      [in] ohos.hdi.sensor.v2_0.ISensorCallback callbackObj);
+
+    [mini, lite, full] ReadData(
+      [in] int sensorId,
+      [out] ohos.hdi.sensor.v2_0.HdfSensorEvents[] event);
+
+    [mini, lite, full] SetSdcSensor(
+      [in] int sensorId,
+      [in] boolean enabled,
+      [in] int rateLevel);
+
+    [mini, lite, full] GetSdcSensorInfo(
+      [out] ohos.hdi.sensor.v2_0.SdcSensorInfo[] sdcSensorInfo);
+}
+
+
+AST[name: ISensorCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/sensor_v2_0/foo/sensor/v2_0/ISensorCallback.idl]
+package ohos.hdi.sensor.v2_0;
+
+import ohos.hdi.sensor.v2_0.SensorTypes;
+
+[mini, lite, full, callback] interface ISensorCallback {
+    [mini, lite, full, callback] OnDataEvent(
+      [in] ohos.hdi.sensor.v2_0.HdfSensorEvents event);
+}
+
+
+AST[name: SensorTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/sensor_v2_0/foo/sensor/v2_0/SensorTypes.idl]
+package ohos.hdi.sensor.v2_0;
+
+[mini, lite, full] struct HdfSensorInformation {
+  std::string sensorName;
+  std::string vendorName;
+  std::string firmwareVersion;
+  std::string hardwareVersion;
+  int sensorTypeId;
+  int sensorId;
+  float maxRange;
+  float accuracy;
+  float power;
+  long minDelay;
+  long maxDelay;
+  unsigned int fifoMaxEventCount;
+  unsigned int reserved;
+};
+
+[mini, lite, full] struct HdfSensorEvents {
+  int sensorId;
+  int version;
+  long timestamp;
+  unsigned int option;
+  int mode;
+  unsigned char[] data;
+  unsigned int dataLen;
+};
+
+[mini, lite, full] enum HdfSensorTypeTag : int {
+  HDF_SENSOR_TYPE_NONE = 0,
+  HDF_SENSOR_TYPE_ACCELEROMETER = 1,
+  HDF_SENSOR_TYPE_GYROSCOPE = 2,
+  HDF_SENSOR_TYPE_PHOTOPLETHYSMOGRAPH = 3,
+  HDF_SENSOR_TYPE_ELECTROCARDIOGRAPH = 4,
+  HDF_SENSOR_TYPE_AMBIENT_LIGHT = 5,
+  HDF_SENSOR_TYPE_MAGNETIC_FIELD = 6,
+  HDF_SENSOR_TYPE_CAPACITIVE = 7,
+  HDF_SENSOR_TYPE_BAROMETER = 8,
+  HDF_SENSOR_TYPE_TEMPERATURE = 9,
+  HDF_SENSOR_TYPE_HALL = 10,
+  HDF_SENSOR_TYPE_GESTURE = 11,
+  HDF_SENSOR_TYPE_PROXIMITY = 12,
+  HDF_SENSOR_TYPE_HUMIDITY = 13,
+  HDF_SENSOR_TYPE_COLOR = 14,
+  HDF_SENSOR_TYPE_SAR = 15,
+  HDF_SENSOR_TYPE_AMBIENT_LIGHT1 = 16,
+  HDF_SENSOR_TYPE_HALL1 = 17,
+  HDF_SENSOR_TYPE_MEDICAL_BEGIN = 128,
+  HDF_SENSOR_TYPE_MEDICAL_END = 160,
+  HDF_SENSOR_TYPE_PHYSICAL_MAX = 255,
+  HDF_SENSOR_TYPE_ORIENTATION = 256,
+  HDF_SENSOR_TYPE_GRAVITY = 257,
+  HDF_SENSOR_TYPE_LINEAR_ACCELERATION = 258,
+  HDF_SENSOR_TYPE_ROTATION_VECTOR = 259,
+  HDF_SENSOR_TYPE_AMBIENT_TEMPERATURE = 260,
+  HDF_SENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED = 261,
+  HDF_SENSOR_TYPE_GAME_ROTATION_VECTOR = 262,
+  HDF_SENSOR_TYPE_GYROSCOPE_UNCALIBRATED = 263,
+  HDF_SENSOR_TYPE_SIGNIFICANT_MOTION = 264,
+  HDF_SENSOR_TYPE_PEDOMETER_DETECTION = 265,
+  HDF_SENSOR_TYPE_PEDOMETER = 266,
+  HDF_SENSOR_TYPE_POSTURE = 267,
+  HDF_SENSOR_TYPE_HEADPOSTURE = 268,
+  HDF_SENSOR_TYPE_DROP_DETECT = 269,
+  HDF_SENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR = 277,
+  HDF_SENSOR_TYPE_HEART_RATE = 278,
+  HDF_SENSOR_TYPE_DEVICE_ORIENTATION = 279,
+  HDF_SENSOR_TYPE_WEAR_DETECTION = 280,
+  HDF_SENSOR_TYPE_ACCELEROMETER_UNCALIBRATED = 281,
+  HDF_SENSOR_TYPE_MAX,
+};
+
+[mini, lite, full] enum HdfSensorGroupType : int {
+  HDF_TRADITIONAL_SENSOR_TYPE = 0,
+  HDF_MEDICAL_SENSOR_TYPE = 1,
+  HDF_SENSOR_GROUP_TYPE_MAX,
+};
+
+[mini, lite, full] struct SdcSensorInfo {
+  unsigned long offset;
+  int sensorId;
+  int ddrSize;
+  int minRateLevel;
+  int maxRateLevel;
+  unsigned long memAddr;
+  int reserved;
+};
+
+

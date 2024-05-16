@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/mode_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    mode_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_1 {
+
+
+
+OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStub(const sptr<OHOS::HDI::Display::Composer::V1_1::IModeCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Composer::V1_1::IModeCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::~ModeCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_MODE_CALLBACK_GET_VERSION:
+            return ModeCallbackStubGetVersion(data, reply, option);
+        case CMD_MODE_CALLBACK_ON_MODE:
+            return ModeCallbackStubOnMode(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubOnMode(MessageParcel& modeCallbackData, MessageParcel& modeCallbackReply, MessageOption& modeCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubOnMode_(modeCallbackData, modeCallbackReply, modeCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubGetVersion(MessageParcel& modeCallbackData, MessageParcel& modeCallbackReply, MessageOption& modeCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubGetVersion_(modeCallbackData, modeCallbackReply, modeCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubOnMode_(MessageParcel& modeCallbackData, MessageParcel& modeCallbackReply, MessageOption& modeCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_1::IModeCallback> impl)
+{
+    if (modeCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IModeCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t modeId = 0;
+    if (!modeCallbackData.ReadUint32(modeId)) {
+        HDF_LOGE("%{public}s: read modeId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t vBlankPeriod = 0;
+    if (!modeCallbackData.ReadUint64(vBlankPeriod)) {
+        HDF_LOGE("%{public}s: read vBlankPeriod failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t modeCallbackRet = impl->OnMode(modeId, vBlankPeriod);
+    if (modeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, modeCallbackRet);
+        return modeCallbackRet;
+    }
+
+    return modeCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackStub::ModeCallbackStubGetVersion_(MessageParcel& modeCallbackData, MessageParcel& modeCallbackReply, MessageOption& modeCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_1::IModeCallback> impl)
+{
+    if (modeCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IModeCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t modeCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (modeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, modeCallbackRet);
+        return modeCallbackRet;
+    }
+
+    if (!modeCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!modeCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return modeCallbackRet;
+}
+} // V1_1
+} // Composer
+} // Display
+} // HDI
+} // OHOS

@@ -1,0 +1,266 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hid_ddk_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Input {
+namespace Ddk {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Hid_EmitItemBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem))) {
+        return false;
+    }
+    return true;
+}
+
+bool Hid_EmitItemBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem& dataBlock)
+{
+    const OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem), dataBlockPtr, sizeof(OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool Hid_DeviceBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Input::Ddk::V1_0::Hid_Device& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.deviceName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.deviceName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint16(dataBlock.vendorId)) {
+        HDF_LOGE("%{public}s: write dataBlock.vendorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint16(dataBlock.productId)) {
+        HDF_LOGE("%{public}s: write dataBlock.productId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint16(dataBlock.version)) {
+        HDF_LOGE("%{public}s: write dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint16(dataBlock.bustype)) {
+        HDF_LOGE("%{public}s: write dataBlock.bustype failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.properties)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.properties", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Hid_DeviceBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Input::Ddk::V1_0::Hid_Device& dataBlock)
+{
+    const char* deviceNameCp = data.ReadCString();
+    if (deviceNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read deviceNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.deviceName = deviceNameCp;
+
+    if (!data.ReadUint16(dataBlock.vendorId)) {
+        HDF_LOGE("%{public}s: read dataBlock.vendorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint16(dataBlock.productId)) {
+        HDF_LOGE("%{public}s: read dataBlock.productId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint16(dataBlock.version)) {
+        HDF_LOGE("%{public}s: read dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint16(dataBlock.bustype)) {
+        HDF_LOGE("%{public}s: read dataBlock.bustype failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.properties)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.properties", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Hid_EventPropertiesBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Input::Ddk::V1_0::Hid_EventProperties& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.hidEventTypes)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidEventTypes", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidKeys)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidKeys", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidAbs)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidAbs", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidRelBits)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidRelBits", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidMiscellaneous)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidMiscellaneous", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidAbsMax)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidAbsMax", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidAbsMin)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidAbsMin", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidAbsFuzz)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidAbsFuzz", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hidAbsFlat)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hidAbsFlat", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Hid_EventPropertiesBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Input::Ddk::V1_0::Hid_EventProperties& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.hidEventTypes)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidEventTypes", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidKeys)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidKeys", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidAbs)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidAbs", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidRelBits)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidRelBits", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidMiscellaneous)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidMiscellaneous", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidAbsMax)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidAbsMax", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidAbsMin)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidAbsMin", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidAbsFuzz)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidAbsFuzz", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hidAbsFlat)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hidAbsFlat", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+} // V1_0
+} // Ddk
+} // Input
+} // HDI
+} // OHOS

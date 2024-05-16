@@ -1,0 +1,1647 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/user_auth_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    user_auth_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace UserAuth {
+namespace V1_2 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::Get(bool isStub)
+{
+    return OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::Get("user_auth_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "user_auth_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface *>(impl);
+}
+
+
+OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStub(const sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::~UserAuthInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_USER_AUTH_INTERFACE_GET_VERSION:
+            return UserAuthInterfaceStubGetVersion(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_INIT:
+            return UserAuthInterfaceStubInit(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_ADD_EXECUTOR:
+            return UserAuthInterfaceStubAddExecutor(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_DELETE_EXECUTOR:
+            return UserAuthInterfaceStubDeleteExecutor(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_OPEN_SESSION:
+            return UserAuthInterfaceStubOpenSession(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_CLOSE_SESSION:
+            return UserAuthInterfaceStubCloseSession(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_ENROLLMENT:
+            return UserAuthInterfaceStubBeginEnrollment(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_UPDATE_ENROLLMENT_RESULT:
+            return UserAuthInterfaceStubUpdateEnrollmentResult(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_CANCEL_ENROLLMENT:
+            return UserAuthInterfaceStubCancelEnrollment(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_DELETE_CREDENTIAL:
+            return UserAuthInterfaceStubDeleteCredential(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_CREDENTIAL:
+            return UserAuthInterfaceStubGetCredential(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_USER_INFO:
+            return UserAuthInterfaceStubGetUserInfo(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_DELETE_USER:
+            return UserAuthInterfaceStubDeleteUser(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_ENFORCE_DELETE_USER:
+            return UserAuthInterfaceStubEnforceDeleteUser(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_AUTHENTICATION:
+            return UserAuthInterfaceStubBeginAuthentication(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_UPDATE_AUTHENTICATION_RESULT:
+            return UserAuthInterfaceStubUpdateAuthenticationResult(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_CANCEL_AUTHENTICATION:
+            return UserAuthInterfaceStubCancelAuthentication(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_IDENTIFICATION:
+            return UserAuthInterfaceStubBeginIdentification(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_UPDATE_IDENTIFICATION_RESULT:
+            return UserAuthInterfaceStubUpdateIdentificationResult(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_CANCEL_IDENTIFICATION:
+            return UserAuthInterfaceStubCancelIdentification(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_AUTH_TRUST_LEVEL:
+            return UserAuthInterfaceStubGetAuthTrustLevel(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_VALID_SOLUTION:
+            return UserAuthInterfaceStubGetValidSolution(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_ENROLLMENT_V1_1:
+            return UserAuthInterfaceStubBeginEnrollmentV1_1(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_AUTHENTICATION_V1_1:
+            return UserAuthInterfaceStubBeginAuthenticationV1_1(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_IDENTIFICATION_V1_1:
+            return UserAuthInterfaceStubBeginIdentificationV1_1(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_ALL_USER_INFO:
+            return UserAuthInterfaceStubGetAllUserInfo(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_GET_ALL_EXT_USER_INFO:
+            return UserAuthInterfaceStubGetAllExtUserInfo(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_AUTHENTICATION_V1_2:
+            return UserAuthInterfaceStubBeginAuthenticationV1_2(data, reply, option);
+        case CMD_USER_AUTH_INTERFACE_BEGIN_ENROLLMENT_V1_2:
+            return UserAuthInterfaceStubBeginEnrollmentV1_2(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubInit(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubInit_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubAddExecutor(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubAddExecutor_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteExecutor(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteExecutor_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubOpenSession(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubOpenSession_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCloseSession(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCloseSession_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollment(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollment_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateEnrollmentResult(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateEnrollmentResult_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelEnrollment(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelEnrollment_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteCredential(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteCredential_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetCredential(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetCredential_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetUserInfo(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetUserInfo_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteUser(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteUser_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubEnforceDeleteUser(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubEnforceDeleteUser_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthentication(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthentication_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateAuthenticationResult(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateAuthenticationResult_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelAuthentication(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelAuthentication_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentification(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentification_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateIdentificationResult(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateIdentificationResult_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelIdentification(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelIdentification_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAuthTrustLevel(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAuthTrustLevel_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetValidSolution(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetValidSolution_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_1(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_1_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_1(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_1_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentificationV1_1(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentificationV1_1_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllUserInfo(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllUserInfo_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllExtUserInfo(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllExtUserInfo_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_2(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_2_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_2(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_2_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetVersion(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption)
+{
+    return OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetVersion_(userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubInit_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->Init();
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubAddExecutor_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::UserAuth::V1_2::ExecutorRegisterInfo info;
+    if (!ExecutorRegisterInfoBlockUnmarshalling(userAuthInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t index = 0;
+
+    std::vector<uint8_t> publicKey;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        publicKey.reserve(capacity);
+    }
+
+    std::vector<uint64_t> templateIds;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint64_t), HDF_ERR_INVALID_PARAM);
+        templateIds.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->AddExecutor(info, index, publicKey, templateIds);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint64(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, publicKey)) {
+        HDF_LOGE("%{public}s: failed to write publicKey", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, templateIds)) {
+        HDF_LOGE("%{public}s: failed to write templateIds", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteExecutor_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t index = 0;
+    if (!userAuthInterfaceData.ReadUint64(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->DeleteExecutor(index);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubOpenSession_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> challenge;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        challenge.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->OpenSession(userId, challenge);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, challenge)) {
+        HDF_LOGE("%{public}s: failed to write challenge", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCloseSession_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->CloseSession(userId);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollment_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> authToken;
+    if (!ReadPodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to read authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::EnrollParam param;
+    if (!EnrollParamBlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::ScheduleInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginEnrollment(userId, authToken, param, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoBlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateEnrollmentResult_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> scheduleResult;
+    if (!ReadPodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to read scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::EnrollResultInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->UpdateEnrollmentResult(userId, scheduleResult, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::EnrollResultInfoBlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelEnrollment_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->CancelEnrollment(userId);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteCredential_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t credentialId = 0;
+    if (!userAuthInterfaceData.ReadUint64(credentialId)) {
+        HDF_LOGE("%{public}s: read credentialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> authToken;
+    if (!ReadPodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to read authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::CredentialInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->DeleteCredential(userId, credentialId, authToken, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::CredentialInfoBlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetCredential_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthType authType = static_cast<enum AuthType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!userAuthInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write authType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::CredentialInfo> infos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::CredentialInfo), HDF_ERR_INVALID_PARAM);
+        infos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetCredential(userId, authType, infos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, infos)) {
+        HDF_LOGE("%{public}s: failed to write infos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetUserInfo_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t secureUid = 0;
+
+    OHOS::HDI::UserAuth::V1_2::PinSubType pinSubType;
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::EnrolledInfo> infos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::EnrolledInfo), HDF_ERR_INVALID_PARAM);
+        infos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetUserInfo(userId, secureUid, pinSubType, infos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint64(secureUid)) {
+        HDF_LOGE("%{public}s: write secureUid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint64(static_cast<uint64_t>(pinSubType))) {
+        HDF_LOGE("%{public}s: write pinSubType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, infos)) {
+        HDF_LOGE("%{public}s: failed to write infos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubDeleteUser_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> authToken;
+    if (!ReadPodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to read authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::CredentialInfo> deletedInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::CredentialInfo), HDF_ERR_INVALID_PARAM);
+        deletedInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->DeleteUser(userId, authToken, deletedInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, deletedInfos)) {
+        HDF_LOGE("%{public}s: failed to write deletedInfos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubEnforceDeleteUser_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::CredentialInfo> deletedInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::CredentialInfo), HDF_ERR_INVALID_PARAM);
+        deletedInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->EnforceDeleteUser(userId, deletedInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, deletedInfos)) {
+        HDF_LOGE("%{public}s: failed to write deletedInfos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthentication_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthSolution param;
+    if (!AuthSolutionBlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::ScheduleInfo> scheduleInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::ScheduleInfo), HDF_ERR_INVALID_PARAM);
+        scheduleInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginAuthentication(contextId, param, scheduleInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(scheduleInfos.size())) {
+        HDF_LOGE("%{public}s: write scheduleInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : scheduleInfos) {
+        if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoBlockMarshalling(userAuthInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateAuthenticationResult_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> scheduleResult;
+    if (!ReadPodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to read scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthResultInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->UpdateAuthenticationResult(contextId, scheduleResult, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::AuthResultInfoBlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelAuthentication_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->CancelAuthentication(contextId);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentification_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthType authType = static_cast<enum AuthType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!userAuthInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write authType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    std::vector<uint8_t> challenge;
+    if (!ReadPodArray(userAuthInterfaceData, challenge)) {
+        HDF_LOGE("%{public}s: failed to read challenge", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t executorSensorHint = 0;
+    if (!userAuthInterfaceData.ReadUint32(executorSensorHint)) {
+        HDF_LOGE("%{public}s: read executorSensorHint failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::ScheduleInfo scheduleInfo;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginIdentification(contextId, authType, challenge, executorSensorHint, scheduleInfo);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoBlockMarshalling(userAuthInterfaceReply, scheduleInfo)) {
+        HDF_LOGE("%{public}s: write scheduleInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubUpdateIdentificationResult_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> scheduleResult;
+    if (!ReadPodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to read scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::IdentifyResultInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->UpdateIdentificationResult(contextId, scheduleResult, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::IdentifyResultInfoBlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubCancelIdentification_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->CancelIdentification(contextId);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAuthTrustLevel_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthType authType = static_cast<enum AuthType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!userAuthInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write authType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    uint32_t authTrustLevel = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetAuthTrustLevel(userId, authType, authTrustLevel);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(authTrustLevel)) {
+        HDF_LOGE("%{public}s: write authTrustLevel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetValidSolution_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::AuthType> authTypes;
+    if (!ReadPodArray(userAuthInterfaceData, authTypes)) {
+        HDF_LOGE("%{public}s: failed to read authTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t authTrustLevel = 0;
+    if (!userAuthInterfaceData.ReadUint32(authTrustLevel)) {
+        HDF_LOGE("%{public}s: read authTrustLevel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::AuthType> validTypes;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::AuthType), HDF_ERR_INVALID_PARAM);
+        validTypes.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetValidSolution(userId, authTypes, authTrustLevel, validTypes);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!WritePodArray(userAuthInterfaceReply, validTypes)) {
+        HDF_LOGE("%{public}s: failed to write validTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_1_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> authToken;
+    if (!ReadPodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to read authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::EnrollParam param;
+    if (!EnrollParamBlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1 info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginEnrollmentV1_1(userId, authToken, param, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1BlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_1_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthSolution param;
+    if (!AuthSolutionBlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1> scheduleInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1), HDF_ERR_INVALID_PARAM);
+        scheduleInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginAuthenticationV1_1(contextId, param, scheduleInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(scheduleInfos.size())) {
+        HDF_LOGE("%{public}s: write scheduleInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : scheduleInfos) {
+        if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1BlockMarshalling(userAuthInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginIdentificationV1_1_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthType authType = static_cast<enum AuthType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!userAuthInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write authType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    std::vector<uint8_t> challenge;
+    if (!ReadPodArray(userAuthInterfaceData, challenge)) {
+        HDF_LOGE("%{public}s: failed to read challenge", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t executorSensorHint = 0;
+    if (!userAuthInterfaceData.ReadUint32(executorSensorHint)) {
+        HDF_LOGE("%{public}s: read executorSensorHint failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1 scheduleInfo;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginIdentificationV1_1(contextId, authType, challenge, executorSensorHint, scheduleInfo);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1BlockMarshalling(userAuthInterfaceReply, scheduleInfo)) {
+        HDF_LOGE("%{public}s: write scheduleInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllUserInfo_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<OHOS::HDI::UserAuth::V1_2::UserInfo> userInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::UserInfo), HDF_ERR_INVALID_PARAM);
+        userInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetAllUserInfo(userInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(userInfos.size())) {
+        HDF_LOGE("%{public}s: write userInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : userInfos) {
+        if (!OHOS::HDI::UserAuth::V1_2::UserInfoBlockMarshalling(userAuthInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetAllExtUserInfo_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<OHOS::HDI::UserAuth::V1_2::ExtUserInfo> userInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::ExtUserInfo), HDF_ERR_INVALID_PARAM);
+        userInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetAllExtUserInfo(userInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(userInfos.size())) {
+        HDF_LOGE("%{public}s: write userInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : userInfos) {
+        if (!OHOS::HDI::UserAuth::V1_2::ExtUserInfoBlockMarshalling(userAuthInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginAuthenticationV1_2_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool userAuthInterfaceMemSet = false;
+    if (!userAuthInterfaceData.ReadBool(userAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read userAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint64_t contextId = 0;
+    if (!userAuthInterfaceData.ReadUint64(contextId)) {
+        HDF_LOGE("%{public}s: read contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::AuthSolutionV1_2 param;
+    if (!AuthSolutionV1_2BlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1> scheduleInfos;
+    if (userAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!userAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1), HDF_ERR_INVALID_PARAM);
+        scheduleInfos.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginAuthenticationV1_2(contextId, param, scheduleInfos);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(scheduleInfos.size())) {
+        HDF_LOGE("%{public}s: write scheduleInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : scheduleInfos) {
+        if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1BlockMarshalling(userAuthInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubBeginEnrollmentV1_2_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userId = 0;
+    if (!userAuthInterfaceData.ReadInt32(userId)) {
+        HDF_LOGE("%{public}s: read userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> authToken;
+    if (!ReadPodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to read authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::EnrollParamV1_2 param;
+    if (!EnrollParamV1_2BlockUnmarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1 info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->BeginEnrollmentV1_2(userId, authToken, param, info);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1BlockMarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_2::UserAuthInterfaceStub::UserAuthInterfaceStubGetVersion_(MessageParcel& userAuthInterfaceData, MessageParcel& userAuthInterfaceReply, MessageOption& userAuthInterfaceOption, sptr<OHOS::HDI::UserAuth::V1_2::IUserAuthInterface> impl)
+{
+    if (userAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::UserAuth::V1_2::IUserAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t userAuthInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+} // V1_2
+} // UserAuth
+} // HDI
+} // OHOS

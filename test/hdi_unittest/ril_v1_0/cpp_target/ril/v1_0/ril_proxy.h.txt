@@ -1,0 +1,606 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_0_RILPROXY_H
+#define OHOS_HDI_RIL_V1_0_RILPROXY_H
+
+#include "v1_0/iril.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_0 {
+
+class RilProxy : public IProxyBroker<OHOS::HDI::Ril::V1_0::IRil> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Ril::V1_0::RilProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Ril::V1_0::RilProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Ril::V1_0::RilProxy> proxy_;
+    };
+
+    explicit RilProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Ril::V1_0::IRil>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~RilProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t SetCallback(const sptr<OHOS::HDI::Ril::V1_0::IRilCallback>& rilCallback) override;
+
+    int32_t SetEmergencyCallList(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::EmergencyInfoList& emergencyInfoList) override;
+
+    int32_t GetEmergencyCallList(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetCallList(int32_t slotId, int32_t serialId) override;
+
+    int32_t Dial(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DialInfo& dialInfo) override;
+
+    int32_t Reject(int32_t slotId, int32_t serialId) override;
+
+    int32_t Hangup(int32_t slotId, int32_t serialId, int32_t callId) override;
+
+    int32_t Answer(int32_t slotId, int32_t serialId) override;
+
+    int32_t HoldCall(int32_t slotId, int32_t serialId) override;
+
+    int32_t UnHoldCall(int32_t slotId, int32_t serialId) override;
+
+    int32_t SwitchCall(int32_t slotId, int32_t serialId) override;
+
+    int32_t CombineConference(int32_t slotId, int32_t serialId, int32_t callType) override;
+
+    int32_t SeparateConference(int32_t slotId, int32_t serialId, int32_t callId, int32_t callType) override;
+
+    int32_t GetCallWaiting(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetCallWaiting(int32_t slotId, int32_t serialId, int32_t activate) override;
+
+    int32_t GetCallTransferInfo(int32_t slotId, int32_t serialId, int32_t reason) override;
+
+    int32_t SetCallTransferInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CallForwardSetInfo& callForwardSetInfo) override;
+
+    int32_t GetCallRestriction(int32_t slotId, int32_t serialId, const std::string& fac) override;
+
+    int32_t SetCallRestriction(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CallRestrictionInfo& callRestrictionInfo) override;
+
+    int32_t GetClip(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetClip(int32_t slotId, int32_t serialId, int32_t action) override;
+
+    int32_t GetClir(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetClir(int32_t slotId, int32_t serialId, int32_t action) override;
+
+    int32_t SetCallPreferenceMode(int32_t slotId, int32_t serialId, int32_t mode) override;
+
+    int32_t GetCallPreferenceMode(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetUssd(int32_t slotId, int32_t serialId, const std::string& str) override;
+
+    int32_t GetUssd(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetMute(int32_t slotId, int32_t serialId, int32_t mute) override;
+
+    int32_t GetMute(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetCallFailReason(int32_t slotId, int32_t serialId) override;
+
+    int32_t CallSupplement(int32_t slotId, int32_t serialId, int32_t type) override;
+
+    int32_t SendDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo) override;
+
+    int32_t StartDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo) override;
+
+    int32_t StopDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo) override;
+
+    int32_t SetBarringPassword(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SetBarringInfo& setBarringInfo) override;
+
+    int32_t ActivatePdpContext(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataCallInfo& dataCallInfo) override;
+
+    int32_t DeactivatePdpContext(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::UniInfo& uniInfo) override;
+
+    int32_t GetPdpContextList(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::UniInfo& uniInfo) override;
+
+    int32_t SetInitApnInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataProfileDataInfo& dataProfileDataInfo) override;
+
+    int32_t GetLinkBandwidthInfo(int32_t slotId, int32_t serialId, int32_t cid) override;
+
+    int32_t SetLinkBandwidthReportingRule(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataLinkBandwidthReportingRule& dataLinkBandwidthReportingRule) override;
+
+    int32_t SetDataPermitted(int32_t slotId, int32_t serialId, int32_t dataPermitted) override;
+
+    int32_t SetDataProfileInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataProfilesInfo& dataProfilesInfo) override;
+
+    int32_t SendDataPerformanceMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataPerformanceInfo& dataPerformanceInfo) override;
+
+    int32_t SendDataSleepMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataSleepInfo& dataSleepInfo) override;
+
+    int32_t SetRadioState(int32_t slotId, int32_t serialId, int32_t fun, int32_t rst) override;
+
+    int32_t GetRadioState(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetImei(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetMeid(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetVoiceRadioTechnology(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetBasebandVersion(int32_t slotId, int32_t serialId) override;
+
+    int32_t ShutDown(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetSimIO(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::SimIoRequestInfo& simIO) override;
+
+    int32_t GetSimStatus(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetImsi(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetSimLockStatus(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimLockInfo& simLockInfo) override;
+
+    int32_t SetSimLock(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::SimLockInfo& simLockInfo) override;
+
+    int32_t ChangeSimPassword(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimPasswordInfo& simPassword) override;
+
+    int32_t UnlockPin(int32_t slotId, int32_t serialId, const std::string& pin) override;
+
+    int32_t UnlockPuk(int32_t slotId, int32_t serialId, const std::string& puk, const std::string& pin) override;
+
+    int32_t UnlockPin2(int32_t slotId, int32_t serialId, const std::string& pin2) override;
+
+    int32_t UnlockPuk2(int32_t slotId, int32_t serialId, const std::string& puk2, const std::string& pin2) override;
+
+    int32_t SetActiveSim(int32_t slotId, int32_t serialId, int32_t index, int32_t enable) override;
+
+    int32_t SimStkSendTerminalResponse(int32_t slotId, int32_t serialId, const std::string& strCmd) override;
+
+    int32_t SimStkSendEnvelope(int32_t slotId, int32_t serialId, const std::string& strCmd) override;
+
+    int32_t SimStkSendCallSetupRequestResult(int32_t slotId, int32_t serialId, int32_t accept) override;
+
+    int32_t SimStkIsReady(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetRadioProtocol(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetRadioProtocol(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::RadioProtocol& radioProtocol) override;
+
+    int32_t SimOpenLogicalChannel(int32_t slotId, int32_t serialId, const std::string& appID, int32_t p2) override;
+
+    int32_t SimCloseLogicalChannel(int32_t slotId, int32_t serialId, int32_t channelId) override;
+
+    int32_t SimTransmitApduLogicalChannel(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo& apduSimIO) override;
+
+    int32_t SimTransmitApduBasicChannel(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo& apduSimIO) override;
+
+    int32_t SimAuthentication(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimAuthenticationRequestInfo& simAuthInfo) override;
+
+    int32_t UnlockSimLock(int32_t slotId, int32_t serialId, int32_t lockType, const std::string& key) override;
+
+    int32_t GetSignalStrength(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetCsRegStatus(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetPsRegStatus(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetOperatorInfo(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetNetworkSearchInformation(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetNetworkSelectionMode(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetNetworkSelectionMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SetNetworkModeInfo& networkModeInfo) override;
+
+    int32_t GetNeighboringCellInfoList(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetCurrentCellInfo(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetPreferredNetwork(int32_t slotId, int32_t serialId, int32_t preferredNetworkType) override;
+
+    int32_t GetPreferredNetwork(int32_t slotId, int32_t serialId) override;
+
+    int32_t GetPhysicalChannelConfig(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetLocateUpdates(int32_t slotId, int32_t serialId, OHOS::HDI::Ril::V1_0::RilRegNotifyMode mode) override;
+
+    int32_t SetNotificationFilter(int32_t slotId, int32_t serialId, int32_t newFilter) override;
+
+    int32_t SetDeviceState(int32_t slotId, int32_t serialId, int32_t deviceStateType, int32_t deviceStateOn) override;
+
+    int32_t SendGsmSms(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo& gsmSmsMessageInfo) override;
+
+    int32_t SendCdmaSms(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SendCdmaSmsMessageInfo& cdmaSmsMessageInfo) override;
+
+    int32_t AddSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& gsmSmsMessageInfo) override;
+
+    int32_t DelSimMessage(int32_t slotId, int32_t serialId, int32_t index) override;
+
+    int32_t UpdateSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& gsmSmsMessageInfo) override;
+
+    int32_t AddCdmaSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& cdmaSmsMessageInfo) override;
+
+    int32_t DelCdmaSimMessage(int32_t slotId, int32_t serialId, int32_t index) override;
+
+    int32_t UpdateCdmaSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& cdmaSmsMessageInfo) override;
+
+    int32_t SetSmscAddr(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ServiceCenterAddress& serviceCenterAddress) override;
+
+    int32_t GetSmscAddr(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetCBConfig(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CBConfigInfo& cellBroadcastInfo) override;
+
+    int32_t GetCBConfig(int32_t slotId, int32_t serialId) override;
+
+    int32_t SetCdmaCBConfig(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CdmaCBConfigInfoList& cdmaCBConfigInfoList) override;
+
+    int32_t GetCdmaCBConfig(int32_t slotId, int32_t serialId) override;
+
+    int32_t SendSmsMoreMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo& gsmSmsMessageInfo) override;
+
+    int32_t SendSmsAck(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::ModeData& modeData) override;
+
+    int32_t SendRilAck() override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t SetCallback_(const sptr<OHOS::HDI::Ril::V1_0::IRilCallback>& rilCallback,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetEmergencyCallList_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::EmergencyInfoList& emergencyInfoList, const sptr<IRemoteObject> remote);
+
+    static int32_t GetEmergencyCallList_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallList_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t Dial_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DialInfo& dialInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t Reject_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t Hangup_(int32_t slotId, int32_t serialId, int32_t callId, const sptr<IRemoteObject> remote);
+
+    static int32_t Answer_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t HoldCall_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t UnHoldCall_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SwitchCall_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t CombineConference_(int32_t slotId, int32_t serialId, int32_t callType,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SeparateConference_(int32_t slotId, int32_t serialId, int32_t callId, int32_t callType,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallWaiting_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallWaiting_(int32_t slotId, int32_t serialId, int32_t activate,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallTransferInfo_(int32_t slotId, int32_t serialId, int32_t reason,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallTransferInfo_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CallForwardSetInfo& callForwardSetInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallRestriction_(int32_t slotId, int32_t serialId, const std::string& fac,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallRestriction_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CallRestrictionInfo& callRestrictionInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t GetClip_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetClip_(int32_t slotId, int32_t serialId, int32_t action, const sptr<IRemoteObject> remote);
+
+    static int32_t GetClir_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetClir_(int32_t slotId, int32_t serialId, int32_t action, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallPreferenceMode_(int32_t slotId, int32_t serialId, int32_t mode,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallPreferenceMode_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetUssd_(int32_t slotId, int32_t serialId, const std::string& str, const sptr<IRemoteObject> remote);
+
+    static int32_t GetUssd_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetMute_(int32_t slotId, int32_t serialId, int32_t mute, const sptr<IRemoteObject> remote);
+
+    static int32_t GetMute_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCallFailReason_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t CallSupplement_(int32_t slotId, int32_t serialId, int32_t type, const sptr<IRemoteObject> remote);
+
+    static int32_t SendDtmf_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t StartDtmf_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t StopDtmf_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::DtmfInfo& dtmfInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetBarringPassword_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SetBarringInfo& setBarringInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t ActivatePdpContext_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataCallInfo& dataCallInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t DeactivatePdpContext_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::UniInfo& uniInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetPdpContextList_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::UniInfo& uniInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetInitApnInfo_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataProfileDataInfo& dataProfileDataInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t GetLinkBandwidthInfo_(int32_t slotId, int32_t serialId, int32_t cid,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetLinkBandwidthReportingRule_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataLinkBandwidthReportingRule& dataLinkBandwidthReportingRule, const sptr<IRemoteObject> remote);
+
+    static int32_t SetDataPermitted_(int32_t slotId, int32_t serialId, int32_t dataPermitted,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetDataProfileInfo_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataProfilesInfo& dataProfilesInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SendDataPerformanceMode_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataPerformanceInfo& dataPerformanceInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SendDataSleepMode_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::DataSleepInfo& dataSleepInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SetRadioState_(int32_t slotId, int32_t serialId, int32_t fun, int32_t rst,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetRadioState_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetImei_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetMeid_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetVoiceRadioTechnology_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetBasebandVersion_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t ShutDown_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetSimIO_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::SimIoRequestInfo& simIO,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetSimStatus_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetImsi_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetSimLockStatus_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimLockInfo& simLockInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SetSimLock_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::SimLockInfo& simLockInfo,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ChangeSimPassword_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimPasswordInfo& simPassword, const sptr<IRemoteObject> remote);
+
+    static int32_t UnlockPin_(int32_t slotId, int32_t serialId, const std::string& pin,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t UnlockPuk_(int32_t slotId, int32_t serialId, const std::string& puk, const std::string& pin,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t UnlockPin2_(int32_t slotId, int32_t serialId, const std::string& pin2,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t UnlockPuk2_(int32_t slotId, int32_t serialId, const std::string& puk2, const std::string& pin2,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetActiveSim_(int32_t slotId, int32_t serialId, int32_t index, int32_t enable,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimStkSendTerminalResponse_(int32_t slotId, int32_t serialId, const std::string& strCmd,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimStkSendEnvelope_(int32_t slotId, int32_t serialId, const std::string& strCmd,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimStkSendCallSetupRequestResult_(int32_t slotId, int32_t serialId, int32_t accept,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimStkIsReady_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetRadioProtocol_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetRadioProtocol_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::RadioProtocol& radioProtocol, const sptr<IRemoteObject> remote);
+
+    static int32_t SimOpenLogicalChannel_(int32_t slotId, int32_t serialId, const std::string& appID, int32_t p2,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimCloseLogicalChannel_(int32_t slotId, int32_t serialId, int32_t channelId,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SimTransmitApduLogicalChannel_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo& apduSimIO, const sptr<IRemoteObject> remote);
+
+    static int32_t SimTransmitApduBasicChannel_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo& apduSimIO, const sptr<IRemoteObject> remote);
+
+    static int32_t SimAuthentication_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SimAuthenticationRequestInfo& simAuthInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t UnlockSimLock_(int32_t slotId, int32_t serialId, int32_t lockType, const std::string& key,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetSignalStrength_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCsRegStatus_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetPsRegStatus_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetOperatorInfo_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetNetworkSearchInformation_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetNetworkSelectionMode_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetNetworkSelectionMode_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SetNetworkModeInfo& networkModeInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t GetNeighboringCellInfoList_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCurrentCellInfo_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetPreferredNetwork_(int32_t slotId, int32_t serialId, int32_t preferredNetworkType,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetPreferredNetwork_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetPhysicalChannelConfig_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetLocateUpdates_(int32_t slotId, int32_t serialId, OHOS::HDI::Ril::V1_0::RilRegNotifyMode mode,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetNotificationFilter_(int32_t slotId, int32_t serialId, int32_t newFilter,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetDeviceState_(int32_t slotId, int32_t serialId, int32_t deviceStateType, int32_t deviceStateOn,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SendGsmSms_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo& gsmSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SendCdmaSms_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SendCdmaSmsMessageInfo& cdmaSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t AddSimMessage_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& gsmSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t DelSimMessage_(int32_t slotId, int32_t serialId, int32_t index, const sptr<IRemoteObject> remote);
+
+    static int32_t UpdateSimMessage_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& gsmSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t AddCdmaSimMessage_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& cdmaSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t DelCdmaSimMessage_(int32_t slotId, int32_t serialId, int32_t index,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t UpdateCdmaSimMessage_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::SmsMessageIOInfo& cdmaSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SetSmscAddr_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::ServiceCenterAddress& serviceCenterAddress, const sptr<IRemoteObject> remote);
+
+    static int32_t GetSmscAddr_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCBConfig_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CBConfigInfo& cellBroadcastInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCBConfig_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCdmaCBConfig_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::CdmaCBConfigInfoList& cdmaCBConfigInfoList, const sptr<IRemoteObject> remote);
+
+    static int32_t GetCdmaCBConfig_(int32_t slotId, int32_t serialId, const sptr<IRemoteObject> remote);
+
+    static int32_t SendSmsMoreMode_(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo& gsmSmsMessageInfo, const sptr<IRemoteObject> remote);
+
+    static int32_t SendSmsAck_(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_0::ModeData& modeData,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SendRilAck_(const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Ril::V1_0::RilProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Ril::V1_0::RilProxy> delegator_;
+};
+
+} // V1_0
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_0_RILPROXY_H
+

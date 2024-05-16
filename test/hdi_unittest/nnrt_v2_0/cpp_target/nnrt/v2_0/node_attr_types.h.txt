@@ -1,0 +1,504 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_NNRT_V2_0_NODEATTRTYPES_H
+#define OHOS_HDI_NNRT_V2_0_NODEATTRTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <vector>
+#include "nnrt/v2_0/nnrt_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V2_0 {
+
+using namespace OHOS;
+
+struct Activation {
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+    float alpha;
+    float minVal;
+    float maxVal;
+    bool approximate;
+} __attribute__ ((aligned(8)));
+
+struct AddFusion {
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct ArgMaxFusion {
+    int64_t axis;
+    int64_t topK;
+    bool keepDims;
+    bool outMaxValue;
+} __attribute__ ((aligned(8)));
+
+struct AvgPoolFusion {
+    std::vector<int64_t> kernelSize;
+    std::vector<int64_t> strides;
+    std::vector<int64_t> pad;
+    OHOS::HDI::Nnrt::V2_0::PadMode padMode;
+    OHOS::HDI::Nnrt::V2_0::RoundMode roundMode;
+    OHOS::HDI::Nnrt::V2_0::Format format;
+    bool global;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+};
+
+struct BatchToSpaceND {
+    std::vector<int64_t> blockShape;
+    std::vector<std::vector<int64_t>> crops;
+};
+
+struct BiasAdd {
+} __attribute__ ((aligned(8)));
+
+struct Cast {
+} __attribute__ ((aligned(8)));
+
+struct Concat {
+    int64_t axis;
+} __attribute__ ((aligned(8)));
+
+struct Conv2DFusion {
+    std::vector<int64_t> kernelSize;
+    std::vector<int64_t> stride;
+    std::vector<int64_t> dilation;
+    OHOS::HDI::Nnrt::V2_0::PadMode padMode;
+    std::vector<int64_t> padList;
+    int64_t group;
+    int64_t inChannel;
+    int64_t outChannel;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+};
+
+struct Conv2dTransposeFusion {
+    std::vector<int64_t> kernelSize;
+    std::vector<int64_t> stride;
+    std::vector<int64_t> dilation;
+    OHOS::HDI::Nnrt::V2_0::PadMode padMode;
+    std::vector<int64_t> padList;
+    int64_t group;
+    int64_t inChannel;
+    int64_t outChannel;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+    std::vector<int64_t> outputPaddings;
+};
+
+struct DivFusion {
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct Eltwise {
+    OHOS::HDI::Nnrt::V2_0::EltwiseMode mode;
+} __attribute__ ((aligned(8)));
+
+struct ExpandDims {
+} __attribute__ ((aligned(8)));
+
+struct Fill {
+} __attribute__ ((aligned(8)));
+
+struct FullConnection {
+    bool hasBias;
+    bool useAxis;
+    int64_t axis;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct FusedBatchNorm {
+    float epsilon;
+} __attribute__ ((aligned(8)));
+
+struct Gather {
+} __attribute__ ((aligned(8)));
+
+struct LayerNormFusion {
+    int64_t beginNormAxis;
+    float epsilon;
+    bool elementwiseAffine;
+    int64_t beginParamsAxis;
+} __attribute__ ((aligned(8)));
+
+struct LessEqual {
+} __attribute__ ((aligned(8)));
+
+struct MatMulFusion {
+    bool transposeA;
+    bool transposeB;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct Maximum {
+} __attribute__ ((aligned(8)));
+
+struct MaxPoolFusion {
+    std::vector<int64_t> kernelSize;
+    std::vector<int64_t> strides;
+    std::vector<int64_t> pad;
+    OHOS::HDI::Nnrt::V2_0::PadMode padMode;
+    OHOS::HDI::Nnrt::V2_0::Format format;
+    OHOS::HDI::Nnrt::V2_0::RoundMode roundMode;
+    bool global;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+};
+
+struct MulFusion {
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct OneHot {
+    int64_t axis;
+} __attribute__ ((aligned(8)));
+
+struct PadFusion {
+    std::vector<std::vector<int64_t>> paddings;
+    OHOS::HDI::Nnrt::V2_0::PaddingMode paddingMode;
+    float constantValue;
+};
+
+struct PowFusion {
+    float scale;
+    float shift;
+} __attribute__ ((aligned(8)));
+
+struct PReLUFusion {
+    bool channelShared;
+} __attribute__ ((aligned(8)));
+
+struct QuantDTypeCast {
+    int64_t srcT;
+    int64_t dstT;
+} __attribute__ ((aligned(8)));
+
+struct ReduceFusion {
+    bool keepDims;
+    OHOS::HDI::Nnrt::V2_0::ReduceMode mode;
+    bool reduceToEnd;
+    float coeff;
+} __attribute__ ((aligned(8)));
+
+struct Reshape {
+} __attribute__ ((aligned(8)));
+
+struct Resize {
+    OHOS::HDI::Nnrt::V2_0::ResizeMethod method;
+    int64_t newHeight;
+    int64_t newWidth;
+    bool preserveAspectRatio;
+    OHOS::HDI::Nnrt::V2_0::CoordinateTransformMode coordinateTransformMode;
+    float cubicCoeff;
+    int64_t excludeOutside;
+    float extrapolationValue;
+    OHOS::HDI::Nnrt::V2_0::NearestMode nearestMode;
+} __attribute__ ((aligned(8)));
+
+struct Rsqrt {
+} __attribute__ ((aligned(8)));
+
+struct ScaleFusion {
+    int64_t axis;
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct Shape {
+} __attribute__ ((aligned(8)));
+
+struct SliceFusion {
+    std::vector<int64_t> axes;
+};
+
+struct Softmax {
+    std::vector<int64_t> axis;
+};
+
+struct SpaceToBatchND {
+    std::vector<int64_t> blockShape;
+    std::vector<std::vector<int64_t>> paddings;
+};
+
+struct Split {
+    int64_t outputNum;
+    std::vector<int64_t> sizeSplits;
+    int64_t axis;
+};
+
+struct Sqrt {
+} __attribute__ ((aligned(8)));
+
+struct SquaredDifference {
+} __attribute__ ((aligned(8)));
+
+struct Squeeze {
+    std::vector<int64_t> axis;
+};
+
+struct Stack {
+    int64_t axis;
+} __attribute__ ((aligned(8)));
+
+struct StridedSlice {
+    int64_t beginMask;
+    int64_t endMask;
+    int64_t ellipsisMask;
+    int64_t newAxisMask;
+    int64_t shrinkAxisMask;
+} __attribute__ ((aligned(8)));
+
+struct SubFusion {
+    OHOS::HDI::Nnrt::V2_0::ActivationType activationType;
+} __attribute__ ((aligned(8)));
+
+struct TileFusion {
+    std::vector<int64_t> dims;
+};
+
+struct TopKFusion {
+    bool sorted;
+    int64_t axis;
+} __attribute__ ((aligned(8)));
+
+struct Transpose {
+} __attribute__ ((aligned(8)));
+
+struct Unsqueeze {
+    std::vector<int64_t> axis;
+};
+
+bool ActivationBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Activation& dataBlock);
+
+bool ActivationBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Activation& dataBlock);
+
+bool AddFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::AddFusion& dataBlock);
+
+bool AddFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::AddFusion& dataBlock);
+
+bool ArgMaxFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::ArgMaxFusion& dataBlock);
+
+bool ArgMaxFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::ArgMaxFusion& dataBlock);
+
+bool AvgPoolFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::AvgPoolFusion& dataBlock);
+
+bool AvgPoolFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::AvgPoolFusion& dataBlock);
+
+bool BatchToSpaceNDBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::BatchToSpaceND& dataBlock);
+
+bool BatchToSpaceNDBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::BatchToSpaceND& dataBlock);
+
+bool BiasAddBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::BiasAdd& dataBlock);
+
+bool BiasAddBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::BiasAdd& dataBlock);
+
+bool CastBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Cast& dataBlock);
+
+bool CastBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Cast& dataBlock);
+
+bool ConcatBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Concat& dataBlock);
+
+bool ConcatBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Concat& dataBlock);
+
+bool Conv2DFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Conv2DFusion& dataBlock);
+
+bool Conv2DFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Conv2DFusion& dataBlock);
+
+bool Conv2dTransposeFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Conv2dTransposeFusion& dataBlock);
+
+bool Conv2dTransposeFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Conv2dTransposeFusion& dataBlock);
+
+bool DivFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::DivFusion& dataBlock);
+
+bool DivFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::DivFusion& dataBlock);
+
+bool EltwiseBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Eltwise& dataBlock);
+
+bool EltwiseBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Eltwise& dataBlock);
+
+bool ExpandDimsBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::ExpandDims& dataBlock);
+
+bool ExpandDimsBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::ExpandDims& dataBlock);
+
+bool FillBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Fill& dataBlock);
+
+bool FillBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Fill& dataBlock);
+
+bool FullConnectionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::FullConnection& dataBlock);
+
+bool FullConnectionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::FullConnection& dataBlock);
+
+bool FusedBatchNormBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::FusedBatchNorm& dataBlock);
+
+bool FusedBatchNormBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::FusedBatchNorm& dataBlock);
+
+bool GatherBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Gather& dataBlock);
+
+bool GatherBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Gather& dataBlock);
+
+bool LayerNormFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::LayerNormFusion& dataBlock);
+
+bool LayerNormFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::LayerNormFusion& dataBlock);
+
+bool LessEqualBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::LessEqual& dataBlock);
+
+bool LessEqualBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::LessEqual& dataBlock);
+
+bool MatMulFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::MatMulFusion& dataBlock);
+
+bool MatMulFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::MatMulFusion& dataBlock);
+
+bool MaximumBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Maximum& dataBlock);
+
+bool MaximumBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Maximum& dataBlock);
+
+bool MaxPoolFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::MaxPoolFusion& dataBlock);
+
+bool MaxPoolFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::MaxPoolFusion& dataBlock);
+
+bool MulFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::MulFusion& dataBlock);
+
+bool MulFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::MulFusion& dataBlock);
+
+bool OneHotBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::OneHot& dataBlock);
+
+bool OneHotBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::OneHot& dataBlock);
+
+bool PadFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::PadFusion& dataBlock);
+
+bool PadFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::PadFusion& dataBlock);
+
+bool PowFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::PowFusion& dataBlock);
+
+bool PowFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::PowFusion& dataBlock);
+
+bool PReLUFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::PReLUFusion& dataBlock);
+
+bool PReLUFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::PReLUFusion& dataBlock);
+
+bool QuantDTypeCastBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::QuantDTypeCast& dataBlock);
+
+bool QuantDTypeCastBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::QuantDTypeCast& dataBlock);
+
+bool ReduceFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::ReduceFusion& dataBlock);
+
+bool ReduceFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::ReduceFusion& dataBlock);
+
+bool ReshapeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Reshape& dataBlock);
+
+bool ReshapeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Reshape& dataBlock);
+
+bool ResizeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Resize& dataBlock);
+
+bool ResizeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Resize& dataBlock);
+
+bool RsqrtBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Rsqrt& dataBlock);
+
+bool RsqrtBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Rsqrt& dataBlock);
+
+bool ScaleFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::ScaleFusion& dataBlock);
+
+bool ScaleFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::ScaleFusion& dataBlock);
+
+bool ShapeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Shape& dataBlock);
+
+bool ShapeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Shape& dataBlock);
+
+bool SliceFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::SliceFusion& dataBlock);
+
+bool SliceFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::SliceFusion& dataBlock);
+
+bool SoftmaxBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Softmax& dataBlock);
+
+bool SoftmaxBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Softmax& dataBlock);
+
+bool SpaceToBatchNDBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::SpaceToBatchND& dataBlock);
+
+bool SpaceToBatchNDBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::SpaceToBatchND& dataBlock);
+
+bool SplitBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Split& dataBlock);
+
+bool SplitBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Split& dataBlock);
+
+bool SqrtBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Sqrt& dataBlock);
+
+bool SqrtBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Sqrt& dataBlock);
+
+bool SquaredDifferenceBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::SquaredDifference& dataBlock);
+
+bool SquaredDifferenceBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::SquaredDifference& dataBlock);
+
+bool SqueezeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Squeeze& dataBlock);
+
+bool SqueezeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Squeeze& dataBlock);
+
+bool StackBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Stack& dataBlock);
+
+bool StackBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Stack& dataBlock);
+
+bool StridedSliceBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::StridedSlice& dataBlock);
+
+bool StridedSliceBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::StridedSlice& dataBlock);
+
+bool SubFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::SubFusion& dataBlock);
+
+bool SubFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::SubFusion& dataBlock);
+
+bool TileFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::TileFusion& dataBlock);
+
+bool TileFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::TileFusion& dataBlock);
+
+bool TopKFusionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::TopKFusion& dataBlock);
+
+bool TopKFusionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::TopKFusion& dataBlock);
+
+bool TransposeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Transpose& dataBlock);
+
+bool TransposeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Transpose& dataBlock);
+
+bool UnsqueezeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Nnrt::V2_0::Unsqueeze& dataBlock);
+
+bool UnsqueezeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Nnrt::V2_0::Unsqueeze& dataBlock);
+
+} // V2_0
+} // Nnrt
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_NNRT_V2_0_NODEATTRTYPES_H
+

@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/wififence_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    wififence_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Wififence {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStub(const sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::~WififenceCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_WIFIFENCE_CALLBACK_GET_VERSION:
+            return WififenceCallbackStubGetVersion(data, reply, option);
+        case CMD_WIFIFENCE_CALLBACK_ON_WIFIFENCE_CHANGED:
+            return WififenceCallbackStubOnWififenceChanged(data, reply, option);
+        case CMD_WIFIFENCE_CALLBACK_ON_GET_WIFIFENCE_SIZE_CB:
+            return WififenceCallbackStubOnGetWififenceSizeCb(data, reply, option);
+        case CMD_WIFIFENCE_CALLBACK_ON_WIFIFENCE_RESET:
+            return WififenceCallbackStubOnWififenceReset(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceChanged(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceChanged_(wififenceCallbackData, wififenceCallbackReply, wififenceCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnGetWififenceSizeCb(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnGetWififenceSizeCb_(wififenceCallbackData, wififenceCallbackReply, wififenceCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceReset(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceReset_(wififenceCallbackData, wififenceCallbackReply, wififenceCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubGetVersion(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubGetVersion_(wififenceCallbackData, wififenceCallbackReply, wififenceCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceChanged_(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback> impl)
+{
+    if (wififenceCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t wififenceId = 0;
+    if (!wififenceCallbackData.ReadInt32(wififenceId)) {
+        HDF_LOGE("%{public}s: read wififenceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t transition = 0;
+    if (!wififenceCallbackData.ReadInt32(transition)) {
+        HDF_LOGE("%{public}s: read transition failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int64_t timestamp = 0;
+    if (!wififenceCallbackData.ReadInt64(timestamp)) {
+        HDF_LOGE("%{public}s: read timestamp failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t wififenceCallbackRet = impl->OnWififenceChanged(wififenceId, transition, timestamp);
+    if (wififenceCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wififenceCallbackRet);
+        return wififenceCallbackRet;
+    }
+
+    return wififenceCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnGetWififenceSizeCb_(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback> impl)
+{
+    if (wififenceCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceSize size;
+    if (!WififenceSizeBlockUnmarshalling(wififenceCallbackData, size)) {
+        HDF_LOGE("%{public}s: read size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t wififenceCallbackRet = impl->OnGetWififenceSizeCb(size);
+    if (wififenceCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wififenceCallbackRet);
+        return wififenceCallbackRet;
+    }
+
+    return wififenceCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubOnWififenceReset_(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback> impl)
+{
+    if (wififenceCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t wififenceCallbackRet = impl->OnWififenceReset();
+    if (wififenceCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wififenceCallbackRet);
+        return wififenceCallbackRet;
+    }
+
+    return wififenceCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceCallbackStub::WififenceCallbackStubGetVersion_(MessageParcel& wififenceCallbackData, MessageParcel& wififenceCallbackReply, MessageOption& wififenceCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback> impl)
+{
+    if (wififenceCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t wififenceCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (wififenceCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wififenceCallbackRet);
+        return wififenceCallbackRet;
+    }
+
+    if (!wififenceCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!wififenceCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return wififenceCallbackRet;
+}
+} // V1_0
+} // Wififence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

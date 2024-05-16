@@ -1,0 +1,1040 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/ril_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "ril/v1_2/ril_callback_proxy.h"
+
+#define HDF_LOG_TAG    ril_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_2 {
+
+
+sptr<OHOS::HDI::Ril::V1_2::IRil> OHOS::HDI::Ril::V1_2::IRil::Get(bool isStub)
+{
+    return OHOS::HDI::Ril::V1_2::IRil::Get("ril_service", isStub);
+}
+
+sptr<OHOS::HDI::Ril::V1_2::IRil> OHOS::HDI::Ril::V1_2::IRil::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "ril_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Ril::V1_2::IRil *>(impl);
+}
+
+
+OHOS::HDI::Ril::V1_2::RilStub::RilStub(const sptr<OHOS::HDI::Ril::V1_2::IRil> &impl)
+    : IPCObjectStub(OHOS::HDI::Ril::V1_2::IRil::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Ril::V1_2::RilStub::~RilStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_RIL_GET_VERSION:
+            return RilStubGetVersion(data, reply, option);
+        case CMD_RIL_SET_CALLBACK1_2:
+            return RilStubSetCallback1_2(data, reply, option);
+        case CMD_RIL_SEND_SIM_MATCHED_OPERATOR_INFO:
+            return RilStubSendSimMatchedOperatorInfo(data, reply, option);
+        case CMD_RIL_CLEAN_ALL_CONNECTIONS:
+            return RilStubCleanAllConnections(data, reply, option);
+        case CMD_RIL_GET_NR_SSB_ID:
+            return RilStubGetNrSsbId(data, reply, option);
+        case CMD_RIL_SET_CALLBACK:
+            return RilStubSetCallback(data, reply, option);
+        case CMD_RIL_SET_EMERGENCY_CALL_LIST:
+            return RilStubSetEmergencyCallList(data, reply, option);
+        case CMD_RIL_GET_EMERGENCY_CALL_LIST:
+            return RilStubGetEmergencyCallList(data, reply, option);
+        case CMD_RIL_GET_CALL_LIST:
+            return RilStubGetCallList(data, reply, option);
+        case CMD_RIL_DIAL:
+            return RilStubDial(data, reply, option);
+        case CMD_RIL_REJECT:
+            return RilStubReject(data, reply, option);
+        case CMD_RIL_HANGUP:
+            return RilStubHangup(data, reply, option);
+        case CMD_RIL_ANSWER:
+            return RilStubAnswer(data, reply, option);
+        case CMD_RIL_HOLD_CALL:
+            return RilStubHoldCall(data, reply, option);
+        case CMD_RIL_UN_HOLD_CALL:
+            return RilStubUnHoldCall(data, reply, option);
+        case CMD_RIL_SWITCH_CALL:
+            return RilStubSwitchCall(data, reply, option);
+        case CMD_RIL_COMBINE_CONFERENCE:
+            return RilStubCombineConference(data, reply, option);
+        case CMD_RIL_SEPARATE_CONFERENCE:
+            return RilStubSeparateConference(data, reply, option);
+        case CMD_RIL_GET_CALL_WAITING:
+            return RilStubGetCallWaiting(data, reply, option);
+        case CMD_RIL_SET_CALL_WAITING:
+            return RilStubSetCallWaiting(data, reply, option);
+        case CMD_RIL_GET_CALL_TRANSFER_INFO:
+            return RilStubGetCallTransferInfo(data, reply, option);
+        case CMD_RIL_SET_CALL_TRANSFER_INFO:
+            return RilStubSetCallTransferInfo(data, reply, option);
+        case CMD_RIL_GET_CALL_RESTRICTION:
+            return RilStubGetCallRestriction(data, reply, option);
+        case CMD_RIL_SET_CALL_RESTRICTION:
+            return RilStubSetCallRestriction(data, reply, option);
+        case CMD_RIL_GET_CLIP:
+            return RilStubGetClip(data, reply, option);
+        case CMD_RIL_SET_CLIP:
+            return RilStubSetClip(data, reply, option);
+        case CMD_RIL_GET_CLIR:
+            return RilStubGetClir(data, reply, option);
+        case CMD_RIL_SET_CLIR:
+            return RilStubSetClir(data, reply, option);
+        case CMD_RIL_SET_CALL_PREFERENCE_MODE:
+            return RilStubSetCallPreferenceMode(data, reply, option);
+        case CMD_RIL_GET_CALL_PREFERENCE_MODE:
+            return RilStubGetCallPreferenceMode(data, reply, option);
+        case CMD_RIL_SET_USSD:
+            return RilStubSetUssd(data, reply, option);
+        case CMD_RIL_CLOSE_UN_FINISHED_USSD:
+            return RilStubCloseUnFinishedUssd(data, reply, option);
+        case CMD_RIL_GET_USSD:
+            return RilStubGetUssd(data, reply, option);
+        case CMD_RIL_SET_MUTE:
+            return RilStubSetMute(data, reply, option);
+        case CMD_RIL_GET_MUTE:
+            return RilStubGetMute(data, reply, option);
+        case CMD_RIL_GET_CALL_FAIL_REASON:
+            return RilStubGetCallFailReason(data, reply, option);
+        case CMD_RIL_CALL_SUPPLEMENT:
+            return RilStubCallSupplement(data, reply, option);
+        case CMD_RIL_SEND_DTMF:
+            return RilStubSendDtmf(data, reply, option);
+        case CMD_RIL_START_DTMF:
+            return RilStubStartDtmf(data, reply, option);
+        case CMD_RIL_STOP_DTMF:
+            return RilStubStopDtmf(data, reply, option);
+        case CMD_RIL_SET_BARRING_PASSWORD:
+            return RilStubSetBarringPassword(data, reply, option);
+        case CMD_RIL_SET_VONR_SWITCH:
+            return RilStubSetVonrSwitch(data, reply, option);
+        case CMD_RIL_ACTIVATE_PDP_CONTEXT:
+            return RilStubActivatePdpContext(data, reply, option);
+        case CMD_RIL_DEACTIVATE_PDP_CONTEXT:
+            return RilStubDeactivatePdpContext(data, reply, option);
+        case CMD_RIL_GET_PDP_CONTEXT_LIST:
+            return RilStubGetPdpContextList(data, reply, option);
+        case CMD_RIL_SET_INIT_APN_INFO:
+            return RilStubSetInitApnInfo(data, reply, option);
+        case CMD_RIL_GET_LINK_BANDWIDTH_INFO:
+            return RilStubGetLinkBandwidthInfo(data, reply, option);
+        case CMD_RIL_GET_LINK_CAPABILITY:
+            return RilStubGetLinkCapability(data, reply, option);
+        case CMD_RIL_SET_LINK_BANDWIDTH_REPORTING_RULE:
+            return RilStubSetLinkBandwidthReportingRule(data, reply, option);
+        case CMD_RIL_SET_DATA_PERMITTED:
+            return RilStubSetDataPermitted(data, reply, option);
+        case CMD_RIL_SET_DATA_PROFILE_INFO:
+            return RilStubSetDataProfileInfo(data, reply, option);
+        case CMD_RIL_SEND_DATA_PERFORMANCE_MODE:
+            return RilStubSendDataPerformanceMode(data, reply, option);
+        case CMD_RIL_SEND_DATA_SLEEP_MODE:
+            return RilStubSendDataSleepMode(data, reply, option);
+        case CMD_RIL_SET_RADIO_STATE:
+            return RilStubSetRadioState(data, reply, option);
+        case CMD_RIL_GET_RADIO_STATE:
+            return RilStubGetRadioState(data, reply, option);
+        case CMD_RIL_GET_IMEI:
+            return RilStubGetImei(data, reply, option);
+        case CMD_RIL_GET_MEID:
+            return RilStubGetMeid(data, reply, option);
+        case CMD_RIL_GET_VOICE_RADIO_TECHNOLOGY:
+            return RilStubGetVoiceRadioTechnology(data, reply, option);
+        case CMD_RIL_GET_BASEBAND_VERSION:
+            return RilStubGetBasebandVersion(data, reply, option);
+        case CMD_RIL_SHUT_DOWN:
+            return RilStubShutDown(data, reply, option);
+        case CMD_RIL_GET_SIM_I_O:
+            return RilStubGetSimIO(data, reply, option);
+        case CMD_RIL_GET_SIM_STATUS:
+            return RilStubGetSimStatus(data, reply, option);
+        case CMD_RIL_GET_IMSI:
+            return RilStubGetImsi(data, reply, option);
+        case CMD_RIL_GET_SIM_LOCK_STATUS:
+            return RilStubGetSimLockStatus(data, reply, option);
+        case CMD_RIL_SET_SIM_LOCK:
+            return RilStubSetSimLock(data, reply, option);
+        case CMD_RIL_CHANGE_SIM_PASSWORD:
+            return RilStubChangeSimPassword(data, reply, option);
+        case CMD_RIL_UNLOCK_PIN:
+            return RilStubUnlockPin(data, reply, option);
+        case CMD_RIL_UNLOCK_PUK:
+            return RilStubUnlockPuk(data, reply, option);
+        case CMD_RIL_UNLOCK_PIN2:
+            return RilStubUnlockPin2(data, reply, option);
+        case CMD_RIL_UNLOCK_PUK2:
+            return RilStubUnlockPuk2(data, reply, option);
+        case CMD_RIL_SET_ACTIVE_SIM:
+            return RilStubSetActiveSim(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_TERMINAL_RESPONSE:
+            return RilStubSimStkSendTerminalResponse(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_ENVELOPE:
+            return RilStubSimStkSendEnvelope(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_CALL_SETUP_REQUEST_RESULT:
+            return RilStubSimStkSendCallSetupRequestResult(data, reply, option);
+        case CMD_RIL_SIM_STK_IS_READY:
+            return RilStubSimStkIsReady(data, reply, option);
+        case CMD_RIL_GET_RADIO_PROTOCOL:
+            return RilStubGetRadioProtocol(data, reply, option);
+        case CMD_RIL_SET_RADIO_PROTOCOL:
+            return RilStubSetRadioProtocol(data, reply, option);
+        case CMD_RIL_SIM_OPEN_LOGICAL_CHANNEL:
+            return RilStubSimOpenLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_CLOSE_LOGICAL_CHANNEL:
+            return RilStubSimCloseLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_TRANSMIT_APDU_LOGICAL_CHANNEL:
+            return RilStubSimTransmitApduLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_TRANSMIT_APDU_BASIC_CHANNEL:
+            return RilStubSimTransmitApduBasicChannel(data, reply, option);
+        case CMD_RIL_SIM_AUTHENTICATION:
+            return RilStubSimAuthentication(data, reply, option);
+        case CMD_RIL_UNLOCK_SIM_LOCK:
+            return RilStubUnlockSimLock(data, reply, option);
+        case CMD_RIL_GET_SIGNAL_STRENGTH:
+            return RilStubGetSignalStrength(data, reply, option);
+        case CMD_RIL_GET_CS_REG_STATUS:
+            return RilStubGetCsRegStatus(data, reply, option);
+        case CMD_RIL_GET_PS_REG_STATUS:
+            return RilStubGetPsRegStatus(data, reply, option);
+        case CMD_RIL_GET_OPERATOR_INFO:
+            return RilStubGetOperatorInfo(data, reply, option);
+        case CMD_RIL_GET_NETWORK_SEARCH_INFORMATION:
+            return RilStubGetNetworkSearchInformation(data, reply, option);
+        case CMD_RIL_GET_NETWORK_SELECTION_MODE:
+            return RilStubGetNetworkSelectionMode(data, reply, option);
+        case CMD_RIL_SET_NETWORK_SELECTION_MODE:
+            return RilStubSetNetworkSelectionMode(data, reply, option);
+        case CMD_RIL_GET_NEIGHBORING_CELL_INFO_LIST:
+            return RilStubGetNeighboringCellInfoList(data, reply, option);
+        case CMD_RIL_GET_CURRENT_CELL_INFO:
+            return RilStubGetCurrentCellInfo(data, reply, option);
+        case CMD_RIL_SET_PREFERRED_NETWORK:
+            return RilStubSetPreferredNetwork(data, reply, option);
+        case CMD_RIL_GET_PREFERRED_NETWORK:
+            return RilStubGetPreferredNetwork(data, reply, option);
+        case CMD_RIL_GET_PHYSICAL_CHANNEL_CONFIG:
+            return RilStubGetPhysicalChannelConfig(data, reply, option);
+        case CMD_RIL_SET_LOCATE_UPDATES:
+            return RilStubSetLocateUpdates(data, reply, option);
+        case CMD_RIL_SET_NOTIFICATION_FILTER:
+            return RilStubSetNotificationFilter(data, reply, option);
+        case CMD_RIL_SET_DEVICE_STATE:
+            return RilStubSetDeviceState(data, reply, option);
+        case CMD_RIL_SEND_GSM_SMS:
+            return RilStubSendGsmSms(data, reply, option);
+        case CMD_RIL_SEND_CDMA_SMS:
+            return RilStubSendCdmaSms(data, reply, option);
+        case CMD_RIL_ADD_SIM_MESSAGE:
+            return RilStubAddSimMessage(data, reply, option);
+        case CMD_RIL_DEL_SIM_MESSAGE:
+            return RilStubDelSimMessage(data, reply, option);
+        case CMD_RIL_UPDATE_SIM_MESSAGE:
+            return RilStubUpdateSimMessage(data, reply, option);
+        case CMD_RIL_ADD_CDMA_SIM_MESSAGE:
+            return RilStubAddCdmaSimMessage(data, reply, option);
+        case CMD_RIL_DEL_CDMA_SIM_MESSAGE:
+            return RilStubDelCdmaSimMessage(data, reply, option);
+        case CMD_RIL_UPDATE_CDMA_SIM_MESSAGE:
+            return RilStubUpdateCdmaSimMessage(data, reply, option);
+        case CMD_RIL_SET_SMSC_ADDR:
+            return RilStubSetSmscAddr(data, reply, option);
+        case CMD_RIL_GET_SMSC_ADDR:
+            return RilStubGetSmscAddr(data, reply, option);
+        case CMD_RIL_SET_C_B_CONFIG:
+            return RilStubSetCBConfig(data, reply, option);
+        case CMD_RIL_GET_C_B_CONFIG:
+            return RilStubGetCBConfig(data, reply, option);
+        case CMD_RIL_SET_CDMA_C_B_CONFIG:
+            return RilStubSetCdmaCBConfig(data, reply, option);
+        case CMD_RIL_GET_CDMA_C_B_CONFIG:
+            return RilStubGetCdmaCBConfig(data, reply, option);
+        case CMD_RIL_SEND_SMS_MORE_MODE:
+            return RilStubSendSmsMoreMode(data, reply, option);
+        case CMD_RIL_SEND_SMS_ACK:
+            return RilStubSendSmsAck(data, reply, option);
+        case CMD_RIL_SEND_RIL_ACK:
+            return RilStubSendRilAck(data, reply, option);
+        case CMD_RIL_GET_RRC_CONNECTION_STATE:
+            return RilStubGetRrcConnectionState(data, reply, option);
+        case CMD_RIL_SET_NR_OPTION_MODE:
+            return RilStubSetNrOptionMode(data, reply, option);
+        case CMD_RIL_GET_NR_OPTION_MODE:
+            return RilStubGetNrOptionMode(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallback1_2(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallback1_2_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendSimMatchedOperatorInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilStub::RilStubSendSimMatchedOperatorInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubCleanAllConnections(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilStub::RilStubCleanAllConnections_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNrSsbId(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNrSsbId_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallback(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCallback_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetEmergencyCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetEmergencyCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetEmergencyCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetEmergencyCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubDial(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubDial_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubReject(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubReject_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubHangup(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubHangup_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubAnswer(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubAnswer_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubHoldCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubHoldCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnHoldCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnHoldCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSwitchCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSwitchCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubCombineConference(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubCombineConference_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSeparateConference(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSeparateConference_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallWaiting(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallWaiting_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallWaiting(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCallWaiting_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallTransferInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallTransferInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallTransferInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCallTransferInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallRestriction(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallRestriction_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallRestriction(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCallRestriction_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetClip(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetClip_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetClip(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetClip_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetClir(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetClir_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetClir(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetClir_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallPreferenceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCallPreferenceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallPreferenceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallPreferenceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetUssd(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetUssd_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubCloseUnFinishedUssd(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubCloseUnFinishedUssd_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetUssd(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetUssd_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetMute(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetMute_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetMute(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetMute_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCallFailReason(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCallFailReason_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubCallSupplement(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubCallSupplement_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubStartDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubStartDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubStopDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubStopDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetBarringPassword(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetBarringPassword_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetVonrSwitch(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetVonrSwitch_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubActivatePdpContext(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubActivatePdpContext_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubDeactivatePdpContext(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubDeactivatePdpContext_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetPdpContextList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetPdpContextList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetInitApnInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetInitApnInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetLinkBandwidthInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetLinkBandwidthInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetLinkCapability(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetLinkCapability_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetLinkBandwidthReportingRule(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetLinkBandwidthReportingRule_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetDataPermitted(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetDataPermitted_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetDataProfileInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetDataProfileInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendDataPerformanceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendDataPerformanceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendDataSleepMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendDataSleepMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetRadioState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetRadioState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetRadioState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetRadioState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetImei(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetImei_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetMeid(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetMeid_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetVoiceRadioTechnology(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetVoiceRadioTechnology_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetBasebandVersion(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetBasebandVersion_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubShutDown(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubShutDown_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetSimIO(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetSimIO_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetSimStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetSimStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetImsi(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetImsi_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetSimLockStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetSimLockStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetSimLock(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetSimLock_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubChangeSimPassword(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubChangeSimPassword_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnlockPin(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnlockPin_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnlockPuk(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnlockPuk_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnlockPin2(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnlockPin2_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnlockPuk2(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnlockPuk2_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetActiveSim(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetActiveSim_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimStkSendTerminalResponse(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimStkSendTerminalResponse_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimStkSendEnvelope(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimStkSendEnvelope_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimStkSendCallSetupRequestResult(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimStkSendCallSetupRequestResult_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimStkIsReady(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimStkIsReady_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetRadioProtocol(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetRadioProtocol_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetRadioProtocol(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetRadioProtocol_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimOpenLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimOpenLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimCloseLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimCloseLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimTransmitApduLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimTransmitApduLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimTransmitApduBasicChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimTransmitApduBasicChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSimAuthentication(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSimAuthentication_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUnlockSimLock(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUnlockSimLock_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetSignalStrength(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetSignalStrength_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCsRegStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCsRegStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetPsRegStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetPsRegStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetOperatorInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetOperatorInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNetworkSearchInformation(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetNetworkSearchInformation_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNetworkSelectionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetNetworkSelectionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetNetworkSelectionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetNetworkSelectionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNeighboringCellInfoList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetNeighboringCellInfoList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCurrentCellInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCurrentCellInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetPreferredNetwork(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetPreferredNetwork_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetPreferredNetwork(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetPreferredNetwork_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetPhysicalChannelConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetPhysicalChannelConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetLocateUpdates(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetLocateUpdates_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetNotificationFilter(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetNotificationFilter_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetDeviceState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetDeviceState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendGsmSms(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendGsmSms_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendCdmaSms(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendCdmaSms_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubAddSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubAddSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubDelSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubDelSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUpdateSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUpdateSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubAddCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubAddCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubDelCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubDelCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubUpdateCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubUpdateCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetSmscAddr(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetSmscAddr_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetSmscAddr(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetSmscAddr_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCdmaCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetCdmaCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetCdmaCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetCdmaCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendSmsMoreMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendSmsMoreMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendSmsAck(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendSmsAck_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendRilAck(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSendRilAck_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetRrcConnectionState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetRrcConnectionState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetNrOptionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubSetNrOptionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNrOptionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetNrOptionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetVersion(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilStub::RilStubGetVersion_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSetCallback1_2_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_2::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Ril::V1_2::IRilCallback> rilCallback;
+    sptr<IRemoteObject> rilCallbackRemote = rilData.ReadRemoteObject();
+    if (rilCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    rilCallback = new OHOS::HDI::Ril::V1_2::RilCallbackProxy(rilCallbackRemote);
+    if (rilCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallback1_2(rilCallback);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubSendSimMatchedOperatorInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_2::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_2::NcfgOperatorInfo ncfgOperatorInfo;
+    if (!NcfgOperatorInfoBlockUnmarshalling(rilData, ncfgOperatorInfo)) {
+        HDF_LOGE("%{public}s: read ncfgOperatorInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendSimMatchedOperatorInfo(slotId, serialId, ncfgOperatorInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubCleanAllConnections_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_2::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->CleanAllConnections(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilStub::RilStubGetNrSsbId_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_2::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetNrSsbId(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+} // V1_2
+} // Ril
+} // HDI
+} // OHOS

@@ -1,0 +1,1208 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hostapd_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    hostapd_interface_stub
+
+struct IHostapdInterface *IHostapdInterfaceGet(bool isStub)
+{
+    return IHostapdInterfaceGetInstance("hostapd_interface_service", isStub);
+}
+
+struct IHostapdInterface *IHostapdInterfaceGetInstance(const char *serviceName, bool isStub)
+{
+    if (!isStub) {
+        return NULL;
+    }
+
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "hostapd_interface_service") == 0) {
+        instName = "service";
+    }
+    return (struct IHostapdInterface *)LoadHdiImpl(IHOSTAPDINTERFACE_INTERFACE_DESC, instName);
+}
+
+void IHostapdInterfaceRelease(struct IHostapdInterface *instance, bool isStub)
+{
+    IHostapdInterfaceReleaseInstance("hostapd_interface_service", instance, isStub);
+}
+
+void IHostapdInterfaceReleaseInstance(const char *serviceName, struct IHostapdInterface *instance, bool isStub)
+{
+    if (serviceName == NULL || !isStub || instance == NULL) {
+        return;
+    }
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "hostapd_interface_service") == 0) {
+        instName = "service";
+    }
+    UnloadHdiImpl(IHOSTAPDINTERFACE_INTERFACE_DESC, instName, instance);
+}
+
+static struct IHostapdCallback *ReadIHostapdCallback(struct HdfSBuf *parcel);
+
+
+static struct IHostapdCallback *ReadIHostapdCallback(struct HdfSBuf *parcel)
+{
+    struct HdfRemoteService *remote = HdfSbufReadRemoteService(parcel);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s:  failed to read remote service of 'IHostapdCallback'", __func__);
+        return NULL;
+    }
+
+    return IHostapdCallbackGet(remote);
+}
+static int32_t SerStubStartAp(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->StartAp == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function StartAp ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->StartAp(serviceImpl);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubStopAp(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->StopAp == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function StopAp ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->StopAp(serviceImpl);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubEnableAp(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->EnableAp == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function EnableAp ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->EnableAp(serviceImpl, ifName, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubDisableAp(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DisableAp == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DisableAp ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->DisableAp(serviceImpl, ifName, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApPasswd(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* pass = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *passCp = HdfSbufReadString(hostapdInterfaceData);
+    if (passCp == NULL) {
+        HDF_LOGE("%{public}s: read passCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    pass = strdup(passCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApPasswd == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApPasswd ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApPasswd(serviceImpl, ifName, pass, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (pass != NULL) {
+        OsalMemFree(pass);
+        pass = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApName(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* name = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *nameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (nameCp == NULL) {
+        HDF_LOGE("%{public}s: read nameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    name = strdup(nameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApName == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApName ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApName(serviceImpl, ifName, name, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (name != NULL) {
+        OsalMemFree(name);
+        name = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApWpaValue(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t securityType = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &securityType)) {
+        HDF_LOGE("%{public}s: read &securityType failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApWpaValue == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApWpaValue ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApWpaValue(serviceImpl, ifName, securityType, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApBand(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t band = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &band)) {
+        HDF_LOGE("%{public}s: read &band failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApBand == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApBand ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApBand(serviceImpl, ifName, band, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetAp80211n(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t value = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &value)) {
+        HDF_LOGE("%{public}s: read &value failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetAp80211n == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetAp80211n ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetAp80211n(serviceImpl, ifName, value, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApWmm(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t value = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &value)) {
+        HDF_LOGE("%{public}s: read &value failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApWmm == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApWmm ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApWmm(serviceImpl, ifName, value, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApChannel(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t channel = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &channel)) {
+        HDF_LOGE("%{public}s: read &channel failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApChannel == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApChannel ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApChannel(serviceImpl, ifName, channel, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetApMaxConn(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t maxConn = 0;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &maxConn)) {
+        HDF_LOGE("%{public}s: read &maxConn failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetApMaxConn == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetApMaxConn ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetApMaxConn(serviceImpl, ifName, maxConn, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubSetMacFilter(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* mac = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *macCp = HdfSbufReadString(hostapdInterfaceData);
+    if (macCp == NULL) {
+        HDF_LOGE("%{public}s: read macCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    mac = strdup(macCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetMacFilter == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetMacFilter ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->SetMacFilter(serviceImpl, ifName, mac, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (mac != NULL) {
+        OsalMemFree(mac);
+        mac = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubDelMacFilter(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* mac = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *macCp = HdfSbufReadString(hostapdInterfaceData);
+    if (macCp == NULL) {
+        HDF_LOGE("%{public}s: read macCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    mac = strdup(macCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DelMacFilter == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DelMacFilter ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->DelMacFilter(serviceImpl, ifName, mac, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (mac != NULL) {
+        OsalMemFree(mac);
+        mac = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubGetStaInfos(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    bool hostapdInterfaceMemSet = false;
+    char* ifName = NULL;
+    char* buf = NULL;
+    uint32_t bufLen = 0;
+    int32_t size = 0;
+    int32_t id = 0;
+
+    if (!HdfSbufReadUint8(hostapdInterfaceData, (uint8_t *)&hostapdInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (hostapdInterfaceMemSet) {
+        if (!HdfSbufReadUint32(hostapdInterfaceData, &bufLen)) {
+            HDF_LOGE("%{public}s: read buf size failed!", __func__);
+            hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(bufLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), hostapdInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (bufLen > 0) {
+            buf = (char*)OsalMemCalloc(bufLen);
+            if (buf == NULL) {
+                HDF_LOGE("%{public}s: malloc buf failed", __func__);
+                hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        buf = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (buf == NULL) {
+            HDF_LOGE("%{public}s: malloc buf failed", __func__);
+            hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        bufLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &size)) {
+        HDF_LOGE("%{public}s: read &size failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetStaInfos == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetStaInfos ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->GetStaInfos(serviceImpl, ifName, buf, bufLen, size, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceReply, buf)) {
+        HDF_LOGE("%{public}s: write buf failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (buf != NULL) {
+        OsalMemFree(buf);
+        buf = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubDisassociateSta(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* mac = NULL;
+    int32_t id = 0;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *macCp = HdfSbufReadString(hostapdInterfaceData);
+    if (macCp == NULL) {
+        HDF_LOGE("%{public}s: read macCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    mac = strdup(macCp);
+
+    if (!HdfSbufReadInt32(hostapdInterfaceData, &id)) {
+        HDF_LOGE("%{public}s: read &id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DisassociateSta == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DisassociateSta ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->DisassociateSta(serviceImpl, ifName, mac, id);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (mac != NULL) {
+        OsalMemFree(mac);
+        mac = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubRegisterEventCallback(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    struct IHostapdCallback* cbFunc = NULL;
+    char* ifName = NULL;
+
+    cbFunc = ReadIHostapdCallback(hostapdInterfaceData);
+    if (cbFunc == NULL) {
+        HDF_LOGE("%{public}s: read cbFunc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RegisterEventCallback == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RegisterEventCallback ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->RegisterEventCallback(serviceImpl, cbFunc, ifName);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubUnregisterEventCallback(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    struct IHostapdCallback* cbFunc = NULL;
+    char* ifName = NULL;
+
+    cbFunc = ReadIHostapdCallback(hostapdInterfaceData);
+    if (cbFunc == NULL) {
+        HDF_LOGE("%{public}s: read cbFunc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->UnregisterEventCallback == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function UnregisterEventCallback ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->UnregisterEventCallback(serviceImpl, cbFunc, ifName);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubHostApdShellCmd(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* cmd = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(hostapdInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *cmdCp = HdfSbufReadString(hostapdInterfaceData);
+    if (cmdCp == NULL) {
+        HDF_LOGE("%{public}s: read cmdCp failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    cmd = strdup(cmdCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->HostApdShellCmd == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function HostApdShellCmd ", __func__);
+        hostapdInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = serviceImpl->HostApdShellCmd(serviceImpl, ifName, cmd);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (cmd != NULL) {
+        OsalMemFree(cmd);
+        cmd = NULL;
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t SerStubGetVersion(struct IHostapdInterface *serviceImpl, struct HdfSBuf *hostapdInterfaceData, struct HdfSBuf *hostapdInterfaceReply)
+{
+    int32_t hostapdInterfaceRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(hostapdInterfaceReply, IHOSTAPD_INTERFACE_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IHOSTAPD_INTERFACE_MAJOR_VERSION failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(hostapdInterfaceReply, IHOSTAPD_INTERFACE_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IHOSTAPD_INTERFACE_MINOR_VERSION failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return hostapdInterfaceRet;
+}
+
+static struct HdfRemoteService *HostapdInterfaceStubAsObject(struct IHostapdInterface *self)
+{
+    return NULL;
+}
+
+static int32_t HostapdInterfaceOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct HostapdInterfaceStub *stub = (struct HostapdInterfaceStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_HOSTAPD_INTERFACE_START_AP:
+            return SerStubStartAp(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_STOP_AP:
+            return SerStubStopAp(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_ENABLE_AP:
+            return SerStubEnableAp(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_DISABLE_AP:
+            return SerStubDisableAp(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_PASSWD:
+            return SerStubSetApPasswd(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_NAME:
+            return SerStubSetApName(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_WPA_VALUE:
+            return SerStubSetApWpaValue(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_BAND:
+            return SerStubSetApBand(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP80211N:
+            return SerStubSetAp80211n(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_WMM:
+            return SerStubSetApWmm(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_CHANNEL:
+            return SerStubSetApChannel(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_AP_MAX_CONN:
+            return SerStubSetApMaxConn(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_SET_MAC_FILTER:
+            return SerStubSetMacFilter(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_DEL_MAC_FILTER:
+            return SerStubDelMacFilter(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_GET_STA_INFOS:
+            return SerStubGetStaInfos(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_DISASSOCIATE_STA:
+            return SerStubDisassociateSta(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_REGISTER_EVENT_CALLBACK:
+            return SerStubRegisterEventCallback(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_UNREGISTER_EVENT_CALLBACK:
+            return SerStubUnregisterEventCallback(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_HOST_APD_SHELL_CMD:
+            return SerStubHostApdShellCmd(stub->interface, data, reply);
+        case CMD_HOSTAPD_INTERFACE_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteDispatcher g_hostapdinterfaceDispatcher = {
+    .Dispatch = HostapdInterfaceOnRemoteRequest,
+    .DispatchAsync = NULL,
+};
+
+static struct HdfRemoteService **HostapdInterfaceStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IHostapdInterface *serviceImpl = (struct IHostapdInterface *)impl;
+    struct HostapdInterfaceStub *stub = OsalMemCalloc(sizeof(struct HostapdInterfaceStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &g_hostapdinterfaceDispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IHOSTAPDINTERFACE_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = HostapdInterfaceOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = HostapdInterfaceStubAsObject;
+    return &stub->remote;
+}
+
+static void HostapdInterfaceStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct HostapdInterfaceStub *stub = CONTAINER_OF(remote, struct HostapdInterfaceStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_hostapdinterfaceConstructor = {
+    .constructor = HostapdInterfaceStubNewInstance,
+    .destructor = HostapdInterfaceStubRelease,
+};
+
+__attribute__((constructor)) static void HostapdInterfaceStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IHOSTAPDINTERFACE_INTERFACE_DESC);
+    StubConstructorRegister(IHOSTAPDINTERFACE_INTERFACE_DESC, &g_hostapdinterfaceConstructor);
+}

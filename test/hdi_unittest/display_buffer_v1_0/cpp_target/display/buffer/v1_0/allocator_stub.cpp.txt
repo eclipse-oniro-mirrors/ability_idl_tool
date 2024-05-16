@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/allocator_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    allocator_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Buffer {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Display::Buffer::V1_0::IAllocator> OHOS::HDI::Display::Buffer::V1_0::IAllocator::Get(bool isStub)
+{
+    return OHOS::HDI::Display::Buffer::V1_0::IAllocator::Get("allocator_service", isStub);
+}
+
+sptr<OHOS::HDI::Display::Buffer::V1_0::IAllocator> OHOS::HDI::Display::Buffer::V1_0::IAllocator::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Display::Buffer::V1_0::IAllocator::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "allocator_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Display::Buffer::V1_0::IAllocator *>(impl);
+}
+
+
+OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStub(const sptr<OHOS::HDI::Display::Buffer::V1_0::IAllocator> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Buffer::V1_0::IAllocator::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::~AllocatorStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_ALLOCATOR_GET_VERSION:
+            return AllocatorStubGetVersion(data, reply, option);
+        case CMD_ALLOCATOR_ALLOC_MEM:
+            return AllocatorStubAllocMem(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubAllocMem(MessageParcel& allocatorData, MessageParcel& allocatorReply, MessageOption& allocatorOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubAllocMem_(allocatorData, allocatorReply, allocatorOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubGetVersion(MessageParcel& allocatorData, MessageParcel& allocatorReply, MessageOption& allocatorOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubGetVersion_(allocatorData, allocatorReply, allocatorOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubAllocMem_(MessageParcel& allocatorData, MessageParcel& allocatorReply, MessageOption& allocatorOption, sptr<OHOS::HDI::Display::Buffer::V1_0::IAllocator> impl)
+{
+    if (allocatorData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_0::IAllocator::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Display::Buffer::V1_0::AllocInfo info;
+    if (!AllocInfoBlockUnmarshalling(allocatorData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<NativeBuffer> handle;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t allocatorRet = impl->AllocMem(info, handle);
+    if (allocatorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, allocatorRet);
+        return allocatorRet;
+    }
+
+    if (!allocatorReply.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return allocatorRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_0::AllocatorStub::AllocatorStubGetVersion_(MessageParcel& allocatorData, MessageParcel& allocatorReply, MessageOption& allocatorOption, sptr<OHOS::HDI::Display::Buffer::V1_0::IAllocator> impl)
+{
+    if (allocatorData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_0::IAllocator::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t allocatorRet = impl->GetVersion(majorVer, minorVer);
+    if (allocatorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, allocatorRet);
+        return allocatorRet;
+    }
+
+    if (!allocatorReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!allocatorReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return allocatorRet;
+}
+} // V1_0
+} // Buffer
+} // Display
+} // HDI
+} // OHOS

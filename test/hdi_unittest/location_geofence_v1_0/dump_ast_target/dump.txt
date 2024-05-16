@@ -1,0 +1,82 @@
+AST[name: IGeofenceInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_geofence_v1_0/foo/location/geofence/v1_0/IGeofenceInterface.idl]
+package ohos.hdi.location.geofence.v1_0;
+
+import ohos.hdi.location.geofence.v1_0.GeofenceTypes;
+import ohos.hdi.location.geofence.v1_0.IGeofenceCallback;
+
+[mini, lite, full] interface IGeofenceInterface {
+    [mini, lite, full] SetGeofenceCallback(
+      [in] ohos.hdi.location.geofence.v1_0.IGeofenceCallback callbackObj);
+
+    [mini, lite, full] AddGnssGeofence(
+      [in] ohos.hdi.location.geofence.v1_0.GeofenceInfo fence,
+      [in] ohos.hdi.location.geofence.v1_0.GeofenceEvent monitorEvent);
+
+    [mini, lite, full] DeleteGnssGeofence(
+      [in] int fenceIndex);
+}
+
+
+AST[name: IGeofenceCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_geofence_v1_0/foo/location/geofence/v1_0/IGeofenceCallback.idl]
+package ohos.hdi.location.geofence.v1_0;
+
+import ohos.hdi.location.geofence.v1_0.GeofenceTypes;
+
+[mini, lite, full, callback] interface IGeofenceCallback {
+    [mini, lite, full, callback] ReportGeofenceAvailability(
+      [in] boolean isAvailable);
+
+    [mini, lite, full, callback] ReportGeofenceEvent(
+      [in] int fenceIndex,
+      [in] ohos.hdi.location.geofence.v1_0.LocationInfo location,
+      [in] ohos.hdi.location.geofence.v1_0.GeofenceEvent event,
+      [in] long timestamp);
+
+    [mini, lite, full, callback] ReportGeofenceOperateResult(
+      [in] int fenceIndex,
+      [in] ohos.hdi.location.geofence.v1_0.GeofenceOperateType type,
+      [in] ohos.hdi.location.geofence.v1_0.GeofenceOperateResult result);
+}
+
+
+AST[name: GeofenceTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_geofence_v1_0/foo/location/geofence/v1_0/GeofenceTypes.idl]
+package ohos.hdi.location.geofence.v1_0;
+
+[mini, lite, full] enum GeofenceEvent : int {
+  GEOFENCE_EVENT_UNCERTAIN = 1,
+  GEOFENCE_EVENT_ENTERED = 2,
+  GEOFENCE_EVENT_EXITED = 4,
+};
+
+[mini, lite, full] enum GeofenceOperateResult : int {
+  OPERATION_SUCCESS = 0,
+  OPERATION_ERROR_UNKNOWN = -100,
+  OPERATION_ERROR_TOO_MANY_GEOFENCES = -101,
+  OPERATION_ERROR_GEOFENCE_INDEX_EXISTS = -102,
+  OPERATION_ERROR_PARAMS_INVALID = -103,
+};
+
+[mini, lite, full] enum GeofenceOperateType : int {
+  TYPE_ADD = 1,
+  TYPE_DELETE = 2,
+};
+
+[mini, lite, full] struct GeofenceInfo {
+  int fenceIndex;
+  double latitude;
+  double longitude;
+  double radius;
+};
+
+[mini, lite, full] struct LocationInfo {
+  double latitude;
+  double longitude;
+  double altitude;
+  float accuracy;
+  float speed;
+  double direction;
+  long timeStamp;
+  long timeSinceBoot;
+};
+
+

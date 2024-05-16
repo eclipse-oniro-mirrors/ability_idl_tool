@@ -1,0 +1,151 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/activity_changed_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    activity_changed_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace ARecognition {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStub(const sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::~ActivityChangedCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_ACTIVITY_CHANGED_CALLBACK_GET_VERSION:
+            return ActivityChangedCallbackStubGetVersion(data, reply, option);
+        case CMD_ACTIVITY_CHANGED_CALLBACK_ON_ACTIVITY_CHANGED:
+            return ActivityChangedCallbackStubOnActivityChanged(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubOnActivityChanged(MessageParcel& activityChangedCallbackData, MessageParcel& activityChangedCallbackReply, MessageOption& activityChangedCallbackOption)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubOnActivityChanged_(activityChangedCallbackData, activityChangedCallbackReply, activityChangedCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubGetVersion(MessageParcel& activityChangedCallbackData, MessageParcel& activityChangedCallbackReply, MessageOption& activityChangedCallbackOption)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubGetVersion_(activityChangedCallbackData, activityChangedCallbackReply, activityChangedCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubOnActivityChanged_(MessageParcel& activityChangedCallbackData, MessageParcel& activityChangedCallbackReply, MessageOption& activityChangedCallbackOption, sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback> impl)
+{
+    if (activityChangedCallbackData.ReadInterfaceToken() != OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::ARecognition::V1_0::ActRecognitionEvent> event;
+    if (!ReadPodArray(activityChangedCallbackData, event)) {
+        HDF_LOGE("%{public}s: failed to read event", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t activityChangedCallbackRet = impl->OnActivityChanged(event);
+    if (activityChangedCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityChangedCallbackRet);
+        return activityChangedCallbackRet;
+    }
+
+    return activityChangedCallbackRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityChangedCallbackStub::ActivityChangedCallbackStubGetVersion_(MessageParcel& activityChangedCallbackData, MessageParcel& activityChangedCallbackReply, MessageOption& activityChangedCallbackOption, sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback> impl)
+{
+    if (activityChangedCallbackData.ReadInterfaceToken() != OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t activityChangedCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (activityChangedCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityChangedCallbackRet);
+        return activityChangedCallbackRet;
+    }
+
+    if (!activityChangedCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityChangedCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return activityChangedCallbackRet;
+}
+} // V1_0
+} // ARecognition
+} // HDI
+} // OHOS

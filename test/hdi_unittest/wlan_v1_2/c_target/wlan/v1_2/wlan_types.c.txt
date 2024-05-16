@@ -1,0 +1,1960 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/wlan_types.h"
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)
+{
+    const void * dataPtr = NULL;
+    void *memPtr = NULL;
+    uint32_t elementCount = 0;
+    if (count == NULL || data == NULL || elementSize == 0) {
+        HDF_LOGE("%{public}s: invalid param", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read element count", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        *count = elementCount;
+        return true;
+    }
+
+    dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        return false;
+    }
+
+    memPtr = OsalMemCalloc(elementSize * elementCount);
+    if (memPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc buffer", __func__);
+        return false;
+    }
+
+    if (memcpy_s(memPtr, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy buffer", __func__);
+        OsalMemFree(memPtr);
+        return false;
+    }
+
+    *data = memPtr;
+    *count = elementCount;
+    return true;
+}
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfFeatureInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfFeatureInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->ifName)) {
+        HDF_LOGE("%{public}s: write dataBlock->ifName failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->type)) {
+        HDF_LOGE("%{public}s: write dataBlock->type failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfFeatureInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfFeatureInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        const char *ifNameCp = HdfSbufReadString(data);
+        if (ifNameCp == NULL) {
+            HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ifName = strdup(ifNameCp);
+        if (dataBlock->ifName == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->type)) {
+        HDF_LOGE("%{public}s: read dataBlock->type failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    return false;
+}
+
+void HdfFeatureInfoFree(struct HdfFeatureInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfStaInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfStaInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->mac, sizeof(uint8_t), dataBlock->macLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->mac", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfStaInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfStaInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* macCp = NULL;
+        uint32_t macCpLen = 0;
+        if (!ReadPodArray(data, (void**)&macCp, sizeof(uint8_t), &macCpLen)) {
+            HDF_LOGE("%{public}s: failed to read macCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->mac = macCp;
+        dataBlock->macLen = macCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    return false;
+}
+
+void HdfStaInfoFree(struct HdfStaInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiDriverScanSsidBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiDriverScanSsid *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->ssid)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssid failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssidLen failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfWifiDriverScanSsidBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiDriverScanSsid *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        const char *ssidCp = HdfSbufReadString(data);
+        if (ssidCp == NULL) {
+            HDF_LOGE("%{public}s: read ssidCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = strdup(ssidCp);
+        if (dataBlock->ssid == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: read dataBlock->ssidLen failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    return false;
+}
+
+void HdfWifiDriverScanSsidFree(struct HdfWifiDriverScanSsid *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiScanBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScan *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (dataBlock->ssidsLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfWifiDriverScanSsid) || !HdfSbufWriteUint32(data, dataBlock->ssidsLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssidsLen failed!", __func__);
+        return false;
+    }
+
+    if ((dataBlock->ssids == NULL && dataBlock->ssidsLen != 0) || (dataBlock->ssids != NULL && dataBlock->ssidsLen == 0)) {
+        HDF_LOGE("%{public}s: dataBlock->ssids is invalid", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < dataBlock->ssidsLen; i++) {
+        if (!HdfWifiDriverScanSsidBlockMarshalling(data, &(dataBlock->ssids)[i])) {
+            HDF_LOGE("%{public}s: write (dataBlock->ssids)[i] failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!WritePodArray(data, dataBlock->freqs, sizeof(int32_t), dataBlock->freqsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->freqs", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->extraIes, sizeof(uint8_t), dataBlock->extraIesLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->extraIes", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint8(data, dataBlock->prefixSsidScanFlag)) {
+        HDF_LOGE("%{public}s: write dataBlock->prefixSsidScanFlag failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint8(data, dataBlock->fastConnectFlag)) {
+        HDF_LOGE("%{public}s: write dataBlock->fastConnectFlag failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfWifiScanBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScan *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        struct HdfWifiDriverScanSsid* ssidsCp = NULL;
+        uint32_t ssidsCpLen = 0;
+        if (!HdfSbufReadUint32(data, &ssidsCpLen)) {
+            HDF_LOGE("%{public}s: read ssidsCpLen failed!", __func__);
+            goto ERRORS;
+        }
+        if (ssidsCpLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfWifiDriverScanSsid)) {
+            HDF_LOGE("%{public}s: ssidsCpLen is invalid data", __func__);
+            goto ERRORS;
+        }
+        if (ssidsCpLen > 0) {
+            ssidsCp = (struct HdfWifiDriverScanSsid*)OsalMemCalloc(sizeof(struct HdfWifiDriverScanSsid) * ssidsCpLen);
+            if (ssidsCp == NULL) {
+                goto ERRORS;
+            }
+            for (uint32_t i = 0; i < ssidsCpLen; i++) {
+                if (!HdfWifiDriverScanSsidBlockUnmarshalling(data, &ssidsCp[i])) {
+                    HDF_LOGE("%{public}s: read &ssidsCp[i] failed!", __func__);
+                    goto ERRORS;
+                }
+            }
+        }
+        dataBlock->ssids = ssidsCp;
+        dataBlock->ssidsLen = ssidsCpLen;
+    }
+
+    {
+        int32_t* freqsCp = NULL;
+        uint32_t freqsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&freqsCp, sizeof(int32_t), &freqsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read freqsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->freqs = freqsCp;
+        dataBlock->freqsLen = freqsCpLen;
+    }
+
+    {
+        uint8_t* extraIesCp = NULL;
+        uint32_t extraIesCpLen = 0;
+        if (!ReadPodArray(data, (void**)&extraIesCp, sizeof(uint8_t), &extraIesCpLen)) {
+            HDF_LOGE("%{public}s: failed to read extraIesCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->extraIes = extraIesCp;
+        dataBlock->extraIesLen = extraIesCpLen;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadUint8(data, &dataBlock->prefixSsidScanFlag)) {
+        HDF_LOGE("%{public}s: read dataBlock->prefixSsidScanFlag failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint8(data, &dataBlock->fastConnectFlag)) {
+        HDF_LOGE("%{public}s: read dataBlock->fastConnectFlag failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssids != NULL) {
+        for (uint32_t i = 0; i < dataBlock->ssidsLen; i++) {
+            HdfWifiDriverScanSsidFree(&dataBlock->ssids[i], false);
+        }
+        OsalMemFree(dataBlock->ssids);
+        dataBlock->ssids = NULL;
+    }
+
+    if (dataBlock->freqs != NULL) {
+        OsalMemFree(dataBlock->freqs);
+        dataBlock->freqs = NULL;
+    }
+
+    if (dataBlock->extraIes != NULL) {
+        OsalMemFree(dataBlock->extraIes);
+        dataBlock->extraIes = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdfWifiScanFree(struct HdfWifiScan *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssids != NULL) {
+        for (uint32_t i = 0; i < dataBlock->ssidsLen; i++) {
+            HdfWifiDriverScanSsidFree(&dataBlock->ssids[i], false);
+        }
+        OsalMemFree(dataBlock->ssids);
+        dataBlock->ssids = NULL;
+    }
+
+    if (dataBlock->freqs != NULL) {
+        OsalMemFree(dataBlock->freqs);
+        dataBlock->freqs = NULL;
+    }
+
+    if (dataBlock->extraIes != NULL) {
+        OsalMemFree(dataBlock->extraIes);
+        dataBlock->extraIes = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfNetDeviceInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfNetDeviceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->index)) {
+        HDF_LOGE("%{public}s: write dataBlock->index failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->ifName)) {
+        HDF_LOGE("%{public}s: write dataBlock->ifName failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->ifNameLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->ifNameLen failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint8(data, dataBlock->iftype)) {
+        HDF_LOGE("%{public}s: write dataBlock->iftype failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->mac, sizeof(uint8_t), dataBlock->macLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->mac", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfNetDeviceInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfNetDeviceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->index)) {
+        HDF_LOGE("%{public}s: read dataBlock->index failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        const char *ifNameCp = HdfSbufReadString(data);
+        if (ifNameCp == NULL) {
+            HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ifName = strdup(ifNameCp);
+        if (dataBlock->ifName == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->ifNameLen)) {
+        HDF_LOGE("%{public}s: read dataBlock->ifNameLen failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint8(data, &dataBlock->iftype)) {
+        HDF_LOGE("%{public}s: read dataBlock->iftype failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* macCp = NULL;
+        uint32_t macCpLen = 0;
+        if (!ReadPodArray(data, (void**)&macCp, sizeof(uint8_t), &macCpLen)) {
+            HDF_LOGE("%{public}s: failed to read macCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->mac = macCp;
+        dataBlock->macLen = macCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    return false;
+}
+
+void HdfNetDeviceInfoFree(struct HdfNetDeviceInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfNetDeviceInfoResultBlockMarshalling(struct HdfSBuf *data, const struct HdfNetDeviceInfoResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (dataBlock->deviceInfosLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfNetDeviceInfo) || !HdfSbufWriteUint32(data, dataBlock->deviceInfosLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->deviceInfosLen failed!", __func__);
+        return false;
+    }
+
+    if ((dataBlock->deviceInfos == NULL && dataBlock->deviceInfosLen != 0) || (dataBlock->deviceInfos != NULL && dataBlock->deviceInfosLen == 0)) {
+        HDF_LOGE("%{public}s: dataBlock->deviceInfos is invalid", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < dataBlock->deviceInfosLen; i++) {
+        if (!HdfNetDeviceInfoBlockMarshalling(data, &(dataBlock->deviceInfos)[i])) {
+            HDF_LOGE("%{public}s: write (dataBlock->deviceInfos)[i] failed!", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool HdfNetDeviceInfoResultBlockUnmarshalling(struct HdfSBuf *data, struct HdfNetDeviceInfoResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        struct HdfNetDeviceInfo* deviceInfosCp = NULL;
+        uint32_t deviceInfosCpLen = 0;
+        if (!HdfSbufReadUint32(data, &deviceInfosCpLen)) {
+            HDF_LOGE("%{public}s: read deviceInfosCpLen failed!", __func__);
+            goto ERRORS;
+        }
+        if (deviceInfosCpLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfNetDeviceInfo)) {
+            HDF_LOGE("%{public}s: deviceInfosCpLen is invalid data", __func__);
+            goto ERRORS;
+        }
+        if (deviceInfosCpLen > 0) {
+            deviceInfosCp = (struct HdfNetDeviceInfo*)OsalMemCalloc(sizeof(struct HdfNetDeviceInfo) * deviceInfosCpLen);
+            if (deviceInfosCp == NULL) {
+                goto ERRORS;
+            }
+            for (uint32_t i = 0; i < deviceInfosCpLen; i++) {
+                if (!HdfNetDeviceInfoBlockUnmarshalling(data, &deviceInfosCp[i])) {
+                    HDF_LOGE("%{public}s: read &deviceInfosCp[i] failed!", __func__);
+                    goto ERRORS;
+                }
+            }
+        }
+        dataBlock->deviceInfos = deviceInfosCp;
+        dataBlock->deviceInfosLen = deviceInfosCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->deviceInfos != NULL) {
+        for (uint32_t i = 0; i < dataBlock->deviceInfosLen; i++) {
+            HdfNetDeviceInfoFree(&dataBlock->deviceInfos[i], false);
+        }
+        OsalMemFree(dataBlock->deviceInfos);
+        dataBlock->deviceInfos = NULL;
+    }
+
+    return false;
+}
+
+void HdfNetDeviceInfoResultFree(struct HdfNetDeviceInfoResult *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->deviceInfos != NULL) {
+        for (uint32_t i = 0; i < dataBlock->deviceInfosLen; i++) {
+            HdfNetDeviceInfoFree(&dataBlock->deviceInfos[i], false);
+        }
+        OsalMemFree(dataBlock->deviceInfos);
+        dataBlock->deviceInfos = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiScanResultBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->flags)) {
+        HDF_LOGE("%{public}s: write dataBlock->flags failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->caps)) {
+        HDF_LOGE("%{public}s: write dataBlock->caps failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->beaconInt)) {
+        HDF_LOGE("%{public}s: write dataBlock->beaconInt failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->qual)) {
+        HDF_LOGE("%{public}s: write dataBlock->qual failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->level)) {
+        HDF_LOGE("%{public}s: write dataBlock->level failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->age)) {
+        HDF_LOGE("%{public}s: write dataBlock->age failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->variable, sizeof(uint8_t), dataBlock->variableLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->variable", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ie, sizeof(uint8_t), dataBlock->ieLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ie", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->beaconIe, sizeof(uint8_t), dataBlock->beaconIeLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->beaconIe", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfWifiScanResultBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->flags)) {
+        HDF_LOGE("%{public}s: read dataBlock->flags failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->caps)) {
+        HDF_LOGE("%{public}s: read dataBlock->caps failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->beaconInt)) {
+        HDF_LOGE("%{public}s: read dataBlock->beaconInt failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->qual)) {
+        HDF_LOGE("%{public}s: read dataBlock->qual failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->level)) {
+        HDF_LOGE("%{public}s: read dataBlock->level failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->age)) {
+        HDF_LOGE("%{public}s: read dataBlock->age failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* variableCp = NULL;
+        uint32_t variableCpLen = 0;
+        if (!ReadPodArray(data, (void**)&variableCp, sizeof(uint8_t), &variableCpLen)) {
+            HDF_LOGE("%{public}s: failed to read variableCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->variable = variableCp;
+        dataBlock->variableLen = variableCpLen;
+    }
+
+    {
+        uint8_t* ieCp = NULL;
+        uint32_t ieCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ieCp, sizeof(uint8_t), &ieCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ieCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ie = ieCp;
+        dataBlock->ieLen = ieCpLen;
+    }
+
+    {
+        uint8_t* beaconIeCp = NULL;
+        uint32_t beaconIeCpLen = 0;
+        if (!ReadPodArray(data, (void**)&beaconIeCp, sizeof(uint8_t), &beaconIeCpLen)) {
+            HDF_LOGE("%{public}s: failed to read beaconIeCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->beaconIe = beaconIeCp;
+        dataBlock->beaconIeLen = beaconIeCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->variable != NULL) {
+        OsalMemFree(dataBlock->variable);
+        dataBlock->variable = NULL;
+    }
+
+    if (dataBlock->ie != NULL) {
+        OsalMemFree(dataBlock->ie);
+        dataBlock->ie = NULL;
+    }
+
+    if (dataBlock->beaconIe != NULL) {
+        OsalMemFree(dataBlock->beaconIe);
+        dataBlock->beaconIe = NULL;
+    }
+
+    return false;
+}
+
+void HdfWifiScanResultFree(struct HdfWifiScanResult *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->variable != NULL) {
+        OsalMemFree(dataBlock->variable);
+        dataBlock->variable = NULL;
+    }
+
+    if (dataBlock->ie != NULL) {
+        OsalMemFree(dataBlock->ie);
+        dataBlock->ie = NULL;
+    }
+
+    if (dataBlock->beaconIe != NULL) {
+        OsalMemFree(dataBlock->beaconIe);
+        dataBlock->beaconIe = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiScanResultExtBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResultExt *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->flags)) {
+        HDF_LOGE("%{public}s: write dataBlock->flags failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->caps)) {
+        HDF_LOGE("%{public}s: write dataBlock->caps failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->beaconInt)) {
+        HDF_LOGE("%{public}s: write dataBlock->beaconInt failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->qual)) {
+        HDF_LOGE("%{public}s: write dataBlock->qual failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->level)) {
+        HDF_LOGE("%{public}s: write dataBlock->level failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->age)) {
+        HDF_LOGE("%{public}s: write dataBlock->age failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint64(data, dataBlock->tsf)) {
+        HDF_LOGE("%{public}s: write dataBlock->tsf failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->variable, sizeof(uint8_t), dataBlock->variableLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->variable", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ie, sizeof(uint8_t), dataBlock->ieLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ie", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->beaconIe, sizeof(uint8_t), dataBlock->beaconIeLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->beaconIe", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdfWifiScanResultExtBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResultExt *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->flags)) {
+        HDF_LOGE("%{public}s: read dataBlock->flags failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->caps)) {
+        HDF_LOGE("%{public}s: read dataBlock->caps failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->beaconInt)) {
+        HDF_LOGE("%{public}s: read dataBlock->beaconInt failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->qual)) {
+        HDF_LOGE("%{public}s: read dataBlock->qual failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->level)) {
+        HDF_LOGE("%{public}s: read dataBlock->level failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->age)) {
+        HDF_LOGE("%{public}s: read dataBlock->age failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint64(data, &dataBlock->tsf)) {
+        HDF_LOGE("%{public}s: read dataBlock->tsf failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* variableCp = NULL;
+        uint32_t variableCpLen = 0;
+        if (!ReadPodArray(data, (void**)&variableCp, sizeof(uint8_t), &variableCpLen)) {
+            HDF_LOGE("%{public}s: failed to read variableCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->variable = variableCp;
+        dataBlock->variableLen = variableCpLen;
+    }
+
+    {
+        uint8_t* ieCp = NULL;
+        uint32_t ieCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ieCp, sizeof(uint8_t), &ieCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ieCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ie = ieCp;
+        dataBlock->ieLen = ieCpLen;
+    }
+
+    {
+        uint8_t* beaconIeCp = NULL;
+        uint32_t beaconIeCpLen = 0;
+        if (!ReadPodArray(data, (void**)&beaconIeCp, sizeof(uint8_t), &beaconIeCpLen)) {
+            HDF_LOGE("%{public}s: failed to read beaconIeCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->beaconIe = beaconIeCp;
+        dataBlock->beaconIeLen = beaconIeCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->variable != NULL) {
+        OsalMemFree(dataBlock->variable);
+        dataBlock->variable = NULL;
+    }
+
+    if (dataBlock->ie != NULL) {
+        OsalMemFree(dataBlock->ie);
+        dataBlock->ie = NULL;
+    }
+
+    if (dataBlock->beaconIe != NULL) {
+        OsalMemFree(dataBlock->beaconIe);
+        dataBlock->beaconIe = NULL;
+    }
+
+    return false;
+}
+
+void HdfWifiScanResultExtFree(struct HdfWifiScanResultExt *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->variable != NULL) {
+        OsalMemFree(dataBlock->variable);
+        dataBlock->variable = NULL;
+    }
+
+    if (dataBlock->ie != NULL) {
+        OsalMemFree(dataBlock->ie);
+        dataBlock->ie = NULL;
+    }
+
+    if (dataBlock->beaconIe != NULL) {
+        OsalMemFree(dataBlock->beaconIe);
+        dataBlock->beaconIe = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiScanResultsBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiScanResults *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (dataBlock->resLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfWifiScanResultExt) || !HdfSbufWriteUint32(data, dataBlock->resLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->resLen failed!", __func__);
+        return false;
+    }
+
+    if ((dataBlock->res == NULL && dataBlock->resLen != 0) || (dataBlock->res != NULL && dataBlock->resLen == 0)) {
+        HDF_LOGE("%{public}s: dataBlock->res is invalid", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < dataBlock->resLen; i++) {
+        if (!HdfWifiScanResultExtBlockMarshalling(data, &(dataBlock->res)[i])) {
+            HDF_LOGE("%{public}s: write (dataBlock->res)[i] failed!", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool HdfWifiScanResultsBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiScanResults *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        struct HdfWifiScanResultExt* resCp = NULL;
+        uint32_t resCpLen = 0;
+        if (!HdfSbufReadUint32(data, &resCpLen)) {
+            HDF_LOGE("%{public}s: read resCpLen failed!", __func__);
+            goto ERRORS;
+        }
+        if (resCpLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdfWifiScanResultExt)) {
+            HDF_LOGE("%{public}s: resCpLen is invalid data", __func__);
+            goto ERRORS;
+        }
+        if (resCpLen > 0) {
+            resCp = (struct HdfWifiScanResultExt*)OsalMemCalloc(sizeof(struct HdfWifiScanResultExt) * resCpLen);
+            if (resCp == NULL) {
+                goto ERRORS;
+            }
+            for (uint32_t i = 0; i < resCpLen; i++) {
+                if (!HdfWifiScanResultExtBlockUnmarshalling(data, &resCp[i])) {
+                    HDF_LOGE("%{public}s: read &resCp[i] failed!", __func__);
+                    goto ERRORS;
+                }
+            }
+        }
+        dataBlock->res = resCp;
+        dataBlock->resLen = resCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->res != NULL) {
+        for (uint32_t i = 0; i < dataBlock->resLen; i++) {
+            HdfWifiScanResultExtFree(&dataBlock->res[i], false);
+        }
+        OsalMemFree(dataBlock->res);
+        dataBlock->res = NULL;
+    }
+
+    return false;
+}
+
+void HdfWifiScanResultsFree(struct HdfWifiScanResults *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->res != NULL) {
+        for (uint32_t i = 0; i < dataBlock->resLen; i++) {
+            HdfWifiScanResultExtFree(&dataBlock->res[i], false);
+        }
+        OsalMemFree(dataBlock->res);
+        dataBlock->res = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdfWifiInfoBlockMarshalling(struct HdfSBuf *data, const struct HdfWifiInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct HdfWifiInfo))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfWifiInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdfWifiInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct HdfWifiInfo *dataBlockPtr = (const struct HdfWifiInfo *)HdfSbufReadUnpadBuffer(data, sizeof(struct HdfWifiInfo));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct HdfWifiInfo), dataBlockPtr, sizeof(struct HdfWifiInfo)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void HdfWifiInfoFree(struct HdfWifiInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool MeasChannelParamBlockMarshalling(struct HdfSBuf *data, const struct MeasChannelParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct MeasChannelParam))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool MeasChannelParamBlockUnmarshalling(struct HdfSBuf *data, struct MeasChannelParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct MeasChannelParam *dataBlockPtr = (const struct MeasChannelParam *)HdfSbufReadUnpadBuffer(data, sizeof(struct MeasChannelParam));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct MeasChannelParam), dataBlockPtr, sizeof(struct MeasChannelParam)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void MeasChannelParamFree(struct MeasChannelParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool MeasChannelResultBlockMarshalling(struct HdfSBuf *data, const struct MeasChannelResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct MeasChannelResult))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool MeasChannelResultBlockUnmarshalling(struct HdfSBuf *data, struct MeasChannelResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct MeasChannelResult *dataBlockPtr = (const struct MeasChannelResult *)HdfSbufReadUnpadBuffer(data, sizeof(struct MeasChannelResult));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct MeasChannelResult), dataBlockPtr, sizeof(struct MeasChannelResult)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void MeasChannelResultFree(struct MeasChannelResult *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool ProjectionScreenCmdParamBlockMarshalling(struct HdfSBuf *data, const struct ProjectionScreenCmdParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->cmdId)) {
+        HDF_LOGE("%{public}s: write dataBlock->cmdId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->buf, sizeof(int8_t), dataBlock->bufLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->buf", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool ProjectionScreenCmdParamBlockUnmarshalling(struct HdfSBuf *data, struct ProjectionScreenCmdParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->cmdId)) {
+        HDF_LOGE("%{public}s: read dataBlock->cmdId failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        int8_t* bufCp = NULL;
+        uint32_t bufCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bufCp, sizeof(int8_t), &bufCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bufCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->buf = bufCp;
+        dataBlock->bufLen = bufCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->buf != NULL) {
+        OsalMemFree(dataBlock->buf);
+        dataBlock->buf = NULL;
+    }
+
+    return false;
+}
+
+void ProjectionScreenCmdParamFree(struct ProjectionScreenCmdParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->buf != NULL) {
+        OsalMemFree(dataBlock->buf);
+        dataBlock->buf = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool WifiStationInfoBlockMarshalling(struct HdfSBuf *data, const struct WifiStationInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct WifiStationInfo))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool WifiStationInfoBlockUnmarshalling(struct HdfSBuf *data, struct WifiStationInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct WifiStationInfo *dataBlockPtr = (const struct WifiStationInfo *)HdfSbufReadUnpadBuffer(data, sizeof(struct WifiStationInfo));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct WifiStationInfo), dataBlockPtr, sizeof(struct WifiStationInfo)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void WifiStationInfoFree(struct WifiStationInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool AdjustChannelInfoBlockMarshalling(struct HdfSBuf *data, const struct AdjustChannelInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct AdjustChannelInfo))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AdjustChannelInfoBlockUnmarshalling(struct HdfSBuf *data, struct AdjustChannelInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct AdjustChannelInfo *dataBlockPtr = (const struct AdjustChannelInfo *)HdfSbufReadUnpadBuffer(data, sizeof(struct AdjustChannelInfo));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct AdjustChannelInfo), dataBlockPtr, sizeof(struct AdjustChannelInfo)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void AdjustChannelInfoFree(struct AdjustChannelInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool PnoNetworkBlockMarshalling(struct HdfSBuf *data, const struct PnoNetwork *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt8(data, dataBlock->isHidden ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write dataBlock->isHidden failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->freqs, sizeof(int32_t), dataBlock->freqsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->freqs", __func__);
+        return false;
+    }
+
+    if (!HdfWifiDriverScanSsidBlockMarshalling(data, &dataBlock->ssid)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssid failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool PnoNetworkBlockUnmarshalling(struct HdfSBuf *data, struct PnoNetwork *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt8(data, (int8_t *)&dataBlock->isHidden)) {
+        HDF_LOGE("%{public}s: read dataBlock->isHidden failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        int32_t* freqsCp = NULL;
+        uint32_t freqsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&freqsCp, sizeof(int32_t), &freqsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read freqsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->freqs = freqsCp;
+        dataBlock->freqsLen = freqsCpLen;
+    }
+
+    if (!HdfWifiDriverScanSsidBlockUnmarshalling(data, &dataBlock->ssid)) {
+        HDF_LOGE("%{public}s: read &dataBlock->ssid failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->freqs != NULL) {
+        OsalMemFree(dataBlock->freqs);
+        dataBlock->freqs = NULL;
+    }
+
+    HdfWifiDriverScanSsidFree(&dataBlock->ssid, false);
+
+    return false;
+}
+
+void PnoNetworkFree(struct PnoNetwork *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->freqs != NULL) {
+        OsalMemFree(dataBlock->freqs);
+        dataBlock->freqs = NULL;
+    }
+
+    HdfWifiDriverScanSsidFree(&dataBlock->ssid, false);
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool PnoSettingsBlockMarshalling(struct HdfSBuf *data, const struct PnoSettings *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->min2gRssi)) {
+        HDF_LOGE("%{public}s: write dataBlock->min2gRssi failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->min5gRssi)) {
+        HDF_LOGE("%{public}s: write dataBlock->min5gRssi failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->scanIntervalMs)) {
+        HDF_LOGE("%{public}s: write dataBlock->scanIntervalMs failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->scanIterations)) {
+        HDF_LOGE("%{public}s: write dataBlock->scanIterations failed!", __func__);
+        return false;
+    }
+
+    if (dataBlock->pnoNetworksLen > HDI_BUFF_MAX_SIZE / sizeof(struct PnoNetwork) || !HdfSbufWriteUint32(data, dataBlock->pnoNetworksLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->pnoNetworksLen failed!", __func__);
+        return false;
+    }
+
+    if ((dataBlock->pnoNetworks == NULL && dataBlock->pnoNetworksLen != 0) || (dataBlock->pnoNetworks != NULL && dataBlock->pnoNetworksLen == 0)) {
+        HDF_LOGE("%{public}s: dataBlock->pnoNetworks is invalid", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < dataBlock->pnoNetworksLen; i++) {
+        if (!PnoNetworkBlockMarshalling(data, &(dataBlock->pnoNetworks)[i])) {
+            HDF_LOGE("%{public}s: write (dataBlock->pnoNetworks)[i] failed!", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PnoSettingsBlockUnmarshalling(struct HdfSBuf *data, struct PnoSettings *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->min2gRssi)) {
+        HDF_LOGE("%{public}s: read dataBlock->min2gRssi failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->min5gRssi)) {
+        HDF_LOGE("%{public}s: read dataBlock->min5gRssi failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->scanIntervalMs)) {
+        HDF_LOGE("%{public}s: read dataBlock->scanIntervalMs failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->scanIterations)) {
+        HDF_LOGE("%{public}s: read dataBlock->scanIterations failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        struct PnoNetwork* pnoNetworksCp = NULL;
+        uint32_t pnoNetworksCpLen = 0;
+        if (!HdfSbufReadUint32(data, &pnoNetworksCpLen)) {
+            HDF_LOGE("%{public}s: read pnoNetworksCpLen failed!", __func__);
+            goto ERRORS;
+        }
+        if (pnoNetworksCpLen > HDI_BUFF_MAX_SIZE / sizeof(struct PnoNetwork)) {
+            HDF_LOGE("%{public}s: pnoNetworksCpLen is invalid data", __func__);
+            goto ERRORS;
+        }
+        if (pnoNetworksCpLen > 0) {
+            pnoNetworksCp = (struct PnoNetwork*)OsalMemCalloc(sizeof(struct PnoNetwork) * pnoNetworksCpLen);
+            if (pnoNetworksCp == NULL) {
+                goto ERRORS;
+            }
+            for (uint32_t i = 0; i < pnoNetworksCpLen; i++) {
+                if (!PnoNetworkBlockUnmarshalling(data, &pnoNetworksCp[i])) {
+                    HDF_LOGE("%{public}s: read &pnoNetworksCp[i] failed!", __func__);
+                    goto ERRORS;
+                }
+            }
+        }
+        dataBlock->pnoNetworks = pnoNetworksCp;
+        dataBlock->pnoNetworksLen = pnoNetworksCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->pnoNetworks != NULL) {
+        for (uint32_t i = 0; i < dataBlock->pnoNetworksLen; i++) {
+            PnoNetworkFree(&dataBlock->pnoNetworks[i], false);
+        }
+        OsalMemFree(dataBlock->pnoNetworks);
+        dataBlock->pnoNetworks = NULL;
+    }
+
+    return false;
+}
+
+void PnoSettingsFree(struct PnoSettings *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->pnoNetworks != NULL) {
+        for (uint32_t i = 0; i < dataBlock->pnoNetworksLen; i++) {
+            PnoNetworkFree(&dataBlock->pnoNetworks[i], false);
+        }
+        OsalMemFree(dataBlock->pnoNetworks);
+        dataBlock->pnoNetworks = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool SignalPollResultBlockMarshalling(struct HdfSBuf *data, const struct SignalPollResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct SignalPollResult))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SignalPollResultBlockUnmarshalling(struct HdfSBuf *data, struct SignalPollResult *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct SignalPollResult *dataBlockPtr = (const struct SignalPollResult *)HdfSbufReadUnpadBuffer(data, sizeof(struct SignalPollResult));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct SignalPollResult), dataBlockPtr, sizeof(struct SignalPollResult)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void SignalPollResultFree(struct SignalPollResult *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}

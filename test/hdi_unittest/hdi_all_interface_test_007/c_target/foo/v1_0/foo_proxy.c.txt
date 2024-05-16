@@ -1,0 +1,921 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include <stub_collector.h>
+#include "v1_0/ifoo.h"
+
+#define HDF_LOG_TAG    foo_proxy
+
+struct FooProxy {
+    struct IFoo impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool WriteFileDescriptor(struct HdfSBuf *data, int fd);
+static bool ReadFileDescriptor(struct HdfSBuf *data, int *fd);
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface);
+
+
+static bool WriteFileDescriptor(struct HdfSBuf *data, int fd)
+{
+    if (!HdfSbufWriteInt8(data, fd >= 0 ? 1 : 0)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (!HdfSbufWriteFileDescriptor(data, fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+static bool ReadFileDescriptor(struct HdfSBuf *data, int *fd)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid HdfSBuf obj", __func__);
+        return false;
+    }
+    if (fd == NULL) {
+        HDF_LOGE("%{public}s: invalid fd pointer", __func__);
+        return false;
+    }
+    *fd = -1;
+    bool fdValied = false;
+    if (!HdfSbufReadInt8(data, (int8_t*)&fdValied)) {
+        HDF_LOGE("%{public}s: failed to read fdValied", __func__);
+        return false;
+    }
+    if (!fdValied) {
+        return true;
+    }
+    *fd = HdfSbufReadFileDescriptor(data);
+    if (*fd < 0) {
+        HDF_LOGE("%{public}s: failed to read fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface)
+{
+    if (interface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        return false;
+    }
+
+    struct HdfRemoteService **stub = StubCollectorGetOrNewObject(desc, interface);
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub of '%{public}s'", __func__, desc);
+        return false;
+    }
+
+    if (HdfSbufWriteRemoteService(parcel, *stub) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to write remote service", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static int32_t FooProxyCall(struct IFoo *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t FooProxyPing(struct IFoo *self, const char* sendMsg, char* recvMsg, uint32_t recvMsgLen)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(fooData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(fooData, sendMsg)) {
+        HDF_LOGE("%{public}s: write sendMsg failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (recvMsg == NULL || recvMsgLen == 0) {
+        HDF_LOGE("%{public}s: recvMsg is invalid", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(fooData, recvMsgLen)) {
+        HDF_LOGE("%{public}s: write recvMsgLen failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_PING, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    const char *recvMsgCopy = HdfSbufReadString(fooReply);
+    if (recvMsgCopy == NULL) {
+        HDF_LOGE("%{public}s: read recvMsgCopy failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(recvMsg, recvMsgLen, recvMsgCopy) != EOK) {
+        HDF_LOGE("%{public}s: read recvMsg failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyGetData(struct IFoo *self, struct FooInfo* info)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_GET_DATA, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!FooInfoBlockUnmarshalling(fooReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxySetCallback(struct IFoo *self, struct IFooCallback* cbObj)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(fooData, IFOOCALLBACK_INTERFACE_DESC, cbObj)) {
+        HDF_LOGE("%{public}s: write cbObj failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_SET_CALLBACK, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc1(struct IFoo *self, bool inData, bool* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(fooData, inData ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC1, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(fooReply, (int8_t *)outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc2(struct IFoo *self, int8_t inData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC2, fooData, fooReply, true);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc3(struct IFoo *self, int16_t inData, int16_t* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt16(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC3, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt16(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc4(struct IFoo *self, int32_t inData, int32_t* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC4, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc5(struct IFoo *self, int64_t inData, int64_t* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt64(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC5, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt64(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc6(struct IFoo *self, const char* inData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC6, fooData, fooReply, true);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc7(struct IFoo *self, float inData, float* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC7, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc8(struct IFoo *self, double inData, double* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteDouble(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC8, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadDouble(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyTestFunc9(struct IFoo *self, int inData, int* outData)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteFileDescriptor(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_TEST_FUNC9, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!ReadFileDescriptor(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static int32_t FooProxyGetVersion(struct IFoo *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t fooRet = HDF_FAILURE;
+
+    struct HdfSBuf *fooData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *fooReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (fooData == NULL || fooReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        fooRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        fooRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), fooData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    fooRet = FooProxyCall(self, CMD_FOO_GET_VERSION, fooData, fooReply, false);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, fooRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(fooReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(fooReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        fooRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (fooData != NULL) {
+        HdfSbufRecycle(fooData);
+    }
+    if (fooReply != NULL) {
+        HdfSbufRecycle(fooReply);
+    }
+    return fooRet;
+}
+
+static struct HdfRemoteService *FooProxyAsObject(struct IFoo *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct FooProxy *proxy = CONTAINER_OF(self, struct FooProxy, impl);
+    return proxy->remote;
+}
+
+static void FooProxyConstruct(struct IFoo *impl)
+{
+    impl->Ping = FooProxyPing;
+    impl->GetData = FooProxyGetData;
+    impl->SetCallback = FooProxySetCallback;
+    impl->TestFunc1 = FooProxyTestFunc1;
+    impl->TestFunc2 = FooProxyTestFunc2;
+    impl->TestFunc3 = FooProxyTestFunc3;
+    impl->TestFunc4 = FooProxyTestFunc4;
+    impl->TestFunc5 = FooProxyTestFunc5;
+    impl->TestFunc6 = FooProxyTestFunc6;
+    impl->TestFunc7 = FooProxyTestFunc7;
+    impl->TestFunc8 = FooProxyTestFunc8;
+    impl->TestFunc9 = FooProxyTestFunc9;
+    impl->GetVersion = FooProxyGetVersion;
+    impl->AsObject = FooProxyAsObject;
+}
+
+struct IFoo *IFooGet(bool isStub)
+{
+    return IFooGetInstance("foo_service", isStub);
+}
+
+struct IFoo *IFooGetInstance(const char *serviceName, bool isStub)
+{
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "foo_service") == 0) {
+            instName = "service";
+        }
+        return LoadHdiImpl(IFOO_INTERFACE_DESC, instName);
+    }
+
+    struct HDIServiceManager *serviceMgr = HDIServiceManagerGet();
+    if (serviceMgr == NULL) {
+        HDF_LOGE("%{public}s: HDIServiceManager not found!", __func__);
+        return NULL;
+    }
+
+    struct HdfRemoteService *remote = serviceMgr->GetService(serviceMgr, serviceName);
+    HDIServiceManagerRelease(serviceMgr);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: failed to get remote!", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IFOO_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct FooProxy *proxy = (struct FooProxy *)OsalMemCalloc(sizeof(struct FooProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IFoo proxy failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    FooProxyConstruct(&proxy->impl);
+    struct IFoo *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t fooRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IFooRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IFOO_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IFOO_MAJOR_VERSION, IFOO_MINOR_VERSION);
+        IFooRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IFooRelease(struct IFoo *instance, bool isStub)
+{
+    IFooReleaseInstance("foo_service", instance, isStub);
+}
+
+void IFooReleaseInstance(const char *serviceName, struct IFoo *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "foo_service") == 0) {
+            instName = "service";
+        }
+        UnloadHdiImpl(IFOO_INTERFACE_DESC, instName, instance);
+        return;
+    }
+
+    struct FooProxy *proxy = CONTAINER_OF(instance, struct FooProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

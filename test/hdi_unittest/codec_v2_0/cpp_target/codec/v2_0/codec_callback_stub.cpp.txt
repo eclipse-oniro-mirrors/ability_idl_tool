@@ -1,0 +1,217 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/codec_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    codec_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+
+
+OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStub(const sptr<OHOS::HDI::Codec::V2_0::ICodecCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Codec::V2_0::CodecCallbackStub::~CodecCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CODEC_CALLBACK_GET_VERSION:
+            return CodecCallbackStubGetVersion(data, reply, option);
+        case CMD_CODEC_CALLBACK_EVENT_HANDLER:
+            return CodecCallbackStubEventHandler(data, reply, option);
+        case CMD_CODEC_CALLBACK_EMPTY_BUFFER_DONE:
+            return CodecCallbackStubEmptyBufferDone(data, reply, option);
+        case CMD_CODEC_CALLBACK_FILL_BUFFER_DONE:
+            return CodecCallbackStubFillBufferDone(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEventHandler(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEventHandler_(codecCallbackData, codecCallbackReply, codecCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEmptyBufferDone(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEmptyBufferDone_(codecCallbackData, codecCallbackReply, codecCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubFillBufferDone(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubFillBufferDone_(codecCallbackData, codecCallbackReply, codecCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubGetVersion(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubGetVersion_(codecCallbackData, codecCallbackReply, codecCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEventHandler_(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption, sptr<OHOS::HDI::Codec::V2_0::ICodecCallback> impl)
+{
+    if (codecCallbackData.ReadInterfaceToken() != OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V2_0::CodecEventType event = static_cast<enum CodecEventType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!codecCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write event failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        event = static_cast<enum CodecEventType>(enumTmp);
+    }
+
+    OHOS::HDI::Codec::V2_0::EventInfo info;
+    if (!EventInfoBlockUnmarshalling(codecCallbackData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecCallbackRet = impl->EventHandler(event, info);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubEmptyBufferDone_(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption, sptr<OHOS::HDI::Codec::V2_0::ICodecCallback> impl)
+{
+    if (codecCallbackData.ReadInterfaceToken() != OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int64_t appData = 0;
+    if (!codecCallbackData.ReadInt64(appData)) {
+        HDF_LOGE("%{public}s: read appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V2_0::OmxCodecBuffer buffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecCallbackRet = impl->EmptyBufferDone(appData, buffer);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubFillBufferDone_(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption, sptr<OHOS::HDI::Codec::V2_0::ICodecCallback> impl)
+{
+    if (codecCallbackData.ReadInterfaceToken() != OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int64_t appData = 0;
+    if (!codecCallbackData.ReadInt64(appData)) {
+        HDF_LOGE("%{public}s: read appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V2_0::OmxCodecBuffer buffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecCallbackRet = impl->FillBufferDone(appData, buffer);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackStub::CodecCallbackStubGetVersion_(MessageParcel& codecCallbackData, MessageParcel& codecCallbackReply, MessageOption& codecCallbackOption, sptr<OHOS::HDI::Codec::V2_0::ICodecCallback> impl)
+{
+    if (codecCallbackData.ReadInterfaceToken() != OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    if (!codecCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecCallbackRet;
+}
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS

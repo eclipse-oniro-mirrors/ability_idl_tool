@@ -1,0 +1,599 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/user_auth_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace UserAuth {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorRegisterInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfo& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.authType))) {
+        HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.executorRole))) {
+        HDF_LOGE("%{public}s: write dataBlock.executorRole failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.executorSensorHint)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorSensorHint failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.executorMatcher)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorMatcher failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.esl))) {
+        HDF_LOGE("%{public}s: write dataBlock.esl failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.publicKey)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.publicKey", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorRegisterInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfo& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+            return false;
+        }
+        dataBlock.authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.executorRole failed!", __func__);
+            return false;
+        }
+        dataBlock.executorRole = static_cast<enum ExecutorRole>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.executorSensorHint)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorSensorHint failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.executorMatcher)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorMatcher failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.esl failed!", __func__);
+            return false;
+        }
+        dataBlock.esl = static_cast<enum ExecutorSecureLevel>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.publicKey)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.publicKey", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::ExecutorInfo& dataBlock)
+{
+    if (!data.WriteUint64(dataBlock.executorIndex)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorIndex failed!", __func__);
+        return false;
+    }
+
+    if (!ExecutorRegisterInfoBlockMarshalling(data, dataBlock.info)) {
+        HDF_LOGE("%{public}s: write dataBlock.info failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::ExecutorInfo& dataBlock)
+{
+    if (!data.ReadUint64(dataBlock.executorIndex)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorIndex failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfoBlockUnmarshalling(data, dataBlock.info)) {
+        HDF_LOGE("%{public}s: read dataBlock.info failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ScheduleInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::ScheduleInfo& dataBlock)
+{
+    if (!data.WriteUint64(dataBlock.scheduleId)) {
+        HDF_LOGE("%{public}s: write dataBlock.scheduleId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.templateIds)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.templateIds", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.authType))) {
+        HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.executorMatcher)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorMatcher failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.scheduleMode)) {
+        HDF_LOGE("%{public}s: write dataBlock.scheduleMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.executors.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.executors.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.executors) {
+        if (!ExecutorInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ScheduleInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::ScheduleInfo& dataBlock)
+{
+    if (!data.ReadUint64(dataBlock.scheduleId)) {
+        HDF_LOGE("%{public}s: read dataBlock.scheduleId failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.templateIds)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.templateIds", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+            return false;
+        }
+        dataBlock.authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.executorMatcher)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorMatcher failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.scheduleMode)) {
+        HDF_LOGE("%{public}s: read dataBlock.scheduleMode failed!", __func__);
+        return false;
+    }
+
+    uint32_t executorsSize = 0;
+    if (!data.ReadUint32(executorsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(executorsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_0::ExecutorInfo), false);
+    dataBlock.executors.clear();
+    dataBlock.executors.reserve(executorsSize);
+    for (uint32_t i0 = 0; i0 < executorsSize; ++i0) {
+        OHOS::HDI::UserAuth::V1_0::ExecutorInfo value0;
+        if (!OHOS::HDI::UserAuth::V1_0::ExecutorInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.executors.push_back(value0);
+    }
+    return true;
+}
+
+bool AuthSolutionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::AuthSolution& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.userId)) {
+        HDF_LOGE("%{public}s: write dataBlock.userId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.authTrustLevel)) {
+        HDF_LOGE("%{public}s: write dataBlock.authTrustLevel failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.authType))) {
+        HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.executorSensorHint)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorSensorHint failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.challenge)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.challenge", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AuthSolutionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::AuthSolution& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.userId)) {
+        HDF_LOGE("%{public}s: read dataBlock.userId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.authTrustLevel)) {
+        HDF_LOGE("%{public}s: read dataBlock.authTrustLevel failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.authType failed!", __func__);
+            return false;
+        }
+        dataBlock.authType = static_cast<enum AuthType>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.executorSensorHint)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorSensorHint failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.challenge)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.challenge", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorSendMsgBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::ExecutorSendMsg& dataBlock)
+{
+    if (!data.WriteUint64(dataBlock.executorIndex)) {
+        HDF_LOGE("%{public}s: write dataBlock.executorIndex failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.commandId)) {
+        HDF_LOGE("%{public}s: write dataBlock.commandId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.msg)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.msg", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExecutorSendMsgBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::ExecutorSendMsg& dataBlock)
+{
+    if (!data.ReadUint64(dataBlock.executorIndex)) {
+        HDF_LOGE("%{public}s: read dataBlock.executorIndex failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.commandId)) {
+        HDF_LOGE("%{public}s: read dataBlock.commandId failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.msg)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.msg", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AuthResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::AuthResultInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: write dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.lockoutDuration)) {
+        HDF_LOGE("%{public}s: write dataBlock.lockoutDuration failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.remainAttempts)) {
+        HDF_LOGE("%{public}s: write dataBlock.remainAttempts failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.msgs.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.msgs.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.msgs) {
+        if (!ExecutorSendMsgBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!WritePodArray(data, dataBlock.token)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.token", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.rootSecret)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.rootSecret", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AuthResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::AuthResultInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: read dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.lockoutDuration)) {
+        HDF_LOGE("%{public}s: read dataBlock.lockoutDuration failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.remainAttempts)) {
+        HDF_LOGE("%{public}s: read dataBlock.remainAttempts failed!", __func__);
+        return false;
+    }
+
+    uint32_t msgsSize = 0;
+    if (!data.ReadUint32(msgsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(msgsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_0::ExecutorSendMsg), false);
+    dataBlock.msgs.clear();
+    dataBlock.msgs.reserve(msgsSize);
+    for (uint32_t i0 = 0; i0 < msgsSize; ++i0) {
+        OHOS::HDI::UserAuth::V1_0::ExecutorSendMsg value0;
+        if (!OHOS::HDI::UserAuth::V1_0::ExecutorSendMsgBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.msgs.push_back(value0);
+    }
+
+    if (!ReadPodArray(data, dataBlock.token)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.token", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.rootSecret)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.rootSecret", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IdentifyResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::IdentifyResultInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: write dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.userId)) {
+        HDF_LOGE("%{public}s: write dataBlock.userId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.token)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.token", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IdentifyResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::IdentifyResultInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: read dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.userId)) {
+        HDF_LOGE("%{public}s: read dataBlock.userId failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.token)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.token", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EnrollParamBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::EnrollParam& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::EnrollParam))) {
+        return false;
+    }
+    return true;
+}
+
+bool EnrollParamBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::EnrollParam& dataBlock)
+{
+    const OHOS::HDI::UserAuth::V1_0::EnrollParam *dataBlockPtr = reinterpret_cast<const OHOS::HDI::UserAuth::V1_0::EnrollParam*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::UserAuth::V1_0::EnrollParam)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::EnrollParam), dataBlockPtr, sizeof(OHOS::HDI::UserAuth::V1_0::EnrollParam)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CredentialInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::CredentialInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::CredentialInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CredentialInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::CredentialInfo& dataBlock)
+{
+    const OHOS::HDI::UserAuth::V1_0::CredentialInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::UserAuth::V1_0::CredentialInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::UserAuth::V1_0::CredentialInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::CredentialInfo), dataBlockPtr, sizeof(OHOS::HDI::UserAuth::V1_0::CredentialInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool EnrolledInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::EnrolledInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::EnrolledInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool EnrolledInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::EnrolledInfo& dataBlock)
+{
+    const OHOS::HDI::UserAuth::V1_0::EnrolledInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::UserAuth::V1_0::EnrolledInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::UserAuth::V1_0::EnrolledInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::UserAuth::V1_0::EnrolledInfo), dataBlockPtr, sizeof(OHOS::HDI::UserAuth::V1_0::EnrolledInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool EnrollResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::UserAuth::V1_0::EnrollResultInfo& dataBlock)
+{
+    if (!data.WriteUint64(dataBlock.credentialId)) {
+        HDF_LOGE("%{public}s: write dataBlock.credentialId failed!", __func__);
+        return false;
+    }
+
+    if (!CredentialInfoBlockMarshalling(data, dataBlock.oldInfo)) {
+        HDF_LOGE("%{public}s: write dataBlock.oldInfo failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.rootSecret)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.rootSecret", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EnrollResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::UserAuth::V1_0::EnrollResultInfo& dataBlock)
+{
+    if (!data.ReadUint64(dataBlock.credentialId)) {
+        HDF_LOGE("%{public}s: read dataBlock.credentialId failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_0::CredentialInfoBlockUnmarshalling(data, dataBlock.oldInfo)) {
+        HDF_LOGE("%{public}s: read dataBlock.oldInfo failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.rootSecret)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.rootSecret", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // UserAuth
+} // HDI
+} // OHOS

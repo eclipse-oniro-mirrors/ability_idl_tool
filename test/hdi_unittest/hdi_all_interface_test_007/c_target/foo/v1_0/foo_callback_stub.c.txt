@@ -1,0 +1,162 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/foo_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    foo_callback_stub
+
+
+static int32_t SerStubPushData(struct IFooCallback *serviceImpl, struct HdfSBuf *fooCallbackData, struct HdfSBuf *fooCallbackReply)
+{
+    int32_t fooCallbackRet = HDF_FAILURE;
+    char* message = NULL;
+
+    const char *messageCp = HdfSbufReadString(fooCallbackData);
+    if (messageCp == NULL) {
+        HDF_LOGE("%{public}s: read messageCp failed!", __func__);
+        fooCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    message = strdup(messageCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        fooCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->PushData == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function PushData ", __func__);
+        fooCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    fooCallbackRet = serviceImpl->PushData(serviceImpl, message);
+    if (fooCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (message != NULL) {
+        OsalMemFree(message);
+        message = NULL;
+    }
+    return fooCallbackRet;
+}
+
+static int32_t SerStubGetVersion(struct IFooCallback *serviceImpl, struct HdfSBuf *fooCallbackData, struct HdfSBuf *fooCallbackReply)
+{
+    int32_t fooCallbackRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(fooCallbackReply, IFOO_CALLBACK_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IFOO_CALLBACK_MAJOR_VERSION failed!", __func__);
+        fooCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(fooCallbackReply, IFOO_CALLBACK_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IFOO_CALLBACK_MINOR_VERSION failed!", __func__);
+        fooCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return fooCallbackRet;
+}
+
+static struct HdfRemoteService *FooCallbackStubAsObject(struct IFooCallback *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct FooCallbackStub *stub = CONTAINER_OF(self, struct FooCallbackStub, interface);
+    return stub->remote;
+}
+
+static int32_t FooCallbackOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct FooCallbackStub *stub = (struct FooCallbackStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_FOO_CALLBACK_PUSH_DATA:
+            return SerStubPushData(stub->interface, data, reply);
+        case CMD_FOO_CALLBACK_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteService **FooCallbackStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IFooCallback *serviceImpl = (struct IFooCallback *)impl;
+    struct FooCallbackStub *stub = OsalMemCalloc(sizeof(struct FooCallbackStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &stub->dispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IFOOCALLBACK_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = FooCallbackOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = FooCallbackStubAsObject;
+    return &stub->remote;
+}
+
+static void FooCallbackStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct FooCallbackStub *stub = CONTAINER_OF(remote, struct FooCallbackStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_foocallbackConstructor = {
+    .constructor = FooCallbackStubNewInstance,
+    .destructor = FooCallbackStubRelease,
+};
+
+__attribute__((constructor)) static void FooCallbackStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IFOOCALLBACK_INTERFACE_DESC);
+    StubConstructorRegister(IFOOCALLBACK_INTERFACE_DESC, &g_foocallbackConstructor);
+}

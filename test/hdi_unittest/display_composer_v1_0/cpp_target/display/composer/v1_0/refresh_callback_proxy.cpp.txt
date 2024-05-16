@@ -1,0 +1,114 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/refresh_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    refresh_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::OnRefresh(uint32_t devId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::OnRefresh_(devId, Remote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::OnRefresh_(uint32_t devId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel refreshCallbackData;
+    MessageParcel refreshCallbackReply;
+    MessageOption refreshCallbackOption(MessageOption::TF_SYNC);
+
+    if (!refreshCallbackData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IRefreshCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!refreshCallbackData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t refreshCallbackRet = remote->SendRequest(CMD_REFRESH_CALLBACK_ON_REFRESH, refreshCallbackData, refreshCallbackReply, refreshCallbackOption);
+    if (refreshCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, refreshCallbackRet);
+        return refreshCallbackRet;
+    }
+
+    return refreshCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel refreshCallbackData;
+    MessageParcel refreshCallbackReply;
+    MessageOption refreshCallbackOption(MessageOption::TF_SYNC);
+
+    if (!refreshCallbackData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IRefreshCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t refreshCallbackRet = remote->SendRequest(CMD_REFRESH_CALLBACK_GET_VERSION, refreshCallbackData, refreshCallbackReply, refreshCallbackOption);
+    if (refreshCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, refreshCallbackRet);
+        return refreshCallbackRet;
+    }
+
+    if (!refreshCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!refreshCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return refreshCallbackRet;
+}
+
+} // V1_0
+} // Composer
+} // Display
+} // HDI
+} // OHOS

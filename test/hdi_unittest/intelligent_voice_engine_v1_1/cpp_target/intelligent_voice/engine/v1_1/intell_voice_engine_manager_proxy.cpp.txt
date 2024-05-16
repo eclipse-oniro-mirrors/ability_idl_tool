@@ -1,0 +1,233 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/intell_voice_engine_manager_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    intell_voice_engine_manager_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Engine {
+namespace V1_1 {
+
+
+template<typename ChildType, typename ParentType>
+static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
+{
+    if (parent == nullptr) {
+        HDF_LOGE("%{public}s:parent is nullptr!", __func__);
+        return nullptr;
+    }
+
+    if (!parent->IsProxy()) {
+        HDF_LOGE("%{public}s:not proxy, not support castfrom!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = OHOS::HDI::hdi_objcast<ParentType>(parent);
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:hdi_objcast failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<ChildType> proxy = OHOS::HDI::hdi_facecast<ChildType>(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:hdi_facecast failed!", __func__);
+        return nullptr;
+    }
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t intellVoiceEngineManagerRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (intellVoiceEngineManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager> OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager::Get(bool isStub)
+{
+    return IIntellVoiceEngineManager::Get("intell_voice_engine_manager_service", isStub);
+}
+
+sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager> OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "intell_voice_engine_manager_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy> proxy = new OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t intellVoiceEngineManagerRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (intellVoiceEngineManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::Reconnect(
+    sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager> OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager::CastFrom(const sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineManager> &parent)
+{
+    return CastFromTemplate<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager, OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineManager>(parent);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::SetDataOprCallback(const sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback>& dataOprCallback)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::SetDataOprCallback_(dataOprCallback, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::GetAdapterDescriptors(std::vector<OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterDescriptor>& descs)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineManagerProxy::GetAdapterDescriptors_(descs, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::CreateAdapter(const OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterDescriptor& descriptor, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter>& adapter)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineManagerProxy::CreateAdapter_(descriptor, adapter, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::ReleaseAdapter(const OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterDescriptor& descriptor)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineManagerProxy::ReleaseAdapter_(descriptor, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::GetVersion(uint32_t& majorVer,
+     uint32_t& minorVer)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineManagerProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceEngineManagerProxy::SetDataOprCallback_(const sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback>& dataOprCallback, const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceEngineManagerData;
+    MessageParcel intellVoiceEngineManagerReply;
+    MessageOption intellVoiceEngineManagerOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceEngineManagerData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceEngineManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (dataOprCallback == nullptr) {
+        HDF_LOGE("%{public}s: parameter dataOprCallback is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceEngineManagerData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(dataOprCallback, OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write dataOprCallback failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceEngineManagerRet = remote->SendRequest(CMD_INTELL_VOICE_ENGINE_MANAGER_SET_DATA_OPR_CALLBACK, intellVoiceEngineManagerData, intellVoiceEngineManagerReply, intellVoiceEngineManagerOption);
+    if (intellVoiceEngineManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineManagerRet);
+        return intellVoiceEngineManagerRet;
+    }
+
+    return intellVoiceEngineManagerRet;
+}
+
+} // V1_1
+} // Engine
+} // IntelligentVoice
+} // HDI
+} // OHOS

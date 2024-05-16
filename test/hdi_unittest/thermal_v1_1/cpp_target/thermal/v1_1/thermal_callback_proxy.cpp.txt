@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/thermal_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    thermal_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Thermal {
+namespace V1_1 {
+
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::OnThermalDataEvent(const OHOS::HDI::Thermal::V1_1::HdfThermalCallbackInfo& event)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::OnThermalDataEvent_(event, Remote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::OnThermalDataEvent_(const OHOS::HDI::Thermal::V1_1::HdfThermalCallbackInfo& event, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalCallbackData;
+    MessageParcel thermalCallbackReply;
+    MessageOption thermalCallbackOption(MessageOption::TF_SYNC);
+
+    if (!thermalCallbackData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Thermal::V1_1::HdfThermalCallbackInfoBlockMarshalling(thermalCallbackData, event)) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalCallbackRet = remote->SendRequest(CMD_THERMAL_CALLBACK_ON_THERMAL_DATA_EVENT, thermalCallbackData, thermalCallbackReply, thermalCallbackOption);
+    if (thermalCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalCallbackRet);
+        return thermalCallbackRet;
+    }
+
+    return thermalCallbackRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalCallbackData;
+    MessageParcel thermalCallbackReply;
+    MessageOption thermalCallbackOption(MessageOption::TF_SYNC);
+
+    if (!thermalCallbackData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalCallbackRet = remote->SendRequest(CMD_THERMAL_CALLBACK_GET_VERSION, thermalCallbackData, thermalCallbackReply, thermalCallbackOption);
+    if (thermalCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalCallbackRet);
+        return thermalCallbackRet;
+    }
+
+    if (!thermalCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return thermalCallbackRet;
+}
+
+} // V1_1
+} // Thermal
+} // HDI
+} // OHOS

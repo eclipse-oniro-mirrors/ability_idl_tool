@@ -1,0 +1,380 @@
+AST[name: ICodecComponentManager file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_v1_0/foo/codec/v1_0/ICodecComponentManager.idl]
+package ohos.hdi.codec.v1_0;
+
+import ohos.hdi.codec.v1_0.ICodecCallback;
+import ohos.hdi.codec.v1_0.ICodecComponent;
+import ohos.hdi.codec.v1_0.CodecTypes;
+
+[mini, lite, full] interface ICodecComponentManager {
+    [mini, lite, full] GetComponentNum(
+      [out] int count);
+
+    [mini, lite, full] GetComponentCapabilityList(
+      [out] ohos.hdi.codec.v1_0.CodecCompCapability[] capList,
+      [in] int count);
+
+    [mini, lite, full] CreateComponent(
+      [out] ohos.hdi.codec.v1_0.ICodecComponent component,
+      [out] unsigned int componentId,
+      [in] std::string compName,
+      [in] long appData,
+      [in] ohos.hdi.codec.v1_0.ICodecCallback callbacks);
+
+    [mini, lite, full] DestroyComponent(
+      [in] unsigned int componentId);
+}
+
+
+AST[name: ICodecComponent file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_v1_0/foo/codec/v1_0/ICodecComponent.idl]
+package ohos.hdi.codec.v1_0;
+
+import ohos.hdi.codec.v1_0.ICodecCallback;
+import ohos.hdi.codec.v1_0.CodecTypes;
+
+[mini, lite, full] interface ICodecComponent {
+    [mini, lite, full] GetComponentVersion(
+      [out] ohos.hdi.codec.v1_0.CompVerInfo verInfo);
+
+    [mini, lite, full] SendCommand(
+      [in] ohos.hdi.codec.v1_0.CodecCommandType cmd,
+      [in] unsigned int param,
+      [in] byte[] cmdData);
+
+    [mini, lite, full] GetParameter(
+      [in] unsigned int index,
+      [in] byte[] inParamStruct,
+      [out] byte[] outParamStruct);
+
+    [mini, lite, full] SetParameter(
+      [in] unsigned int index,
+      [in] byte[] paramStruct);
+
+    [mini, lite, full] GetConfig(
+      [in] unsigned int index,
+      [in] byte[] inCfgStruct,
+      [out] byte[] outCfgStruct);
+
+    [mini, lite, full] SetConfig(
+      [in] unsigned int index,
+      [in] byte[] cfgStruct);
+
+    [mini, lite, full] GetExtensionIndex(
+      [in] std::string paramName,
+      [out] unsigned int indexType);
+
+    [mini, lite, full] GetState(
+      [out] ohos.hdi.codec.v1_0.CodecStateType state);
+
+    [mini, lite, full] ComponentTunnelRequest(
+      [in] unsigned int port,
+      [in] int tunneledComp,
+      [in] unsigned int tunneledPort,
+      [in] ohos.hdi.codec.v1_0.CodecTunnelSetupType inTunnelSetup,
+      [out] ohos.hdi.codec.v1_0.CodecTunnelSetupType outTunnelSetup);
+
+    [mini, lite, full] UseBuffer(
+      [in] unsigned int portIndex,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer inBuffer,
+      [out] ohos.hdi.codec.v1_0.OmxCodecBuffer outBuffer);
+
+    [mini, lite, full] AllocateBuffer(
+      [in] unsigned int portIndex,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer inBuffer,
+      [out] ohos.hdi.codec.v1_0.OmxCodecBuffer outBuffer);
+
+    [mini, lite, full] FreeBuffer(
+      [in] unsigned int portIndex,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer buffer);
+
+    [mini, lite, full] EmptyThisBuffer(
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer buffer);
+
+    [mini, lite, full] FillThisBuffer(
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer buffer);
+
+    [mini, lite, full] SetCallbacks(
+      [in] ohos.hdi.codec.v1_0.ICodecCallback callbacks,
+      [in] long appData);
+
+    [mini, lite, full] ComponentDeInit();
+
+    [mini, lite, full] UseEglImage(
+      [in] unsigned int portIndex,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer inBuffer,
+      [out] ohos.hdi.codec.v1_0.OmxCodecBuffer outBuffer,
+      [in] byte[] eglImage);
+
+    [mini, lite, full] ComponentRoleEnum(
+      [out] unsigned char[] role,
+      [in] unsigned int index);
+}
+
+
+AST[name: ICodecCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_v1_0/foo/codec/v1_0/ICodecCallback.idl]
+package ohos.hdi.codec.v1_0;
+
+import ohos.hdi.codec.v1_0.CodecTypes;
+
+[mini, lite, full, callback] interface ICodecCallback {
+    [mini, lite, full, callback] EventHandler(
+      [in] ohos.hdi.codec.v1_0.CodecEventType event,
+      [in] ohos.hdi.codec.v1_0.EventInfo info);
+
+    [mini, lite, full, callback] EmptyBufferDone(
+      [in] long appData,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer buffer);
+
+    [mini, lite, full, callback] FillBufferDone(
+      [in] long appData,
+      [in] ohos.hdi.codec.v1_0.OmxCodecBuffer buffer);
+}
+
+
+AST[name: CodecTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_v1_0/foo/codec/v1_0/CodecTypes.idl]
+package ohos.hdi.codec.v1_0;
+
+[mini, lite, full] enum CodecType : int {
+  VIDEO_DECODER,
+  VIDEO_ENCODER,
+  AUDIO_DECODER,
+  AUDIO_ENCODER,
+  INVALID_TYPE,
+};
+
+[mini, lite, full] enum AvCodecRole : int {
+  MEDIA_ROLETYPE_IMAGE_JPEG = 0,
+  MEDIA_ROLETYPE_VIDEO_AVC,
+  MEDIA_ROLETYPE_VIDEO_HEVC,
+  MEDIA_ROLETYPE_AUDIO_FIRST = 0x10000,
+  MEDIA_ROLETYPE_AUDIO_AAC = 0x10000,
+  MEDIA_ROLETYPE_AUDIO_G711A,
+  MEDIA_ROLETYPE_AUDIO_G711U,
+  MEDIA_ROLETYPE_AUDIO_G726,
+  MEDIA_ROLETYPE_AUDIO_PCM,
+  MEDIA_ROLETYPE_AUDIO_MP3,
+  MEDIA_ROLETYPE_INVALID,
+};
+
+[mini, lite, full] enum Profile : int {
+  INVALID_PROFILE = 0,
+  AAC_LC_PROFILE = 0x1000,
+  AAC_MAIN_PROFILE,
+  AAC_HE_V1_PROFILE,
+  AAC_HE_V2_PROFILE,
+  AAC_LD_PROFILE,
+  AAC_ELD_PROFILE,
+  AVC_BASELINE_PROFILE = 0x2000,
+  AVC_MAIN_PROFILE,
+  AVC_HIGH_PROFILE,
+  HEVC_MAIN_PROFILE = 0x3000,
+  HEVC_MAIN_10_PROFILE,
+};
+
+[mini, lite, full] enum CodecCapsMask : int {
+  CODEC_CAP_ADAPTIVE_PLAYBACK = 0x1,
+  CODEC_CAP_SECURE_PLAYBACK = 0x2,
+  CODEC_CAP_TUNNEL_PLAYBACK = 0x4,
+  CODEC_CAP_MULTI_PLANE = 0x10000,
+};
+
+[mini, lite, full] enum AudioSampleRate : int {
+  AUD_SAMPLE_RATE_8000 = 8000,
+  AUD_SAMPLE_RATE_12000 = 12000,
+  AUD_SAMPLE_RATE_11025 = 11025,
+  AUD_SAMPLE_RATE_16000 = 16000,
+  AUD_SAMPLE_RATE_22050 = 22050,
+  AUD_SAMPLE_RATE_24000 = 24000,
+  AUD_SAMPLE_RATE_32000 = 32000,
+  AUD_SAMPLE_RATE_44100 = 44100,
+  AUD_SAMPLE_RATE_48000 = 48000,
+  AUD_SAMPLE_RATE_64000 = 64000,
+  AUD_SAMPLE_RATE_96000 = 96000,
+  AUD_SAMPLE_RATE_INVALID,
+};
+
+[mini, lite, full] enum CodecAudioSampleFormat : int {
+  AUDIO_SAMPLE_FMT_U8 = 0,
+  AUDIO_SAMPLE_FMT_S16,
+  AUDIO_SAMPLE_FMT_S32,
+  AUDIO_SAMPLE_FMT_FLOAT,
+  AUDIO_SAMPLE_FMT_DOUBLE,
+  AUDIO_SAMPLE_FMT_U8P,
+  AUDIO_SAMPLE_FMT_S16P,
+  AUDIO_SAMPLE_FMT_S32P,
+  AUDIO_SAMPLE_FMT_FLOATP,
+  AUDIO_SAMPLE_FMT_DOUBLEP,
+  AUDIO_SAMPLE_FMT_INVALID,
+};
+
+[mini, lite, full] enum CodecProcessMode : int {
+  PROCESS_BLOCKING_INPUT_BUFFER = 0x1,
+  PROCESS_BLOCKING_OUTPUT_BUFFER = 0x2,
+  PROCESS_BLOCKING_CONTROL_FLOW = 0x4,
+  PROCESS_NONBLOCKING_INPUT_BUFFER = 0x100,
+  PROCESS_NONBLOCKING_OUTPUT_BUFFER = 0x200,
+  PROCESS_NONBLOCKING_CONTROL_FLOW = 0x400,
+};
+
+[mini, lite, full] enum ShareMemTypes : int {
+  READ_WRITE_TYPE = 0x1,
+  READ_ONLY_TYPE = 0x2,
+};
+
+[mini, lite, full] enum BitRateMode : int {
+  BIT_RATE_MODE_INVALID,
+  BIT_RATE_MODE_VBR,
+  BIT_RATE_MODE_CBR,
+  BIT_RATE_MODE_CQ,
+  BIT_RATE_MODE_VCBR,
+  BIT_RATE_MODE_ABR,
+};
+
+[mini, lite, full] enum CodecEventType : int {
+  CODEC_EVENT_CMD_COMPLETE,
+  CODEC_EVENT_ERROR,
+  CODEC_EVENT_MARK,
+  CODEC_EVENT_PORT_SETTINGS_CHANGED,
+  CODEC_EVENT_BUFFER_FLAG,
+  CODEC_EVENT_RESOURCES_ACQUIRED,
+  CODEC_EVENT_COMPONENT_RESUMED,
+  CODEC_EVENT_DYNAMIC_RESOURCES_AVAILABLE,
+  CODEC_EVENT_PORT_FORMAT_DETECTED,
+  CODEC_EVENT_KHRONOS_EXTENSIONS = 0x6F000000,
+  CODEC_EVENT_VENDOR_START_UNUSED = 0x7F000000,
+  CODEC_EVENT_MAX = 0x7FFFFFFF,
+};
+
+[mini, lite, full] enum CodecCommandType : int {
+  CODEC_COMMAND_STATE_SET,
+  CODEC_COMMAND_FLUSH,
+  CODEC_COMMAND_PORT_DISABLE,
+  CODEC_COMMAND_PORT_ENABLE,
+  CODEC_COMMAND_MARK_BUFFER,
+  CODEC_COMMAND_KHRONOS_EXTENSIONS = 0x6F000000,
+  CODEC_COMMAND_VENDOR_START_UNUSED = 0x7F000000,
+  CODEC_COMMAND_MAX = 0x7FFFFFFF,
+};
+
+[mini, lite, full] enum CodecStateType : int {
+  CODEC_STATE_INVALID,
+  CODEC_STATE_LOADED,
+  CODEC_STATE_IDLE,
+  CODEC_STATE_EXECUTING,
+  CODEC_STATE_PAUSE,
+  CODEC_STATE_WAIT_FOR_RESOURCES,
+  CODEC_STATE_KHRONOS_EXTENSIONS = 0x6F000000,
+  CODEC_STATE_VENDOR_START_UNUSED = 0x7F000000,
+  CODEC_STATE_MAX = 0x7FFFFFFF,
+};
+
+[mini, lite, full] enum CodecBufferSupplierType : int {
+  CODEC_BUFFER_SUPPLY_UNSPECIFIED = 0,
+  CODEC_BUFFER_SUPPLY_INPUT,
+  CODEC_BUFFER_SUPPLY_OUTPUT,
+  CODEC_BUFFER_SUPPLY_KHRONOS_EXTENSIONS = 0x6F000000,
+  CODEC_BUFFER_SUPPLY_VENDOR_START_UNUSED = 0x7F000000,
+  CODEC_BUFFER_SUPPLY_MAX = 0x7FFFFFFF,
+};
+
+[mini, lite, full] struct Alignment {
+  int widthAlignment;
+  int heightAlignment;
+};
+
+[mini, lite, full] struct Rect {
+  int width;
+  int height;
+};
+
+[mini, lite, full] struct RangeValue {
+  int min;
+  int max;
+};
+
+[mini, lite, full] struct CodecVideoPortCap {
+  ohos.hdi.codec.v1_0.Rect minSize;
+  ohos.hdi.codec.v1_0.Rect maxSize;
+  ohos.hdi.codec.v1_0.Alignment whAlignment;
+  ohos.hdi.codec.v1_0.RangeValue blockCount;
+  ohos.hdi.codec.v1_0.RangeValue blocksPerSecond;
+  ohos.hdi.codec.v1_0.Rect blockSize;
+  int[] supportPixFmts;
+  ohos.hdi.codec.v1_0.BitRateMode[] bitRatemode;
+  ohos.hdi.codec.v1_0.RangeValue frameRate;
+  int[] measuredFrameRate;
+};
+
+[mini, lite, full] struct CodecAudioPortCap {
+  int[] sampleFormats;
+  int[] sampleRate;
+  int[] channelLayouts;
+  int[] channelCount;
+};
+
+[mini, lite, full] struct PortCap {
+  ohos.hdi.codec.v1_0.CodecVideoPortCap video;
+  ohos.hdi.codec.v1_0.CodecAudioPortCap audio;
+};
+
+[mini, lite, full] struct CodecVerType {
+  unsigned char majorVersion;
+  unsigned char minorVersion;
+  unsigned char revision;
+  unsigned char step;
+};
+
+[mini, lite, full] union CodecVersionType {
+  ohos.hdi.codec.v1_0.CodecVerType version;
+  unsigned int nVersion;
+};
+
+[mini, lite, full] struct CodecCompCapability {
+  ohos.hdi.codec.v1_0.AvCodecRole role;
+  ohos.hdi.codec.v1_0.CodecType type;
+  std::string compName;
+  int[] supportProfiles;
+  int maxInst;
+  boolean isSoftwareCodec;
+  int processModeMask;
+  unsigned int capsMask;
+  ohos.hdi.codec.v1_0.RangeValue bitRate;
+  ohos.hdi.codec.v1_0.PortCap port;
+  boolean canSwapWidthHeight;
+};
+
+[mini, lite, full] struct OmxCodecBuffer {
+  unsigned int bufferId;
+  unsigned int size;
+  ohos.hdi.codec.v1_0.CodecVersionType version;
+  unsigned int bufferType;
+  NativeBuffer bufferhandle;
+  FileDescriptor fd;
+  unsigned int allocLen;
+  unsigned int filledLen;
+  unsigned int offset;
+  FileDescriptor fenceFd;
+  ohos.hdi.codec.v1_0.ShareMemTypes type;
+  long pts;
+  unsigned int flag;
+};
+
+[mini, lite, full] struct CodecTunnelSetupType {
+  unsigned int tunnelFlags;
+  ohos.hdi.codec.v1_0.CodecBufferSupplierType supplier;
+};
+
+[mini, lite, full] struct CompVerInfo {
+  std::string compName;
+  unsigned char[] compUUID;
+  ohos.hdi.codec.v1_0.CodecVersionType compVersion;
+  ohos.hdi.codec.v1_0.CodecVersionType specVersion;
+};
+
+[mini, lite, full] struct EventInfo {
+  long appData;
+  unsigned int data1;
+  unsigned int data2;
+  byte[] eventData;
+};
+
+

@@ -1,0 +1,416 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/geofence_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Geofence {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PointBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point))) {
+        return false;
+    }
+    return true;
+}
+
+bool PointBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::Point)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceCircleRequestBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest))) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceCircleRequestBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofencePolygonRequestBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.geofenceId)) {
+        HDF_LOGE("%{public}s: write dataBlock.geofenceId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.points)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.points", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint16(dataBlock.accuracy)) {
+        HDF_LOGE("%{public}s: write dataBlock.accuracy failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.loiterTimeMs)) {
+        HDF_LOGE("%{public}s: write dataBlock.loiterTimeMs failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.monitorTransitions)) {
+        HDF_LOGE("%{public}s: write dataBlock.monitorTransitions failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.attribute)) {
+        HDF_LOGE("%{public}s: write dataBlock.attribute failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GeofencePolygonRequestBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.geofenceId)) {
+        HDF_LOGE("%{public}s: read dataBlock.geofenceId failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.points)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.points", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint16(dataBlock.accuracy)) {
+        HDF_LOGE("%{public}s: read dataBlock.accuracy failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.loiterTimeMs)) {
+        HDF_LOGE("%{public}s: read dataBlock.loiterTimeMs failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.monitorTransitions)) {
+        HDF_LOGE("%{public}s: read dataBlock.monitorTransitions failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.attribute)) {
+        HDF_LOGE("%{public}s: read dataBlock.attribute failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult))) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceResult)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool OfflineDbBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.times)) {
+        HDF_LOGE("%{public}s: write dataBlock.times failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.totalTimes)) {
+        HDF_LOGE("%{public}s: write dataBlock.totalTimes failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.dbs)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.dbs", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool OfflineDbBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.times)) {
+        HDF_LOGE("%{public}s: read dataBlock.times failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.totalTimes)) {
+        HDF_LOGE("%{public}s: read dataBlock.totalTimes failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.dbs)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.dbs", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GeoLocationInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool GeoLocationInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceSizeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize))) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceSizeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceSize)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell))) {
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCell)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool NeighborCellBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell))) {
+        return false;
+    }
+    return true;
+}
+
+bool NeighborCellBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::NeighborCell)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceCellInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCellInfo& dataBlock)
+{
+    if (!CurrentCellBlockMarshalling(data, dataBlock.cell)) {
+        HDF_LOGE("%{public}s: write dataBlock.cell failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.neighborCells)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.neighborCells", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GeofenceCellInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCellInfo& dataBlock)
+{
+    if (!OHOS::HDI::Location::Lpfence::Geofence::V1_0::CurrentCellBlockUnmarshalling(data, dataBlock.cell)) {
+        HDF_LOGE("%{public}s: read dataBlock.cell failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.neighborCells)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.neighborCells", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool RequestCellDbBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Geofence::V1_0::RequestCellDb& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.requestSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.requestSize failed!", __func__);
+        return false;
+    }
+
+    if (!GeoLocationInfoBlockMarshalling(data, dataBlock.location)) {
+        HDF_LOGE("%{public}s: write dataBlock.location failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.cellInfo.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.cellInfo.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.cellInfo) {
+        if (!GeofenceCellInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool RequestCellDbBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Geofence::V1_0::RequestCellDb& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.requestSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.requestSize failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeoLocationInfoBlockUnmarshalling(data, dataBlock.location)) {
+        HDF_LOGE("%{public}s: read dataBlock.location failed!", __func__);
+        return false;
+    }
+
+    uint32_t cellInfoSize = 0;
+    if (!data.ReadUint32(cellInfoSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(cellInfoSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCellInfo), false);
+    dataBlock.cellInfo.clear();
+    dataBlock.cellInfo.reserve(cellInfoSize);
+    for (uint32_t i0 = 0; i0 < cellInfoSize; ++i0) {
+        OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCellInfo value0;
+        if (!OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCellInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.cellInfo.push_back(value0);
+    }
+    return true;
+}
+
+} // V1_0
+} // Geofence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

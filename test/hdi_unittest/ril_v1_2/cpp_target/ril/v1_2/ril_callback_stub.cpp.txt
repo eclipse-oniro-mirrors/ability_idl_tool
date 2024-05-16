@@ -1,0 +1,1335 @@
+/*
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/ril_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    ril_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_2 {
+
+
+
+OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStub(const sptr<OHOS::HDI::Ril::V1_2::IRilCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Ril::V1_2::RilCallbackStub::~RilCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_RIL_CALLBACK_GET_VERSION:
+            return RilCallbackStubGetVersion(data, reply, option);
+        case CMD_RIL_CALLBACK_RESIDENT_NETWORK_UPDATED:
+            return RilCallbackStubResidentNetworkUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_SIM_MATCHED_OPERATOR_INFO_RESPONSE:
+            return RilCallbackStubSendSimMatchedOperatorInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_CLEAN_ALL_CONNECTIONS_RESPONSE:
+            return RilCallbackStubCleanAllConnectionsResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NR_SSB_ID_RESPONSE:
+            return RilCallbackStubGetNrSsbIdResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED_1_2:
+            return RilCallbackStubNetworkCurrentCellUpdated_1_2(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE_1_2:
+            return RilCallbackStubGetCurrentCellInfoResponse_1_2(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NEIGHBORING_CELL_INFO_LIST_RESPONSE_1_2:
+            return RilCallbackStubGetNeighboringCellInfoListResponse_1_2(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_EMERGENCY_NOTICE:
+            return RilCallbackStubCallEmergencyNotice(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_STATE_UPDATED:
+            return RilCallbackStubCallStateUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_RINGBACK_VOICE_NOTICE:
+            return RilCallbackStubCallRingbackVoiceNotice(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_SRVCC_STATUS_NOTICE:
+            return RilCallbackStubCallSrvccStatusNotice(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_USSD_NOTICE:
+            return RilCallbackStubCallUssdNotice(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_SS_NOTICE:
+            return RilCallbackStubCallSsNotice(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_RSRVCC_STATUS_NOTIFY:
+            return RilCallbackStubCallRsrvccStatusNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_EMERGENCY_CALL_LIST_RESPONSE:
+            return RilCallbackStubSetEmergencyCallListResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_EMERGENCY_CALL_LIST_RESPONSE:
+            return RilCallbackStubGetEmergencyCallListResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_LIST_RESPONSE:
+            return RilCallbackStubGetCallListResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_DIAL_RESPONSE:
+            return RilCallbackStubDialResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_HANGUP_RESPONSE:
+            return RilCallbackStubHangupResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_REJECT_RESPONSE:
+            return RilCallbackStubRejectResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_ANSWER_RESPONSE:
+            return RilCallbackStubAnswerResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_HOLD_CALL_RESPONSE:
+            return RilCallbackStubHoldCallResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UN_HOLD_CALL_RESPONSE:
+            return RilCallbackStubUnHoldCallResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SWITCH_CALL_RESPONSE:
+            return RilCallbackStubSwitchCallResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CLIP_RESPONSE:
+            return RilCallbackStubGetClipResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CLIP_RESPONSE:
+            return RilCallbackStubSetClipResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_COMBINE_CONFERENCE_RESPONSE:
+            return RilCallbackStubCombineConferenceResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SEPARATE_CONFERENCE_RESPONSE:
+            return RilCallbackStubSeparateConferenceResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_CALL_SUPPLEMENT_RESPONSE:
+            return RilCallbackStubCallSupplementResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_WAITING_RESPONSE:
+            return RilCallbackStubGetCallWaitingResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CALL_WAITING_RESPONSE:
+            return RilCallbackStubSetCallWaitingResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_TRANSFER_INFO_RESPONSE:
+            return RilCallbackStubGetCallTransferInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CALL_TRANSFER_INFO_RESPONSE:
+            return RilCallbackStubSetCallTransferInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_RESTRICTION_RESPONSE:
+            return RilCallbackStubGetCallRestrictionResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CALL_RESTRICTION_RESPONSE:
+            return RilCallbackStubSetCallRestrictionResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CLIR_RESPONSE:
+            return RilCallbackStubGetClirResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CLIR_RESPONSE:
+            return RilCallbackStubSetClirResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_START_DTMF_RESPONSE:
+            return RilCallbackStubStartDtmfResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_DTMF_RESPONSE:
+            return RilCallbackStubSendDtmfResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_STOP_DTMF_RESPONSE:
+            return RilCallbackStubStopDtmfResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_PREFERENCE_MODE_RESPONSE:
+            return RilCallbackStubGetCallPreferenceModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CALL_PREFERENCE_MODE_RESPONSE:
+            return RilCallbackStubSetCallPreferenceModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_USSD_RESPONSE:
+            return RilCallbackStubSetUssdResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_CLOSE_UN_FINISHED_USSD_RESPONSE:
+            return RilCallbackStubCloseUnFinishedUssdResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_USSD_RESPONSE:
+            return RilCallbackStubGetUssdResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_MUTE_RESPONSE:
+            return RilCallbackStubSetMuteResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_MUTE_RESPONSE:
+            return RilCallbackStubGetMuteResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CALL_FAIL_REASON_RESPONSE:
+            return RilCallbackStubGetCallFailReasonResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_BARRING_PASSWORD_RESPONSE:
+            return RilCallbackStubSetBarringPasswordResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_VONR_SWITCH_RESPONSE:
+            return RilCallbackStubSetVonrSwitchResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_PDP_CONTEXT_LIST_UPDATED:
+            return RilCallbackStubPdpContextListUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_DATA_LINK_CAPABILITY_UPDATED:
+            return RilCallbackStubDataLinkCapabilityUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_ACTIVATE_PDP_CONTEXT_RESPONSE:
+            return RilCallbackStubActivatePdpContextResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_DEACTIVATE_PDP_CONTEXT_RESPONSE:
+            return RilCallbackStubDeactivatePdpContextResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_PDP_CONTEXT_LIST_RESPONSE:
+            return RilCallbackStubGetPdpContextListResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_INIT_APN_INFO_RESPONSE:
+            return RilCallbackStubSetInitApnInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_LINK_BANDWIDTH_INFO_RESPONSE:
+            return RilCallbackStubGetLinkBandwidthInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_LINK_CAPABILITY_RESPONSE:
+            return RilCallbackStubGetLinkCapabilityResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_LINK_BANDWIDTH_REPORTING_RULE_RESPONSE:
+            return RilCallbackStubSetLinkBandwidthReportingRuleResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_DATA_PERMITTED_RESPONSE:
+            return RilCallbackStubSetDataPermittedResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_RADIO_STATE_UPDATED:
+            return RilCallbackStubRadioStateUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_VOICE_RADIO_TECH_UPDATED:
+            return RilCallbackStubVoiceRadioTechUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_DSDS_MODE_UPDATED:
+            return RilCallbackStubDsdsModeUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_SHUT_DOWN_RESPONSE:
+            return RilCallbackStubShutDownResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_RADIO_STATE_RESPONSE:
+            return RilCallbackStubSetRadioStateResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_RADIO_STATE_RESPONSE:
+            return RilCallbackStubGetRadioStateResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_IMEI_RESPONSE:
+            return RilCallbackStubGetImeiResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_MEID_RESPONSE:
+            return RilCallbackStubGetMeidResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_VOICE_RADIO_TECHNOLOGY_RESPONSE:
+            return RilCallbackStubGetVoiceRadioTechnologyResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_BASEBAND_VERSION_RESPONSE:
+            return RilCallbackStubGetBasebandVersionResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STATE_UPDATED:
+            return RilCallbackStubSimStateUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_SESSION_END_NOTIFY:
+            return RilCallbackStubSimStkSessionEndNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_PROACTIVE_NOTIFY:
+            return RilCallbackStubSimStkProactiveNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_ALPHA_NOTIFY:
+            return RilCallbackStubSimStkAlphaNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_EVENT_NOTIFY:
+            return RilCallbackStubSimStkEventNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_CALL_SETUP_NOTIFY:
+            return RilCallbackStubSimStkCallSetupNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_REFRESH_NOTIFY:
+            return RilCallbackStubSimRefreshNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_RADIO_PROTOCOL_UPDATED:
+            return RilCallbackStubSimRadioProtocolUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_SIM_I_O_RESPONSE:
+            return RilCallbackStubGetSimIOResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_SIM_STATUS_RESPONSE:
+            return RilCallbackStubGetSimStatusResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_IMSI_RESPONSE:
+            return RilCallbackStubGetImsiResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_SIM_LOCK_STATUS_RESPONSE:
+            return RilCallbackStubGetSimLockStatusResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_SIM_LOCK_RESPONSE:
+            return RilCallbackStubSetSimLockResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_CHANGE_SIM_PASSWORD_RESPONSE:
+            return RilCallbackStubChangeSimPasswordResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UNLOCK_PIN_RESPONSE:
+            return RilCallbackStubUnlockPinResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UNLOCK_PUK_RESPONSE:
+            return RilCallbackStubUnlockPukResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UNLOCK_PIN2_RESPONSE:
+            return RilCallbackStubUnlockPin2Response(data, reply, option);
+        case CMD_RIL_CALLBACK_UNLOCK_PUK2_RESPONSE:
+            return RilCallbackStubUnlockPuk2Response(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_ACTIVE_SIM_RESPONSE:
+            return RilCallbackStubSetActiveSimResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_SEND_TERMINAL_RESPONSE_RESPONSE:
+            return RilCallbackStubSimStkSendTerminalResponseResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_SEND_ENVELOPE_RESPONSE:
+            return RilCallbackStubSimStkSendEnvelopeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_SEND_CALL_SETUP_REQUEST_RESULT_RESPONSE:
+            return RilCallbackStubSimStkSendCallSetupRequestResultResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_STK_IS_READY_RESPONSE:
+            return RilCallbackStubSimStkIsReadyResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_RADIO_PROTOCOL_RESPONSE:
+            return RilCallbackStubGetRadioProtocolResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_RADIO_PROTOCOL_RESPONSE:
+            return RilCallbackStubSetRadioProtocolResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_OPEN_LOGICAL_CHANNEL_RESPONSE:
+            return RilCallbackStubSimOpenLogicalChannelResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_CLOSE_LOGICAL_CHANNEL_RESPONSE:
+            return RilCallbackStubSimCloseLogicalChannelResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_TRANSMIT_APDU_LOGICAL_CHANNEL_RESPONSE:
+            return RilCallbackStubSimTransmitApduLogicalChannelResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_TRANSMIT_APDU_BASIC_CHANNEL_RESPONSE:
+            return RilCallbackStubSimTransmitApduBasicChannelResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SIM_AUTHENTICATION_RESPONSE:
+            return RilCallbackStubSimAuthenticationResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UNLOCK_SIM_LOCK_RESPONSE:
+            return RilCallbackStubUnlockSimLockResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_CS_REG_STATUS_UPDATED:
+            return RilCallbackStubNetworkCsRegStatusUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_PS_REG_STATUS_UPDATED:
+            return RilCallbackStubNetworkPsRegStatusUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_SIGNAL_STRENGTH_UPDATED:
+            return RilCallbackStubSignalStrengthUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_TIME_ZONE_UPDATED:
+            return RilCallbackStubNetworkTimeZoneUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_TIME_UPDATED:
+            return RilCallbackStubNetworkTimeUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_PHY_CHNL_CFG_UPDATED:
+            return RilCallbackStubNetworkPhyChnlCfgUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED:
+            return RilCallbackStubNetworkCurrentCellUpdated(data, reply, option);
+        case CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED_1_1:
+            return RilCallbackStubNetworkCurrentCellUpdated_1_1(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_SIGNAL_STRENGTH_RESPONSE:
+            return RilCallbackStubGetSignalStrengthResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CS_REG_STATUS_RESPONSE:
+            return RilCallbackStubGetCsRegStatusResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_PS_REG_STATUS_RESPONSE:
+            return RilCallbackStubGetPsRegStatusResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_OPERATOR_INFO_RESPONSE:
+            return RilCallbackStubGetOperatorInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NETWORK_SEARCH_INFORMATION_RESPONSE:
+            return RilCallbackStubGetNetworkSearchInformationResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NETWORK_SELECTION_MODE_RESPONSE:
+            return RilCallbackStubGetNetworkSelectionModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_NETWORK_SELECTION_MODE_RESPONSE:
+            return RilCallbackStubSetNetworkSelectionModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NEIGHBORING_CELL_INFO_LIST_RESPONSE:
+            return RilCallbackStubGetNeighboringCellInfoListResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE:
+            return RilCallbackStubGetCurrentCellInfoResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE_1_1:
+            return RilCallbackStubGetCurrentCellInfoResponse_1_1(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_PREFERRED_NETWORK_RESPONSE:
+            return RilCallbackStubSetPreferredNetworkResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_PREFERRED_NETWORK_RESPONSE:
+            return RilCallbackStubGetPreferredNetworkResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_PHYSICAL_CHANNEL_CONFIG_RESPONSE:
+            return RilCallbackStubGetPhysicalChannelConfigResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_LOCATE_UPDATES_RESPONSE:
+            return RilCallbackStubSetLocateUpdatesResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_NOTIFICATION_FILTER_RESPONSE:
+            return RilCallbackStubSetNotificationFilterResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_DEVICE_STATE_RESPONSE:
+            return RilCallbackStubSetDeviceStateResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_NEW_SMS_NOTIFY:
+            return RilCallbackStubNewSmsNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_NEW_CDMA_SMS_NOTIFY:
+            return RilCallbackStubNewCdmaSmsNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SMS_STATUS_REPORT_NOTIFY:
+            return RilCallbackStubSmsStatusReportNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_NEW_SMS_STORED_ON_SIM_NOTIFY:
+            return RilCallbackStubNewSmsStoredOnSimNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_CB_CONFIG_NOTIFY:
+            return RilCallbackStubCBConfigNotify(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_GSM_SMS_RESPONSE:
+            return RilCallbackStubSendGsmSmsResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_CDMA_SMS_RESPONSE:
+            return RilCallbackStubSendCdmaSmsResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_ADD_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubAddSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_DEL_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubDelSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UPDATE_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubUpdateSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_ADD_CDMA_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubAddCdmaSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_DEL_CDMA_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubDelCdmaSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_UPDATE_CDMA_SIM_MESSAGE_RESPONSE:
+            return RilCallbackStubUpdateCdmaSimMessageResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_SMSC_ADDR_RESPONSE:
+            return RilCallbackStubSetSmscAddrResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_SMSC_ADDR_RESPONSE:
+            return RilCallbackStubGetSmscAddrResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_C_B_CONFIG_RESPONSE:
+            return RilCallbackStubSetCBConfigResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_C_B_CONFIG_RESPONSE:
+            return RilCallbackStubGetCBConfigResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_CDMA_C_B_CONFIG_RESPONSE:
+            return RilCallbackStubSetCdmaCBConfigResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_CDMA_C_B_CONFIG_RESPONSE:
+            return RilCallbackStubGetCdmaCBConfigResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_SMS_MORE_MODE_RESPONSE:
+            return RilCallbackStubSendSmsMoreModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SEND_SMS_ACK_RESPONSE:
+            return RilCallbackStubSendSmsAckResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_COMMON_ERROR_RESPONSE:
+            return RilCallbackStubCommonErrorResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_RRC_CONNECTION_STATE_RESPONSE:
+            return RilCallbackStubGetRrcConnectionStateResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_SET_NR_OPTION_MODE_RESPONSE:
+            return RilCallbackStubSetNrOptionModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_NR_OPTION_MODE_RESPONSE:
+            return RilCallbackStubGetNrOptionModeResponse(data, reply, option);
+        case CMD_RIL_CALLBACK_GET_RRC_CONNECTION_STATE_UPDATED:
+            return RilCallbackStubGetRrcConnectionStateUpdated(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubResidentNetworkUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubResidentNetworkUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSimMatchedOperatorInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSimMatchedOperatorInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnectionsResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnectionsResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_2(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_2_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_1_2(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_1_2_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNeighboringCellInfoListResponse_1_2(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNeighboringCellInfoListResponse_1_2_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallEmergencyNotice(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallEmergencyNotice_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallStateUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallStateUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallRingbackVoiceNotice(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallRingbackVoiceNotice_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallSrvccStatusNotice(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallSrvccStatusNotice_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallUssdNotice(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallUssdNotice_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallSsNotice(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallSsNotice_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallRsrvccStatusNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallRsrvccStatusNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetEmergencyCallListResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetEmergencyCallListResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetEmergencyCallListResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetEmergencyCallListResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallListResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallListResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDialResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDialResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubHangupResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubHangupResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubRejectResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubRejectResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubAnswerResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubAnswerResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubHoldCallResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubHoldCallResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnHoldCallResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnHoldCallResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSwitchCallResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSwitchCallResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetClipResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetClipResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetClipResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetClipResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCombineConferenceResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCombineConferenceResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSeparateConferenceResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSeparateConferenceResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCallSupplementResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCallSupplementResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallWaitingResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallWaitingResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCallWaitingResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCallWaitingResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallTransferInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallTransferInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCallTransferInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCallTransferInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallRestrictionResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallRestrictionResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCallRestrictionResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCallRestrictionResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetClirResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetClirResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetClirResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetClirResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubStartDtmfResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubStartDtmfResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendDtmfResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSendDtmfResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubStopDtmfResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubStopDtmfResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallPreferenceModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallPreferenceModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCallPreferenceModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCallPreferenceModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetUssdResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetUssdResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCloseUnFinishedUssdResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCloseUnFinishedUssdResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetUssdResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetUssdResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetMuteResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetMuteResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetMuteResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetMuteResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCallFailReasonResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCallFailReasonResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetBarringPasswordResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetBarringPasswordResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetVonrSwitchResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetVonrSwitchResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubPdpContextListUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubPdpContextListUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDataLinkCapabilityUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDataLinkCapabilityUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubActivatePdpContextResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubActivatePdpContextResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDeactivatePdpContextResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDeactivatePdpContextResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetPdpContextListResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetPdpContextListResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetInitApnInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetInitApnInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetLinkBandwidthInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetLinkBandwidthInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetLinkCapabilityResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetLinkCapabilityResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetLinkBandwidthReportingRuleResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetLinkBandwidthReportingRuleResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetDataPermittedResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetDataPermittedResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubRadioStateUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubRadioStateUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubVoiceRadioTechUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubVoiceRadioTechUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDsdsModeUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDsdsModeUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubShutDownResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubShutDownResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetRadioStateResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetRadioStateResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetRadioStateResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetRadioStateResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetImeiResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetImeiResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetMeidResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetMeidResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetVoiceRadioTechnologyResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetVoiceRadioTechnologyResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetBasebandVersionResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetBasebandVersionResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStateUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStateUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkSessionEndNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkSessionEndNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkProactiveNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkProactiveNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkAlphaNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkAlphaNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkEventNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkEventNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkCallSetupNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkCallSetupNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimRefreshNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimRefreshNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimRadioProtocolUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimRadioProtocolUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetSimIOResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetSimIOResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetSimStatusResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetSimStatusResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetImsiResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetImsiResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetSimLockStatusResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetSimLockStatusResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetSimLockResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetSimLockResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubChangeSimPasswordResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubChangeSimPasswordResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnlockPinResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnlockPinResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnlockPukResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnlockPukResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnlockPin2Response(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnlockPin2Response_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnlockPuk2Response(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnlockPuk2Response_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetActiveSimResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetActiveSimResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkSendTerminalResponseResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkSendTerminalResponseResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkSendEnvelopeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkSendEnvelopeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkSendCallSetupRequestResultResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkSendCallSetupRequestResultResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimStkIsReadyResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimStkIsReadyResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetRadioProtocolResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetRadioProtocolResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetRadioProtocolResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetRadioProtocolResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimOpenLogicalChannelResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimOpenLogicalChannelResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimCloseLogicalChannelResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimCloseLogicalChannelResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimTransmitApduLogicalChannelResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimTransmitApduLogicalChannelResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimTransmitApduBasicChannelResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimTransmitApduBasicChannelResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSimAuthenticationResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSimAuthenticationResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUnlockSimLockResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUnlockSimLockResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCsRegStatusUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkCsRegStatusUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkPsRegStatusUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkPsRegStatusUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSignalStrengthUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSignalStrengthUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkTimeZoneUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkTimeZoneUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkTimeUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkTimeUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkPhyChnlCfgUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkPhyChnlCfgUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_1(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_1_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetSignalStrengthResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetSignalStrengthResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCsRegStatusResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCsRegStatusResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetPsRegStatusResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetPsRegStatusResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetOperatorInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetOperatorInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNetworkSearchInformationResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetNetworkSearchInformationResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNetworkSelectionModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetNetworkSelectionModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetNetworkSelectionModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetNetworkSelectionModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNeighboringCellInfoListResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetNeighboringCellInfoListResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_1_1(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_1_1_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetPreferredNetworkResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetPreferredNetworkResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetPreferredNetworkResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetPreferredNetworkResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetPhysicalChannelConfigResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetPhysicalChannelConfigResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetLocateUpdatesResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetLocateUpdatesResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetNotificationFilterResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetNotificationFilterResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetDeviceStateResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetDeviceStateResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNewSmsNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNewSmsNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNewCdmaSmsNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNewCdmaSmsNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSmsStatusReportNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSmsStatusReportNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNewSmsStoredOnSimNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubNewSmsStoredOnSimNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCBConfigNotify(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCBConfigNotify_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendGsmSmsResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSendGsmSmsResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendCdmaSmsResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSendCdmaSmsResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubAddSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubAddSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDelSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDelSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUpdateSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUpdateSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubAddCdmaSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubAddCdmaSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubDelCdmaSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubDelCdmaSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubUpdateCdmaSimMessageResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubUpdateCdmaSimMessageResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetSmscAddrResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetSmscAddrResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetSmscAddrResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetSmscAddrResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCBConfigResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCBConfigResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCBConfigResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCBConfigResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetCdmaCBConfigResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetCdmaCBConfigResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCdmaCBConfigResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetCdmaCBConfigResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSmsMoreModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSendSmsMoreModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSmsAckResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSendSmsAckResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCommonErrorResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubCommonErrorResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetRrcConnectionStateResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetRrcConnectionStateResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSetNrOptionModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubSetNrOptionModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrOptionModeResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetNrOptionModeResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetRrcConnectionStateUpdated(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetRrcConnectionStateUpdated_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetVersion(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
+{
+    return OHOS::HDI::Ril::V1_1::RilCallbackStub::RilCallbackStubGetVersion_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubResidentNetworkUpdated_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* plmnCp = rilCallbackData.ReadCString();
+    if (plmnCp == nullptr) {
+        HDF_LOGE("%{public}s: read plmn failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string plmn = plmnCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->ResidentNetworkUpdated(responseInfo, plmn);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSimMatchedOperatorInfoResponse_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->SendSimMatchedOperatorInfoResponse(responseInfo);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnectionsResponse_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->CleanAllConnectionsResponse(responseInfo);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_2::NrCellSsbIds nrCellSsbIds;
+    if (!NrCellSsbIdsBlockUnmarshalling(rilCallbackData, nrCellSsbIds)) {
+        HDF_LOGE("%{public}s: read nrCellSsbIds failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->GetNrSsbIdResponse(responseInfo, nrCellSsbIds);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_2_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2 cellListCurrentInfo;
+    if (!CellListCurrentInfo_1_2BlockUnmarshalling(rilCallbackData, cellListCurrentInfo)) {
+        HDF_LOGE("%{public}s: read cellListCurrentInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->NetworkCurrentCellUpdated_1_2(responseInfo, cellListCurrentInfo);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetCurrentCellInfoResponse_1_2_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2 cellListCurrentInfo;
+    if (!CellListCurrentInfo_1_2BlockUnmarshalling(rilCallbackData, cellListCurrentInfo)) {
+        HDF_LOGE("%{public}s: read cellListCurrentInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->GetCurrentCellInfoResponse_1_2(responseInfo, cellListCurrentInfo);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNeighboringCellInfoListResponse_1_2_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
+{
+    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
+    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
+        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_2::CellListNearbyInfo_1_2 cellListNearbyInfo;
+    if (!CellListNearbyInfo_1_2BlockUnmarshalling(rilCallbackData, cellListNearbyInfo)) {
+        HDF_LOGE("%{public}s: read cellListNearbyInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilCallbackRet = impl->GetNeighboringCellInfoListResponse_1_2(responseInfo, cellListNearbyInfo);
+    if (rilCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
+        return rilCallbackRet;
+    }
+
+    return rilCallbackRet;
+}
+} // V1_2
+} // Ril
+} // HDI
+} // OHOS

@@ -1,0 +1,299 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/camera_host_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+#include "camera/v1_1/camera_device_proxy.h"
+
+#define HDF_LOG_TAG    camera_host_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_1 {
+
+
+template<typename ChildType, typename ParentType>
+static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
+{
+    if (parent == nullptr) {
+        HDF_LOGE("%{public}s:parent is nullptr!", __func__);
+        return nullptr;
+    }
+
+    if (!parent->IsProxy()) {
+        HDF_LOGE("%{public}s:not proxy, not support castfrom!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = OHOS::HDI::hdi_objcast<ParentType>(parent);
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:hdi_objcast failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<ChildType> proxy = OHOS::HDI::hdi_facecast<ChildType>(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:hdi_facecast failed!", __func__);
+        return nullptr;
+    }
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t cameraHostRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+sptr<OHOS::HDI::Camera::V1_1::ICameraHost> OHOS::HDI::Camera::V1_1::ICameraHost::Get(bool isStub)
+{
+    return ICameraHost::Get("camera_host_service", isStub);
+}
+
+sptr<OHOS::HDI::Camera::V1_1::ICameraHost> OHOS::HDI::Camera::V1_1::ICameraHost::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Camera::V1_1::ICameraHost::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "camera_host_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Camera::V1_1::ICameraHost *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Camera::V1_1::CameraHostProxy> proxy = new OHOS::HDI::Camera::V1_1::CameraHostProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Camera::V1_1::CameraHostProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t cameraHostRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::Reconnect(
+    sptr<OHOS::HDI::Camera::V1_1::CameraHostProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Camera::V1_1::CameraHostProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+sptr<OHOS::HDI::Camera::V1_1::ICameraHost> OHOS::HDI::Camera::V1_1::ICameraHost::CastFrom(const sptr<OHOS::HDI::Camera::V1_0::ICameraHost> &parent)
+{
+    return CastFromTemplate<OHOS::HDI::Camera::V1_1::ICameraHost, OHOS::HDI::Camera::V1_0::ICameraHost>(parent);
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::OpenCamera_V1_1(const std::string& cameraId,
+     const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_1::ICameraDevice>& device)
+{
+    return OHOS::HDI::Camera::V1_1::CameraHostProxy::OpenCamera_V1_1_(cameraId, callbackObj, device, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::Prelaunch(const OHOS::HDI::Camera::V1_1::PrelaunchConfig& config)
+{
+    return OHOS::HDI::Camera::V1_1::CameraHostProxy::Prelaunch_(config, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::SetCallback(const sptr<OHOS::HDI::Camera::V1_0::ICameraHostCallback>& callbackObj)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::SetCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::GetCameraIds(std::vector<std::string>& cameraIds)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::GetCameraIds_(cameraIds, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::GetCameraAbility(const std::string& cameraId,
+     std::vector<uint8_t>& cameraAbility)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::GetCameraAbility_(cameraId, cameraAbility, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::OpenCamera(const std::string& cameraId,
+     const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_0::ICameraDevice>& device)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::OpenCamera_(cameraId, callbackObj, device, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::SetFlashlight(const std::string& cameraId, bool isEnable)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::SetFlashlight_(cameraId, isEnable, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::OpenCamera_V1_1_(const std::string& cameraId,
+     const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_1::ICameraDevice>& device, const sptr<IRemoteObject> remote)
+{
+    MessageParcel cameraHostData;
+    MessageParcel cameraHostReply;
+    MessageOption cameraHostOption(MessageOption::TF_SYNC);
+
+    if (!cameraHostData.WriteInterfaceToken(OHOS::HDI::Camera::V1_1::ICameraHost::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cameraHostData.WriteCString(cameraId.c_str())) {
+        HDF_LOGE("%{public}s: write cameraId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cameraHostData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Camera::V1_0::ICameraDeviceCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t cameraHostRet = remote->SendRequest(CMD_CAMERA_HOST_OPEN_CAMERA__V1_1, cameraHostData, cameraHostReply, cameraHostOption);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    sptr<IRemoteObject> deviceRemote = cameraHostReply.ReadRemoteObject();
+    if (deviceRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    device = new OHOS::HDI::Camera::V1_1::CameraDeviceProxy(deviceRemote);
+    if (device == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_1::CameraHostProxy::Prelaunch_(const OHOS::HDI::Camera::V1_1::PrelaunchConfig& config,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel cameraHostData;
+    MessageParcel cameraHostReply;
+    MessageOption cameraHostOption(MessageOption::TF_SYNC);
+
+    if (!cameraHostData.WriteInterfaceToken(OHOS::HDI::Camera::V1_1::ICameraHost::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Camera::V1_1::PrelaunchConfigBlockMarshalling(cameraHostData, config)) {
+        HDF_LOGE("%{public}s: write config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t cameraHostRet = remote->SendRequest(CMD_CAMERA_HOST_PRELAUNCH, cameraHostData, cameraHostReply, cameraHostOption);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+
+} // V1_1
+} // Camera
+} // HDI
+} // OHOS

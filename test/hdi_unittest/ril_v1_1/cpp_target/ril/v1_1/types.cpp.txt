@@ -1,0 +1,4003 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EmergencyCallBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::EmergencyCall& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: write dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.total)) {
+        HDF_LOGE("%{public}s: write dataBlock.total failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.eccNum.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.eccNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.mcc.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.mcc failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.eccType))) {
+        HDF_LOGE("%{public}s: write dataBlock.eccType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.simpresent))) {
+        HDF_LOGE("%{public}s: write dataBlock.simpresent failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.abnormalService))) {
+        HDF_LOGE("%{public}s: write dataBlock.abnormalService failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EmergencyCallBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::EmergencyCall& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: read dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.total)) {
+        HDF_LOGE("%{public}s: read dataBlock.total failed!", __func__);
+        return false;
+    }
+
+    const char* eccNumCp = data.ReadCString();
+    if (eccNumCp == nullptr) {
+        HDF_LOGE("%{public}s: read eccNumCp failed", __func__);
+        return false;
+    }
+    dataBlock.eccNum = eccNumCp;
+
+    const char* mccCp = data.ReadCString();
+    if (mccCp == nullptr) {
+        HDF_LOGE("%{public}s: read mccCp failed", __func__);
+        return false;
+    }
+    dataBlock.mcc = mccCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.eccType failed!", __func__);
+            return false;
+        }
+        dataBlock.eccType = static_cast<enum EccType>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.simpresent failed!", __func__);
+            return false;
+        }
+        dataBlock.simpresent = static_cast<enum SimpresentType>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.abnormalService failed!", __func__);
+            return false;
+        }
+        dataBlock.abnormalService = static_cast<enum AbnormalServiceType>(enumTmp);
+    }
+    return true;
+}
+
+bool EmergencyInfoListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::EmergencyInfoList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.calls.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.calls.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.calls) {
+        if (!EmergencyCallBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool EmergencyInfoListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::EmergencyInfoList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    uint32_t callsSize = 0;
+    if (!data.ReadUint32(callsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(callsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::EmergencyCall), false);
+    dataBlock.calls.clear();
+    dataBlock.calls.reserve(callsSize);
+    for (uint32_t i0 = 0; i0 < callsSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::EmergencyCall value0;
+        if (!OHOS::HDI::Ril::V1_1::EmergencyCallBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.calls.push_back(value0);
+    }
+    return true;
+}
+
+bool RilRadioResponseInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RilRadioResponseInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool RilRadioResponseInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::RilRadioResponseInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RilRadioResponseInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::RilRadioResponseInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SetupDataCallResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: write dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.retryTime)) {
+        HDF_LOGE("%{public}s: write dataBlock.retryTime failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.cid)) {
+        HDF_LOGE("%{public}s: write dataBlock.cid failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.active)) {
+        HDF_LOGE("%{public}s: write dataBlock.active failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.maxTransferUnit)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxTransferUnit failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pduSessionId)) {
+        HDF_LOGE("%{public}s: write dataBlock.pduSessionId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.type.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.netPortName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.netPortName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.address.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.address failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.dns.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.dns failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.dnsSec.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.dnsSec failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.gateway.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.gateway failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pCscfPrimAddr.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pCscfPrimAddr failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pCscfSecAddr.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pCscfSecAddr failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SetupDataCallResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: read dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.retryTime)) {
+        HDF_LOGE("%{public}s: read dataBlock.retryTime failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.cid)) {
+        HDF_LOGE("%{public}s: read dataBlock.cid failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.active)) {
+        HDF_LOGE("%{public}s: read dataBlock.active failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.maxTransferUnit)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxTransferUnit failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pduSessionId)) {
+        HDF_LOGE("%{public}s: read dataBlock.pduSessionId failed!", __func__);
+        return false;
+    }
+
+    const char* typeCp = data.ReadCString();
+    if (typeCp == nullptr) {
+        HDF_LOGE("%{public}s: read typeCp failed", __func__);
+        return false;
+    }
+    dataBlock.type = typeCp;
+
+    const char* netPortNameCp = data.ReadCString();
+    if (netPortNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read netPortNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.netPortName = netPortNameCp;
+
+    const char* addressCp = data.ReadCString();
+    if (addressCp == nullptr) {
+        HDF_LOGE("%{public}s: read addressCp failed", __func__);
+        return false;
+    }
+    dataBlock.address = addressCp;
+
+    const char* dnsCp = data.ReadCString();
+    if (dnsCp == nullptr) {
+        HDF_LOGE("%{public}s: read dnsCp failed", __func__);
+        return false;
+    }
+    dataBlock.dns = dnsCp;
+
+    const char* dnsSecCp = data.ReadCString();
+    if (dnsSecCp == nullptr) {
+        HDF_LOGE("%{public}s: read dnsSecCp failed", __func__);
+        return false;
+    }
+    dataBlock.dnsSec = dnsSecCp;
+
+    const char* gatewayCp = data.ReadCString();
+    if (gatewayCp == nullptr) {
+        HDF_LOGE("%{public}s: read gatewayCp failed", __func__);
+        return false;
+    }
+    dataBlock.gateway = gatewayCp;
+
+    const char* pCscfPrimAddrCp = data.ReadCString();
+    if (pCscfPrimAddrCp == nullptr) {
+        HDF_LOGE("%{public}s: read pCscfPrimAddrCp failed", __func__);
+        return false;
+    }
+    dataBlock.pCscfPrimAddr = pCscfPrimAddrCp;
+
+    const char* pCscfSecAddrCp = data.ReadCString();
+    if (pCscfSecAddrCp == nullptr) {
+        HDF_LOGE("%{public}s: read pCscfSecAddrCp failed", __func__);
+        return false;
+    }
+    dataBlock.pCscfSecAddr = pCscfSecAddrCp;
+    return true;
+}
+
+bool DataCallResultListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataCallResultList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: write dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.dcList.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.dcList.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.dcList) {
+        if (!SetupDataCallResultInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool DataCallResultListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataCallResultList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: read dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    uint32_t dcListSize = 0;
+    if (!data.ReadUint32(dcListSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(dcListSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo), false);
+    dataBlock.dcList.clear();
+    dataBlock.dcList.reserve(dcListSize);
+    for (uint32_t i0 = 0; i0 < dcListSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo value0;
+        if (!OHOS::HDI::Ril::V1_1::SetupDataCallResultInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.dcList.push_back(value0);
+    }
+    return true;
+}
+
+bool DataLinkCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataLinkCapability& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataLinkCapability))) {
+        return false;
+    }
+    return true;
+}
+
+bool DataLinkCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataLinkCapability& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::DataLinkCapability *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::DataLinkCapability*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::DataLinkCapability)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataLinkCapability), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::DataLinkCapability)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool DataProfileDataInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.profileId)) {
+        HDF_LOGE("%{public}s: write dataBlock.profileId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.authenticationType)) {
+        HDF_LOGE("%{public}s: write dataBlock.authenticationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.apn.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.apn failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.protocol.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.protocol failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.roamingProtocol.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.roamingProtocol failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.userName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.userName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.password.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.password failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DataProfileDataInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.profileId)) {
+        HDF_LOGE("%{public}s: read dataBlock.profileId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.authenticationType)) {
+        HDF_LOGE("%{public}s: read dataBlock.authenticationType failed!", __func__);
+        return false;
+    }
+
+    const char* apnCp = data.ReadCString();
+    if (apnCp == nullptr) {
+        HDF_LOGE("%{public}s: read apnCp failed", __func__);
+        return false;
+    }
+    dataBlock.apn = apnCp;
+
+    const char* protocolCp = data.ReadCString();
+    if (protocolCp == nullptr) {
+        HDF_LOGE("%{public}s: read protocolCp failed", __func__);
+        return false;
+    }
+    dataBlock.protocol = protocolCp;
+
+    const char* roamingProtocolCp = data.ReadCString();
+    if (roamingProtocolCp == nullptr) {
+        HDF_LOGE("%{public}s: read roamingProtocolCp failed", __func__);
+        return false;
+    }
+    dataBlock.roamingProtocol = roamingProtocolCp;
+
+    const char* userNameCp = data.ReadCString();
+    if (userNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read userNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.userName = userNameCp;
+
+    const char* passwordCp = data.ReadCString();
+    if (passwordCp == nullptr) {
+        HDF_LOGE("%{public}s: read passwordCp failed", __func__);
+        return false;
+    }
+    dataBlock.password = passwordCp;
+    return true;
+}
+
+bool DataProfilesInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.profilesSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.profilesSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.isRoaming)) {
+        HDF_LOGE("%{public}s: write dataBlock.isRoaming failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.profiles.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.profiles.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.profiles) {
+        if (!DataProfileDataInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool DataProfilesInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.profilesSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.profilesSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.isRoaming)) {
+        HDF_LOGE("%{public}s: read dataBlock.isRoaming failed!", __func__);
+        return false;
+    }
+
+    uint32_t profilesSize = 0;
+    if (!data.ReadUint32(profilesSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(profilesSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::DataProfileDataInfo), false);
+    dataBlock.profiles.clear();
+    dataBlock.profiles.reserve(profilesSize);
+    for (uint32_t i0 = 0; i0 < profilesSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::DataProfileDataInfo value0;
+        if (!OHOS::HDI::Ril::V1_1::DataProfileDataInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.profiles.push_back(value0);
+    }
+    return true;
+}
+
+bool DataCallInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataCallInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.radioTechnology)) {
+        HDF_LOGE("%{public}s: write dataBlock.radioTechnology failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.modemCognitive)) {
+        HDF_LOGE("%{public}s: write dataBlock.modemCognitive failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.roamingAllowed)) {
+        HDF_LOGE("%{public}s: write dataBlock.roamingAllowed failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.isRoaming)) {
+        HDF_LOGE("%{public}s: write dataBlock.isRoaming failed!", __func__);
+        return false;
+    }
+
+    if (!DataProfileDataInfoBlockMarshalling(data, dataBlock.dataProfileInfo)) {
+        HDF_LOGE("%{public}s: write dataBlock.dataProfileInfo failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DataCallInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataCallInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.radioTechnology)) {
+        HDF_LOGE("%{public}s: read dataBlock.radioTechnology failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.modemCognitive)) {
+        HDF_LOGE("%{public}s: read dataBlock.modemCognitive failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.roamingAllowed)) {
+        HDF_LOGE("%{public}s: read dataBlock.roamingAllowed failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.isRoaming)) {
+        HDF_LOGE("%{public}s: read dataBlock.isRoaming failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Ril::V1_1::DataProfileDataInfoBlockUnmarshalling(data, dataBlock.dataProfileInfo)) {
+        HDF_LOGE("%{public}s: read dataBlock.dataProfileInfo failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DataLinkBandwidthInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool DataLinkBandwidthInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool DataLinkBandwidthReportingRuleBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.rat)) {
+        HDF_LOGE("%{public}s: write dataBlock.rat failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.delayMs)) {
+        HDF_LOGE("%{public}s: write dataBlock.delayMs failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.delayUplinkKbps)) {
+        HDF_LOGE("%{public}s: write dataBlock.delayUplinkKbps failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.delayDownlinkKbps)) {
+        HDF_LOGE("%{public}s: write dataBlock.delayDownlinkKbps failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.maximumUplinkKbpsSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.maximumUplinkKbpsSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.maximumDownlinkKbpsSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.maximumDownlinkKbpsSize failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.maximumUplinkKbps)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.maximumUplinkKbps", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.maximumDownlinkKbps)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.maximumDownlinkKbps", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DataLinkBandwidthReportingRuleBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.rat)) {
+        HDF_LOGE("%{public}s: read dataBlock.rat failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.delayMs)) {
+        HDF_LOGE("%{public}s: read dataBlock.delayMs failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.delayUplinkKbps)) {
+        HDF_LOGE("%{public}s: read dataBlock.delayUplinkKbps failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.delayDownlinkKbps)) {
+        HDF_LOGE("%{public}s: read dataBlock.delayDownlinkKbps failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.maximumUplinkKbpsSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.maximumUplinkKbpsSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.maximumDownlinkKbpsSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.maximumDownlinkKbpsSize failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.maximumUplinkKbps)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.maximumUplinkKbps", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.maximumDownlinkKbps)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.maximumDownlinkKbps", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DataPerformanceInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataPerformanceInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool DataPerformanceInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::DataPerformanceInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::DataPerformanceInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::DataPerformanceInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataPerformanceInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::DataPerformanceInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool DataSleepInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DataSleepInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataSleepInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool DataSleepInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DataSleepInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::DataSleepInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::DataSleepInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::DataSleepInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::DataSleepInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::DataSleepInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool UniInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::UniInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.gsmIndex)) {
+        HDF_LOGE("%{public}s: write dataBlock.gsmIndex failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.arg1)) {
+        HDF_LOGE("%{public}s: write dataBlock.arg1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.arg2)) {
+        HDF_LOGE("%{public}s: write dataBlock.arg2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.strTmp.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.strTmp failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool UniInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::UniInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.gsmIndex)) {
+        HDF_LOGE("%{public}s: read dataBlock.gsmIndex failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.arg1)) {
+        HDF_LOGE("%{public}s: read dataBlock.arg1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.arg2)) {
+        HDF_LOGE("%{public}s: read dataBlock.arg2 failed!", __func__);
+        return false;
+    }
+
+    const char* strTmpCp = data.ReadCString();
+    if (strTmpCp == nullptr) {
+        HDF_LOGE("%{public}s: read strTmpCp failed", __func__);
+        return false;
+    }
+    dataBlock.strTmp = strTmpCp;
+    return true;
+}
+
+bool VoiceRadioTechnologyBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::VoiceRadioTechnology& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.srvStatus))) {
+        HDF_LOGE("%{public}s: write dataBlock.srvStatus failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.srvDomain))) {
+        HDF_LOGE("%{public}s: write dataBlock.srvDomain failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.roamStatus))) {
+        HDF_LOGE("%{public}s: write dataBlock.roamStatus failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.simStatus))) {
+        HDF_LOGE("%{public}s: write dataBlock.simStatus failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.lockStatus))) {
+        HDF_LOGE("%{public}s: write dataBlock.lockStatus failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.sysMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.sysMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.sysModeName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.sysModeName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.actType))) {
+        HDF_LOGE("%{public}s: write dataBlock.actType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.actName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.actName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool VoiceRadioTechnologyBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::VoiceRadioTechnology& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.srvStatus failed!", __func__);
+            return false;
+        }
+        dataBlock.srvStatus = static_cast<enum RilSrvStatus>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.srvDomain failed!", __func__);
+            return false;
+        }
+        dataBlock.srvDomain = static_cast<enum RilSrvDomain>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.roamStatus failed!", __func__);
+            return false;
+        }
+        dataBlock.roamStatus = static_cast<enum RilRoamStatus>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.simStatus failed!", __func__);
+            return false;
+        }
+        dataBlock.simStatus = static_cast<enum RilSimStatus>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.lockStatus failed!", __func__);
+            return false;
+        }
+        dataBlock.lockStatus = static_cast<enum RilSimLockStatus>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.sysMode failed!", __func__);
+            return false;
+        }
+        dataBlock.sysMode = static_cast<enum RilSysMode>(enumTmp);
+    }
+
+    const char* sysModeNameCp = data.ReadCString();
+    if (sysModeNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read sysModeNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.sysModeName = sysModeNameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.actType failed!", __func__);
+            return false;
+        }
+        dataBlock.actType = static_cast<enum RilRadioTech>(enumTmp);
+    }
+
+    const char* actNameCp = data.ReadCString();
+    if (actNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read actNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.actName = actNameCp;
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DialInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DialInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.clir)) {
+        HDF_LOGE("%{public}s: write dataBlock.clir failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.address.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.address failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DialInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DialInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.clir)) {
+        HDF_LOGE("%{public}s: read dataBlock.clir failed!", __func__);
+        return false;
+    }
+
+    const char* addressCp = data.ReadCString();
+    if (addressCp == nullptr) {
+        HDF_LOGE("%{public}s: read addressCp failed", __func__);
+        return false;
+    }
+    dataBlock.address = addressCp;
+    return true;
+}
+
+bool CallInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: write dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.dir)) {
+        HDF_LOGE("%{public}s: write dataBlock.dir failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: write dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mpty)) {
+        HDF_LOGE("%{public}s: write dataBlock.mpty failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.voiceDomain)) {
+        HDF_LOGE("%{public}s: write dataBlock.voiceDomain failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.callType)) {
+        HDF_LOGE("%{public}s: write dataBlock.callType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.number.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.number failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.alpha.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.alpha failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CallInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: read dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.dir)) {
+        HDF_LOGE("%{public}s: read dataBlock.dir failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: read dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mpty)) {
+        HDF_LOGE("%{public}s: read dataBlock.mpty failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.voiceDomain)) {
+        HDF_LOGE("%{public}s: read dataBlock.voiceDomain failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.callType)) {
+        HDF_LOGE("%{public}s: read dataBlock.callType failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: read dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    const char* numberCp = data.ReadCString();
+    if (numberCp == nullptr) {
+        HDF_LOGE("%{public}s: read numberCp failed", __func__);
+        return false;
+    }
+    dataBlock.number = numberCp;
+
+    const char* alphaCp = data.ReadCString();
+    if (alphaCp == nullptr) {
+        HDF_LOGE("%{public}s: read alphaCp failed", __func__);
+        return false;
+    }
+    dataBlock.alpha = alphaCp;
+    return true;
+}
+
+bool CallInfoListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallInfoList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.calls.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.calls.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.calls) {
+        if (!CallInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CallInfoListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallInfoList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    uint32_t callsSize = 0;
+    if (!data.ReadUint32(callsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(callsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::CallInfo), false);
+    dataBlock.calls.clear();
+    dataBlock.calls.reserve(callsSize);
+    for (uint32_t i0 = 0; i0 < callsSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::CallInfo value0;
+        if (!OHOS::HDI::Ril::V1_1::CallInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.calls.push_back(value0);
+    }
+    return true;
+}
+
+bool GetClipResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::GetClipResult& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GetClipResult))) {
+        return false;
+    }
+    return true;
+}
+
+bool GetClipResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::GetClipResult& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::GetClipResult *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::GetClipResult*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::GetClipResult)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GetClipResult), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::GetClipResult)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GetClirResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::GetClirResult& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GetClirResult))) {
+        return false;
+    }
+    return true;
+}
+
+bool GetClirResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::GetClirResult& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::GetClirResult *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::GetClirResult*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::GetClirResult)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GetClirResult), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::GetClirResult)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CallWaitResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallWaitResult& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CallWaitResult))) {
+        return false;
+    }
+    return true;
+}
+
+bool CallWaitResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallWaitResult& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CallWaitResult *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CallWaitResult*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CallWaitResult)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CallWaitResult), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CallWaitResult)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CallRestrictionInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallRestrictionInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.fac.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.fac failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.password.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.password failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CallRestrictionInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallRestrictionInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    const char* facCp = data.ReadCString();
+    if (facCp == nullptr) {
+        HDF_LOGE("%{public}s: read facCp failed", __func__);
+        return false;
+    }
+    dataBlock.fac = facCp;
+
+    const char* passwordCp = data.ReadCString();
+    if (passwordCp == nullptr) {
+        HDF_LOGE("%{public}s: read passwordCp failed", __func__);
+        return false;
+    }
+    dataBlock.password = passwordCp;
+    return true;
+}
+
+bool CallRestrictionResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallRestrictionResult& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CallRestrictionResult))) {
+        return false;
+    }
+    return true;
+}
+
+bool CallRestrictionResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallRestrictionResult& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CallRestrictionResult *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CallRestrictionResult*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CallRestrictionResult)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CallRestrictionResult), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CallRestrictionResult)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CallForwardSetInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallForwardSetInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: write dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: write dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.number.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.number failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CallForwardSetInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallForwardSetInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: read dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: read dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    const char* numberCp = data.ReadCString();
+    if (numberCp == nullptr) {
+        HDF_LOGE("%{public}s: read numberCp failed", __func__);
+        return false;
+    }
+    dataBlock.number = numberCp;
+    return true;
+}
+
+bool CallForwardQueryResultBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallForwardQueryResult& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: write dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: write dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: write dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: write dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: write dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.number.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.number failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CallForwardQueryResultBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallForwardQueryResult& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.result)) {
+        HDF_LOGE("%{public}s: read dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: read dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: read dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: read dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.reason)) {
+        HDF_LOGE("%{public}s: read dataBlock.reason failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: read dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    const char* numberCp = data.ReadCString();
+    if (numberCp == nullptr) {
+        HDF_LOGE("%{public}s: read numberCp failed", __func__);
+        return false;
+    }
+    dataBlock.number = numberCp;
+    return true;
+}
+
+bool CallForwardQueryInfoListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CallForwardQueryInfoList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.calls.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.calls.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.calls) {
+        if (!CallForwardQueryResultBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CallForwardQueryInfoListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CallForwardQueryInfoList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.callSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.callSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    uint32_t callsSize = 0;
+    if (!data.ReadUint32(callsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(callsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::CallForwardQueryResult), false);
+    dataBlock.calls.clear();
+    dataBlock.calls.reserve(callsSize);
+    for (uint32_t i0 = 0; i0 < callsSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::CallForwardQueryResult value0;
+        if (!OHOS::HDI::Ril::V1_1::CallForwardQueryResultBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.calls.push_back(value0);
+    }
+    return true;
+}
+
+bool UssdNoticeInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::UssdNoticeInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.message.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.message failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool UssdNoticeInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::UssdNoticeInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: read dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    const char* messageCp = data.ReadCString();
+    if (messageCp == nullptr) {
+        HDF_LOGE("%{public}s: read messageCp failed", __func__);
+        return false;
+    }
+    dataBlock.message = messageCp;
+    return true;
+}
+
+bool SsNoticeInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SsNoticeInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::SsNoticeInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool SsNoticeInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SsNoticeInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::SsNoticeInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::SsNoticeInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::SsNoticeInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::SsNoticeInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::SsNoticeInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SrvccStatusBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SrvccStatus& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::SrvccStatus))) {
+        return false;
+    }
+    return true;
+}
+
+bool SrvccStatusBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SrvccStatus& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::SrvccStatus *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::SrvccStatus*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::SrvccStatus)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::SrvccStatus), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::SrvccStatus)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RingbackVoiceBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::RingbackVoice& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RingbackVoice))) {
+        return false;
+    }
+    return true;
+}
+
+bool RingbackVoiceBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::RingbackVoice& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::RingbackVoice *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::RingbackVoice*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::RingbackVoice)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RingbackVoice), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::RingbackVoice)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool DtmfInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::DtmfInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.callId)) {
+        HDF_LOGE("%{public}s: write dataBlock.callId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.onLength)) {
+        HDF_LOGE("%{public}s: write dataBlock.onLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.offLength)) {
+        HDF_LOGE("%{public}s: write dataBlock.offLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.stringLength)) {
+        HDF_LOGE("%{public}s: write dataBlock.stringLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.dtmfKey.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.dtmfKey failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DtmfInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::DtmfInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.callId)) {
+        HDF_LOGE("%{public}s: read dataBlock.callId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.onLength)) {
+        HDF_LOGE("%{public}s: read dataBlock.onLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.offLength)) {
+        HDF_LOGE("%{public}s: read dataBlock.offLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.stringLength)) {
+        HDF_LOGE("%{public}s: read dataBlock.stringLength failed!", __func__);
+        return false;
+    }
+
+    const char* dtmfKeyCp = data.ReadCString();
+    if (dtmfKeyCp == nullptr) {
+        HDF_LOGE("%{public}s: read dtmfKeyCp failed", __func__);
+        return false;
+    }
+    dataBlock.dtmfKey = dtmfKeyCp;
+    return true;
+}
+
+bool SetBarringInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SetBarringInfo& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.fac.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.fac failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.oldPassword.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.oldPassword failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.newPassword.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.newPassword failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SetBarringInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SetBarringInfo& dataBlock)
+{
+    const char* facCp = data.ReadCString();
+    if (facCp == nullptr) {
+        HDF_LOGE("%{public}s: read facCp failed", __func__);
+        return false;
+    }
+    dataBlock.fac = facCp;
+
+    const char* oldPasswordCp = data.ReadCString();
+    if (oldPasswordCp == nullptr) {
+        HDF_LOGE("%{public}s: read oldPasswordCp failed", __func__);
+        return false;
+    }
+    dataBlock.oldPassword = oldPasswordCp;
+
+    const char* newPasswordCp = data.ReadCString();
+    if (newPasswordCp == nullptr) {
+        HDF_LOGE("%{public}s: read newPasswordCp failed", __func__);
+        return false;
+    }
+    dataBlock.newPassword = newPasswordCp;
+    return true;
+}
+
+bool CardStatusInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CardStatusInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CardStatusInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CardStatusInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CardStatusInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CardStatusInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CardStatusInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CardStatusInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CardStatusInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CardStatusInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SimIoRequestInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SimIoRequestInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.command)) {
+        HDF_LOGE("%{public}s: write dataBlock.command failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.fileId)) {
+        HDF_LOGE("%{public}s: write dataBlock.fileId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p1)) {
+        HDF_LOGE("%{public}s: write dataBlock.p1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p2)) {
+        HDF_LOGE("%{public}s: write dataBlock.p2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p3)) {
+        HDF_LOGE("%{public}s: write dataBlock.p3 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.data.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.data failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.path.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.path failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pin2.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pin2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.aid.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.aid failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimIoRequestInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SimIoRequestInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.command)) {
+        HDF_LOGE("%{public}s: read dataBlock.command failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.fileId)) {
+        HDF_LOGE("%{public}s: read dataBlock.fileId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p1)) {
+        HDF_LOGE("%{public}s: read dataBlock.p1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p2)) {
+        HDF_LOGE("%{public}s: read dataBlock.p2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p3)) {
+        HDF_LOGE("%{public}s: read dataBlock.p3 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    const char* dataCp = data.ReadCString();
+    if (dataCp == nullptr) {
+        HDF_LOGE("%{public}s: read dataCp failed", __func__);
+        return false;
+    }
+    dataBlock.data = dataCp;
+
+    const char* pathCp = data.ReadCString();
+    if (pathCp == nullptr) {
+        HDF_LOGE("%{public}s: read pathCp failed", __func__);
+        return false;
+    }
+    dataBlock.path = pathCp;
+
+    const char* pin2Cp = data.ReadCString();
+    if (pin2Cp == nullptr) {
+        HDF_LOGE("%{public}s: read pin2Cp failed", __func__);
+        return false;
+    }
+    dataBlock.pin2 = pin2Cp;
+
+    const char* aidCp = data.ReadCString();
+    if (aidCp == nullptr) {
+        HDF_LOGE("%{public}s: read aidCp failed", __func__);
+        return false;
+    }
+    dataBlock.aid = aidCp;
+    return true;
+}
+
+bool IccIoResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::IccIoResultInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.sw1)) {
+        HDF_LOGE("%{public}s: write dataBlock.sw1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.sw2)) {
+        HDF_LOGE("%{public}s: write dataBlock.sw2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.response.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.response failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IccIoResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::IccIoResultInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.sw1)) {
+        HDF_LOGE("%{public}s: read dataBlock.sw1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.sw2)) {
+        HDF_LOGE("%{public}s: read dataBlock.sw2 failed!", __func__);
+        return false;
+    }
+
+    const char* responseCp = data.ReadCString();
+    if (responseCp == nullptr) {
+        HDF_LOGE("%{public}s: read responseCp failed", __func__);
+        return false;
+    }
+    dataBlock.response = responseCp;
+    return true;
+}
+
+bool SimLockInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SimLockInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: write dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.fac.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.fac failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: write dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.passwd.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.passwd failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimLockInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SimLockInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.classx)) {
+        HDF_LOGE("%{public}s: read dataBlock.classx failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    const char* facCp = data.ReadCString();
+    if (facCp == nullptr) {
+        HDF_LOGE("%{public}s: read facCp failed", __func__);
+        return false;
+    }
+    dataBlock.fac = facCp;
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: read dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    const char* passwdCp = data.ReadCString();
+    if (passwdCp == nullptr) {
+        HDF_LOGE("%{public}s: read passwdCp failed", __func__);
+        return false;
+    }
+    dataBlock.passwd = passwdCp;
+    return true;
+}
+
+bool SimPasswordInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SimPasswordInfo& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.fac.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.fac failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.oldPassword.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.oldPassword failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.newPassword.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.newPassword failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.passwordLength)) {
+        HDF_LOGE("%{public}s: write dataBlock.passwordLength failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimPasswordInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SimPasswordInfo& dataBlock)
+{
+    const char* facCp = data.ReadCString();
+    if (facCp == nullptr) {
+        HDF_LOGE("%{public}s: read facCp failed", __func__);
+        return false;
+    }
+    dataBlock.fac = facCp;
+
+    const char* oldPasswordCp = data.ReadCString();
+    if (oldPasswordCp == nullptr) {
+        HDF_LOGE("%{public}s: read oldPasswordCp failed", __func__);
+        return false;
+    }
+    dataBlock.oldPassword = oldPasswordCp;
+
+    const char* newPasswordCp = data.ReadCString();
+    if (newPasswordCp == nullptr) {
+        HDF_LOGE("%{public}s: read newPasswordCp failed", __func__);
+        return false;
+    }
+    dataBlock.newPassword = newPasswordCp;
+
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.passwordLength)) {
+        HDF_LOGE("%{public}s: read dataBlock.passwordLength failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimPinInputTimesBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SimPinInputTimes& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.times)) {
+        HDF_LOGE("%{public}s: write dataBlock.times failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pukTimes)) {
+        HDF_LOGE("%{public}s: write dataBlock.pukTimes failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pinTimes)) {
+        HDF_LOGE("%{public}s: write dataBlock.pinTimes failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.puk2Times)) {
+        HDF_LOGE("%{public}s: write dataBlock.puk2Times failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pin2Times)) {
+        HDF_LOGE("%{public}s: write dataBlock.pin2Times failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.code.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.code failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimPinInputTimesBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SimPinInputTimes& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.times)) {
+        HDF_LOGE("%{public}s: read dataBlock.times failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pukTimes)) {
+        HDF_LOGE("%{public}s: read dataBlock.pukTimes failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pinTimes)) {
+        HDF_LOGE("%{public}s: read dataBlock.pinTimes failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.puk2Times)) {
+        HDF_LOGE("%{public}s: read dataBlock.puk2Times failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pin2Times)) {
+        HDF_LOGE("%{public}s: read dataBlock.pin2Times failed!", __func__);
+        return false;
+    }
+
+    const char* codeCp = data.ReadCString();
+    if (codeCp == nullptr) {
+        HDF_LOGE("%{public}s: read codeCp failed", __func__);
+        return false;
+    }
+    dataBlock.code = codeCp;
+    return true;
+}
+
+bool ApduSimIORequestInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.channelId)) {
+        HDF_LOGE("%{public}s: write dataBlock.channelId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.instruction)) {
+        HDF_LOGE("%{public}s: write dataBlock.instruction failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p1)) {
+        HDF_LOGE("%{public}s: write dataBlock.p1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p2)) {
+        HDF_LOGE("%{public}s: write dataBlock.p2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.p3)) {
+        HDF_LOGE("%{public}s: write dataBlock.p3 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.data.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.data failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ApduSimIORequestInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.channelId)) {
+        HDF_LOGE("%{public}s: read dataBlock.channelId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: read dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.instruction)) {
+        HDF_LOGE("%{public}s: read dataBlock.instruction failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p1)) {
+        HDF_LOGE("%{public}s: read dataBlock.p1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p2)) {
+        HDF_LOGE("%{public}s: read dataBlock.p2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.p3)) {
+        HDF_LOGE("%{public}s: read dataBlock.p3 failed!", __func__);
+        return false;
+    }
+
+    const char* dataCp = data.ReadCString();
+    if (dataCp == nullptr) {
+        HDF_LOGE("%{public}s: read dataCp failed", __func__);
+        return false;
+    }
+    dataBlock.data = dataCp;
+    return true;
+}
+
+bool SimAuthenticationRequestInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.aid.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.aid failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.authData.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.authData failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SimAuthenticationRequestInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    const char* aidCp = data.ReadCString();
+    if (aidCp == nullptr) {
+        HDF_LOGE("%{public}s: read aidCp failed", __func__);
+        return false;
+    }
+    dataBlock.aid = aidCp;
+
+    const char* authDataCp = data.ReadCString();
+    if (authDataCp == nullptr) {
+        HDF_LOGE("%{public}s: read authDataCp failed", __func__);
+        return false;
+    }
+    dataBlock.authData = authDataCp;
+    return true;
+}
+
+bool OpenLogicalChannelResponseBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::OpenLogicalChannelResponse& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.sw1)) {
+        HDF_LOGE("%{public}s: write dataBlock.sw1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.sw2)) {
+        HDF_LOGE("%{public}s: write dataBlock.sw2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.channelId)) {
+        HDF_LOGE("%{public}s: write dataBlock.channelId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.response.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.response failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool OpenLogicalChannelResponseBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::OpenLogicalChannelResponse& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.sw1)) {
+        HDF_LOGE("%{public}s: read dataBlock.sw1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.sw2)) {
+        HDF_LOGE("%{public}s: read dataBlock.sw2 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.channelId)) {
+        HDF_LOGE("%{public}s: read dataBlock.channelId failed!", __func__);
+        return false;
+    }
+
+    const char* responseCp = data.ReadCString();
+    if (responseCp == nullptr) {
+        HDF_LOGE("%{public}s: read responseCp failed", __func__);
+        return false;
+    }
+    dataBlock.response = responseCp;
+    return true;
+}
+
+bool LockStatusRespBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::LockStatusResp& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::LockStatusResp))) {
+        return false;
+    }
+    return true;
+}
+
+bool LockStatusRespBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::LockStatusResp& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::LockStatusResp *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::LockStatusResp*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::LockStatusResp)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::LockStatusResp), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::LockStatusResp)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RadioProtocolBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::RadioProtocol& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RadioProtocol))) {
+        return false;
+    }
+    return true;
+}
+
+bool RadioProtocolBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::RadioProtocol& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::RadioProtocol *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::RadioProtocol*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::RadioProtocol)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::RadioProtocol), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::RadioProtocol)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GsmRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::GsmRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GsmRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool GsmRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::GsmRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::GsmRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::GsmRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::GsmRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::GsmRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::GsmRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CdmaRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CdmaRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CdmaRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool CdmaRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CdmaRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CdmaRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CdmaRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CdmaRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CdmaRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CdmaRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool WcdmaRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::WcdmaRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::WcdmaRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool WcdmaRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::WcdmaRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::WcdmaRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::WcdmaRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::WcdmaRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::WcdmaRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::WcdmaRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LteRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::LteRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::LteRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool LteRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::LteRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::LteRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::LteRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::LteRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::LteRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::LteRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool TdScdmaRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::TdScdmaRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::TdScdmaRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool TdScdmaRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::TdScdmaRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::TdScdmaRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::TdScdmaRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::TdScdmaRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::TdScdmaRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::TdScdmaRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool NrRssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::NrRssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::NrRssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool NrRssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::NrRssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::NrRssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::NrRssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::NrRssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::NrRssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::NrRssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RssiBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::Rssi& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::Rssi))) {
+        return false;
+    }
+    return true;
+}
+
+bool RssiBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::Rssi& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::Rssi *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::Rssi*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::Rssi)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::Rssi), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::Rssi)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CsRegStatusInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CsRegStatusInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CsRegStatusInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CsRegStatusInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CsRegStatusInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CsRegStatusInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CsRegStatusInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CsRegStatusInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CsRegStatusInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CsRegStatusInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PsRegStatusInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::PsRegStatusInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::PsRegStatusInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool PsRegStatusInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::PsRegStatusInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::PsRegStatusInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::PsRegStatusInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::PsRegStatusInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::PsRegStatusInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::PsRegStatusInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool OperatorInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::OperatorInfo& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.longName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.longName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.shortName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.shortName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.numeric.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.numeric failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool OperatorInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::OperatorInfo& dataBlock)
+{
+    const char* longNameCp = data.ReadCString();
+    if (longNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read longNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.longName = longNameCp;
+
+    const char* shortNameCp = data.ReadCString();
+    if (shortNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read shortNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.shortName = shortNameCp;
+
+    const char* numericCp = data.ReadCString();
+    if (numericCp == nullptr) {
+        HDF_LOGE("%{public}s: read numericCp failed", __func__);
+        return false;
+    }
+    dataBlock.numeric = numericCp;
+    return true;
+}
+
+bool AvailableNetworkInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::AvailableNetworkInfo& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.longName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.longName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.shortName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.shortName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.numeric.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.numeric failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: write dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.rat)) {
+        HDF_LOGE("%{public}s: write dataBlock.rat failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AvailableNetworkInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::AvailableNetworkInfo& dataBlock)
+{
+    const char* longNameCp = data.ReadCString();
+    if (longNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read longNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.longName = longNameCp;
+
+    const char* shortNameCp = data.ReadCString();
+    if (shortNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read shortNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.shortName = shortNameCp;
+
+    const char* numericCp = data.ReadCString();
+    if (numericCp == nullptr) {
+        HDF_LOGE("%{public}s: read numericCp failed", __func__);
+        return false;
+    }
+    dataBlock.numeric = numericCp;
+
+    if (!data.ReadInt32(dataBlock.status)) {
+        HDF_LOGE("%{public}s: read dataBlock.status failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.rat)) {
+        HDF_LOGE("%{public}s: read dataBlock.rat failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AvailableNetworkListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::AvailableNetworkList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.availableNetworkInfo.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.availableNetworkInfo.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.availableNetworkInfo) {
+        if (!AvailableNetworkInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AvailableNetworkListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::AvailableNetworkList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    uint32_t availableNetworkInfoSize = 0;
+    if (!data.ReadUint32(availableNetworkInfoSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(availableNetworkInfoSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::AvailableNetworkInfo), false);
+    dataBlock.availableNetworkInfo.clear();
+    dataBlock.availableNetworkInfo.reserve(availableNetworkInfoSize);
+    for (uint32_t i0 = 0; i0 < availableNetworkInfoSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::AvailableNetworkInfo value0;
+        if (!OHOS::HDI::Ril::V1_1::AvailableNetworkInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.availableNetworkInfo.push_back(value0);
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SetNetworkModeInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.selectMode)) {
+        HDF_LOGE("%{public}s: write dataBlock.selectMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.oper.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.oper failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SetNetworkModeInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.selectMode)) {
+        HDF_LOGE("%{public}s: read dataBlock.selectMode failed!", __func__);
+        return false;
+    }
+
+    const char* operCp = data.ReadCString();
+    if (operCp == nullptr) {
+        HDF_LOGE("%{public}s: read operCp failed", __func__);
+        return false;
+    }
+    dataBlock.oper = operCp;
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatGsmBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatGsm& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatGsm))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatGsmBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatGsm& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatGsm *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatGsm*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatGsm)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatGsm), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatGsm)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatLteBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatLte& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatLte))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatLteBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatLte& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatLte *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatLte*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatLte)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatLte), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatLte)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatWcdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatWcdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatWcdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatWcdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatWcdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatWcdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatWcdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatWcdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatWcdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatWcdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatCdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatCdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatCdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatCdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatCdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatCdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatCdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatCdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatCdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatCdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatTdscdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatTdscdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatTdscdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatTdscdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatTdscdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatTdscdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatTdscdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatTdscdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatTdscdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatTdscdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatNrBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListRatNr& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatNr))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListRatNrBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListRatNr& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellListRatNr *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellListRatNr*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellListRatNr)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellListRatNr), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellListRatNr)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellNearbyInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellNearbyInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellNearbyInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellNearbyInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellNearbyInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellNearbyInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellNearbyInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellNearbyInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellNearbyInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellNearbyInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListNearbyInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListNearbyInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.cellNearbyInfo)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.cellNearbyInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellListNearbyInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListNearbyInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.cellNearbyInfo)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.cellNearbyInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellRatGsmBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatGsm& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatGsm))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatGsmBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatGsm& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatGsm *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatGsm*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatGsm)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatGsm), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatGsm)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatLteBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatLte& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatLte))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatLteBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatLte& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatLte *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatLte*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatLte)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatLte), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatLte)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatWcdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatWcdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatWcdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatWcdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatWcdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatWcdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatWcdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatWcdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatWcdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatWcdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatCdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatCdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatCdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatCdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatCdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatCdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatCdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatCdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatCdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatCdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatTdscdmaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatTdscdma& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatTdscdma))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatTdscdmaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatTdscdma& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatTdscdma *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatTdscdma*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatTdscdma)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatTdscdma), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatTdscdma)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatNrBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatNr& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatNrBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatNr& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatNr *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatNr*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatNr)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatNr_1_1BlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellRatNr_1_1& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr_1_1))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellRatNr_1_1BlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellRatNr_1_1& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CellRatNr_1_1 *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CellRatNr_1_1*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CellRatNr_1_1)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr_1_1), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CellRatNr_1_1)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellInfo_1_1BlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1))) {
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellInfo_1_1BlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1 *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListCurrentInfo_1_1BlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListCurrentInfo_1_1& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.cellCurrentInfo)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.cellCurrentInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellListCurrentInfo_1_1BlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListCurrentInfo_1_1& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.cellCurrentInfo)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.cellCurrentInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CurrentCellInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CurrentCellInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CurrentCellInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CurrentCellInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CurrentCellInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CurrentCellInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellListCurrentInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CellListCurrentInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.cellCurrentInfo)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.cellCurrentInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellListCurrentInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CellListCurrentInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.cellCurrentInfo)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.cellCurrentInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PreferredNetworkTypeInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool PreferredNetworkTypeInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PhysicalChannelConfigBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::PhysicalChannelConfig& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.cellConnStatus))) {
+        HDF_LOGE("%{public}s: write dataBlock.cellConnStatus failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.ratType))) {
+        HDF_LOGE("%{public}s: write dataBlock.ratType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.cellBandwidthDownlinkKhz)) {
+        HDF_LOGE("%{public}s: write dataBlock.cellBandwidthDownlinkKhz failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.cellBandwidthUplinkKhz)) {
+        HDF_LOGE("%{public}s: write dataBlock.cellBandwidthUplinkKhz failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.freqRange)) {
+        HDF_LOGE("%{public}s: write dataBlock.freqRange failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.downlinkChannelNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.downlinkChannelNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.uplinkChannelNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.uplinkChannelNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.physicalCellId)) {
+        HDF_LOGE("%{public}s: write dataBlock.physicalCellId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.contextIdNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.contextIdNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.contextIds)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.contextIds", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PhysicalChannelConfigBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::PhysicalChannelConfig& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.cellConnStatus failed!", __func__);
+            return false;
+        }
+        dataBlock.cellConnStatus = static_cast<enum RilCellConnectionStatus>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.ratType failed!", __func__);
+            return false;
+        }
+        dataBlock.ratType = static_cast<enum RilRadioTech>(enumTmp);
+    }
+
+    if (!data.ReadInt32(dataBlock.cellBandwidthDownlinkKhz)) {
+        HDF_LOGE("%{public}s: read dataBlock.cellBandwidthDownlinkKhz failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.cellBandwidthUplinkKhz)) {
+        HDF_LOGE("%{public}s: read dataBlock.cellBandwidthUplinkKhz failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.freqRange)) {
+        HDF_LOGE("%{public}s: read dataBlock.freqRange failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.downlinkChannelNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.downlinkChannelNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.uplinkChannelNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.uplinkChannelNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.physicalCellId)) {
+        HDF_LOGE("%{public}s: read dataBlock.physicalCellId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.contextIdNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.contextIdNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.contextIds)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.contextIds", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ChannelConfigInfoListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::ChannelConfigInfoList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.channelConfigInfos.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.channelConfigInfos.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.channelConfigInfos) {
+        if (!PhysicalChannelConfigBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ChannelConfigInfoListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::ChannelConfigInfoList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.itemNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.itemNum failed!", __func__);
+        return false;
+    }
+
+    uint32_t channelConfigInfosSize = 0;
+    if (!data.ReadUint32(channelConfigInfosSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(channelConfigInfosSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Ril::V1_1::PhysicalChannelConfig), false);
+    dataBlock.channelConfigInfos.clear();
+    dataBlock.channelConfigInfos.reserve(channelConfigInfosSize);
+    for (uint32_t i0 = 0; i0 < channelConfigInfosSize; ++i0) {
+        OHOS::HDI::Ril::V1_1::PhysicalChannelConfig value0;
+        if (!OHOS::HDI::Ril::V1_1::PhysicalChannelConfigBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.channelConfigInfos.push_back(value0);
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GsmSmsMessageInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: write dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.smscPdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.smscPdu failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pdu failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool GsmSmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: read dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    const char* smscPduCp = data.ReadCString();
+    if (smscPduCp == nullptr) {
+        HDF_LOGE("%{public}s: read smscPduCp failed", __func__);
+        return false;
+    }
+    dataBlock.smscPdu = smscPduCp;
+
+    const char* pduCp = data.ReadCString();
+    if (pduCp == nullptr) {
+        HDF_LOGE("%{public}s: read pduCp failed", __func__);
+        return false;
+    }
+    dataBlock.pdu = pduCp;
+    return true;
+}
+
+bool SendCdmaSmsMessageInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: write dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.smscPdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.smscPdu failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SendCdmaSmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: read dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    const char* smscPduCp = data.ReadCString();
+    if (smscPduCp == nullptr) {
+        HDF_LOGE("%{public}s: read smscPduCp failed", __func__);
+        return false;
+    }
+    dataBlock.smscPdu = smscPduCp;
+    return true;
+}
+
+bool SmsMessageIOInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.smscPdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.smscPdu failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pdu failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: write dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: write dataBlock.index failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SmsMessageIOInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    const char* smscPduCp = data.ReadCString();
+    if (smscPduCp == nullptr) {
+        HDF_LOGE("%{public}s: read smscPduCp failed", __func__);
+        return false;
+    }
+    dataBlock.smscPdu = smscPduCp;
+
+    const char* pduCp = data.ReadCString();
+    if (pduCp == nullptr) {
+        HDF_LOGE("%{public}s: read pduCp failed", __func__);
+        return false;
+    }
+    dataBlock.pdu = pduCp;
+
+    if (!data.ReadInt32(dataBlock.state)) {
+        HDF_LOGE("%{public}s: read dataBlock.state failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: read dataBlock.index failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ServiceCenterAddressBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::ServiceCenterAddress& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.tosca)) {
+        HDF_LOGE("%{public}s: write dataBlock.tosca failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.address.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.address failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ServiceCenterAddressBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::ServiceCenterAddress& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.tosca)) {
+        HDF_LOGE("%{public}s: read dataBlock.tosca failed!", __func__);
+        return false;
+    }
+
+    const char* addressCp = data.ReadCString();
+    if (addressCp == nullptr) {
+        HDF_LOGE("%{public}s: read addressCp failed", __func__);
+        return false;
+    }
+    dataBlock.address = addressCp;
+    return true;
+}
+
+bool CBConfigInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CBConfigInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: write dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.mids.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.mids failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.dcss.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.dcss failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CBConfigInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CBConfigInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: read dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    const char* midsCp = data.ReadCString();
+    if (midsCp == nullptr) {
+        HDF_LOGE("%{public}s: read midsCp failed", __func__);
+        return false;
+    }
+    dataBlock.mids = midsCp;
+
+    const char* dcssCp = data.ReadCString();
+    if (dcssCp == nullptr) {
+        HDF_LOGE("%{public}s: read dcssCp failed", __func__);
+        return false;
+    }
+    dataBlock.dcss = dcssCp;
+    return true;
+}
+
+bool CdmaCBConfigInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CdmaCBConfigInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo& dataBlock)
+{
+    const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo), dataBlockPtr, sizeof(OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CdmaCBConfigInfoListBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: write dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.list)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.list", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CdmaCBConfigInfoListBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: read dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.list)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.list", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CBConfigReportInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::CBConfigReportInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: write dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.sn)) {
+        HDF_LOGE("%{public}s: write dataBlock.sn failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mid)) {
+        HDF_LOGE("%{public}s: write dataBlock.mid failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.page)) {
+        HDF_LOGE("%{public}s: write dataBlock.page failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pages)) {
+        HDF_LOGE("%{public}s: write dataBlock.pages failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.length)) {
+        HDF_LOGE("%{public}s: write dataBlock.length failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.data.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.data failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.dcs.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.dcs failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pdu failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CBConfigReportInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::CBConfigReportInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: read dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.sn)) {
+        HDF_LOGE("%{public}s: read dataBlock.sn failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mid)) {
+        HDF_LOGE("%{public}s: read dataBlock.mid failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.page)) {
+        HDF_LOGE("%{public}s: read dataBlock.page failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pages)) {
+        HDF_LOGE("%{public}s: read dataBlock.pages failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.length)) {
+        HDF_LOGE("%{public}s: read dataBlock.length failed!", __func__);
+        return false;
+    }
+
+    const char* dataCp = data.ReadCString();
+    if (dataCp == nullptr) {
+        HDF_LOGE("%{public}s: read dataCp failed", __func__);
+        return false;
+    }
+    dataBlock.data = dataCp;
+
+    const char* dcsCp = data.ReadCString();
+    if (dcsCp == nullptr) {
+        HDF_LOGE("%{public}s: read dcsCp failed", __func__);
+        return false;
+    }
+    dataBlock.dcs = dcsCp;
+
+    const char* pduCp = data.ReadCString();
+    if (pduCp == nullptr) {
+        HDF_LOGE("%{public}s: read pduCp failed", __func__);
+        return false;
+    }
+    dataBlock.pdu = pduCp;
+    return true;
+}
+
+bool SmsMessageInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SmsMessageInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: write dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: write dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.pdu)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.pdu", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SmsMessageInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.indicationType)) {
+        HDF_LOGE("%{public}s: read dataBlock.indicationType failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: read dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.pdu)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.pdu", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ModeDataBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::ModeData& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: write dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.result)) {
+        HDF_LOGE("%{public}s: write dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pdu failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ModeDataBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::ModeData& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.serial)) {
+        HDF_LOGE("%{public}s: read dataBlock.serial failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.result)) {
+        HDF_LOGE("%{public}s: read dataBlock.result failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    const char* pduCp = data.ReadCString();
+    if (pduCp == nullptr) {
+        HDF_LOGE("%{public}s: read pduCp failed", __func__);
+        return false;
+    }
+    dataBlock.pdu = pduCp;
+    return true;
+}
+
+bool SendSmsResultInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Ril::V1_1::SendSmsResultInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.msgRef)) {
+        HDF_LOGE("%{public}s: write dataBlock.msgRef failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.pdu.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.pdu failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.errCode)) {
+        HDF_LOGE("%{public}s: write dataBlock.errCode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SendSmsResultInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Ril::V1_1::SendSmsResultInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.msgRef)) {
+        HDF_LOGE("%{public}s: read dataBlock.msgRef failed!", __func__);
+        return false;
+    }
+
+    const char* pduCp = data.ReadCString();
+    if (pduCp == nullptr) {
+        HDF_LOGE("%{public}s: read pduCp failed", __func__);
+        return false;
+    }
+    dataBlock.pdu = pduCp;
+
+    if (!data.ReadInt32(dataBlock.errCode)) {
+        HDF_LOGE("%{public}s: read dataBlock.errCode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V1_1
+} // Ril
+} // HDI
+} // OHOS

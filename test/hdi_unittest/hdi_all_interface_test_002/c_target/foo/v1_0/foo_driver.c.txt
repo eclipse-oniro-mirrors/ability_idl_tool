@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+#include <hdf_device_desc.h>
+#include <hdf_log.h>
+#include "v1_0/foo_service.h"
+
+#define HDF_LOG_TAG    foo_driver
+
+static int HdfFooDriverBind(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%s: driver bind start", __func__);
+    struct FooService *serviceImpl = FooServiceGet();
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%s: failed to get service impl", __func__);
+        return HDF_FAILURE;
+    }
+    deviceObject->service = &serviceImpl->super.service;
+    return HDF_SUCCESS;
+}
+
+static int HdfFooDriverInit(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%s: driver init start", __func__);
+    return HDF_SUCCESS;
+}
+
+static void HdfFooDriverRelease(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%s: driver release start", __func__);
+    if (deviceObject == NULL || deviceObject->service == NULL) {
+        HDF_LOGE("%s: invalid device object", __func__);
+        return;
+    }
+
+    struct FooService *serviceImpl = (struct FooService *)deviceObject->service;
+    if (serviceImpl != NULL) {
+        FooServiceRelease(serviceImpl);
+    }
+}
+
+struct HdfDriverEntry g_fooDriverEntry = {
+    .moduleVersion = 1,
+    .moduleName = "",
+    .Bind = HdfFooDriverBind,
+    .Init = HdfFooDriverInit,
+    .Release = HdfFooDriverRelease,
+};
+
+HDF_INIT(g_fooDriverEntry);

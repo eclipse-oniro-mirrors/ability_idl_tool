@@ -1,0 +1,357 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CODEC_V2_0_CODECTYPES_H
+#define OHOS_HDI_CODEC_V2_0_CODECTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <base/native_buffer.h>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::Base;
+
+enum CodecType : int32_t {
+    VIDEO_DECODER,
+    VIDEO_ENCODER,
+    AUDIO_DECODER,
+    AUDIO_ENCODER,
+    INVALID_TYPE,
+};
+
+enum AvCodecRole : int32_t {
+    MEDIA_ROLETYPE_IMAGE_JPEG = 0,
+    MEDIA_ROLETYPE_VIDEO_AVC,
+    MEDIA_ROLETYPE_VIDEO_HEVC,
+    MEDIA_ROLETYPE_AUDIO_FIRST = 0x10000,
+    MEDIA_ROLETYPE_AUDIO_AAC = 0x10000,
+    MEDIA_ROLETYPE_AUDIO_G711A,
+    MEDIA_ROLETYPE_AUDIO_G711U,
+    MEDIA_ROLETYPE_AUDIO_G726,
+    MEDIA_ROLETYPE_AUDIO_PCM,
+    MEDIA_ROLETYPE_AUDIO_MP3,
+    MEDIA_ROLETYPE_INVALID,
+};
+
+enum Profile : int32_t {
+    INVALID_PROFILE = 0,
+    AAC_LC_PROFILE = 0x1000,
+    AAC_MAIN_PROFILE,
+    AAC_HE_V1_PROFILE,
+    AAC_HE_V2_PROFILE,
+    AAC_LD_PROFILE,
+    AAC_ELD_PROFILE,
+    AVC_BASELINE_PROFILE = 0x2000,
+    AVC_MAIN_PROFILE,
+    AVC_HIGH_PROFILE,
+    HEVC_MAIN_PROFILE = 0x3000,
+    HEVC_MAIN_10_PROFILE,
+};
+
+enum CodecCapsMask : int32_t {
+    CODEC_CAP_ADAPTIVE_PLAYBACK = 0x1,
+    CODEC_CAP_SECURE_PLAYBACK = 0x2,
+    CODEC_CAP_TUNNEL_PLAYBACK = 0x4,
+    CODEC_CAP_MULTI_PLANE = 0x10000,
+};
+
+enum AudioSampleRate : int32_t {
+    AUD_SAMPLE_RATE_8000 = 8000,
+    AUD_SAMPLE_RATE_12000 = 12000,
+    AUD_SAMPLE_RATE_11025 = 11025,
+    AUD_SAMPLE_RATE_16000 = 16000,
+    AUD_SAMPLE_RATE_22050 = 22050,
+    AUD_SAMPLE_RATE_24000 = 24000,
+    AUD_SAMPLE_RATE_32000 = 32000,
+    AUD_SAMPLE_RATE_44100 = 44100,
+    AUD_SAMPLE_RATE_48000 = 48000,
+    AUD_SAMPLE_RATE_64000 = 64000,
+    AUD_SAMPLE_RATE_96000 = 96000,
+    AUD_SAMPLE_RATE_INVALID,
+};
+
+enum CodecAudioSampleFormat : int32_t {
+    AUDIO_SAMPLE_FMT_U8 = 0,
+    AUDIO_SAMPLE_FMT_S16,
+    AUDIO_SAMPLE_FMT_S32,
+    AUDIO_SAMPLE_FMT_FLOAT,
+    AUDIO_SAMPLE_FMT_DOUBLE,
+    AUDIO_SAMPLE_FMT_U8P,
+    AUDIO_SAMPLE_FMT_S16P,
+    AUDIO_SAMPLE_FMT_S32P,
+    AUDIO_SAMPLE_FMT_FLOATP,
+    AUDIO_SAMPLE_FMT_DOUBLEP,
+    AUDIO_SAMPLE_FMT_INVALID,
+};
+
+enum CodecProcessMode : int32_t {
+    PROCESS_BLOCKING_INPUT_BUFFER = 0x1,
+    PROCESS_BLOCKING_OUTPUT_BUFFER = 0x2,
+    PROCESS_BLOCKING_CONTROL_FLOW = 0x4,
+    PROCESS_NONBLOCKING_INPUT_BUFFER = 0x100,
+    PROCESS_NONBLOCKING_OUTPUT_BUFFER = 0x200,
+    PROCESS_NONBLOCKING_CONTROL_FLOW = 0x400,
+};
+
+enum ShareMemTypes : int32_t {
+    READ_WRITE_TYPE = 0x1,
+    READ_ONLY_TYPE = 0x2,
+};
+
+enum BitRateMode : int32_t {
+    BIT_RATE_MODE_INVALID,
+    BIT_RATE_MODE_VBR,
+    BIT_RATE_MODE_CBR,
+    BIT_RATE_MODE_CQ,
+    BIT_RATE_MODE_VCBR,
+    BIT_RATE_MODE_ABR,
+};
+
+enum CodecEventType : int32_t {
+    CODEC_EVENT_CMD_COMPLETE,
+    CODEC_EVENT_ERROR,
+    CODEC_EVENT_MARK,
+    CODEC_EVENT_PORT_SETTINGS_CHANGED,
+    CODEC_EVENT_BUFFER_FLAG,
+    CODEC_EVENT_RESOURCES_ACQUIRED,
+    CODEC_EVENT_COMPONENT_RESUMED,
+    CODEC_EVENT_DYNAMIC_RESOURCES_AVAILABLE,
+    CODEC_EVENT_PORT_FORMAT_DETECTED,
+    CODEC_EVENT_KHRONOS_EXTENSIONS = 0x6F000000,
+    CODEC_EVENT_VENDOR_START_UNUSED = 0x7F000000,
+    CODEC_EVENT_MAX = 0x7FFFFFFF,
+};
+
+enum CodecCommandType : int32_t {
+    CODEC_COMMAND_STATE_SET,
+    CODEC_COMMAND_FLUSH,
+    CODEC_COMMAND_PORT_DISABLE,
+    CODEC_COMMAND_PORT_ENABLE,
+    CODEC_COMMAND_MARK_BUFFER,
+    CODEC_COMMAND_KHRONOS_EXTENSIONS = 0x6F000000,
+    CODEC_COMMAND_VENDOR_START_UNUSED = 0x7F000000,
+    CODEC_COMMAND_MAX = 0x7FFFFFFF,
+};
+
+enum CodecStateType : int32_t {
+    CODEC_STATE_INVALID,
+    CODEC_STATE_LOADED,
+    CODEC_STATE_IDLE,
+    CODEC_STATE_EXECUTING,
+    CODEC_STATE_PAUSE,
+    CODEC_STATE_WAIT_FOR_RESOURCES,
+    CODEC_STATE_KHRONOS_EXTENSIONS = 0x6F000000,
+    CODEC_STATE_VENDOR_START_UNUSED = 0x7F000000,
+    CODEC_STATE_MAX = 0x7FFFFFFF,
+};
+
+enum CodecBufferSupplierType : int32_t {
+    CODEC_BUFFER_SUPPLY_UNSPECIFIED = 0,
+    CODEC_BUFFER_SUPPLY_INPUT,
+    CODEC_BUFFER_SUPPLY_OUTPUT,
+    CODEC_BUFFER_SUPPLY_KHRONOS_EXTENSIONS = 0x6F000000,
+    CODEC_BUFFER_SUPPLY_VENDOR_START_UNUSED = 0x7F000000,
+    CODEC_BUFFER_SUPPLY_MAX = 0x7FFFFFFF,
+};
+
+struct Alignment {
+    int32_t widthAlignment;
+    int32_t heightAlignment;
+} __attribute__ ((aligned(8)));
+
+struct Rect {
+    int32_t width;
+    int32_t height;
+} __attribute__ ((aligned(8)));
+
+struct RangeValue {
+    int32_t min;
+    int32_t max;
+} __attribute__ ((aligned(8)));
+
+struct CodecVideoPortCap {
+    OHOS::HDI::Codec::V2_0::Rect minSize;
+    OHOS::HDI::Codec::V2_0::Rect maxSize;
+    OHOS::HDI::Codec::V2_0::Alignment whAlignment;
+    OHOS::HDI::Codec::V2_0::RangeValue blockCount;
+    OHOS::HDI::Codec::V2_0::RangeValue blocksPerSecond;
+    OHOS::HDI::Codec::V2_0::Rect blockSize;
+    std::vector<int32_t> supportPixFmts;
+    std::vector<OHOS::HDI::Codec::V2_0::BitRateMode> bitRatemode;
+    OHOS::HDI::Codec::V2_0::RangeValue frameRate;
+    std::vector<int32_t> measuredFrameRate;
+};
+
+struct CodecAudioPortCap {
+    std::vector<int32_t> sampleFormats;
+    std::vector<int32_t> sampleRate;
+    std::vector<int32_t> channelLayouts;
+    std::vector<int32_t> channelCount;
+};
+
+struct PortCap {
+    OHOS::HDI::Codec::V2_0::CodecVideoPortCap video;
+    OHOS::HDI::Codec::V2_0::CodecAudioPortCap audio;
+};
+
+struct CodecVerType {
+    uint8_t majorVersion;
+    uint8_t minorVersion;
+    uint8_t revision;
+    uint8_t step;
+} __attribute__ ((aligned(8)));
+
+union CodecVersionType {
+    OHOS::HDI::Codec::V2_0::CodecVerType version;
+    uint32_t nVersion;
+}  __attribute__ ((aligned(8)));
+
+struct CodecCompCapability {
+    OHOS::HDI::Codec::V2_0::AvCodecRole role;
+    OHOS::HDI::Codec::V2_0::CodecType type;
+    std::string compName;
+    std::vector<int32_t> supportProfiles;
+    int32_t maxInst;
+    bool isSoftwareCodec;
+    int32_t processModeMask;
+    uint32_t capsMask;
+    OHOS::HDI::Codec::V2_0::RangeValue bitRate;
+    OHOS::HDI::Codec::V2_0::PortCap port;
+    bool canSwapWidthHeight;
+};
+
+struct OmxCodecBuffer {
+    uint32_t bufferId;
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t bufferType;
+    sptr<NativeBuffer> bufferhandle;
+    int fd;
+    uint32_t allocLen;
+    uint32_t filledLen;
+    uint32_t offset;
+    int fenceFd;
+    OHOS::HDI::Codec::V2_0::ShareMemTypes type;
+    int64_t pts;
+    uint32_t flag;
+    std::vector<uint8_t> alongParam;
+};
+
+struct CodecTunnelSetupType {
+    uint32_t tunnelFlags;
+    OHOS::HDI::Codec::V2_0::CodecBufferSupplierType supplier;
+} __attribute__ ((aligned(8)));
+
+struct CompVerInfo {
+    std::string compName;
+    std::vector<uint8_t> compUUID;
+    OHOS::HDI::Codec::V2_0::CodecVersionType compVersion;
+    OHOS::HDI::Codec::V2_0::CodecVersionType specVersion;
+};
+
+struct EventInfo {
+    int64_t appData;
+    uint32_t data1;
+    uint32_t data2;
+    std::vector<int8_t> eventData;
+};
+
+bool AlignmentBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::Alignment& dataBlock);
+
+bool AlignmentBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::Alignment& dataBlock);
+
+bool RectBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::Rect& dataBlock);
+
+bool RectBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::Rect& dataBlock);
+
+bool RangeValueBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::RangeValue& dataBlock);
+
+bool RangeValueBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::RangeValue& dataBlock);
+
+bool CodecVideoPortCapBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecVideoPortCap& dataBlock);
+
+bool CodecVideoPortCapBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecVideoPortCap& dataBlock);
+
+bool CodecAudioPortCapBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecAudioPortCap& dataBlock);
+
+bool CodecAudioPortCapBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecAudioPortCap& dataBlock);
+
+bool PortCapBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::PortCap& dataBlock);
+
+bool PortCapBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::PortCap& dataBlock);
+
+bool CodecVerTypeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecVerType& dataBlock);
+
+bool CodecVerTypeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecVerType& dataBlock);
+
+bool CodecCompCapabilityBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecCompCapability& dataBlock);
+
+bool CodecCompCapabilityBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecCompCapability& dataBlock);
+
+bool OmxCodecBufferBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& dataBlock);
+
+bool OmxCodecBufferBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::OmxCodecBuffer& dataBlock);
+
+bool CodecTunnelSetupTypeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecTunnelSetupType& dataBlock);
+
+bool CodecTunnelSetupTypeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecTunnelSetupType& dataBlock);
+
+bool CompVerInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CompVerInfo& dataBlock);
+
+bool CompVerInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CompVerInfo& dataBlock);
+
+bool EventInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::EventInfo& dataBlock);
+
+bool EventInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::EventInfo& dataBlock);
+
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CODEC_V2_0_CODECTYPES_H
+

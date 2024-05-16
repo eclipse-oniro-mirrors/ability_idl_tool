@@ -1,0 +1,383 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/camera_host_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "camera/v1_0/camera_device_callback_proxy.h"
+#include "camera/v1_2/camera_host_callback_proxy.h"
+
+#define HDF_LOG_TAG    camera_host_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+
+
+sptr<OHOS::HDI::Camera::V1_2::ICameraHost> OHOS::HDI::Camera::V1_2::ICameraHost::Get(bool isStub)
+{
+    return OHOS::HDI::Camera::V1_2::ICameraHost::Get("camera_host_service", isStub);
+}
+
+sptr<OHOS::HDI::Camera::V1_2::ICameraHost> OHOS::HDI::Camera::V1_2::ICameraHost::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "camera_host_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Camera::V1_2::ICameraHost *>(impl);
+}
+
+
+OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStub(const sptr<OHOS::HDI::Camera::V1_2::ICameraHost> &impl)
+    : IPCObjectStub(OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Camera::V1_2::CameraHostStub::~CameraHostStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CAMERA_HOST_GET_VERSION:
+            return CameraHostStubGetVersion(data, reply, option);
+        case CMD_CAMERA_HOST_OPEN_CAMERA__V1_2:
+            return CameraHostStubOpenCamera_V1_2(data, reply, option);
+        case CMD_CAMERA_HOST_NOTIFY_DEVICE_STATE_CHANGE_INFO:
+            return CameraHostStubNotifyDeviceStateChangeInfo(data, reply, option);
+        case CMD_CAMERA_HOST_SET_CALLBACK__V1_2:
+            return CameraHostStubSetCallback_V1_2(data, reply, option);
+        case CMD_CAMERA_HOST_SET_FLASHLIGHT__V1_2:
+            return CameraHostStubSetFlashlight_V1_2(data, reply, option);
+        case CMD_CAMERA_HOST_PRE_CAMERA_SWITCH:
+            return CameraHostStubPreCameraSwitch(data, reply, option);
+        case CMD_CAMERA_HOST_PRELAUNCH_WITH_OP_MODE:
+            return CameraHostStubPrelaunchWithOpMode(data, reply, option);
+        case CMD_CAMERA_HOST_OPEN_CAMERA__V1_1:
+            return CameraHostStubOpenCamera_V1_1(data, reply, option);
+        case CMD_CAMERA_HOST_PRELAUNCH:
+            return CameraHostStubPrelaunch(data, reply, option);
+        case CMD_CAMERA_HOST_SET_CALLBACK:
+            return CameraHostStubSetCallback(data, reply, option);
+        case CMD_CAMERA_HOST_GET_CAMERA_IDS:
+            return CameraHostStubGetCameraIds(data, reply, option);
+        case CMD_CAMERA_HOST_GET_CAMERA_ABILITY:
+            return CameraHostStubGetCameraAbility(data, reply, option);
+        case CMD_CAMERA_HOST_OPEN_CAMERA:
+            return CameraHostStubOpenCamera(data, reply, option);
+        case CMD_CAMERA_HOST_SET_FLASHLIGHT:
+            return CameraHostStubSetFlashlight(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubOpenCamera_V1_2(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubOpenCamera_V1_2_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubNotifyDeviceStateChangeInfo(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubNotifyDeviceStateChangeInfo_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetCallback_V1_2(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetCallback_V1_2_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetFlashlight_V1_2(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetFlashlight_V1_2_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPreCameraSwitch(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPreCameraSwitch_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPrelaunchWithOpMode(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPrelaunchWithOpMode_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubOpenCamera_V1_1(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_1::CameraHostStub::CameraHostStubOpenCamera_V1_1_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPrelaunch(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_1::CameraHostStub::CameraHostStubPrelaunch_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetCallback(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubSetCallback_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubGetCameraIds(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubGetCameraIds_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubGetCameraAbility(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubGetCameraAbility_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubOpenCamera(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubOpenCamera_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetFlashlight(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubSetFlashlight_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubGetVersion(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraHostStub::CameraHostStubGetVersion_(cameraHostData, cameraHostReply, cameraHostOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubOpenCamera_V1_2_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* cameraIdCp = cameraHostData.ReadCString();
+    if (cameraIdCp == nullptr) {
+        HDF_LOGE("%{public}s: read cameraId failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string cameraId = cameraIdCp;
+
+    sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = cameraHostData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Camera::V1_0::CameraDeviceCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Camera::V1_2::ICameraDevice> device;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->OpenCamera_V1_2(cameraId, callbackObj, device);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    if (device == nullptr) {
+        HDF_LOGE("%{public}s: parameter device is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cameraHostReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(device, OHOS::HDI::Camera::V1_2::ICameraDevice::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write device failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubNotifyDeviceStateChangeInfo_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t notifyType = 0;
+    if (!cameraHostData.ReadInt32(notifyType)) {
+        HDF_LOGE("%{public}s: read notifyType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t deviceState = 0;
+    if (!cameraHostData.ReadInt32(deviceState)) {
+        HDF_LOGE("%{public}s: read deviceState failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->NotifyDeviceStateChangeInfo(notifyType, deviceState);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetCallback_V1_2_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Camera::V1_2::ICameraHostCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = cameraHostData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Camera::V1_2::CameraHostCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->SetCallback_V1_2(callbackObj);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubSetFlashlight_V1_2_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float level = 0;
+    if (!cameraHostData.ReadFloat(level)) {
+        HDF_LOGE("%{public}s: read level failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->SetFlashlight_V1_2(level);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPreCameraSwitch_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* cameraIdCp = cameraHostData.ReadCString();
+    if (cameraIdCp == nullptr) {
+        HDF_LOGE("%{public}s: read cameraId failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string cameraId = cameraIdCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->PreCameraSwitch(cameraId);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraHostStub::CameraHostStubPrelaunchWithOpMode_(MessageParcel& cameraHostData, MessageParcel& cameraHostReply, MessageOption& cameraHostOption, sptr<OHOS::HDI::Camera::V1_2::ICameraHost> impl)
+{
+    if (cameraHostData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraHost::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Camera::V1_1::PrelaunchConfig config;
+    if (!PrelaunchConfigBlockUnmarshalling(cameraHostData, config)) {
+        HDF_LOGE("%{public}s: read config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t operationMode = 0;
+    if (!cameraHostData.ReadInt32(operationMode)) {
+        HDF_LOGE("%{public}s: read operationMode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraHostRet = impl->PrelaunchWithOpMode(config, operationMode);
+    if (cameraHostRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraHostRet);
+        return cameraHostRet;
+    }
+
+    return cameraHostRet;
+}
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS

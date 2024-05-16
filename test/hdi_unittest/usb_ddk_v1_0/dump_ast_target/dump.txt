@@ -1,0 +1,95 @@
+AST[name: IUsbDdk file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/usb_ddk_v1_0/foo/usb/ddk/v1_0/IUsbDdk.idl]
+package ohos.hdi.usb.ddk.v1_0;
+
+import ohos.hdi.usb.ddk.v1_0.UsbDdkTypes;
+
+[mini, lite, full] interface IUsbDdk {
+    [mini, lite, full] Init();
+
+    [mini, lite, full] Release();
+
+    [mini, lite, full] GetDeviceDescriptor(
+      [in] unsigned long deviceId,
+      [out] ohos.hdi.usb.ddk.v1_0.UsbDeviceDescriptor desc);
+
+    [mini, lite, full] GetConfigDescriptor(
+      [in] unsigned long deviceId,
+      [in] unsigned char configIndex,
+      [out] List<unsigned char> configDesc);
+
+    [mini, lite, full] ClaimInterface(
+      [in] unsigned long deviceId,
+      [in] unsigned char interfaceIndex,
+      [out] unsigned long interfaceHandle);
+
+    [mini, lite, full] ReleaseInterface(
+      [in] unsigned long interfaceHandle);
+
+    [mini, lite, full] SelectInterfaceSetting(
+      [in] unsigned long interfaceHandle,
+      [in] unsigned char settingIndex);
+
+    [mini, lite, full] GetCurrentInterfaceSetting(
+      [in] unsigned long interfaceHandle,
+      [out] unsigned char settingIndex);
+
+    [mini, lite, full] SendControlReadRequest(
+      [in] unsigned long interfaceHandle,
+      [in] ohos.hdi.usb.ddk.v1_0.UsbControlRequestSetup setup,
+      [in] unsigned int timeout,
+      [out] List<unsigned char> data);
+
+    [mini, lite, full] SendControlWriteRequest(
+      [in] unsigned long interfaceHandle,
+      [in] ohos.hdi.usb.ddk.v1_0.UsbControlRequestSetup setup,
+      [in] unsigned int timeout,
+      [in] List<unsigned char> data);
+
+    [mini, lite, full] SendPipeRequest(
+      [in] ohos.hdi.usb.ddk.v1_0.UsbRequestPipe pipe,
+      [in] unsigned int size,
+      [in] unsigned int offset,
+      [in] unsigned int length,
+      [out] unsigned int transferedLength);
+
+    [mini, lite, full] GetDeviceMemMapFd(
+      [in] unsigned long deviceId,
+      [out] FileDescriptor fd);
+}
+
+
+AST[name: UsbDdkTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/usb_ddk_v1_0/foo/usb/ddk/v1_0/UsbDdkTypes.idl]
+package ohos.hdi.usb.ddk.v1_0;
+
+[mini, lite, full] struct UsbControlRequestSetup {
+  unsigned char requestType;
+  unsigned char requestCmd;
+  unsigned short value;
+  unsigned short index;
+  unsigned short length;
+};
+
+[mini, lite, full] struct UsbDeviceDescriptor {
+  unsigned char bLength;
+  unsigned char bDescriptorType;
+  unsigned short bcdUSB;
+  unsigned char bDeviceClass;
+  unsigned char bDeviceSubClass;
+  unsigned char bDeviceProtocol;
+  unsigned char bMaxPacketSize0;
+  unsigned short idVendor;
+  unsigned short idProduct;
+  unsigned short bcdDevice;
+  unsigned char iManufacturer;
+  unsigned char iProduct;
+  unsigned char iSerialNumber;
+  unsigned char bNumConfigurations;
+};
+
+[mini, lite, full] struct UsbRequestPipe {
+  unsigned long interfaceHandle;
+  unsigned int timeout;
+  unsigned char endpoint;
+};
+
+

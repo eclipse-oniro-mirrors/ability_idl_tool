@@ -1,0 +1,119 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/mode_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    mode_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_1 {
+
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::OnMode(uint32_t modeId, uint64_t vBlankPeriod)
+{
+    return OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::OnMode_(modeId, vBlankPeriod, Remote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::OnMode_(uint32_t modeId, uint64_t vBlankPeriod,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel modeCallbackData;
+    MessageParcel modeCallbackReply;
+    MessageOption modeCallbackOption(MessageOption::TF_SYNC);
+
+    if (!modeCallbackData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_1::IModeCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!modeCallbackData.WriteUint32(modeId)) {
+        HDF_LOGE("%{public}s: write modeId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!modeCallbackData.WriteUint64(vBlankPeriod)) {
+        HDF_LOGE("%{public}s: write vBlankPeriod failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t modeCallbackRet = remote->SendRequest(CMD_MODE_CALLBACK_ON_MODE, modeCallbackData, modeCallbackReply, modeCallbackOption);
+    if (modeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, modeCallbackRet);
+        return modeCallbackRet;
+    }
+
+    return modeCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel modeCallbackData;
+    MessageParcel modeCallbackReply;
+    MessageOption modeCallbackOption(MessageOption::TF_SYNC);
+
+    if (!modeCallbackData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_1::IModeCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t modeCallbackRet = remote->SendRequest(CMD_MODE_CALLBACK_GET_VERSION, modeCallbackData, modeCallbackReply, modeCallbackOption);
+    if (modeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, modeCallbackRet);
+        return modeCallbackRet;
+    }
+
+    if (!modeCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!modeCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return modeCallbackRet;
+}
+
+} // V1_1
+} // Composer
+} // Display
+} // HDI
+} // OHOS

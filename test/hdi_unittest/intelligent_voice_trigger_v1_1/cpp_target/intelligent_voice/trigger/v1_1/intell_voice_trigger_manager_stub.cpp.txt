@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/intell_voice_trigger_manager_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    intell_voice_trigger_manager_stub
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Trigger {
+namespace V1_1 {
+
+
+sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::Get(bool isStub)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::Get("intell_voice_trigger_manager_service", isStub);
+}
+
+sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "intell_voice_trigger_manager_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager *>(impl);
+}
+
+
+OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStub(const sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> &impl)
+    : IPCObjectStub(OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::~IntellVoiceTriggerManagerStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_INTELL_VOICE_TRIGGER_MANAGER_GET_VERSION:
+            return IntellVoiceTriggerManagerStubGetVersion(data, reply, option);
+        case CMD_INTELL_VOICE_TRIGGER_MANAGER_LOAD_ADAPTER__V1_1:
+            return IntellVoiceTriggerManagerStubLoadAdapter_V1_1(data, reply, option);
+        case CMD_INTELL_VOICE_TRIGGER_MANAGER_LOAD_ADAPTER:
+            return IntellVoiceTriggerManagerStubLoadAdapter(data, reply, option);
+        case CMD_INTELL_VOICE_TRIGGER_MANAGER_UNLOAD_ADAPTER:
+            return IntellVoiceTriggerManagerStubUnloadAdapter(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubLoadAdapter_V1_1(MessageParcel& intellVoiceTriggerManagerData, MessageParcel& intellVoiceTriggerManagerReply, MessageOption& intellVoiceTriggerManagerOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubLoadAdapter_V1_1_(intellVoiceTriggerManagerData, intellVoiceTriggerManagerReply, intellVoiceTriggerManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubLoadAdapter(MessageParcel& intellVoiceTriggerManagerData, MessageParcel& intellVoiceTriggerManagerReply, MessageOption& intellVoiceTriggerManagerOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubLoadAdapter_(intellVoiceTriggerManagerData, intellVoiceTriggerManagerReply, intellVoiceTriggerManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubUnloadAdapter(MessageParcel& intellVoiceTriggerManagerData, MessageParcel& intellVoiceTriggerManagerReply, MessageOption& intellVoiceTriggerManagerOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubUnloadAdapter_(intellVoiceTriggerManagerData, intellVoiceTriggerManagerReply, intellVoiceTriggerManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubGetVersion(MessageParcel& intellVoiceTriggerManagerData, MessageParcel& intellVoiceTriggerManagerReply, MessageOption& intellVoiceTriggerManagerOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubGetVersion_(intellVoiceTriggerManagerData, intellVoiceTriggerManagerReply, intellVoiceTriggerManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_1::IntellVoiceTriggerManagerStub::IntellVoiceTriggerManagerStubLoadAdapter_V1_1_(MessageParcel& intellVoiceTriggerManagerData, MessageParcel& intellVoiceTriggerManagerReply, MessageOption& intellVoiceTriggerManagerOption, sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> impl)
+{
+    if (intellVoiceTriggerManagerData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterDsecriptor descriptor;
+    if (!IntellVoiceTriggerAdapterDsecriptorBlockUnmarshalling(intellVoiceTriggerManagerData, descriptor)) {
+        HDF_LOGE("%{public}s: read descriptor failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerAdapter> adapter;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceTriggerManagerRet = impl->LoadAdapter_V1_1(descriptor, adapter);
+    if (intellVoiceTriggerManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerManagerRet);
+        return intellVoiceTriggerManagerRet;
+    }
+
+    if (adapter == nullptr) {
+        HDF_LOGE("%{public}s: parameter adapter is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerManagerReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(adapter, OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerAdapter::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write adapter failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceTriggerManagerRet;
+}
+} // V1_1
+} // Trigger
+} // IntelligentVoice
+} // HDI
+} // OHOS

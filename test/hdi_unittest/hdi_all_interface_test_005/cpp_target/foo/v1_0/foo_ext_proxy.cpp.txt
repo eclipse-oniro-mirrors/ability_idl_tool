@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/ifoo_ext.h"
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    foo_ext_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Foo {
+namespace V1_0 {
+sptr<OHOS::HDI::Foo::V1_0::IFooExt> OHOS::HDI::Foo::V1_0::IFooExt::Get(bool isStub)
+{
+    return IFooExt::Get("foo_ext_service", isStub);
+}
+
+sptr<OHOS::HDI::Foo::V1_0::IFooExt> IFooExt::Get(const std::string &serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Foo::V1_0::IFooExt::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "foo_ext_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Foo::V1_0::IFooExt *>(impl);
+    }
+
+    return nullptr;
+}
+} // V1_0
+} // Foo
+} // HDI
+} // OHOS

@@ -1,0 +1,202 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/codec_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    codec_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EventHandler(OHOS::HDI::Codec::V2_0::CodecEventType event,
+     const OHOS::HDI::Codec::V2_0::EventInfo& info)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EventHandler_(event, info, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EmptyBufferDone(int64_t appData,
+     const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& buffer)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EmptyBufferDone_(appData, buffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::FillBufferDone(int64_t appData,
+     const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& buffer)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackProxy::FillBufferDone_(appData, buffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Codec::V2_0::CodecCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EventHandler_(OHOS::HDI::Codec::V2_0::CodecEventType event,
+     const OHOS::HDI::Codec::V2_0::EventInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecCallbackData;
+    MessageParcel codecCallbackReply;
+    MessageOption codecCallbackOption(MessageOption::TF_SYNC);
+
+    if (!codecCallbackData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecCallbackData.WriteUint64(static_cast<uint64_t>(event))) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::EventInfoBlockMarshalling(codecCallbackData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecCallbackRet = remote->SendRequest(CMD_CODEC_CALLBACK_EVENT_HANDLER, codecCallbackData, codecCallbackReply, codecCallbackOption);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::EmptyBufferDone_(int64_t appData,
+     const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecCallbackData;
+    MessageParcel codecCallbackReply;
+    MessageOption codecCallbackOption(MessageOption::TF_SYNC);
+
+    if (!codecCallbackData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecCallbackData.WriteInt64(appData)) {
+        HDF_LOGE("%{public}s: write appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::OmxCodecBufferBlockMarshalling(codecCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecCallbackRet = remote->SendRequest(CMD_CODEC_CALLBACK_EMPTY_BUFFER_DONE, codecCallbackData, codecCallbackReply, codecCallbackOption);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::FillBufferDone_(int64_t appData,
+     const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecCallbackData;
+    MessageParcel codecCallbackReply;
+    MessageOption codecCallbackOption(MessageOption::TF_SYNC);
+
+    if (!codecCallbackData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecCallbackData.WriteInt64(appData)) {
+        HDF_LOGE("%{public}s: write appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::OmxCodecBufferBlockMarshalling(codecCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecCallbackRet = remote->SendRequest(CMD_CODEC_CALLBACK_FILL_BUFFER_DONE, codecCallbackData, codecCallbackReply, codecCallbackOption);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    return codecCallbackRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecCallbackData;
+    MessageParcel codecCallbackReply;
+    MessageOption codecCallbackOption(MessageOption::TF_SYNC);
+
+    if (!codecCallbackData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecCallbackRet = remote->SendRequest(CMD_CODEC_CALLBACK_GET_VERSION, codecCallbackData, codecCallbackReply, codecCallbackOption);
+    if (codecCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecCallbackRet);
+        return codecCallbackRet;
+    }
+
+    if (!codecCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecCallbackRet;
+}
+
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS

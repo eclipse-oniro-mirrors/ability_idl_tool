@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/media_decrypt_module_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    media_decrypt_module_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::DecryptMediaData(bool secure,
+     const OHOS::HDI::Drm::V1_0::CryptoInfo& cryptoInfo, const OHOS::HDI::Drm::V1_0::DrmBuffer& srcBuffer, const OHOS::HDI::Drm::V1_0::DrmBuffer& destBuffer)
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::DecryptMediaData_(secure, cryptoInfo, srcBuffer, destBuffer, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::Release()
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::Release_(Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::DecryptMediaData_(bool secure,
+     const OHOS::HDI::Drm::V1_0::CryptoInfo& cryptoInfo, const OHOS::HDI::Drm::V1_0::DrmBuffer& srcBuffer, const OHOS::HDI::Drm::V1_0::DrmBuffer& destBuffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaDecryptModuleData;
+    MessageParcel mediaDecryptModuleReply;
+    MessageOption mediaDecryptModuleOption(MessageOption::TF_SYNC);
+
+    if (!mediaDecryptModuleData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaDecryptModuleData.WriteBool(secure)) {
+        HDF_LOGE("%{public}s: write secure failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Drm::V1_0::CryptoInfoBlockMarshalling(mediaDecryptModuleData, cryptoInfo)) {
+        HDF_LOGE("%{public}s: write cryptoInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Drm::V1_0::DrmBufferBlockMarshalling(mediaDecryptModuleData, srcBuffer)) {
+        HDF_LOGE("%{public}s: write srcBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Drm::V1_0::DrmBufferBlockMarshalling(mediaDecryptModuleData, destBuffer)) {
+        HDF_LOGE("%{public}s: write destBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaDecryptModuleRet = remote->SendRequest(CMD_MEDIA_DECRYPT_MODULE_DECRYPT_MEDIA_DATA, mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption);
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    return mediaDecryptModuleRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::Release_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaDecryptModuleData;
+    MessageParcel mediaDecryptModuleReply;
+    MessageOption mediaDecryptModuleOption(MessageOption::TF_SYNC);
+
+    if (!mediaDecryptModuleData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaDecryptModuleRet = remote->SendRequest(CMD_MEDIA_DECRYPT_MODULE_RELEASE, mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption);
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    return mediaDecryptModuleRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaDecryptModuleData;
+    MessageParcel mediaDecryptModuleReply;
+    MessageOption mediaDecryptModuleOption(MessageOption::TF_SYNC);
+
+    if (!mediaDecryptModuleData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaDecryptModuleRet = remote->SendRequest(CMD_MEDIA_DECRYPT_MODULE_GET_VERSION, mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption);
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    if (!mediaDecryptModuleReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaDecryptModuleReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaDecryptModuleRet;
+}
+
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

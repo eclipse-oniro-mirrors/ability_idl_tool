@@ -1,0 +1,153 @@
+AST[name: IDCameraProvider file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_camera_v1_0/foo/distributed_camera/v1_0/IDCameraProvider.idl]
+package ohos.hdi.distributed_camera.v1_0;
+
+import ohos.hdi.distributed_camera.v1_0.IDCameraProviderCallback;
+import ohos.hdi.distributed_camera.v1_0.DCameraTypes;
+
+[mini, lite, full] interface IDCameraProvider {
+    [mini, lite, full] EnableDCameraDevice(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] std::string abilityInfo,
+      [in] ohos.hdi.distributed_camera.v1_0.IDCameraProviderCallback callbackObj);
+
+    [mini, lite, full] DisableDCameraDevice(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase);
+
+    [mini, lite, full] AcquireBuffer(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] int streamId,
+      [out] ohos.hdi.distributed_camera.v1_0.DCameraBuffer buffer);
+
+    [mini, lite, full] ShutterBuffer(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] int streamId,
+      [in] ohos.hdi.distributed_camera.v1_0.DCameraBuffer buffer);
+
+    [mini, lite, full] OnSettingsResult(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] ohos.hdi.distributed_camera.v1_0.DCameraSettings result);
+
+    [mini, lite, full] Notify(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] ohos.hdi.distributed_camera.v1_0.DCameraHDFEvent event);
+}
+
+
+AST[name: IDCameraProviderCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_camera_v1_0/foo/distributed_camera/v1_0/IDCameraProviderCallback.idl]
+package ohos.hdi.distributed_camera.v1_0;
+
+import ohos.hdi.distributed_camera.v1_0.DCameraTypes;
+
+[mini, lite, full, callback] interface IDCameraProviderCallback {
+    [mini, lite, full, callback] OpenSession(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase);
+
+    [mini, lite, full, callback] CloseSession(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase);
+
+    [mini, lite, full, callback] ConfigureStreams(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] ohos.hdi.distributed_camera.v1_0.DCStreamInfo[] streamInfos);
+
+    [mini, lite, full, callback] ReleaseStreams(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] int[] streamIds);
+
+    [mini, lite, full, callback] StartCapture(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] ohos.hdi.distributed_camera.v1_0.DCCaptureInfo[] captureInfos);
+
+    [mini, lite, full, callback] StopCapture(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] int[] streamIds);
+
+    [mini, lite, full, callback] UpdateSettings(
+      [in] ohos.hdi.distributed_camera.v1_0.DHBase dhBase,
+      [in] ohos.hdi.distributed_camera.v1_0.DCameraSettings[] settings);
+}
+
+
+AST[name: DCameraTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_camera_v1_0/foo/distributed_camera/v1_0/DCameraTypes.idl]
+package ohos.hdi.distributed_camera.v1_0;
+
+[mini, lite, full] enum DCSettingsType : int {
+  UPDATE_METADATA = 0,
+  ENABLE_METADATA = 1,
+  DISABLE_METADATA = 2,
+  METADATA_RESULT = 3,
+  SET_FLASH_LIGHT = 4,
+  FPS_RANGE = 5,
+  UPDATE_FRAME_METADATA = 6,
+};
+
+[mini, lite, full] enum DCamRetCode : int {
+  SUCCESS = 0,
+  CAMERA_BUSY = 1,
+  INVALID_ARGUMENT = 2,
+  METHOD_NOT_SUPPORTED = 3,
+  CAMERA_OFFLINE = 4,
+  EXCEED_MAX_NUMBER = 5,
+  DEVICE_NOT_INIT = 6,
+  FAILED = 7,
+};
+
+[mini, lite, full] enum DCEncodeType : int {
+  ENCODE_TYPE_NULL = 0,
+  ENCODE_TYPE_H264 = 1,
+  ENCODE_TYPE_H265 = 2,
+  ENCODE_TYPE_JPEG = 3,
+  ENCODE_TYPE_MPEG4_ES = 4,
+};
+
+[mini, lite, full] enum DCStreamType : int {
+  CONTINUOUS_FRAME = 0,
+  SNAPSHOT_FRAME = 1,
+};
+
+[mini, lite, full] struct DHBase {
+  std::string deviceId_;
+  std::string dhId_;
+};
+
+[mini, lite, full] struct DCameraSettings {
+  ohos.hdi.distributed_camera.v1_0.DCSettingsType type_;
+  std::string value_;
+};
+
+[mini, lite, full] struct DCStreamInfo {
+  int streamId_;
+  int width_;
+  int height_;
+  int stride_;
+  int format_;
+  int dataspace_;
+  ohos.hdi.distributed_camera.v1_0.DCEncodeType encodeType_;
+  ohos.hdi.distributed_camera.v1_0.DCStreamType type_;
+};
+
+[mini, lite, full] struct DCCaptureInfo {
+  int[] streamIds_;
+  int width_;
+  int height_;
+  int stride_;
+  int format_;
+  int dataspace_;
+  boolean isCapture_;
+  ohos.hdi.distributed_camera.v1_0.DCEncodeType encodeType_;
+  ohos.hdi.distributed_camera.v1_0.DCStreamType type_;
+  ohos.hdi.distributed_camera.v1_0.DCameraSettings[] captureSettings_;
+};
+
+[mini, lite, full] struct DCameraBuffer {
+  int index_;
+  unsigned int size_;
+  NativeBuffer bufferHandle_;
+};
+
+[mini, lite, full] struct DCameraHDFEvent {
+  int type_;
+  int result_;
+  std::string content_;
+};
+
+

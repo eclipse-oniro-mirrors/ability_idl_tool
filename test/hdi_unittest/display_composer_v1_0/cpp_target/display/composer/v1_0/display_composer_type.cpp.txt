@@ -1,0 +1,633 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/display_composer_type.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PropertyObjectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::PropertyObject& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.propId)) {
+        HDF_LOGE("%{public}s: write dataBlock.propId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(dataBlock.value)) {
+        HDF_LOGE("%{public}s: write dataBlock.value failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PropertyObjectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::PropertyObject& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    if (!data.ReadUint32(dataBlock.propId)) {
+        HDF_LOGE("%{public}s: read dataBlock.propId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint64(dataBlock.value)) {
+        HDF_LOGE("%{public}s: read dataBlock.value failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DisplayCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::DisplayCapability& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.phyWidth)) {
+        HDF_LOGE("%{public}s: write dataBlock.phyWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.phyHeight)) {
+        HDF_LOGE("%{public}s: write dataBlock.phyHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.supportLayers)) {
+        HDF_LOGE("%{public}s: write dataBlock.supportLayers failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.virtualDispCount)) {
+        HDF_LOGE("%{public}s: write dataBlock.virtualDispCount failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.supportWriteBack)) {
+        HDF_LOGE("%{public}s: write dataBlock.supportWriteBack failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.propertyCount)) {
+        HDF_LOGE("%{public}s: write dataBlock.propertyCount failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.props.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.props.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.props) {
+        if (!PropertyObjectBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool DisplayCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::DisplayCapability& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum InterfaceType>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.phyWidth)) {
+        HDF_LOGE("%{public}s: read dataBlock.phyWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.phyHeight)) {
+        HDF_LOGE("%{public}s: read dataBlock.phyHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.supportLayers)) {
+        HDF_LOGE("%{public}s: read dataBlock.supportLayers failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.virtualDispCount)) {
+        HDF_LOGE("%{public}s: read dataBlock.virtualDispCount failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.supportWriteBack)) {
+        HDF_LOGE("%{public}s: read dataBlock.supportWriteBack failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.propertyCount)) {
+        HDF_LOGE("%{public}s: read dataBlock.propertyCount failed!", __func__);
+        return false;
+    }
+
+    uint32_t propsSize = 0;
+    if (!data.ReadUint32(propsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(propsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Display::Composer::V1_0::PropertyObject), false);
+    dataBlock.props.clear();
+    dataBlock.props.reserve(propsSize);
+    for (uint32_t i0 = 0; i0 < propsSize; ++i0) {
+        OHOS::HDI::Display::Composer::V1_0::PropertyObject value0;
+        if (!OHOS::HDI::Display::Composer::V1_0::PropertyObjectBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.props.push_back(value0);
+    }
+    return true;
+}
+
+bool DisplayModeInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool DisplayModeInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::LayerInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::LayerInfo& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::LayerInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::LayerInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::LayerInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerInfo), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerAlphaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::LayerAlpha& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerAlpha))) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerAlphaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::LayerAlpha& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::LayerAlpha *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::LayerAlpha*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::LayerAlpha)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerAlpha), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerAlpha)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool IRectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::IRect& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::IRect))) {
+        return false;
+    }
+    return true;
+}
+
+bool IRectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::IRect& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::IRect *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::IRect*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::IRect)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::IRect), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::IRect)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ISurfaceBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::ISurface& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ISurface))) {
+        return false;
+    }
+    return true;
+}
+
+bool ISurfaceBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::ISurface& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::ISurface *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::ISurface*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::ISurface)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ISurface), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::ISurface)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ILineBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::ILine& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ILine))) {
+        return false;
+    }
+    return true;
+}
+
+bool ILineBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::ILine& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::ILine *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::ILine*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::ILine)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ILine), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::ILine)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ICircleBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::ICircle& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ICircle))) {
+        return false;
+    }
+    return true;
+}
+
+bool ICircleBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::ICircle& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::ICircle *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::ICircle*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::ICircle)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::ICircle), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::ICircle)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RectangleBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::Rectangle& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::Rectangle))) {
+        return false;
+    }
+    return true;
+}
+
+bool RectangleBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::Rectangle& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::Rectangle *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::Rectangle*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::Rectangle)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::Rectangle), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::Rectangle)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GfxOptBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::GfxOpt& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::GfxOpt))) {
+        return false;
+    }
+    return true;
+}
+
+bool GfxOptBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::GfxOpt& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::GfxOpt *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::GfxOpt*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::GfxOpt)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::GfxOpt), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::GfxOpt)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool HDRCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::HDRCapability& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.formatCount)) {
+        HDF_LOGE("%{public}s: write dataBlock.formatCount failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.formats)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.formats", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.maxLum)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxLum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.maxAverageLum)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxAverageLum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.minLum)) {
+        HDF_LOGE("%{public}s: write dataBlock.minLum failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HDRCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::HDRCapability& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.formatCount)) {
+        HDF_LOGE("%{public}s: read dataBlock.formatCount failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.formats)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.formats", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.maxLum)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxLum failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.maxAverageLum)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxAverageLum failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.minLum)) {
+        HDF_LOGE("%{public}s: read dataBlock.minLum failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HDRMetaDataBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::HDRMetaData& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::HDRMetaData))) {
+        return false;
+    }
+    return true;
+}
+
+bool HDRMetaDataBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::HDRMetaData& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::HDRMetaData *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::HDRMetaData*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::HDRMetaData)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::HDRMetaData), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::HDRMetaData)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PresentTimestampBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::PresentTimestamp& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::PresentTimestamp))) {
+        return false;
+    }
+    return true;
+}
+
+bool PresentTimestampBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::PresentTimestamp& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::PresentTimestamp *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::PresentTimestamp*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::PresentTimestamp)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::PresentTimestamp), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::PresentTimestamp)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ExtDataHandleBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::ExtDataHandle& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.fd)) {
+        HDF_LOGE("%{public}s: write dataBlock.fd failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.reserveInts)) {
+        HDF_LOGE("%{public}s: write dataBlock.reserveInts failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.reserve)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.reserve", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExtDataHandleBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::ExtDataHandle& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.fd)) {
+        HDF_LOGE("%{public}s: read dataBlock.fd failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.reserveInts)) {
+        HDF_LOGE("%{public}s: read dataBlock.reserveInts failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.reserve)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.reserve", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool YUVDescInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::YUVDescInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::YUVDescInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool YUVDescInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::YUVDescInfo& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::YUVDescInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::YUVDescInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::YUVDescInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::YUVDescInfo), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::YUVDescInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool HdifdInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::HdifdInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: write dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteStrongParcelable(dataBlock.hdiFd)) {
+        HDF_LOGE("%{public}s: write dataBlock.hdiFd failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdifdInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::HdifdInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: read dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    dataBlock.hdiFd = data.ReadStrongParcelable<HdifdParcelable>();
+    return true;
+}
+
+bool LayerColorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Display::Composer::V1_0::LayerColor& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerColor))) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerColorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Display::Composer::V1_0::LayerColor& dataBlock)
+{
+    const OHOS::HDI::Display::Composer::V1_0::LayerColor *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Display::Composer::V1_0::LayerColor*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Display::Composer::V1_0::LayerColor)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerColor), dataBlockPtr, sizeof(OHOS::HDI::Display::Composer::V1_0::LayerColor)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Composer
+} // Display
+} // HDI
+} // OHOS

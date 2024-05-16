@@ -1,0 +1,222 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/vibrator_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    vibrator_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Vibrator {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> OHOS::HDI::Vibrator::V1_0::IVibratorInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Vibrator::V1_0::IVibratorInterface::Get("vibrator_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> OHOS::HDI::Vibrator::V1_0::IVibratorInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "vibrator_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Vibrator::V1_0::IVibratorInterface *>(impl);
+}
+
+
+OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStub(const sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::~VibratorInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_VIBRATOR_INTERFACE_GET_VERSION:
+            return VibratorInterfaceStubGetVersion(data, reply, option);
+        case CMD_VIBRATOR_INTERFACE_START_ONCE:
+            return VibratorInterfaceStubStartOnce(data, reply, option);
+        case CMD_VIBRATOR_INTERFACE_START:
+            return VibratorInterfaceStubStart(data, reply, option);
+        case CMD_VIBRATOR_INTERFACE_STOP:
+            return VibratorInterfaceStubStop(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStartOnce(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption)
+{
+    return OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStartOnce_(vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStart(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption)
+{
+    return OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStart_(vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStop(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption)
+{
+    return OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStop_(vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubGetVersion(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption)
+{
+    return OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubGetVersion_(vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStartOnce_(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption, sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> impl)
+{
+    if (vibratorInterfaceData.ReadInterfaceToken() != OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t duration = 0;
+    if (!vibratorInterfaceData.ReadUint32(duration)) {
+        HDF_LOGE("%{public}s: read duration failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vibratorInterfaceRet = impl->StartOnce(duration);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStart_(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption, sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> impl)
+{
+    if (vibratorInterfaceData.ReadInterfaceToken() != OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* effectTypeCp = vibratorInterfaceData.ReadCString();
+    if (effectTypeCp == nullptr) {
+        HDF_LOGE("%{public}s: read effectType failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string effectType = effectTypeCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vibratorInterfaceRet = impl->Start(effectType);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubStop_(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption, sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> impl)
+{
+    if (vibratorInterfaceData.ReadInterfaceToken() != OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Vibrator::V1_0::HdfVibratorMode mode = static_cast<enum HdfVibratorMode>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!vibratorInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write mode failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        mode = static_cast<enum HdfVibratorMode>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vibratorInterfaceRet = impl->Stop(mode);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_0::VibratorInterfaceStub::VibratorInterfaceStubGetVersion_(MessageParcel& vibratorInterfaceData, MessageParcel& vibratorInterfaceReply, MessageOption& vibratorInterfaceOption, sptr<OHOS::HDI::Vibrator::V1_0::IVibratorInterface> impl)
+{
+    if (vibratorInterfaceData.ReadInterfaceToken() != OHOS::HDI::Vibrator::V1_0::IVibratorInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vibratorInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!vibratorInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+} // V1_0
+} // Vibrator
+} // HDI
+} // OHOS

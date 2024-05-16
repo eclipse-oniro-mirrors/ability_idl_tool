@@ -1,0 +1,194 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/media_key_session_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    media_key_session_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEvent(OHOS::HDI::Drm::V1_0::EventType eventType,
+     int32_t extra, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEvent_(eventType, extra, data, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEventKeyChange(const std::map<std::vector<uint8_t>,
+     OHOS::HDI::Drm::V1_0::MediaKeySessionKeyStatus>& keyStatus, bool newKeysAvailable)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEventKeyChange_(keyStatus, newKeysAvailable, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEvent_(OHOS::HDI::Drm::V1_0::EventType eventType,
+     int32_t extra, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySessionCallbackData;
+    MessageParcel mediaKeySessionCallbackReply;
+    MessageOption mediaKeySessionCallbackOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySessionCallbackData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySessionCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySessionCallbackData.WriteUint64(static_cast<uint64_t>(eventType))) {
+        HDF_LOGE("%{public}s: write eventType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySessionCallbackData.WriteInt32(extra)) {
+        HDF_LOGE("%{public}s: write extra failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySessionCallbackData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySessionCallbackRet = remote->SendRequest(CMD_MEDIA_KEY_SESSION_CALLBACK_SEND_EVENT, mediaKeySessionCallbackData, mediaKeySessionCallbackReply, mediaKeySessionCallbackOption);
+    if (mediaKeySessionCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySessionCallbackRet);
+        return mediaKeySessionCallbackRet;
+    }
+
+    return mediaKeySessionCallbackRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::SendEventKeyChange_(const std::map<std::vector<uint8_t>,
+     OHOS::HDI::Drm::V1_0::MediaKeySessionKeyStatus>& keyStatus, bool newKeysAvailable, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySessionCallbackData;
+    MessageParcel mediaKeySessionCallbackReply;
+    MessageOption mediaKeySessionCallbackOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySessionCallbackData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySessionCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySessionCallbackData.WriteUint32(keyStatus.size())) {
+        HDF_LOGE("%{public}s: write keyStatus failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (auto it0 : keyStatus) {
+        if (!WritePodArray(mediaKeySessionCallbackData, (it0.first))) {
+            HDF_LOGE("%{public}s: failed to write (it0.first)", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        if (!mediaKeySessionCallbackData.WriteUint64(static_cast<uint64_t>((it0.second)))) {
+            HDF_LOGE("%{public}s: write (it0.second) failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (!mediaKeySessionCallbackData.WriteBool(newKeysAvailable)) {
+        HDF_LOGE("%{public}s: write newKeysAvailable failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySessionCallbackRet = remote->SendRequest(CMD_MEDIA_KEY_SESSION_CALLBACK_SEND_EVENT_KEY_CHANGE, mediaKeySessionCallbackData, mediaKeySessionCallbackReply, mediaKeySessionCallbackOption);
+    if (mediaKeySessionCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySessionCallbackRet);
+        return mediaKeySessionCallbackRet;
+    }
+
+    return mediaKeySessionCallbackRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySessionCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySessionCallbackData;
+    MessageParcel mediaKeySessionCallbackReply;
+    MessageOption mediaKeySessionCallbackOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySessionCallbackData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySessionCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySessionCallbackRet = remote->SendRequest(CMD_MEDIA_KEY_SESSION_CALLBACK_GET_VERSION, mediaKeySessionCallbackData, mediaKeySessionCallbackReply, mediaKeySessionCallbackOption);
+    if (mediaKeySessionCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySessionCallbackRet);
+        return mediaKeySessionCallbackRet;
+    }
+
+    if (!mediaKeySessionCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySessionCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySessionCallbackRet;
+}
+
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

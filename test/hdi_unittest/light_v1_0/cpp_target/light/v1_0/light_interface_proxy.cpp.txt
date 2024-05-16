@@ -1,0 +1,355 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/light_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    light_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Light {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Light::V1_0::ILightInterface> OHOS::HDI::Light::V1_0::ILightInterface::Get(bool isStub)
+{
+    return ILightInterface::Get("light_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Light::V1_0::ILightInterface> OHOS::HDI::Light::V1_0::ILightInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "light_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Light::V1_0::ILightInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Light::V1_0::LightInterfaceProxy> proxy = new OHOS::HDI::Light::V1_0::LightInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Light::V1_0::LightInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t lightInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Light::V1_0::LightInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Light::V1_0::LightInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetLightInfo(std::vector<OHOS::HDI::Light::V1_0::HdfLightInfo>& info)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetLightInfo_(info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnLight(int32_t lightId,
+     const OHOS::HDI::Light::V1_0::HdfLightEffect& effect)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnLight_(lightId, effect, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnMultiLights(int32_t lightId,
+     const std::vector<OHOS::HDI::Light::V1_0::HdfLightColor>& colors)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnMultiLights_(lightId, colors, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOffLight(int32_t lightId)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOffLight_(lightId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetLightInfo_(std::vector<OHOS::HDI::Light::V1_0::HdfLightInfo>& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel lightInterfaceData;
+    MessageParcel lightInterfaceReply;
+    MessageOption lightInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!lightInterfaceData.WriteInterfaceToken(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t lightInterfaceRet = remote->SendRequest(CMD_LIGHT_INTERFACE_GET_LIGHT_INFO, lightInterfaceData, lightInterfaceReply, lightInterfaceOption);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    uint32_t infoSize = 0;
+    if (!lightInterfaceReply.ReadUint32(infoSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(infoSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Light::V1_0::HdfLightInfo), HDF_ERR_INVALID_PARAM);
+    info.clear();
+    info.reserve(infoSize);
+    for (uint32_t i0 = 0; i0 < infoSize; ++i0) {
+        OHOS::HDI::Light::V1_0::HdfLightInfo value0;
+        if (!HdfLightInfoBlockUnmarshalling(lightInterfaceReply, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        info.push_back(value0);
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnLight_(int32_t lightId,
+     const OHOS::HDI::Light::V1_0::HdfLightEffect& effect, const sptr<IRemoteObject> remote)
+{
+    MessageParcel lightInterfaceData;
+    MessageParcel lightInterfaceReply;
+    MessageOption lightInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!lightInterfaceData.WriteInterfaceToken(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceData.WriteInt32(lightId)) {
+        HDF_LOGE("%{public}s: write lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Light::V1_0::HdfLightEffectBlockMarshalling(lightInterfaceData, effect)) {
+        HDF_LOGE("%{public}s: write effect failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t lightInterfaceRet = remote->SendRequest(CMD_LIGHT_INTERFACE_TURN_ON_LIGHT, lightInterfaceData, lightInterfaceReply, lightInterfaceOption);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOnMultiLights_(int32_t lightId,
+     const std::vector<OHOS::HDI::Light::V1_0::HdfLightColor>& colors, const sptr<IRemoteObject> remote)
+{
+    MessageParcel lightInterfaceData;
+    MessageParcel lightInterfaceReply;
+    MessageOption lightInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!lightInterfaceData.WriteInterfaceToken(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceData.WriteInt32(lightId)) {
+        HDF_LOGE("%{public}s: write lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(lightInterfaceData, colors)) {
+        HDF_LOGE("%{public}s: failed to write colors", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t lightInterfaceRet = remote->SendRequest(CMD_LIGHT_INTERFACE_TURN_ON_MULTI_LIGHTS, lightInterfaceData, lightInterfaceReply, lightInterfaceOption);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::TurnOffLight_(int32_t lightId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel lightInterfaceData;
+    MessageParcel lightInterfaceReply;
+    MessageOption lightInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!lightInterfaceData.WriteInterfaceToken(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceData.WriteInt32(lightId)) {
+        HDF_LOGE("%{public}s: write lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t lightInterfaceRet = remote->SendRequest(CMD_LIGHT_INTERFACE_TURN_OFF_LIGHT, lightInterfaceData, lightInterfaceReply, lightInterfaceOption);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel lightInterfaceData;
+    MessageParcel lightInterfaceReply;
+    MessageOption lightInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!lightInterfaceData.WriteInterfaceToken(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t lightInterfaceRet = remote->SendRequest(CMD_LIGHT_INTERFACE_GET_VERSION, lightInterfaceData, lightInterfaceReply, lightInterfaceOption);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    if (!lightInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return lightInterfaceRet;
+}
+
+} // V1_0
+} // Light
+} // HDI
+} // OHOS

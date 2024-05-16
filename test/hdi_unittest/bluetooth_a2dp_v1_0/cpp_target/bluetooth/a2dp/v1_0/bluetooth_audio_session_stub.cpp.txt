@@ -1,0 +1,263 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/bluetooth_audio_session_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "bluetooth/a2dp/v1_0/bluetooth_audio_callback_proxy.h"
+
+#define HDF_LOG_TAG    bluetooth_audio_session_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Bluetooth {
+namespace A2dp {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get(bool isStub)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get("bluetooth_audio_session_service", isStub);
+}
+
+sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "bluetooth_audio_session_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession *>(impl);
+}
+
+
+OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStub(const sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> &impl)
+    : IPCObjectStub(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::~BluetoothAudioSessionStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_BLUETOOTH_AUDIO_SESSION_GET_VERSION:
+            return BluetoothAudioSessionStubGetVersion(data, reply, option);
+        case CMD_BLUETOOTH_AUDIO_SESSION_START_SESSION:
+            return BluetoothAudioSessionStubStartSession(data, reply, option);
+        case CMD_BLUETOOTH_AUDIO_SESSION_STOP_SESSION:
+            return BluetoothAudioSessionStubStopSession(data, reply, option);
+        case CMD_BLUETOOTH_AUDIO_SESSION_RENDER_OPERATION_RESULT:
+            return BluetoothAudioSessionStubRenderOperationResult(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStartSession(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStartSession_(bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption, impl_);
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStopSession(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStopSession_(bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption, impl_);
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubRenderOperationResult(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubRenderOperationResult_(bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption, impl_);
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubGetVersion(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubGetVersion_(bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption, impl_);
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStartSession_(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption, sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> impl)
+{
+    if (bluetoothAudioSessionData.ReadInterfaceToken() != OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType = static_cast<enum SessionType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!bluetoothAudioSessionData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write sessionType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        sessionType = static_cast<enum SessionType>(enumTmp);
+    }
+
+    sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = bluetoothAudioSessionData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::shared_ptr<SharedMemQueue<uint8_t>> queue;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t bluetoothAudioSessionRet = impl->StartSession(sessionType, callbackObj, queue);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    if (queue == nullptr || !queue->IsGood() || queue->GetMeta() == nullptr || !queue->GetMeta()->Marshalling(bluetoothAudioSessionReply)) {
+        HDF_LOGE("%{public}s: write queue failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubStopSession_(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption, sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> impl)
+{
+    if (bluetoothAudioSessionData.ReadInterfaceToken() != OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType = static_cast<enum SessionType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!bluetoothAudioSessionData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write sessionType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        sessionType = static_cast<enum SessionType>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t bluetoothAudioSessionRet = impl->StopSession(sessionType);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubRenderOperationResult_(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption, sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> impl)
+{
+    if (bluetoothAudioSessionData.ReadInterfaceToken() != OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Bluetooth::A2dp::V1_0::Operation operation = static_cast<enum Operation>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!bluetoothAudioSessionData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write operation failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        operation = static_cast<enum Operation>(enumTmp);
+    }
+
+    OHOS::HDI::Bluetooth::A2dp::V1_0::Status status = static_cast<enum Status>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!bluetoothAudioSessionData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum Status>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t bluetoothAudioSessionRet = impl->RenderOperationResult(operation, status);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionStub::BluetoothAudioSessionStubGetVersion_(MessageParcel& bluetoothAudioSessionData, MessageParcel& bluetoothAudioSessionReply, MessageOption& bluetoothAudioSessionOption, sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> impl)
+{
+    if (bluetoothAudioSessionData.ReadInterfaceToken() != OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t bluetoothAudioSessionRet = impl->GetVersion(majorVer, minorVer);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    if (!bluetoothAudioSessionReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+} // V1_0
+} // A2dp
+} // Bluetooth
+} // HDI
+} // OHOS

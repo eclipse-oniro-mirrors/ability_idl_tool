@@ -1,0 +1,4165 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/wpa_types.h"
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)
+{
+    const void * dataPtr = NULL;
+    void *memPtr = NULL;
+    uint32_t elementCount = 0;
+    if (count == NULL || data == NULL || elementSize == 0) {
+        HDF_LOGE("%{public}s: invalid param", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read element count", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        *count = elementCount;
+        return true;
+    }
+
+    dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        return false;
+    }
+
+    memPtr = OsalMemCalloc(elementSize * elementCount);
+    if (memPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc buffer", __func__);
+        return false;
+    }
+
+    if (memcpy_s(memPtr, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy buffer", __func__);
+        OsalMemFree(memPtr);
+        return false;
+    }
+
+    *data = memPtr;
+    *count = elementCount;
+    return true;
+}
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiFeatureInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiFeatureInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->ifName)) {
+        HDF_LOGE("%{public}s: write dataBlock->ifName failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->type)) {
+        HDF_LOGE("%{public}s: write dataBlock->type failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiFeatureInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiFeatureInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        const char *ifNameCp = HdfSbufReadString(data);
+        if (ifNameCp == NULL) {
+            HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ifName = strdup(ifNameCp);
+        if (dataBlock->ifName == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->type)) {
+        HDF_LOGE("%{public}s: read dataBlock->type failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    return false;
+}
+
+void HdiFeatureInfoFree(struct HdiFeatureInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ifName != NULL) {
+        OsalMemFree(dataBlock->ifName);
+        dataBlock->ifName = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWifiStatusBlockMarshalling(struct HdfSBuf *data, const struct HdiWifiStatus *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->ssid)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssid failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->ssidLen failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->keyMgmt)) {
+        HDF_LOGE("%{public}s: write dataBlock->keyMgmt failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->keyMgmtLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->keyMgmtLen failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->address, sizeof(uint8_t), dataBlock->addressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->address", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWifiStatusBlockUnmarshalling(struct HdfSBuf *data, struct HdiWifiStatus *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        const char *ssidCp = HdfSbufReadString(data);
+        if (ssidCp == NULL) {
+            HDF_LOGE("%{public}s: read ssidCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = strdup(ssidCp);
+        if (dataBlock->ssid == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: read dataBlock->ssidLen failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        const char *keyMgmtCp = HdfSbufReadString(data);
+        if (keyMgmtCp == NULL) {
+            HDF_LOGE("%{public}s: read keyMgmtCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->keyMgmt = strdup(keyMgmtCp);
+        if (dataBlock->keyMgmt == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->keyMgmtLen)) {
+        HDF_LOGE("%{public}s: read dataBlock->keyMgmtLen failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* addressCp = NULL;
+        uint32_t addressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&addressCp, sizeof(uint8_t), &addressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read addressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->address = addressCp;
+        dataBlock->addressLen = addressCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->keyMgmt != NULL) {
+        OsalMemFree(dataBlock->keyMgmt);
+        dataBlock->keyMgmt = NULL;
+    }
+
+    if (dataBlock->address != NULL) {
+        OsalMemFree(dataBlock->address);
+        dataBlock->address = NULL;
+    }
+
+    return false;
+}
+
+void HdiWifiStatusFree(struct HdiWifiStatus *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->keyMgmt != NULL) {
+        OsalMemFree(dataBlock->keyMgmt);
+        dataBlock->keyMgmt = NULL;
+    }
+
+    if (dataBlock->address != NULL) {
+        OsalMemFree(dataBlock->address);
+        dataBlock->address = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWifiWpaNetworkInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiWifiWpaNetworkInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->id)) {
+        HDF_LOGE("%{public}s: write dataBlock->id failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->flags, sizeof(uint8_t), dataBlock->flagsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->flags", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWifiWpaNetworkInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiWifiWpaNetworkInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->id)) {
+        HDF_LOGE("%{public}s: read dataBlock->id failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* flagsCp = NULL;
+        uint32_t flagsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&flagsCp, sizeof(uint8_t), &flagsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read flagsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->flags = flagsCp;
+        dataBlock->flagsLen = flagsCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->flags != NULL) {
+        OsalMemFree(dataBlock->flags);
+        dataBlock->flags = NULL;
+    }
+
+    return false;
+}
+
+void HdiWifiWpaNetworkInfoFree(struct HdiWifiWpaNetworkInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->flags != NULL) {
+        OsalMemFree(dataBlock->flags);
+        dataBlock->flags = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWifiWpsParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWifiWpsParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->anyFlag)) {
+        HDF_LOGE("%{public}s: write dataBlock->anyFlag failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->multiAp)) {
+        HDF_LOGE("%{public}s: write dataBlock->multiAp failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->pinCode, sizeof(uint8_t), dataBlock->pinCodeLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->pinCode", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWifiWpsParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWifiWpsParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->anyFlag)) {
+        HDF_LOGE("%{public}s: read dataBlock->anyFlag failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->multiAp)) {
+        HDF_LOGE("%{public}s: read dataBlock->multiAp failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* pinCodeCp = NULL;
+        uint32_t pinCodeCpLen = 0;
+        if (!ReadPodArray(data, (void**)&pinCodeCp, sizeof(uint8_t), &pinCodeCpLen)) {
+            HDF_LOGE("%{public}s: failed to read pinCodeCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->pinCode = pinCodeCp;
+        dataBlock->pinCodeLen = pinCodeCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->pinCode != NULL) {
+        OsalMemFree(dataBlock->pinCode);
+        dataBlock->pinCode = NULL;
+    }
+
+    return false;
+}
+
+void HdiWifiWpsParamFree(struct HdiWifiWpsParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->pinCode != NULL) {
+        OsalMemFree(dataBlock->pinCode);
+        dataBlock->pinCode = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaCmdStatusBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaCmdStatus *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->id)) {
+        HDF_LOGE("%{public}s: write dataBlock->id failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->keyMgmt, sizeof(uint8_t), dataBlock->keyMgmtLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->keyMgmt", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->address, sizeof(uint8_t), dataBlock->addressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->address", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaCmdStatusBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaCmdStatus *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->id)) {
+        HDF_LOGE("%{public}s: read dataBlock->id failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* keyMgmtCp = NULL;
+        uint32_t keyMgmtCpLen = 0;
+        if (!ReadPodArray(data, (void**)&keyMgmtCp, sizeof(uint8_t), &keyMgmtCpLen)) {
+            HDF_LOGE("%{public}s: failed to read keyMgmtCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->keyMgmt = keyMgmtCp;
+        dataBlock->keyMgmtLen = keyMgmtCpLen;
+    }
+
+    {
+        uint8_t* addressCp = NULL;
+        uint32_t addressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&addressCp, sizeof(uint8_t), &addressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read addressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->address = addressCp;
+        dataBlock->addressLen = addressCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->keyMgmt != NULL) {
+        OsalMemFree(dataBlock->keyMgmt);
+        dataBlock->keyMgmt = NULL;
+    }
+
+    if (dataBlock->address != NULL) {
+        OsalMemFree(dataBlock->address);
+        dataBlock->address = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaCmdStatusFree(struct HdiWpaCmdStatus *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->keyMgmt != NULL) {
+        OsalMemFree(dataBlock->keyMgmt);
+        dataBlock->keyMgmt = NULL;
+    }
+
+    if (dataBlock->address != NULL) {
+        OsalMemFree(dataBlock->address);
+        dataBlock->address = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaDisconnectParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaDisconnectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->reasonCode)) {
+        HDF_LOGE("%{public}s: write dataBlock->reasonCode failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->locallyGenerated)) {
+        HDF_LOGE("%{public}s: write dataBlock->locallyGenerated failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaDisconnectParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaDisconnectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->reasonCode)) {
+        HDF_LOGE("%{public}s: read dataBlock->reasonCode failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->locallyGenerated)) {
+        HDF_LOGE("%{public}s: read dataBlock->locallyGenerated failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaDisconnectParamFree(struct HdiWpaDisconnectParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaConnectParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaConnectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: write dataBlock->networkId failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaConnectParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaConnectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: read dataBlock->networkId failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaConnectParamFree(struct HdiWpaConnectParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaBssidChangedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaBssidChangedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->reason, sizeof(uint8_t), dataBlock->reasonLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->reason", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaBssidChangedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaBssidChangedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* reasonCp = NULL;
+        uint32_t reasonCpLen = 0;
+        if (!ReadPodArray(data, (void**)&reasonCp, sizeof(uint8_t), &reasonCpLen)) {
+            HDF_LOGE("%{public}s: failed to read reasonCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->reason = reasonCp;
+        dataBlock->reasonLen = reasonCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->reason != NULL) {
+        OsalMemFree(dataBlock->reason);
+        dataBlock->reason = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaBssidChangedParamFree(struct HdiWpaBssidChangedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->reason != NULL) {
+        OsalMemFree(dataBlock->reason);
+        dataBlock->reason = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaStateChangedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaStateChangedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->status)) {
+        HDF_LOGE("%{public}s: write dataBlock->status failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: write dataBlock->networkId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaStateChangedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaStateChangedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->status)) {
+        HDF_LOGE("%{public}s: read dataBlock->status failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: read dataBlock->networkId failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaStateChangedParamFree(struct HdiWpaStateChangedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaTempDisabledParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaTempDisabledParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: write dataBlock->networkId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->authFailures)) {
+        HDF_LOGE("%{public}s: write dataBlock->authFailures failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->duration)) {
+        HDF_LOGE("%{public}s: write dataBlock->duration failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->reason, sizeof(uint8_t), dataBlock->reasonLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->reason", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaTempDisabledParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaTempDisabledParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: read dataBlock->networkId failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->authFailures)) {
+        HDF_LOGE("%{public}s: read dataBlock->authFailures failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->duration)) {
+        HDF_LOGE("%{public}s: read dataBlock->duration failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* reasonCp = NULL;
+        uint32_t reasonCpLen = 0;
+        if (!ReadPodArray(data, (void**)&reasonCp, sizeof(uint8_t), &reasonCpLen)) {
+            HDF_LOGE("%{public}s: failed to read reasonCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->reason = reasonCp;
+        dataBlock->reasonLen = reasonCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->reason != NULL) {
+        OsalMemFree(dataBlock->reason);
+        dataBlock->reason = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaTempDisabledParamFree(struct HdiWpaTempDisabledParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->reason != NULL) {
+        OsalMemFree(dataBlock->reason);
+        dataBlock->reason = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaAssociateRejectParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaAssociateRejectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->statusCode)) {
+        HDF_LOGE("%{public}s: write dataBlock->statusCode failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->timeOut)) {
+        HDF_LOGE("%{public}s: write dataBlock->timeOut failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaAssociateRejectParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaAssociateRejectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->statusCode)) {
+        HDF_LOGE("%{public}s: read dataBlock->statusCode failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->timeOut)) {
+        HDF_LOGE("%{public}s: read dataBlock->timeOut failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaAssociateRejectParamFree(struct HdiWpaAssociateRejectParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaRecvScanResultParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaRecvScanResultParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct HdiWpaRecvScanResultParam))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdiWpaRecvScanResultParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaRecvScanResultParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct HdiWpaRecvScanResultParam *dataBlockPtr = (const struct HdiWpaRecvScanResultParam *)HdfSbufReadUnpadBuffer(data, sizeof(struct HdiWpaRecvScanResultParam));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct HdiWpaRecvScanResultParam), dataBlockPtr, sizeof(struct HdiWpaRecvScanResultParam)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void HdiWpaRecvScanResultParamFree(struct HdiWpaRecvScanResultParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool ConnectionCapabilitiesBlockMarshalling(struct HdfSBuf *data, const struct ConnectionCapabilities *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct ConnectionCapabilities))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ConnectionCapabilitiesBlockUnmarshalling(struct HdfSBuf *data, struct ConnectionCapabilities *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct ConnectionCapabilities *dataBlockPtr = (const struct ConnectionCapabilities *)HdfSbufReadUnpadBuffer(data, sizeof(struct ConnectionCapabilities));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct ConnectionCapabilities), dataBlockPtr, sizeof(struct ConnectionCapabilities)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void ConnectionCapabilitiesFree(struct ConnectionCapabilities *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pNetworkInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pNetworkInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->id)) {
+        HDF_LOGE("%{public}s: write dataBlock->id failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->flags, sizeof(uint8_t), dataBlock->flagsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->flags", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pNetworkInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pNetworkInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->id)) {
+        HDF_LOGE("%{public}s: read dataBlock->id failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* flagsCp = NULL;
+        uint32_t flagsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&flagsCp, sizeof(uint8_t), &flagsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read flagsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->flags = flagsCp;
+        dataBlock->flagsLen = flagsCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->flags != NULL) {
+        OsalMemFree(dataBlock->flags);
+        dataBlock->flags = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pNetworkInfoFree(struct HdiP2pNetworkInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->flags != NULL) {
+        OsalMemFree(dataBlock->flags);
+        dataBlock->flags = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pNetworkListBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pNetworkList *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->infoNum)) {
+        HDF_LOGE("%{public}s: write dataBlock->infoNum failed!", __func__);
+        return false;
+    }
+
+    if (dataBlock->infosLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdiP2pNetworkInfo) || !HdfSbufWriteUint32(data, dataBlock->infosLen)) {
+        HDF_LOGE("%{public}s: write dataBlock->infosLen failed!", __func__);
+        return false;
+    }
+
+    if ((dataBlock->infos == NULL && dataBlock->infosLen != 0) || (dataBlock->infos != NULL && dataBlock->infosLen == 0)) {
+        HDF_LOGE("%{public}s: dataBlock->infos is invalid", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < dataBlock->infosLen; i++) {
+        if (!HdiP2pNetworkInfoBlockMarshalling(data, &(dataBlock->infos)[i])) {
+            HDF_LOGE("%{public}s: write (dataBlock->infos)[i] failed!", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool HdiP2pNetworkListBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pNetworkList *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->infoNum)) {
+        HDF_LOGE("%{public}s: read dataBlock->infoNum failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        struct HdiP2pNetworkInfo* infosCp = NULL;
+        uint32_t infosCpLen = 0;
+        if (!HdfSbufReadUint32(data, &infosCpLen)) {
+            HDF_LOGE("%{public}s: read infosCpLen failed!", __func__);
+            goto ERRORS;
+        }
+        if (infosCpLen > HDI_BUFF_MAX_SIZE / sizeof(struct HdiP2pNetworkInfo)) {
+            HDF_LOGE("%{public}s: infosCpLen is invalid data", __func__);
+            goto ERRORS;
+        }
+        if (infosCpLen > 0) {
+            infosCp = (struct HdiP2pNetworkInfo*)OsalMemCalloc(sizeof(struct HdiP2pNetworkInfo) * infosCpLen);
+            if (infosCp == NULL) {
+                goto ERRORS;
+            }
+            for (uint32_t i = 0; i < infosCpLen; i++) {
+                if (!HdiP2pNetworkInfoBlockUnmarshalling(data, &infosCp[i])) {
+                    HDF_LOGE("%{public}s: read &infosCp[i] failed!", __func__);
+                    goto ERRORS;
+                }
+            }
+        }
+        dataBlock->infos = infosCp;
+        dataBlock->infosLen = infosCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->infos != NULL) {
+        for (uint32_t i = 0; i < dataBlock->infosLen; i++) {
+            HdiP2pNetworkInfoFree(&dataBlock->infos[i], false);
+        }
+        OsalMemFree(dataBlock->infos);
+        dataBlock->infos = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pNetworkListFree(struct HdiP2pNetworkList *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->infos != NULL) {
+        for (uint32_t i = 0; i < dataBlock->infosLen; i++) {
+            HdiP2pNetworkInfoFree(&dataBlock->infos[i], false);
+        }
+        OsalMemFree(dataBlock->infos);
+        dataBlock->infos = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pDeviceInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pDeviceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->p2pDeviceAddress, sizeof(uint8_t), dataBlock->p2pDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->p2pDeviceAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->primaryDeviceType, sizeof(uint8_t), dataBlock->primaryDeviceTypeLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->primaryDeviceType", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->deviceName, sizeof(uint8_t), dataBlock->deviceNameLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->deviceName", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: write dataBlock->configMethods failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->deviceCapabilities)) {
+        HDF_LOGE("%{public}s: write dataBlock->deviceCapabilities failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->groupCapabilities)) {
+        HDF_LOGE("%{public}s: write dataBlock->groupCapabilities failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->wfdDeviceInfo, sizeof(uint8_t), dataBlock->wfdDeviceInfoLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->wfdDeviceInfo", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->wfdLength)) {
+        HDF_LOGE("%{public}s: write dataBlock->wfdLength failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->operSsid, sizeof(uint8_t), dataBlock->operSsidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->operSsid", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pDeviceInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pDeviceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    {
+        uint8_t* p2pDeviceAddressCp = NULL;
+        uint32_t p2pDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&p2pDeviceAddressCp, sizeof(uint8_t), &p2pDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read p2pDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->p2pDeviceAddress = p2pDeviceAddressCp;
+        dataBlock->p2pDeviceAddressLen = p2pDeviceAddressCpLen;
+    }
+
+    {
+        uint8_t* primaryDeviceTypeCp = NULL;
+        uint32_t primaryDeviceTypeCpLen = 0;
+        if (!ReadPodArray(data, (void**)&primaryDeviceTypeCp, sizeof(uint8_t), &primaryDeviceTypeCpLen)) {
+            HDF_LOGE("%{public}s: failed to read primaryDeviceTypeCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->primaryDeviceType = primaryDeviceTypeCp;
+        dataBlock->primaryDeviceTypeLen = primaryDeviceTypeCpLen;
+    }
+
+    {
+        uint8_t* deviceNameCp = NULL;
+        uint32_t deviceNameCpLen = 0;
+        if (!ReadPodArray(data, (void**)&deviceNameCp, sizeof(uint8_t), &deviceNameCpLen)) {
+            HDF_LOGE("%{public}s: failed to read deviceNameCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->deviceName = deviceNameCp;
+        dataBlock->deviceNameLen = deviceNameCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: read dataBlock->configMethods failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->deviceCapabilities)) {
+        HDF_LOGE("%{public}s: read dataBlock->deviceCapabilities failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->groupCapabilities)) {
+        HDF_LOGE("%{public}s: read dataBlock->groupCapabilities failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* wfdDeviceInfoCp = NULL;
+        uint32_t wfdDeviceInfoCpLen = 0;
+        if (!ReadPodArray(data, (void**)&wfdDeviceInfoCp, sizeof(uint8_t), &wfdDeviceInfoCpLen)) {
+            HDF_LOGE("%{public}s: failed to read wfdDeviceInfoCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->wfdDeviceInfo = wfdDeviceInfoCp;
+        dataBlock->wfdDeviceInfoLen = wfdDeviceInfoCpLen;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->wfdLength)) {
+        HDF_LOGE("%{public}s: read dataBlock->wfdLength failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* operSsidCp = NULL;
+        uint32_t operSsidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&operSsidCp, sizeof(uint8_t), &operSsidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read operSsidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->operSsid = operSsidCp;
+        dataBlock->operSsidLen = operSsidCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->primaryDeviceType != NULL) {
+        OsalMemFree(dataBlock->primaryDeviceType);
+        dataBlock->primaryDeviceType = NULL;
+    }
+
+    if (dataBlock->deviceName != NULL) {
+        OsalMemFree(dataBlock->deviceName);
+        dataBlock->deviceName = NULL;
+    }
+
+    if (dataBlock->wfdDeviceInfo != NULL) {
+        OsalMemFree(dataBlock->wfdDeviceInfo);
+        dataBlock->wfdDeviceInfo = NULL;
+    }
+
+    if (dataBlock->operSsid != NULL) {
+        OsalMemFree(dataBlock->operSsid);
+        dataBlock->operSsid = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pDeviceInfoFree(struct HdiP2pDeviceInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->primaryDeviceType != NULL) {
+        OsalMemFree(dataBlock->primaryDeviceType);
+        dataBlock->primaryDeviceType = NULL;
+    }
+
+    if (dataBlock->deviceName != NULL) {
+        OsalMemFree(dataBlock->deviceName);
+        dataBlock->deviceName = NULL;
+    }
+
+    if (dataBlock->wfdDeviceInfo != NULL) {
+        OsalMemFree(dataBlock->wfdDeviceInfo);
+        dataBlock->wfdDeviceInfo = NULL;
+    }
+
+    if (dataBlock->operSsid != NULL) {
+        OsalMemFree(dataBlock->operSsid);
+        dataBlock->operSsid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pServiceInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pServiceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->mode)) {
+        HDF_LOGE("%{public}s: write dataBlock->mode failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->version)) {
+        HDF_LOGE("%{public}s: write dataBlock->version failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->name, sizeof(uint8_t), dataBlock->nameLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->name", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->query, sizeof(uint8_t), dataBlock->queryLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->query", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->resp, sizeof(uint8_t), dataBlock->respLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->resp", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pServiceInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pServiceInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->mode)) {
+        HDF_LOGE("%{public}s: read dataBlock->mode failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->version)) {
+        HDF_LOGE("%{public}s: read dataBlock->version failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* nameCp = NULL;
+        uint32_t nameCpLen = 0;
+        if (!ReadPodArray(data, (void**)&nameCp, sizeof(uint8_t), &nameCpLen)) {
+            HDF_LOGE("%{public}s: failed to read nameCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->name = nameCp;
+        dataBlock->nameLen = nameCpLen;
+    }
+
+    {
+        uint8_t* queryCp = NULL;
+        uint32_t queryCpLen = 0;
+        if (!ReadPodArray(data, (void**)&queryCp, sizeof(uint8_t), &queryCpLen)) {
+            HDF_LOGE("%{public}s: failed to read queryCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->query = queryCp;
+        dataBlock->queryLen = queryCpLen;
+    }
+
+    {
+        uint8_t* respCp = NULL;
+        uint32_t respCpLen = 0;
+        if (!ReadPodArray(data, (void**)&respCp, sizeof(uint8_t), &respCpLen)) {
+            HDF_LOGE("%{public}s: failed to read respCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->resp = respCp;
+        dataBlock->respLen = respCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->name != NULL) {
+        OsalMemFree(dataBlock->name);
+        dataBlock->name = NULL;
+    }
+
+    if (dataBlock->query != NULL) {
+        OsalMemFree(dataBlock->query);
+        dataBlock->query = NULL;
+    }
+
+    if (dataBlock->resp != NULL) {
+        OsalMemFree(dataBlock->resp);
+        dataBlock->resp = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pServiceInfoFree(struct HdiP2pServiceInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->name != NULL) {
+        OsalMemFree(dataBlock->name);
+        dataBlock->name = NULL;
+    }
+
+    if (dataBlock->query != NULL) {
+        OsalMemFree(dataBlock->query);
+        dataBlock->query = NULL;
+    }
+
+    if (dataBlock->resp != NULL) {
+        OsalMemFree(dataBlock->resp);
+        dataBlock->resp = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pReqServiceBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pReqService *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->msg, sizeof(uint8_t), dataBlock->msgLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->msg", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pReqServiceBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pReqService *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* msgCp = NULL;
+        uint32_t msgCpLen = 0;
+        if (!ReadPodArray(data, (void**)&msgCp, sizeof(uint8_t), &msgCpLen)) {
+            HDF_LOGE("%{public}s: failed to read msgCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->msg = msgCp;
+        dataBlock->msgLen = msgCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->msg != NULL) {
+        OsalMemFree(dataBlock->msg);
+        dataBlock->msg = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pReqServiceFree(struct HdiP2pReqService *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->msg != NULL) {
+        OsalMemFree(dataBlock->msg);
+        dataBlock->msg = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pServDiscReqInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pServDiscReqInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->dialogToken)) {
+        HDF_LOGE("%{public}s: write dataBlock->dialogToken failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->updateIndic)) {
+        HDF_LOGE("%{public}s: write dataBlock->updateIndic failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->mac, sizeof(uint8_t), dataBlock->macLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->mac", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->tlvs, sizeof(uint8_t), dataBlock->tlvsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->tlvs", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pServDiscReqInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pServDiscReqInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->dialogToken)) {
+        HDF_LOGE("%{public}s: read dataBlock->dialogToken failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->updateIndic)) {
+        HDF_LOGE("%{public}s: read dataBlock->updateIndic failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* macCp = NULL;
+        uint32_t macCpLen = 0;
+        if (!ReadPodArray(data, (void**)&macCp, sizeof(uint8_t), &macCpLen)) {
+            HDF_LOGE("%{public}s: failed to read macCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->mac = macCp;
+        dataBlock->macLen = macCpLen;
+    }
+
+    {
+        uint8_t* tlvsCp = NULL;
+        uint32_t tlvsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&tlvsCp, sizeof(uint8_t), &tlvsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read tlvsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->tlvs = tlvsCp;
+        dataBlock->tlvsLen = tlvsCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pServDiscReqInfoFree(struct HdiP2pServDiscReqInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiHid2dConnectInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiHid2dConnectInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->passphrase, sizeof(uint8_t), dataBlock->passphraseLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->passphrase", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->frequency)) {
+        HDF_LOGE("%{public}s: write dataBlock->frequency failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiHid2dConnectInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiHid2dConnectInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    {
+        uint8_t* passphraseCp = NULL;
+        uint32_t passphraseCpLen = 0;
+        if (!ReadPodArray(data, (void**)&passphraseCp, sizeof(uint8_t), &passphraseCpLen)) {
+            HDF_LOGE("%{public}s: failed to read passphraseCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->passphrase = passphraseCp;
+        dataBlock->passphraseLen = passphraseCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->frequency)) {
+        HDF_LOGE("%{public}s: read dataBlock->frequency failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->passphrase != NULL) {
+        OsalMemFree(dataBlock->passphrase);
+        dataBlock->passphrase = NULL;
+    }
+
+    return false;
+}
+
+void HdiHid2dConnectInfoFree(struct HdiHid2dConnectInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (dataBlock->passphrase != NULL) {
+        OsalMemFree(dataBlock->passphrase);
+        dataBlock->passphrase = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pConnectInfoBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pConnectInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->persistent)) {
+        HDF_LOGE("%{public}s: write dataBlock->persistent failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->mode)) {
+        HDF_LOGE("%{public}s: write dataBlock->mode failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->goIntent)) {
+        HDF_LOGE("%{public}s: write dataBlock->goIntent failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->provdisc)) {
+        HDF_LOGE("%{public}s: write dataBlock->provdisc failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->peerDevAddr, sizeof(uint8_t), dataBlock->peerDevAddrLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->peerDevAddr", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->pin, sizeof(uint8_t), dataBlock->pinLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->pin", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pConnectInfoBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pConnectInfo *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->persistent)) {
+        HDF_LOGE("%{public}s: read dataBlock->persistent failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->mode)) {
+        HDF_LOGE("%{public}s: read dataBlock->mode failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->goIntent)) {
+        HDF_LOGE("%{public}s: read dataBlock->goIntent failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->provdisc)) {
+        HDF_LOGE("%{public}s: read dataBlock->provdisc failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* peerDevAddrCp = NULL;
+        uint32_t peerDevAddrCpLen = 0;
+        if (!ReadPodArray(data, (void**)&peerDevAddrCp, sizeof(uint8_t), &peerDevAddrCpLen)) {
+            HDF_LOGE("%{public}s: failed to read peerDevAddrCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->peerDevAddr = peerDevAddrCp;
+        dataBlock->peerDevAddrLen = peerDevAddrCpLen;
+    }
+
+    {
+        uint8_t* pinCp = NULL;
+        uint32_t pinCpLen = 0;
+        if (!ReadPodArray(data, (void**)&pinCp, sizeof(uint8_t), &pinCpLen)) {
+            HDF_LOGE("%{public}s: failed to read pinCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->pin = pinCp;
+        dataBlock->pinLen = pinCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->peerDevAddr != NULL) {
+        OsalMemFree(dataBlock->peerDevAddr);
+        dataBlock->peerDevAddr = NULL;
+    }
+
+    if (dataBlock->pin != NULL) {
+        OsalMemFree(dataBlock->pin);
+        dataBlock->pin = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pConnectInfoFree(struct HdiP2pConnectInfo *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->peerDevAddr != NULL) {
+        OsalMemFree(dataBlock->peerDevAddr);
+        dataBlock->peerDevAddr = NULL;
+    }
+
+    if (dataBlock->pin != NULL) {
+        OsalMemFree(dataBlock->pin);
+        dataBlock->pin = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pDeviceInfoParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pDeviceInfoParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->p2pDeviceAddress, sizeof(uint8_t), dataBlock->p2pDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->p2pDeviceAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->primaryDeviceType, sizeof(uint8_t), dataBlock->primaryDeviceTypeLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->primaryDeviceType", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->deviceName, sizeof(uint8_t), dataBlock->deviceNameLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->deviceName", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: write dataBlock->configMethods failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->deviceCapabilities)) {
+        HDF_LOGE("%{public}s: write dataBlock->deviceCapabilities failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->groupCapabilities)) {
+        HDF_LOGE("%{public}s: write dataBlock->groupCapabilities failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->wfdDeviceInfo, sizeof(uint8_t), dataBlock->wfdDeviceInfoLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->wfdDeviceInfo", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint32(data, dataBlock->wfdLength)) {
+        HDF_LOGE("%{public}s: write dataBlock->wfdLength failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->operSsid, sizeof(uint8_t), dataBlock->operSsidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->operSsid", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pDeviceInfoParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pDeviceInfoParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    {
+        uint8_t* p2pDeviceAddressCp = NULL;
+        uint32_t p2pDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&p2pDeviceAddressCp, sizeof(uint8_t), &p2pDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read p2pDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->p2pDeviceAddress = p2pDeviceAddressCp;
+        dataBlock->p2pDeviceAddressLen = p2pDeviceAddressCpLen;
+    }
+
+    {
+        uint8_t* primaryDeviceTypeCp = NULL;
+        uint32_t primaryDeviceTypeCpLen = 0;
+        if (!ReadPodArray(data, (void**)&primaryDeviceTypeCp, sizeof(uint8_t), &primaryDeviceTypeCpLen)) {
+            HDF_LOGE("%{public}s: failed to read primaryDeviceTypeCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->primaryDeviceType = primaryDeviceTypeCp;
+        dataBlock->primaryDeviceTypeLen = primaryDeviceTypeCpLen;
+    }
+
+    {
+        uint8_t* deviceNameCp = NULL;
+        uint32_t deviceNameCpLen = 0;
+        if (!ReadPodArray(data, (void**)&deviceNameCp, sizeof(uint8_t), &deviceNameCpLen)) {
+            HDF_LOGE("%{public}s: failed to read deviceNameCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->deviceName = deviceNameCp;
+        dataBlock->deviceNameLen = deviceNameCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: read dataBlock->configMethods failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->deviceCapabilities)) {
+        HDF_LOGE("%{public}s: read dataBlock->deviceCapabilities failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->groupCapabilities)) {
+        HDF_LOGE("%{public}s: read dataBlock->groupCapabilities failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* wfdDeviceInfoCp = NULL;
+        uint32_t wfdDeviceInfoCpLen = 0;
+        if (!ReadPodArray(data, (void**)&wfdDeviceInfoCp, sizeof(uint8_t), &wfdDeviceInfoCpLen)) {
+            HDF_LOGE("%{public}s: failed to read wfdDeviceInfoCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->wfdDeviceInfo = wfdDeviceInfoCp;
+        dataBlock->wfdDeviceInfoLen = wfdDeviceInfoCpLen;
+    }
+
+    if (!HdfSbufReadUint32(data, &dataBlock->wfdLength)) {
+        HDF_LOGE("%{public}s: read dataBlock->wfdLength failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* operSsidCp = NULL;
+        uint32_t operSsidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&operSsidCp, sizeof(uint8_t), &operSsidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read operSsidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->operSsid = operSsidCp;
+        dataBlock->operSsidLen = operSsidCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->primaryDeviceType != NULL) {
+        OsalMemFree(dataBlock->primaryDeviceType);
+        dataBlock->primaryDeviceType = NULL;
+    }
+
+    if (dataBlock->deviceName != NULL) {
+        OsalMemFree(dataBlock->deviceName);
+        dataBlock->deviceName = NULL;
+    }
+
+    if (dataBlock->wfdDeviceInfo != NULL) {
+        OsalMemFree(dataBlock->wfdDeviceInfo);
+        dataBlock->wfdDeviceInfo = NULL;
+    }
+
+    if (dataBlock->operSsid != NULL) {
+        OsalMemFree(dataBlock->operSsid);
+        dataBlock->operSsid = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pDeviceInfoParamFree(struct HdiP2pDeviceInfoParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->primaryDeviceType != NULL) {
+        OsalMemFree(dataBlock->primaryDeviceType);
+        dataBlock->primaryDeviceType = NULL;
+    }
+
+    if (dataBlock->deviceName != NULL) {
+        OsalMemFree(dataBlock->deviceName);
+        dataBlock->deviceName = NULL;
+    }
+
+    if (dataBlock->wfdDeviceInfo != NULL) {
+        OsalMemFree(dataBlock->wfdDeviceInfo);
+        dataBlock->wfdDeviceInfo = NULL;
+    }
+
+    if (dataBlock->operSsid != NULL) {
+        OsalMemFree(dataBlock->operSsid);
+        dataBlock->operSsid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pDeviceLostParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pDeviceLostParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->p2pDeviceAddress, sizeof(uint8_t), dataBlock->p2pDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->p2pDeviceAddress", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: write dataBlock->networkId failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pDeviceLostParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pDeviceLostParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* p2pDeviceAddressCp = NULL;
+        uint32_t p2pDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&p2pDeviceAddressCp, sizeof(uint8_t), &p2pDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read p2pDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->p2pDeviceAddress = p2pDeviceAddressCp;
+        dataBlock->p2pDeviceAddressLen = p2pDeviceAddressCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->networkId)) {
+        HDF_LOGE("%{public}s: read dataBlock->networkId failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pDeviceLostParamFree(struct HdiP2pDeviceLostParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pGoNegotiationRequestParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pGoNegotiationRequestParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->passwordId)) {
+        HDF_LOGE("%{public}s: write dataBlock->passwordId failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pGoNegotiationRequestParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pGoNegotiationRequestParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->passwordId)) {
+        HDF_LOGE("%{public}s: read dataBlock->passwordId failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pGoNegotiationRequestParamFree(struct HdiP2pGoNegotiationRequestParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pGoNegotiationCompletedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pGoNegotiationCompletedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct HdiP2pGoNegotiationCompletedParam))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdiP2pGoNegotiationCompletedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pGoNegotiationCompletedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct HdiP2pGoNegotiationCompletedParam *dataBlockPtr = (const struct HdiP2pGoNegotiationCompletedParam *)HdfSbufReadUnpadBuffer(data, sizeof(struct HdiP2pGoNegotiationCompletedParam));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct HdiP2pGoNegotiationCompletedParam), dataBlockPtr, sizeof(struct HdiP2pGoNegotiationCompletedParam)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void HdiP2pGoNegotiationCompletedParamFree(struct HdiP2pGoNegotiationCompletedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pInvitationReceivedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pInvitationReceivedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->type)) {
+        HDF_LOGE("%{public}s: write dataBlock->type failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->persistentNetworkId)) {
+        HDF_LOGE("%{public}s: write dataBlock->persistentNetworkId failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->operatingFrequency)) {
+        HDF_LOGE("%{public}s: write dataBlock->operatingFrequency failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->goDeviceAddress, sizeof(uint8_t), dataBlock->goDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->goDeviceAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pInvitationReceivedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pInvitationReceivedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->type)) {
+        HDF_LOGE("%{public}s: read dataBlock->type failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->persistentNetworkId)) {
+        HDF_LOGE("%{public}s: read dataBlock->persistentNetworkId failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->operatingFrequency)) {
+        HDF_LOGE("%{public}s: read dataBlock->operatingFrequency failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    {
+        uint8_t* goDeviceAddressCp = NULL;
+        uint32_t goDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&goDeviceAddressCp, sizeof(uint8_t), &goDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read goDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->goDeviceAddress = goDeviceAddressCp;
+        dataBlock->goDeviceAddressLen = goDeviceAddressCpLen;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->goDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->goDeviceAddress);
+        dataBlock->goDeviceAddress = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pInvitationReceivedParamFree(struct HdiP2pInvitationReceivedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->goDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->goDeviceAddress);
+        dataBlock->goDeviceAddress = NULL;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pInvitationResultParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pInvitationResultParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->status)) {
+        HDF_LOGE("%{public}s: write dataBlock->status failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pInvitationResultParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pInvitationResultParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->status)) {
+        HDF_LOGE("%{public}s: read dataBlock->status failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pInvitationResultParamFree(struct HdiP2pInvitationResultParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pGroupStartedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pGroupStartedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->isGo)) {
+        HDF_LOGE("%{public}s: write dataBlock->isGo failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->isPersistent)) {
+        HDF_LOGE("%{public}s: write dataBlock->isPersistent failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->frequency)) {
+        HDF_LOGE("%{public}s: write dataBlock->frequency failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->groupIfName, sizeof(uint8_t), dataBlock->groupIfNameLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->groupIfName", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->ssid, sizeof(uint8_t), dataBlock->ssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->ssid", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->psk, sizeof(uint8_t), dataBlock->pskLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->psk", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->passphrase, sizeof(uint8_t), dataBlock->passphraseLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->passphrase", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->goDeviceAddress, sizeof(uint8_t), dataBlock->goDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->goDeviceAddress", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pGroupStartedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pGroupStartedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->isGo)) {
+        HDF_LOGE("%{public}s: read dataBlock->isGo failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->isPersistent)) {
+        HDF_LOGE("%{public}s: read dataBlock->isPersistent failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->frequency)) {
+        HDF_LOGE("%{public}s: read dataBlock->frequency failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* groupIfNameCp = NULL;
+        uint32_t groupIfNameCpLen = 0;
+        if (!ReadPodArray(data, (void**)&groupIfNameCp, sizeof(uint8_t), &groupIfNameCpLen)) {
+            HDF_LOGE("%{public}s: failed to read groupIfNameCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->groupIfName = groupIfNameCp;
+        dataBlock->groupIfNameLen = groupIfNameCpLen;
+    }
+
+    {
+        uint8_t* ssidCp = NULL;
+        uint32_t ssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&ssidCp, sizeof(uint8_t), &ssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read ssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->ssid = ssidCp;
+        dataBlock->ssidLen = ssidCpLen;
+    }
+
+    {
+        uint8_t* pskCp = NULL;
+        uint32_t pskCpLen = 0;
+        if (!ReadPodArray(data, (void**)&pskCp, sizeof(uint8_t), &pskCpLen)) {
+            HDF_LOGE("%{public}s: failed to read pskCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->psk = pskCp;
+        dataBlock->pskLen = pskCpLen;
+    }
+
+    {
+        uint8_t* passphraseCp = NULL;
+        uint32_t passphraseCpLen = 0;
+        if (!ReadPodArray(data, (void**)&passphraseCp, sizeof(uint8_t), &passphraseCpLen)) {
+            HDF_LOGE("%{public}s: failed to read passphraseCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->passphrase = passphraseCp;
+        dataBlock->passphraseLen = passphraseCpLen;
+    }
+
+    {
+        uint8_t* goDeviceAddressCp = NULL;
+        uint32_t goDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&goDeviceAddressCp, sizeof(uint8_t), &goDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read goDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->goDeviceAddress = goDeviceAddressCp;
+        dataBlock->goDeviceAddressLen = goDeviceAddressCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->groupIfName != NULL) {
+        OsalMemFree(dataBlock->groupIfName);
+        dataBlock->groupIfName = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->psk != NULL) {
+        OsalMemFree(dataBlock->psk);
+        dataBlock->psk = NULL;
+    }
+
+    if (dataBlock->passphrase != NULL) {
+        OsalMemFree(dataBlock->passphrase);
+        dataBlock->passphrase = NULL;
+    }
+
+    if (dataBlock->goDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->goDeviceAddress);
+        dataBlock->goDeviceAddress = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pGroupStartedParamFree(struct HdiP2pGroupStartedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->groupIfName != NULL) {
+        OsalMemFree(dataBlock->groupIfName);
+        dataBlock->groupIfName = NULL;
+    }
+
+    if (dataBlock->ssid != NULL) {
+        OsalMemFree(dataBlock->ssid);
+        dataBlock->ssid = NULL;
+    }
+
+    if (dataBlock->psk != NULL) {
+        OsalMemFree(dataBlock->psk);
+        dataBlock->psk = NULL;
+    }
+
+    if (dataBlock->passphrase != NULL) {
+        OsalMemFree(dataBlock->passphrase);
+        dataBlock->passphrase = NULL;
+    }
+
+    if (dataBlock->goDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->goDeviceAddress);
+        dataBlock->goDeviceAddress = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pGroupRemovedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pGroupRemovedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->isGo)) {
+        HDF_LOGE("%{public}s: write dataBlock->isGo failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->groupIfName, sizeof(uint8_t), dataBlock->groupIfNameLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->groupIfName", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pGroupRemovedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pGroupRemovedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->isGo)) {
+        HDF_LOGE("%{public}s: read dataBlock->isGo failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* groupIfNameCp = NULL;
+        uint32_t groupIfNameCpLen = 0;
+        if (!ReadPodArray(data, (void**)&groupIfNameCp, sizeof(uint8_t), &groupIfNameCpLen)) {
+            HDF_LOGE("%{public}s: failed to read groupIfNameCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->groupIfName = groupIfNameCp;
+        dataBlock->groupIfNameLen = groupIfNameCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->groupIfName != NULL) {
+        OsalMemFree(dataBlock->groupIfName);
+        dataBlock->groupIfName = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pGroupRemovedParamFree(struct HdiP2pGroupRemovedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->groupIfName != NULL) {
+        OsalMemFree(dataBlock->groupIfName);
+        dataBlock->groupIfName = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pProvisionDiscoveryCompletedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pProvisionDiscoveryCompletedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->isRequest)) {
+        HDF_LOGE("%{public}s: write dataBlock->isRequest failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->provDiscStatusCode)) {
+        HDF_LOGE("%{public}s: write dataBlock->provDiscStatusCode failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: write dataBlock->configMethods failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->p2pDeviceAddress, sizeof(uint8_t), dataBlock->p2pDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->p2pDeviceAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->generatedPin, sizeof(uint8_t), dataBlock->generatedPinLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->generatedPin", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pProvisionDiscoveryCompletedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pProvisionDiscoveryCompletedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->isRequest)) {
+        HDF_LOGE("%{public}s: read dataBlock->isRequest failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->provDiscStatusCode)) {
+        HDF_LOGE("%{public}s: read dataBlock->provDiscStatusCode failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->configMethods)) {
+        HDF_LOGE("%{public}s: read dataBlock->configMethods failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* p2pDeviceAddressCp = NULL;
+        uint32_t p2pDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&p2pDeviceAddressCp, sizeof(uint8_t), &p2pDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read p2pDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->p2pDeviceAddress = p2pDeviceAddressCp;
+        dataBlock->p2pDeviceAddressLen = p2pDeviceAddressCpLen;
+    }
+
+    {
+        uint8_t* generatedPinCp = NULL;
+        uint32_t generatedPinCpLen = 0;
+        if (!ReadPodArray(data, (void**)&generatedPinCp, sizeof(uint8_t), &generatedPinCpLen)) {
+            HDF_LOGE("%{public}s: failed to read generatedPinCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->generatedPin = generatedPinCp;
+        dataBlock->generatedPinLen = generatedPinCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->generatedPin != NULL) {
+        OsalMemFree(dataBlock->generatedPin);
+        dataBlock->generatedPin = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pProvisionDiscoveryCompletedParamFree(struct HdiP2pProvisionDiscoveryCompletedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (dataBlock->generatedPin != NULL) {
+        OsalMemFree(dataBlock->generatedPin);
+        dataBlock->generatedPin = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pServDiscReqInfoParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pServDiscReqInfoParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->freq)) {
+        HDF_LOGE("%{public}s: write dataBlock->freq failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->dialogToken)) {
+        HDF_LOGE("%{public}s: write dataBlock->dialogToken failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->updateIndic)) {
+        HDF_LOGE("%{public}s: write dataBlock->updateIndic failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->mac, sizeof(uint8_t), dataBlock->macLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->mac", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->tlvs, sizeof(uint8_t), dataBlock->tlvsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->tlvs", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pServDiscReqInfoParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pServDiscReqInfoParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->freq)) {
+        HDF_LOGE("%{public}s: read dataBlock->freq failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->dialogToken)) {
+        HDF_LOGE("%{public}s: read dataBlock->dialogToken failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->updateIndic)) {
+        HDF_LOGE("%{public}s: read dataBlock->updateIndic failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* macCp = NULL;
+        uint32_t macCpLen = 0;
+        if (!ReadPodArray(data, (void**)&macCp, sizeof(uint8_t), &macCpLen)) {
+            HDF_LOGE("%{public}s: failed to read macCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->mac = macCp;
+        dataBlock->macLen = macCpLen;
+    }
+
+    {
+        uint8_t* tlvsCp = NULL;
+        uint32_t tlvsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&tlvsCp, sizeof(uint8_t), &tlvsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read tlvsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->tlvs = tlvsCp;
+        dataBlock->tlvsLen = tlvsCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pServDiscReqInfoParamFree(struct HdiP2pServDiscReqInfoParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->mac != NULL) {
+        OsalMemFree(dataBlock->mac);
+        dataBlock->mac = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pServDiscRespParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pServDiscRespParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->updateIndicator)) {
+        HDF_LOGE("%{public}s: write dataBlock->updateIndicator failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->tlvs, sizeof(uint8_t), dataBlock->tlvsLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->tlvs", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pServDiscRespParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pServDiscRespParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->updateIndicator)) {
+        HDF_LOGE("%{public}s: read dataBlock->updateIndicator failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    {
+        uint8_t* tlvsCp = NULL;
+        uint32_t tlvsCpLen = 0;
+        if (!ReadPodArray(data, (void**)&tlvsCp, sizeof(uint8_t), &tlvsCpLen)) {
+            HDF_LOGE("%{public}s: failed to read tlvsCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->tlvs = tlvsCp;
+        dataBlock->tlvsLen = tlvsCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pServDiscRespParamFree(struct HdiP2pServDiscRespParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->tlvs != NULL) {
+        OsalMemFree(dataBlock->tlvs);
+        dataBlock->tlvs = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pStaConnectStateParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pStaConnectStateParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->state)) {
+        HDF_LOGE("%{public}s: write dataBlock->state failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->srcAddress, sizeof(uint8_t), dataBlock->srcAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->srcAddress", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->p2pDeviceAddress, sizeof(uint8_t), dataBlock->p2pDeviceAddressLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->p2pDeviceAddress", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiP2pStaConnectStateParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pStaConnectStateParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->state)) {
+        HDF_LOGE("%{public}s: read dataBlock->state failed!", __func__);
+        goto ERRORS;
+    }
+
+    {
+        uint8_t* srcAddressCp = NULL;
+        uint32_t srcAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&srcAddressCp, sizeof(uint8_t), &srcAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read srcAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->srcAddress = srcAddressCp;
+        dataBlock->srcAddressLen = srcAddressCpLen;
+    }
+
+    {
+        uint8_t* p2pDeviceAddressCp = NULL;
+        uint32_t p2pDeviceAddressCpLen = 0;
+        if (!ReadPodArray(data, (void**)&p2pDeviceAddressCp, sizeof(uint8_t), &p2pDeviceAddressCpLen)) {
+            HDF_LOGE("%{public}s: failed to read p2pDeviceAddressCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->p2pDeviceAddress = p2pDeviceAddressCp;
+        dataBlock->p2pDeviceAddressLen = p2pDeviceAddressCpLen;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    return false;
+}
+
+void HdiP2pStaConnectStateParamFree(struct HdiP2pStaConnectStateParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->srcAddress != NULL) {
+        OsalMemFree(dataBlock->srcAddress);
+        dataBlock->srcAddress = NULL;
+    }
+
+    if (dataBlock->p2pDeviceAddress != NULL) {
+        OsalMemFree(dataBlock->p2pDeviceAddress);
+        dataBlock->p2pDeviceAddress = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiP2pIfaceCreatedParamBlockMarshalling(struct HdfSBuf *data, const struct HdiP2pIfaceCreatedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(data, (const uint8_t *)dataBlock, sizeof(struct HdiP2pIfaceCreatedParam))) {
+        HDF_LOGE("%{public}s: failed to write buffer data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdiP2pIfaceCreatedParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiP2pIfaceCreatedParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    const struct HdiP2pIfaceCreatedParam *dataBlockPtr = (const struct HdiP2pIfaceCreatedParam *)HdfSbufReadUnpadBuffer(data, sizeof(struct HdiP2pIfaceCreatedParam));
+    if (dataBlockPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        goto ERRORS;
+    }
+
+    if (memcpy_s(dataBlock, sizeof(struct HdiP2pIfaceCreatedParam), dataBlockPtr, sizeof(struct HdiP2pIfaceCreatedParam)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy data", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    return false;
+}
+
+void HdiP2pIfaceCreatedParamFree(struct HdiP2pIfaceCreatedParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}
+
+bool HdiWpaAuthRejectParamBlockMarshalling(struct HdfSBuf *data, const struct HdiWpaAuthRejectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock->bssid, sizeof(uint8_t), dataBlock->bssidLen)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock->bssid", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->authType)) {
+        HDF_LOGE("%{public}s: write dataBlock->authType failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->authTransaction)) {
+        HDF_LOGE("%{public}s: write dataBlock->authTransaction failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteUint16(data, dataBlock->statusCode)) {
+        HDF_LOGE("%{public}s: write dataBlock->statusCode failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiWpaAuthRejectParamBlockUnmarshalling(struct HdfSBuf *data, struct HdiWpaAuthRejectParam *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        uint8_t* bssidCp = NULL;
+        uint32_t bssidCpLen = 0;
+        if (!ReadPodArray(data, (void**)&bssidCp, sizeof(uint8_t), &bssidCpLen)) {
+            HDF_LOGE("%{public}s: failed to read bssidCp", __func__);
+            goto ERRORS;
+        }
+        dataBlock->bssid = bssidCp;
+        dataBlock->bssidLen = bssidCpLen;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->authType)) {
+        HDF_LOGE("%{public}s: read dataBlock->authType failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->authTransaction)) {
+        HDF_LOGE("%{public}s: read dataBlock->authTransaction failed!", __func__);
+        goto ERRORS;
+    }
+
+    if (!HdfSbufReadUint16(data, &dataBlock->statusCode)) {
+        HDF_LOGE("%{public}s: read dataBlock->statusCode failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    return false;
+}
+
+void HdiWpaAuthRejectParamFree(struct HdiWpaAuthRejectParam *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->bssid != NULL) {
+        OsalMemFree(dataBlock->bssid);
+        dataBlock->bssid = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}

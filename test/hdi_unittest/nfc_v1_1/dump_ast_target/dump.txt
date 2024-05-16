@@ -1,0 +1,142 @@
+AST[name: INfcInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/nfc_v1_1/foo/nfc/v1_1/INfcInterface.idl]
+package ohos.hdi.nfc.v1_1;
+
+import ohos.hdi.nfc.v1_1.NfcTypes;
+import ohos.hdi.nfc.v1_0.INfcInterface;
+import ohos.hdi.nfc.v1_0.NfcTypes;
+
+[mini, lite, full] interface INfcInterface {
+    [mini, lite, full] GetVendorConfig(
+      [out] ohos.hdi.nfc.v1_1.NfcVendorConfig config,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] DoFactoryReset(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] Shutdown(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] IoctlWithResponse(
+      [in] ohos.hdi.nfc.v1_0.NfcCommand cmd,
+      [in] List<unsigned char> data,
+      [out] List<unsigned char> response,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+}
+
+
+AST[name: INfcInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/nfc_v1_1/foo/nfc/v1_0/INfcInterface.idl]
+package ohos.hdi.nfc.v1_0;
+
+import ohos.hdi.nfc.v1_0.INfcCallback;
+import ohos.hdi.nfc.v1_0.NfcTypes;
+
+[mini, lite, full] interface INfcInterface {
+    [mini, lite, full] Open(
+      [in] ohos.hdi.nfc.v1_0.INfcCallback callbackObj,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] CoreInitialized(
+      [in] List<unsigned char> data,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] Prediscover(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] Write(
+      [in] List<unsigned char> data,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] ControlGranted(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] PowerCycle(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] Close(
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+
+    [mini, lite, full] Ioctl(
+      [in] ohos.hdi.nfc.v1_0.NfcCommand cmd,
+      [in] List<unsigned char> data,
+      [out] ohos.hdi.nfc.v1_0.NfcStatus status);
+}
+
+
+AST[name: INfcCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/nfc_v1_1/foo/nfc/v1_0/INfcCallback.idl]
+package ohos.hdi.nfc.v1_0;
+
+import ohos.hdi.nfc.v1_0.NfcTypes;
+
+[mini, lite, full, callback] interface INfcCallback {
+    [mini, lite, full, callback] OnData(
+      [in] List<unsigned char> data);
+
+    [mini, lite, full, callback] OnEvent(
+      [in] ohos.hdi.nfc.v1_0.NfcEvent event,
+      [in] ohos.hdi.nfc.v1_0.NfcStatus status);
+}
+
+
+AST[name: NfcTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/nfc_v1_1/foo/nfc/v1_1/NfcTypes.idl]
+package ohos.hdi.nfc.v1_1;
+
+[mini, lite, full] enum VendorProtocalDiscoveryCfg : int {
+  NCI_PROTOCOL_18092_ACTIVE = 0,
+  NCI_PROTOCOL_B_PRIME = 1,
+  NCI_PROTOCOL_DUAL = 2,
+  NCI_PROTOCOL_15693 = 3,
+  NCI_PROTOCOL_KOVIO = 4,
+  NCI_PROTOCOL_MIFARE = 5,
+  NCI_DISCOVERY_TYPE_POLL_KOVIO = 6,
+  NCI_DISCOVERY_TYPE_POLL_B_PRIME = 7,
+  NCI_DISCOVERY_TYPE_LISTEN_B_PRIME = 8,
+  VENDOR_PROPEIETARY_CFG_MAX = 9,
+};
+
+[mini, lite, full] struct NfcVendorConfig {
+  unsigned int isoDepExtApduLength;
+  unsigned char defaultOffHostRoute;
+  unsigned char defaultOffHostRouteFelica;
+  unsigned char defaultSysCodeRoute;
+  unsigned char defaultSysCodePwrState;
+  unsigned char defaultUnconfiguredRoute;
+  unsigned char esePipeId;
+  unsigned char simPipeId;
+  boolean pollBailOutMode;
+  unsigned char checkAlgorithm;
+  unsigned char[] vendorProtocalDiscoveryCfg;
+  unsigned char vendorProtocalDiscoveryCfgSize;
+  List<unsigned char> hostWhitelist;
+  List<unsigned char> offHostRouteUicc;
+  List<unsigned char> offHostRouteEse;
+  unsigned char defaultIsoDepRoute;
+};
+
+
+AST[name: NfcTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/nfc_v1_1/foo/nfc/v1_0/NfcTypes.idl]
+package ohos.hdi.nfc.v1_0;
+
+[mini, lite, full] enum NfcEvent : int {
+  OPEN_CPLT = 0,
+  CLOSE_CPLT = 1,
+  POST_INIT_CPLT = 2,
+  PRE_DISCOVER_CPLT = 3,
+  REQUEST_CONTROL = 4,
+  RELEASE_CONTROL = 5,
+  ERROR = 6,
+  HCI_NETWORK_RESET = 7,
+};
+
+[mini, lite, full] enum NfcStatus : int {
+  OK = 0,
+  FAILED = 1,
+  ERR_TRANSPORT = 2,
+  ERR_CMD_TIMEOUT = 3,
+  REFUSED = 4,
+};
+
+[mini, lite, full] enum NfcCommand : int {
+  CMD_INVALID = 0,
+};
+
+

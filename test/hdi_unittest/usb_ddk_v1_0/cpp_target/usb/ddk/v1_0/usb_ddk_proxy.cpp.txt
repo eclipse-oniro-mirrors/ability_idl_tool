@@ -1,0 +1,757 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usb_ddk_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    usb_ddk_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace Ddk {
+namespace V1_0 {
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk> OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::Get(bool isStub)
+{
+    return IUsbDdk::Get("usb_ddk_service", isStub);
+}
+
+sptr<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk> OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "usb_ddk_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> proxy = new OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t usbDdkRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Reconnect(
+    sptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Init()
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Init_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Release()
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Release_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceDescriptor(uint64_t deviceId,
+     OHOS::HDI::Usb::Ddk::V1_0::UsbDeviceDescriptor& desc)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceDescriptor_(deviceId, desc, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetConfigDescriptor(uint64_t deviceId, uint8_t configIndex,
+     std::vector<uint8_t>& configDesc)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetConfigDescriptor_(deviceId, configIndex, configDesc, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ClaimInterface(uint64_t deviceId, uint8_t interfaceIndex,
+     uint64_t& interfaceHandle)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ClaimInterface_(deviceId, interfaceIndex, interfaceHandle, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ReleaseInterface(uint64_t interfaceHandle)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ReleaseInterface_(interfaceHandle, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SelectInterfaceSetting(uint64_t interfaceHandle, uint8_t settingIndex)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SelectInterfaceSetting_(interfaceHandle, settingIndex, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetCurrentInterfaceSetting(uint64_t interfaceHandle,
+     uint8_t& settingIndex)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetCurrentInterfaceSetting_(interfaceHandle, settingIndex, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlReadRequest(uint64_t interfaceHandle,
+     const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlReadRequest_(interfaceHandle, setup, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlWriteRequest(uint64_t interfaceHandle,
+     const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlWriteRequest_(interfaceHandle, setup, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendPipeRequest(const OHOS::HDI::Usb::Ddk::V1_0::UsbRequestPipe& pipe,
+     uint32_t size, uint32_t offset, uint32_t length, uint32_t& transferedLength)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendPipeRequest_(pipe, size, offset, length, transferedLength, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceMemMapFd(uint64_t deviceId, int& fd)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceMemMapFd_(deviceId, fd, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Init_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_INIT, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Release_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_RELEASE, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceDescriptor_(uint64_t deviceId,
+     OHOS::HDI::Usb::Ddk::V1_0::UsbDeviceDescriptor& desc, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_GET_DEVICE_DESCRIPTOR, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!UsbDeviceDescriptorBlockUnmarshalling(usbDdkReply, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetConfigDescriptor_(uint64_t deviceId, uint8_t configIndex,
+     std::vector<uint8_t>& configDesc, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint8(configIndex)) {
+        HDF_LOGE("%{public}s: write configIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_GET_CONFIG_DESCRIPTOR, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!ReadPodArray(usbDdkReply, configDesc)) {
+        HDF_LOGE("%{public}s: failed to read configDesc", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ClaimInterface_(uint64_t deviceId, uint8_t interfaceIndex,
+     uint64_t& interfaceHandle, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint8(interfaceIndex)) {
+        HDF_LOGE("%{public}s: write interfaceIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_CLAIM_INTERFACE, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!usbDdkReply.ReadUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: read interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::ReleaseInterface_(uint64_t interfaceHandle,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: write interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_RELEASE_INTERFACE, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SelectInterfaceSetting_(uint64_t interfaceHandle, uint8_t settingIndex,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: write interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint8(settingIndex)) {
+        HDF_LOGE("%{public}s: write settingIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_SELECT_INTERFACE_SETTING, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetCurrentInterfaceSetting_(uint64_t interfaceHandle,
+     uint8_t& settingIndex, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: write interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_GET_CURRENT_INTERFACE_SETTING, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!usbDdkReply.ReadUint8(settingIndex)) {
+        HDF_LOGE("%{public}s: read settingIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlReadRequest_(uint64_t interfaceHandle,
+     const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: write interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetupBlockMarshalling(usbDdkData, setup)) {
+        HDF_LOGE("%{public}s: write setup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_SEND_CONTROL_READ_REQUEST, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!ReadPodArray(usbDdkReply, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendControlWriteRequest_(uint64_t interfaceHandle,
+     const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(interfaceHandle)) {
+        HDF_LOGE("%{public}s: write interfaceHandle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetupBlockMarshalling(usbDdkData, setup)) {
+        HDF_LOGE("%{public}s: write setup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbDdkData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_SEND_CONTROL_WRITE_REQUEST, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::SendPipeRequest_(const OHOS::HDI::Usb::Ddk::V1_0::UsbRequestPipe& pipe,
+     uint32_t size, uint32_t offset, uint32_t length, uint32_t& transferedLength, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::Ddk::V1_0::UsbRequestPipeBlockMarshalling(usbDdkData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint32(size)) {
+        HDF_LOGE("%{public}s: write size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint32(offset)) {
+        HDF_LOGE("%{public}s: write offset failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint32(length)) {
+        HDF_LOGE("%{public}s: write length failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_SEND_PIPE_REQUEST, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!usbDdkReply.ReadUint32(transferedLength)) {
+        HDF_LOGE("%{public}s: read transferedLength failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetDeviceMemMapFd_(uint64_t deviceId, int& fd,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkData.WriteUint64(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_GET_DEVICE_MEM_MAP_FD, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    fd = -1;
+    if (!ReadFileDescriptor(usbDdkReply, fd)) {
+        HDF_LOGE("%{public}s: read fd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+int32_t OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbDdkData;
+    MessageParcel usbDdkReply;
+    MessageOption usbDdkOption(MessageOption::TF_SYNC);
+
+    if (!usbDdkData.WriteInterfaceToken(OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbDdkRet = remote->SendRequest(CMD_USB_DDK_GET_VERSION, usbDdkData, usbDdkReply, usbDdkOption);
+    if (usbDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbDdkRet);
+        return usbDdkRet;
+    }
+
+    if (!usbDdkReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbDdkReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbDdkRet;
+}
+
+} // V1_0
+} // Ddk
+} // Usb
+} // HDI
+} // OHOS

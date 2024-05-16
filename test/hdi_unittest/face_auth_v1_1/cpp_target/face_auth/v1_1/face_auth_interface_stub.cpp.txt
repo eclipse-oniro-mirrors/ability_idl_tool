@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/face_auth_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    face_auth_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace FaceAuth {
+namespace V1_1 {
+
+
+sptr<OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface> OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::Get(bool isStub)
+{
+    return OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::Get("face_auth_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface> OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "face_auth_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface *>(impl);
+}
+
+
+OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStub(const sptr<OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::~FaceAuthInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_FACE_AUTH_INTERFACE_GET_VERSION:
+            return FaceAuthInterfaceStubGetVersion(data, reply, option);
+        case CMD_FACE_AUTH_INTERFACE_GET_EXECUTOR_LIST_V1_1:
+            return FaceAuthInterfaceStubGetExecutorListV1_1(data, reply, option);
+        case CMD_FACE_AUTH_INTERFACE_GET_EXECUTOR_LIST:
+            return FaceAuthInterfaceStubGetExecutorList(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetExecutorListV1_1(MessageParcel& faceAuthInterfaceData, MessageParcel& faceAuthInterfaceReply, MessageOption& faceAuthInterfaceOption)
+{
+    return OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetExecutorListV1_1_(faceAuthInterfaceData, faceAuthInterfaceReply, faceAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetExecutorList(MessageParcel& faceAuthInterfaceData, MessageParcel& faceAuthInterfaceReply, MessageOption& faceAuthInterfaceOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetExecutorList_(faceAuthInterfaceData, faceAuthInterfaceReply, faceAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetVersion(MessageParcel& faceAuthInterfaceData, MessageParcel& faceAuthInterfaceReply, MessageOption& faceAuthInterfaceOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetVersion_(faceAuthInterfaceData, faceAuthInterfaceReply, faceAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::FaceAuthInterfaceStub::FaceAuthInterfaceStubGetExecutorListV1_1_(MessageParcel& faceAuthInterfaceData, MessageParcel& faceAuthInterfaceReply, MessageOption& faceAuthInterfaceOption, sptr<OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface> impl)
+{
+    if (faceAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::FaceAuth::V1_1::IFaceAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool faceAuthInterfaceMemSet = false;
+    if (!faceAuthInterfaceData.ReadBool(faceAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read faceAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor>> executorList;
+    if (faceAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!faceAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor>), HDF_ERR_INVALID_PARAM);
+        executorList.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t faceAuthInterfaceRet = impl->GetExecutorListV1_1(executorList);
+    if (faceAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, faceAuthInterfaceRet);
+        return faceAuthInterfaceRet;
+    }
+
+    if (!faceAuthInterfaceReply.WriteUint32(executorList.size())) {
+        HDF_LOGE("%{public}s: write executorList size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : executorList) {
+        if (it0 == nullptr) {
+            HDF_LOGE("%{public}s: parameter it0 is nullptr!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+
+        if (!faceAuthInterfaceReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(it0, OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor()))) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return faceAuthInterfaceRet;
+}
+} // V1_1
+} // FaceAuth
+} // HDI
+} // OHOS

@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_NFC_V1_0_NFCCALLBACKPROXY_H
+#define OHOS_HDI_NFC_V1_0_NFCCALLBACKPROXY_H
+
+#include "v1_0/infc_callback.h"
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Nfc {
+namespace V1_0 {
+
+class NfcCallbackProxy : public IProxyBroker<OHOS::HDI::Nfc::V1_0::INfcCallback> {
+public:
+    explicit NfcCallbackProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Nfc::V1_0::INfcCallback>(remote) {
+    }
+    virtual ~NfcCallbackProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t OnData(const std::vector<uint8_t>& data) override;
+
+    int32_t OnEvent(OHOS::HDI::Nfc::V1_0::NfcEvent event, OHOS::HDI::Nfc::V1_0::NfcStatus status) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t OnData_(const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t OnEvent_(OHOS::HDI::Nfc::V1_0::NfcEvent event, OHOS::HDI::Nfc::V1_0::NfcStatus status,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+private:
+    static inline BrokerDelegator<OHOS::HDI::Nfc::V1_0::NfcCallbackProxy> delegator_;
+};
+
+} // V1_0
+} // Nfc
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_NFC_V1_0_NFCCALLBACKPROXY_H
+

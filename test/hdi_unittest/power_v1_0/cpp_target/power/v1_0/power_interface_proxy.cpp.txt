@@ -1,0 +1,409 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/power_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    power_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Power::V1_0::IPowerInterface> OHOS::HDI::Power::V1_0::IPowerInterface::Get(bool isStub)
+{
+    return IPowerInterface::Get("power_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Power::V1_0::IPowerInterface> OHOS::HDI::Power::V1_0::IPowerInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "power_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Power::V1_0::IPowerInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Power::V1_0::PowerInterfaceProxy> proxy = new OHOS::HDI::Power::V1_0::PowerInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Power::V1_0::PowerInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t powerInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Power::V1_0::PowerInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Power::V1_0::PowerInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::RegisterCallback(const sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback>& ipowerHdiCallback)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::RegisterCallback_(ipowerHdiCallback, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StartSuspend()
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StartSuspend_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StopSuspend()
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StopSuspend_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::ForceSuspend()
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::ForceSuspend_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendBlock(const std::string& name)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendBlock_(name, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendUnblock(const std::string& name)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendUnblock_(name, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::PowerDump(std::string& info)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::PowerDump_(info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::RegisterCallback_(const sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback>& ipowerHdiCallback, const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (ipowerHdiCallback == nullptr) {
+        HDF_LOGE("%{public}s: parameter ipowerHdiCallback is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(ipowerHdiCallback, OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write ipowerHdiCallback failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_REGISTER_CALLBACK, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StartSuspend_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_START_SUSPEND, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::StopSuspend_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_STOP_SUSPEND, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::ForceSuspend_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_FORCE_SUSPEND, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendBlock_(const std::string& name,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_SUSPEND_BLOCK, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::SuspendUnblock_(const std::string& name,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_SUSPEND_UNBLOCK, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::PowerDump_(std::string& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_POWER_DUMP, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    const char* infoCp = powerInterfaceReply.ReadCString();
+    if (infoCp == nullptr) {
+        HDF_LOGE("%{public}s: read info failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    info = infoCp;
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerInterfaceData;
+    MessageParcel powerInterfaceReply;
+    MessageOption powerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!powerInterfaceData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerInterfaceRet = remote->SendRequest(CMD_POWER_INTERFACE_GET_VERSION, powerInterfaceData, powerInterfaceReply, powerInterfaceOption);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    if (!powerInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerInterfaceRet;
+}
+
+} // V1_0
+} // Power
+} // HDI
+} // OHOS

@@ -1,0 +1,376 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/metadata_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    metadata_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Buffer {
+namespace V1_1 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> OHOS::HDI::Display::Buffer::V1_1::IMetadata::Get(bool isStub)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::IMetadata::Get("metadata_service", isStub);
+}
+
+sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> OHOS::HDI::Display::Buffer::V1_1::IMetadata::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "metadata_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Display::Buffer::V1_1::IMetadata *>(impl);
+}
+
+
+OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStub(const sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Buffer::V1_1::MetadataStub::~MetadataStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_METADATA_GET_VERSION:
+            return MetadataStubGetVersion(data, reply, option);
+        case CMD_METADATA_REGISTER_BUFFER:
+            return MetadataStubRegisterBuffer(data, reply, option);
+        case CMD_METADATA_SET_METADATA:
+            return MetadataStubSetMetadata(data, reply, option);
+        case CMD_METADATA_GET_METADATA:
+            return MetadataStubGetMetadata(data, reply, option);
+        case CMD_METADATA_LIST_METADATA_KEYS:
+            return MetadataStubListMetadataKeys(data, reply, option);
+        case CMD_METADATA_ERASE_METADATA_KEY:
+            return MetadataStubEraseMetadataKey(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubRegisterBuffer(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubRegisterBuffer_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubSetMetadata(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubSetMetadata_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetMetadata(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetMetadata_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubListMetadataKeys(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubListMetadataKeys_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubEraseMetadataKey(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubEraseMetadataKey_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetVersion(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetVersion_(metadataData, metadataReply, metadataOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubRegisterBuffer_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<NativeBuffer> handle = metadataData.ReadStrongParcelable<NativeBuffer>();
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->RegisterBuffer(handle);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubSetMetadata_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<NativeBuffer> handle = metadataData.ReadStrongParcelable<NativeBuffer>();
+
+    uint32_t key = 0;
+    if (!metadataData.ReadUint32(key)) {
+        HDF_LOGE("%{public}s: read key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> value;
+    if (!ReadPodArray(metadataData, value)) {
+        HDF_LOGE("%{public}s: failed to read value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->SetMetadata(handle, key, value);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetMetadata_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool metadataMemSet = false;
+    if (!metadataData.ReadBool(metadataMemSet)) {
+        HDF_LOGE("%{public}s: failed to read metadataMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    sptr<NativeBuffer> handle = metadataData.ReadStrongParcelable<NativeBuffer>();
+
+    uint32_t key = 0;
+    if (!metadataData.ReadUint32(key)) {
+        HDF_LOGE("%{public}s: read key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> value;
+    if (metadataMemSet) {
+        uint32_t capacity = 0;
+        if (!metadataData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        value.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->GetMetadata(handle, key, value);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!WritePodArray(metadataReply, value)) {
+        HDF_LOGE("%{public}s: failed to write value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubListMetadataKeys_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool metadataMemSet = false;
+    if (!metadataData.ReadBool(metadataMemSet)) {
+        HDF_LOGE("%{public}s: failed to read metadataMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    sptr<NativeBuffer> handle = metadataData.ReadStrongParcelable<NativeBuffer>();
+
+    std::vector<uint32_t> keys;
+    if (metadataMemSet) {
+        uint32_t capacity = 0;
+        if (!metadataData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint32_t), HDF_ERR_INVALID_PARAM);
+        keys.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->ListMetadataKeys(handle, keys);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!WritePodArray(metadataReply, keys)) {
+        HDF_LOGE("%{public}s: failed to write keys", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubEraseMetadataKey_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<NativeBuffer> handle = metadataData.ReadStrongParcelable<NativeBuffer>();
+
+    uint32_t key = 0;
+    if (!metadataData.ReadUint32(key)) {
+        HDF_LOGE("%{public}s: read key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->EraseMetadataKey(handle, key);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataStub::MetadataStubGetVersion_(MessageParcel& metadataData, MessageParcel& metadataReply, MessageOption& metadataOption, sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> impl)
+{
+    if (metadataData.ReadInterfaceToken() != OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t metadataRet = impl->GetVersion(majorVer, minorVer);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!metadataReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+} // V1_1
+} // Buffer
+} // Display
+} // HDI
+} // OHOS

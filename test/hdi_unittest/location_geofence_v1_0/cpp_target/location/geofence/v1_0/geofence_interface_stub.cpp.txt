@@ -1,0 +1,238 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/geofence_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "location/geofence/v1_0/geofence_callback_proxy.h"
+
+#define HDF_LOG_TAG    geofence_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Geofence {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::Get("geofence_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "geofence_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface *>(impl);
+}
+
+
+OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStub(const sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::~GeofenceInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_GEOFENCE_INTERFACE_GET_VERSION:
+            return GeofenceInterfaceStubGetVersion(data, reply, option);
+        case CMD_GEOFENCE_INTERFACE_SET_GEOFENCE_CALLBACK:
+            return GeofenceInterfaceStubSetGeofenceCallback(data, reply, option);
+        case CMD_GEOFENCE_INTERFACE_ADD_GNSS_GEOFENCE:
+            return GeofenceInterfaceStubAddGnssGeofence(data, reply, option);
+        case CMD_GEOFENCE_INTERFACE_DELETE_GNSS_GEOFENCE:
+            return GeofenceInterfaceStubDeleteGnssGeofence(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubSetGeofenceCallback(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption)
+{
+    return OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubSetGeofenceCallback_(geofenceInterfaceData, geofenceInterfaceReply, geofenceInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubAddGnssGeofence(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption)
+{
+    return OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubAddGnssGeofence_(geofenceInterfaceData, geofenceInterfaceReply, geofenceInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubDeleteGnssGeofence(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption)
+{
+    return OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubDeleteGnssGeofence_(geofenceInterfaceData, geofenceInterfaceReply, geofenceInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubGetVersion(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption)
+{
+    return OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubGetVersion_(geofenceInterfaceData, geofenceInterfaceReply, geofenceInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubSetGeofenceCallback_(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption, sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> impl)
+{
+    if (geofenceInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = geofenceInterfaceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Location::Geofence::V1_0::GeofenceCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t geofenceInterfaceRet = impl->SetGeofenceCallback(callbackObj);
+    if (geofenceInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceInterfaceRet);
+        return geofenceInterfaceRet;
+    }
+
+    return geofenceInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubAddGnssGeofence_(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption, sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> impl)
+{
+    if (geofenceInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Geofence::V1_0::GeofenceInfo fence;
+    if (!GeofenceInfoBlockUnmarshalling(geofenceInterfaceData, fence)) {
+        HDF_LOGE("%{public}s: read fence failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Geofence::V1_0::GeofenceEvent monitorEvent = static_cast<enum GeofenceEvent>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!geofenceInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write monitorEvent failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        monitorEvent = static_cast<enum GeofenceEvent>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t geofenceInterfaceRet = impl->AddGnssGeofence(fence, monitorEvent);
+    if (geofenceInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceInterfaceRet);
+        return geofenceInterfaceRet;
+    }
+
+    return geofenceInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubDeleteGnssGeofence_(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption, sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> impl)
+{
+    if (geofenceInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t fenceIndex = 0;
+    if (!geofenceInterfaceData.ReadInt32(fenceIndex)) {
+        HDF_LOGE("%{public}s: read fenceIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t geofenceInterfaceRet = impl->DeleteGnssGeofence(fenceIndex);
+    if (geofenceInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceInterfaceRet);
+        return geofenceInterfaceRet;
+    }
+
+    return geofenceInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Geofence::V1_0::GeofenceInterfaceStub::GeofenceInterfaceStubGetVersion_(MessageParcel& geofenceInterfaceData, MessageParcel& geofenceInterfaceReply, MessageOption& geofenceInterfaceOption, sptr<OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface> impl)
+{
+    if (geofenceInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Geofence::V1_0::IGeofenceInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t geofenceInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (geofenceInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceInterfaceRet);
+        return geofenceInterfaceRet;
+    }
+
+    if (!geofenceInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return geofenceInterfaceRet;
+}
+} // V1_0
+} // Geofence
+} // Location
+} // HDI
+} // OHOS

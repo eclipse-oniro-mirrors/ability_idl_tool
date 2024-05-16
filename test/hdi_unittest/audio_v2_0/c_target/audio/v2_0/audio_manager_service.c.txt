@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include "v2_0/iaudio_manager.h"
+
+#define HDF_LOG_TAG    audio_manager_service
+
+struct AudioManagerService {
+    struct IAudioManager interface;
+};
+
+static int32_t AudioManagerGetAllAdapters(struct IAudioManager *self, struct AudioAdapterDescriptor* descs,
+     uint32_t* descsLen)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioManagerLoadAdapter(struct IAudioManager *self, const struct AudioAdapterDescriptor* desc,
+     struct IAudioAdapter** adapter)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioManagerUnloadAdapter(struct IAudioManager *self, const char* adapterName)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioManagerReleaseAudioManagerObject(struct IAudioManager *self)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioManagerGetVersion(struct IAudioManager *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    *majorVer = IAUDIO_MANAGER_MAJOR_VERSION;
+    *minorVer = IAUDIO_MANAGER_MINOR_VERSION;
+    return HDF_SUCCESS;
+}
+
+struct IAudioManager *AudioManagerImplGetInstance(void)
+{
+    struct AudioManagerService *service = (struct AudioManagerService *)OsalMemCalloc(sizeof(struct AudioManagerService));
+    if (service == NULL) {
+        HDF_LOGE("%{public}s: malloc AudioManagerService obj failed!", __func__);
+        return NULL;
+    }
+
+    service->interface.GetAllAdapters = AudioManagerGetAllAdapters;
+    service->interface.LoadAdapter = AudioManagerLoadAdapter;
+    service->interface.UnloadAdapter = AudioManagerUnloadAdapter;
+    service->interface.ReleaseAudioManagerObject = AudioManagerReleaseAudioManagerObject;
+    service->interface.GetVersion = AudioManagerGetVersion;
+    return &service->interface;
+}
+
+void AudioManagerImplRelease(struct IAudioManager *instance)
+{
+    if (instance == NULL) {
+        return;
+    }
+    OsalMemFree(instance);
+}

@@ -1,0 +1,218 @@
+AST[name: IUserAuthInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/user_auth_v1_0/foo/user_auth/v1_0/IUserAuthInterface.idl]
+package ohos.hdi.user_auth.v1_0;
+
+import ohos.hdi.user_auth.v1_0.UserAuthTypes;
+
+[mini, lite, full] interface IUserAuthInterface {
+    [mini, lite, full] Init();
+
+    [mini, lite, full] AddExecutor(
+      [in] ohos.hdi.user_auth.v1_0.ExecutorRegisterInfo info,
+      [out] unsigned long index,
+      [out] unsigned char[] publicKey,
+      [out] unsigned long[] templateIds);
+
+    [mini, lite, full] DeleteExecutor(
+      [in] unsigned long index);
+
+    [mini, lite, full] OpenSession(
+      [in] int userId,
+      [out] unsigned char[] challenge);
+
+    [mini, lite, full] CloseSession(
+      [in] int userId);
+
+    [mini, lite, full] BeginEnrollment(
+      [in] int userId,
+      [in] unsigned char[] authToken,
+      [in] ohos.hdi.user_auth.v1_0.EnrollParam param,
+      [out] ohos.hdi.user_auth.v1_0.ScheduleInfo info);
+
+    [mini, lite, full] UpdateEnrollmentResult(
+      [in] int userId,
+      [in] unsigned char[] scheduleResult,
+      [out] ohos.hdi.user_auth.v1_0.EnrollResultInfo info);
+
+    [mini, lite, full] CancelEnrollment(
+      [in] int userId);
+
+    [mini, lite, full] DeleteCredential(
+      [in] int userId,
+      [in] unsigned long credentialId,
+      [in] unsigned char[] authToken,
+      [out] ohos.hdi.user_auth.v1_0.CredentialInfo info);
+
+    [mini, lite, full] GetCredential(
+      [in] int userId,
+      [in] ohos.hdi.user_auth.v1_0.AuthType authType,
+      [out] ohos.hdi.user_auth.v1_0.CredentialInfo[] infos);
+
+    [mini, lite, full] GetUserInfo(
+      [in] int userId,
+      [out] unsigned long secureUid,
+      [out] ohos.hdi.user_auth.v1_0.PinSubType pinSubType,
+      [out] ohos.hdi.user_auth.v1_0.EnrolledInfo[] infos);
+
+    [mini, lite, full] DeleteUser(
+      [in] int userId,
+      [in] unsigned char[] authToken,
+      [out] ohos.hdi.user_auth.v1_0.CredentialInfo[] deletedInfos);
+
+    [mini, lite, full] EnforceDeleteUser(
+      [in] int userId,
+      [out] ohos.hdi.user_auth.v1_0.CredentialInfo[] deletedInfos);
+
+    [mini, lite, full] BeginAuthentication(
+      [in] unsigned long contextId,
+      [in] ohos.hdi.user_auth.v1_0.AuthSolution param,
+      [out] ohos.hdi.user_auth.v1_0.ScheduleInfo[] scheduleInfos);
+
+    [mini, lite, full] UpdateAuthenticationResult(
+      [in] unsigned long contextId,
+      [in] unsigned char[] scheduleResult,
+      [out] ohos.hdi.user_auth.v1_0.AuthResultInfo info);
+
+    [mini, lite, full] CancelAuthentication(
+      [in] unsigned long contextId);
+
+    [mini, lite, full] BeginIdentification(
+      [in] unsigned long contextId,
+      [in] ohos.hdi.user_auth.v1_0.AuthType authType,
+      [in] unsigned char[] challenge,
+      [in] unsigned int executorSensorHint,
+      [out] ohos.hdi.user_auth.v1_0.ScheduleInfo scheduleInfo);
+
+    [mini, lite, full] UpdateIdentificationResult(
+      [in] unsigned long contextId,
+      [in] unsigned char[] scheduleResult,
+      [out] ohos.hdi.user_auth.v1_0.IdentifyResultInfo info);
+
+    [mini, lite, full] CancelIdentification(
+      [in] unsigned long contextId);
+
+    [mini, lite, full] GetAuthTrustLevel(
+      [in] int userId,
+      [in] ohos.hdi.user_auth.v1_0.AuthType authType,
+      [out] unsigned int authTrustLevel);
+
+    [mini, lite, full] GetValidSolution(
+      [in] int userId,
+      [in] ohos.hdi.user_auth.v1_0.AuthType[] authTypes,
+      [in] unsigned int authTrustLevel,
+      [out] ohos.hdi.user_auth.v1_0.AuthType[] validTypes);
+}
+
+
+AST[name: UserAuthTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/user_auth_v1_0/foo/user_auth/v1_0/UserAuthTypes.idl]
+package ohos.hdi.user_auth.v1_0;
+
+[mini, lite, full] enum AuthType : int {
+  ALL = 0,
+  PIN = 1,
+  FACE = 2,
+  FINGERPRINT = 4,
+};
+
+[mini, lite, full] enum ExecutorRole : int {
+  COLLECTOR = 1,
+  VERIFIER = 2,
+  ALL_IN_ONE = 3,
+};
+
+[mini, lite, full] enum ExecutorSecureLevel : int {
+  ESL0 = 0,
+  ESL1 = 1,
+  ESL2 = 2,
+  ESL3 = 3,
+};
+
+[mini, lite, full] enum PinSubType : int {
+  PIN_SIX = 10000,
+  PIN_NUMBER = 10001,
+  PIN_MIX = 10002,
+};
+
+[mini, lite, full] enum ScheduleMode : int {
+  ENROLL = 0,
+  AUTH = 1,
+  IDENTIFY = 2,
+};
+
+[mini, lite, full] struct ExecutorRegisterInfo {
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+  ohos.hdi.user_auth.v1_0.ExecutorRole executorRole;
+  unsigned int executorSensorHint;
+  unsigned int executorMatcher;
+  ohos.hdi.user_auth.v1_0.ExecutorSecureLevel esl;
+  unsigned char[] publicKey;
+};
+
+[mini, lite, full] struct ExecutorInfo {
+  unsigned long executorIndex;
+  ohos.hdi.user_auth.v1_0.ExecutorRegisterInfo info;
+};
+
+[mini, lite, full] struct ScheduleInfo {
+  unsigned long scheduleId;
+  unsigned long[] templateIds;
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+  unsigned int executorMatcher;
+  unsigned int scheduleMode;
+  ohos.hdi.user_auth.v1_0.ExecutorInfo[] executors;
+};
+
+[mini, lite, full] struct AuthSolution {
+  int userId;
+  unsigned int authTrustLevel;
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+  unsigned int executorSensorHint;
+  unsigned char[] challenge;
+};
+
+[mini, lite, full] struct ExecutorSendMsg {
+  unsigned long executorIndex;
+  int commandId;
+  unsigned char[] msg;
+};
+
+[mini, lite, full] struct AuthResultInfo {
+  int result;
+  int lockoutDuration;
+  int remainAttempts;
+  ohos.hdi.user_auth.v1_0.ExecutorSendMsg[] msgs;
+  unsigned char[] token;
+  unsigned char[] rootSecret;
+};
+
+[mini, lite, full] struct IdentifyResultInfo {
+  int result;
+  int userId;
+  unsigned char[] token;
+};
+
+[mini, lite, full] struct EnrollParam {
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+  unsigned int executorSensorHint;
+};
+
+[mini, lite, full] struct CredentialInfo {
+  unsigned long credentialId;
+  unsigned long executorIndex;
+  unsigned long templateId;
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+  unsigned int executorMatcher;
+  unsigned int executorSensorHint;
+};
+
+[mini, lite, full] struct EnrolledInfo {
+  unsigned long enrolledId;
+  ohos.hdi.user_auth.v1_0.AuthType authType;
+};
+
+[mini, lite, full] struct EnrollResultInfo {
+  unsigned long credentialId;
+  ohos.hdi.user_auth.v1_0.CredentialInfo oldInfo;
+  unsigned char[] rootSecret;
+};
+
+

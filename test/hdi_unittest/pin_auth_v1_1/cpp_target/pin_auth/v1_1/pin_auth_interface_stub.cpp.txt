@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/pin_auth_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    pin_auth_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace PinAuth {
+namespace V1_1 {
+
+
+sptr<OHOS::HDI::PinAuth::V1_1::IPinAuthInterface> OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::Get(bool isStub)
+{
+    return OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::Get("pin_auth_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::PinAuth::V1_1::IPinAuthInterface> OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "pin_auth_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::PinAuth::V1_1::IPinAuthInterface *>(impl);
+}
+
+
+OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStub(const sptr<OHOS::HDI::PinAuth::V1_1::IPinAuthInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::~PinAuthInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_PIN_AUTH_INTERFACE_GET_VERSION:
+            return PinAuthInterfaceStubGetVersion(data, reply, option);
+        case CMD_PIN_AUTH_INTERFACE_GET_EXECUTOR_LIST_V1_1:
+            return PinAuthInterfaceStubGetExecutorListV1_1(data, reply, option);
+        case CMD_PIN_AUTH_INTERFACE_GET_EXECUTOR_LIST:
+            return PinAuthInterfaceStubGetExecutorList(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStubGetExecutorListV1_1(MessageParcel& pinAuthInterfaceData, MessageParcel& pinAuthInterfaceReply, MessageOption& pinAuthInterfaceOption)
+{
+    return OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStubGetExecutorListV1_1_(pinAuthInterfaceData, pinAuthInterfaceReply, pinAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStubGetExecutorList(MessageParcel& pinAuthInterfaceData, MessageParcel& pinAuthInterfaceReply, MessageOption& pinAuthInterfaceOption)
+{
+    return OHOS::HDI::PinAuth::V1_0::PinAuthInterfaceStub::PinAuthInterfaceStubGetExecutorList_(pinAuthInterfaceData, pinAuthInterfaceReply, pinAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStubGetVersion(MessageParcel& pinAuthInterfaceData, MessageParcel& pinAuthInterfaceReply, MessageOption& pinAuthInterfaceOption)
+{
+    return OHOS::HDI::PinAuth::V1_0::PinAuthInterfaceStub::PinAuthInterfaceStubGetVersion_(pinAuthInterfaceData, pinAuthInterfaceReply, pinAuthInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::PinAuthInterfaceStub::PinAuthInterfaceStubGetExecutorListV1_1_(MessageParcel& pinAuthInterfaceData, MessageParcel& pinAuthInterfaceReply, MessageOption& pinAuthInterfaceOption, sptr<OHOS::HDI::PinAuth::V1_1::IPinAuthInterface> impl)
+{
+    if (pinAuthInterfaceData.ReadInterfaceToken() != OHOS::HDI::PinAuth::V1_1::IPinAuthInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool pinAuthInterfaceMemSet = false;
+    if (!pinAuthInterfaceData.ReadBool(pinAuthInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read pinAuthInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<sptr<OHOS::HDI::PinAuth::V1_1::IExecutor>> executorList;
+    if (pinAuthInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!pinAuthInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(sptr<OHOS::HDI::PinAuth::V1_1::IExecutor>), HDF_ERR_INVALID_PARAM);
+        executorList.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t pinAuthInterfaceRet = impl->GetExecutorListV1_1(executorList);
+    if (pinAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, pinAuthInterfaceRet);
+        return pinAuthInterfaceRet;
+    }
+
+    if (!pinAuthInterfaceReply.WriteUint32(executorList.size())) {
+        HDF_LOGE("%{public}s: write executorList size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : executorList) {
+        if (it0 == nullptr) {
+            HDF_LOGE("%{public}s: parameter it0 is nullptr!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+
+        if (!pinAuthInterfaceReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(it0, OHOS::HDI::PinAuth::V1_1::IExecutor::GetDescriptor()))) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return pinAuthInterfaceRet;
+}
+} // V1_1
+} // PinAuth
+} // HDI
+} // OHOS

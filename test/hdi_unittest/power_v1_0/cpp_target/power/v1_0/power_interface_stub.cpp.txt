@@ -1,0 +1,361 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/power_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "power/v1_0/power_hdi_callback_proxy.h"
+
+#define HDF_LOG_TAG    power_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Power::V1_0::IPowerInterface> OHOS::HDI::Power::V1_0::IPowerInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Power::V1_0::IPowerInterface::Get("power_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Power::V1_0::IPowerInterface> OHOS::HDI::Power::V1_0::IPowerInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "power_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Power::V1_0::IPowerInterface *>(impl);
+}
+
+
+OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStub(const sptr<OHOS::HDI::Power::V1_0::IPowerInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Power::V1_0::PowerInterfaceStub::~PowerInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_POWER_INTERFACE_GET_VERSION:
+            return PowerInterfaceStubGetVersion(data, reply, option);
+        case CMD_POWER_INTERFACE_REGISTER_CALLBACK:
+            return PowerInterfaceStubRegisterCallback(data, reply, option);
+        case CMD_POWER_INTERFACE_START_SUSPEND:
+            return PowerInterfaceStubStartSuspend(data, reply, option);
+        case CMD_POWER_INTERFACE_STOP_SUSPEND:
+            return PowerInterfaceStubStopSuspend(data, reply, option);
+        case CMD_POWER_INTERFACE_FORCE_SUSPEND:
+            return PowerInterfaceStubForceSuspend(data, reply, option);
+        case CMD_POWER_INTERFACE_SUSPEND_BLOCK:
+            return PowerInterfaceStubSuspendBlock(data, reply, option);
+        case CMD_POWER_INTERFACE_SUSPEND_UNBLOCK:
+            return PowerInterfaceStubSuspendUnblock(data, reply, option);
+        case CMD_POWER_INTERFACE_POWER_DUMP:
+            return PowerInterfaceStubPowerDump(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubRegisterCallback(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubRegisterCallback_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStartSuspend(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStartSuspend_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStopSuspend(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStopSuspend_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubForceSuspend(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubForceSuspend_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendBlock(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendBlock_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendUnblock(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendUnblock_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubPowerDump(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubPowerDump_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubGetVersion(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubGetVersion_(powerInterfaceData, powerInterfaceReply, powerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubRegisterCallback_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback> ipowerHdiCallback;
+    sptr<IRemoteObject> ipowerHdiCallbackRemote = powerInterfaceData.ReadRemoteObject();
+    if (ipowerHdiCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    ipowerHdiCallback = new OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy(ipowerHdiCallbackRemote);
+    if (ipowerHdiCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->RegisterCallback(ipowerHdiCallback);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStartSuspend_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->StartSuspend();
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubStopSuspend_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->StopSuspend();
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubForceSuspend_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->ForceSuspend();
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendBlock_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* nameCp = powerInterfaceData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->SuspendBlock(name);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubSuspendUnblock_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* nameCp = powerInterfaceData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->SuspendUnblock(name);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubPowerDump_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool powerInterfaceMemSet = false;
+    if (!powerInterfaceData.ReadBool(powerInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read powerInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string info;
+    if (powerInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!powerInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        info.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->PowerDump(info);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    if (!powerInterfaceReply.WriteCString(info.c_str())) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerInterfaceStub::PowerInterfaceStubGetVersion_(MessageParcel& powerInterfaceData, MessageParcel& powerInterfaceReply, MessageOption& powerInterfaceOption, sptr<OHOS::HDI::Power::V1_0::IPowerInterface> impl)
+{
+    if (powerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (powerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerInterfaceRet);
+        return powerInterfaceRet;
+    }
+
+    if (!powerInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerInterfaceRet;
+}
+} // V1_0
+} // Power
+} // HDI
+} // OHOS

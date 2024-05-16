@@ -1,0 +1,136 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_POWER_V1_1_IPOWERINTERFACE_H
+#define OHOS_HDI_POWER_V1_1_IPOWERINTERFACE_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "power/v1_1/ipower_hdi_callback.h"
+#include "power/v1_1/ipower_running_lock_callback.h"
+#include "power/v1_1/power_types.h"
+#include "power/v1_1/running_lock_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_1 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_POWER_INTERFACE_GET_VERSION = 0,
+    CMD_POWER_INTERFACE_REGISTER_CALLBACK = 1,
+    CMD_POWER_INTERFACE_START_SUSPEND = 2,
+    CMD_POWER_INTERFACE_STOP_SUSPEND = 3,
+    CMD_POWER_INTERFACE_FORCE_SUSPEND = 4,
+    CMD_POWER_INTERFACE_SUSPEND_BLOCK = 5,
+    CMD_POWER_INTERFACE_SUSPEND_UNBLOCK = 6,
+    CMD_POWER_INTERFACE_POWER_DUMP = 7,
+    CMD_POWER_INTERFACE_HOLD_RUNNING_LOCK = 8,
+    CMD_POWER_INTERFACE_UNHOLD_RUNNING_LOCK = 9,
+    CMD_POWER_INTERFACE_GET_WAKEUP_REASON = 10,
+    CMD_POWER_INTERFACE_HOLD_RUNNING_LOCK_EXT = 11,
+    CMD_POWER_INTERFACE_UNHOLD_RUNNING_LOCK_EXT = 12,
+    CMD_POWER_INTERFACE_REGISTER_RUNNING_LOCK_CALLBACK = 13,
+    CMD_POWER_INTERFACE_UN_REGISTER_RUNNING_LOCK_CALLBACK = 14,
+};
+
+class IPowerInterface : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.power.v1_1.IPowerInterface");
+
+    virtual ~IPowerInterface() = default;
+
+    static sptr<OHOS::HDI::Power::V1_1::IPowerInterface> Get(bool isStub = false);
+    static sptr<OHOS::HDI::Power::V1_1::IPowerInterface> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t RegisterCallback(const sptr<OHOS::HDI::Power::V1_1::IPowerHdiCallback>& ipowerHdiCallback) = 0;
+
+    virtual int32_t StartSuspend() = 0;
+
+    virtual int32_t StopSuspend() = 0;
+
+    virtual int32_t ForceSuspend() = 0;
+
+    virtual int32_t SuspendBlock(const std::string& name) = 0;
+
+    virtual int32_t SuspendUnblock(const std::string& name) = 0;
+
+    virtual int32_t PowerDump(std::string& info) = 0;
+
+    virtual int32_t HoldRunningLock(const OHOS::HDI::Power::V1_1::RunningLockInfo& info) = 0;
+
+    virtual int32_t UnholdRunningLock(const OHOS::HDI::Power::V1_1::RunningLockInfo& info) = 0;
+
+    virtual int32_t GetWakeupReason(std::string& reason) = 0;
+
+    virtual int32_t HoldRunningLockExt(const OHOS::HDI::Power::V1_1::RunningLockInfo& info, uint64_t lockid,
+         const std::string& bundleName) = 0;
+
+    virtual int32_t UnholdRunningLockExt(const OHOS::HDI::Power::V1_1::RunningLockInfo& info, uint64_t lockid,
+         const std::string& bundleName) = 0;
+
+    virtual int32_t RegisterRunningLockCallback(const sptr<OHOS::HDI::Power::V1_1::IPowerRunningLockCallback>& iPowerRunningLockCallback) = 0;
+
+    virtual int32_t UnRegisterRunningLockCallback() = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 1;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_1
+} // Power
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_POWER_V1_1_IPOWERINTERFACE_H
+

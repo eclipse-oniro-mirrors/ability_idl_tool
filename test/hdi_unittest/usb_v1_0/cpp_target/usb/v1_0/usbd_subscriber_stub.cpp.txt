@@ -1,0 +1,161 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usbd_subscriber_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    usbd_subscriber_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStub(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> &impl)
+    : IPCObjectStub(OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::~UsbdSubscriberStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_USBD_SUBSCRIBER_GET_VERSION:
+            return UsbdSubscriberStubGetVersion(data, reply, option);
+        case CMD_USBD_SUBSCRIBER_DEVICE_EVENT:
+            return UsbdSubscriberStubDeviceEvent(data, reply, option);
+        case CMD_USBD_SUBSCRIBER_PORT_CHANGED_EVENT:
+            return UsbdSubscriberStubPortChangedEvent(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubDeviceEvent(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubDeviceEvent_(usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubPortChangedEvent(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubPortChangedEvent_(usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubGetVersion(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubGetVersion_(usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubDeviceEvent_(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> impl)
+{
+    if (usbdSubscriberData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::USBDeviceInfo info;
+    if (!USBDeviceInfoBlockUnmarshalling(usbdSubscriberData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdSubscriberRet = impl->DeviceEvent(info);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    return usbdSubscriberRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubPortChangedEvent_(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> impl)
+{
+    if (usbdSubscriberData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::PortInfo info;
+    if (!PortInfoBlockUnmarshalling(usbdSubscriberData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdSubscriberRet = impl->PortChangedEvent(info);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    return usbdSubscriberRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberStub::UsbdSubscriberStubGetVersion_(MessageParcel& usbdSubscriberData, MessageParcel& usbdSubscriberReply, MessageOption& usbdSubscriberOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> impl)
+{
+    if (usbdSubscriberData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdSubscriberRet = impl->GetVersion(majorVer, minorVer);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    if (!usbdSubscriberReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdSubscriberReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbdSubscriberRet;
+}
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

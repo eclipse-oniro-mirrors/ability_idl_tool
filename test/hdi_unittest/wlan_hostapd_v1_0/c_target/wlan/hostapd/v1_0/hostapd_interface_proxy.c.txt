@@ -1,0 +1,1349 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include <stub_collector.h>
+#include "v1_0/ihostapd_interface.h"
+
+#define HDF_LOG_TAG    hostapd_interface_proxy
+
+struct HostapdInterfaceProxy {
+    struct IHostapdInterface impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface);
+
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface)
+{
+    if (interface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        return false;
+    }
+
+    struct HdfRemoteService **stub = StubCollectorGetOrNewObject(desc, interface);
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub of '%{public}s'", __func__, desc);
+        return false;
+    }
+
+    if (HdfSbufWriteRemoteService(parcel, *stub) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to write remote service", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static int32_t HostapdInterfaceProxyCall(struct IHostapdInterface *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t HostapdInterfaceProxyStartAp(struct IHostapdInterface *self)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_START_AP, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyStopAp(struct IHostapdInterface *self)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_STOP_AP, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyEnableAp(struct IHostapdInterface *self, const char* ifName, int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_ENABLE_AP, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyDisableAp(struct IHostapdInterface *self, const char* ifName, int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_DISABLE_AP, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApPasswd(struct IHostapdInterface *self, const char* ifName, const char* pass,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, pass)) {
+        HDF_LOGE("%{public}s: write pass failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_PASSWD, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApName(struct IHostapdInterface *self, const char* ifName, const char* name,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, name)) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_NAME, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApWpaValue(struct IHostapdInterface *self, const char* ifName,
+     int32_t securityType, int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, securityType)) {
+        HDF_LOGE("%{public}s: write securityType failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_WPA_VALUE, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApBand(struct IHostapdInterface *self, const char* ifName, int32_t band,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, band)) {
+        HDF_LOGE("%{public}s: write band failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_BAND, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetAp80211n(struct IHostapdInterface *self, const char* ifName, int32_t value,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP80211N, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApWmm(struct IHostapdInterface *self, const char* ifName, int32_t value,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_WMM, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApChannel(struct IHostapdInterface *self, const char* ifName, int32_t channel,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, channel)) {
+        HDF_LOGE("%{public}s: write channel failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_CHANNEL, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetApMaxConn(struct IHostapdInterface *self, const char* ifName, int32_t maxConn,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, maxConn)) {
+        HDF_LOGE("%{public}s: write maxConn failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_AP_MAX_CONN, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxySetMacFilter(struct IHostapdInterface *self, const char* ifName, const char* mac,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, mac)) {
+        HDF_LOGE("%{public}s: write mac failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_SET_MAC_FILTER, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyDelMacFilter(struct IHostapdInterface *self, const char* ifName, const char* mac,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, mac)) {
+        HDF_LOGE("%{public}s: write mac failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_DEL_MAC_FILTER, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyGetStaInfos(struct IHostapdInterface *self, const char* ifName, char* buf,
+     uint32_t bufLen, int32_t size, int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(hostapdInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (buf == NULL || bufLen == 0) {
+        HDF_LOGE("%{public}s: buf is invalid", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(hostapdInterfaceData, bufLen)) {
+        HDF_LOGE("%{public}s: write bufLen failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, size)) {
+        HDF_LOGE("%{public}s: write size failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_GET_STA_INFOS, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *bufCopy = HdfSbufReadString(hostapdInterfaceReply);
+    if (bufCopy == NULL) {
+        HDF_LOGE("%{public}s: read bufCopy failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(buf, bufLen, bufCopy) != EOK) {
+        HDF_LOGE("%{public}s: read buf failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyDisassociateSta(struct IHostapdInterface *self, const char* ifName, const char* mac,
+     int32_t id)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, mac)) {
+        HDF_LOGE("%{public}s: write mac failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(hostapdInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_DISASSOCIATE_STA, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyRegisterEventCallback(struct IHostapdInterface *self,
+     struct IHostapdCallback* cbFunc, const char* ifName)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(hostapdInterfaceData, IHOSTAPDCALLBACK_INTERFACE_DESC, cbFunc)) {
+        HDF_LOGE("%{public}s: write cbFunc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_REGISTER_EVENT_CALLBACK, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyUnregisterEventCallback(struct IHostapdInterface *self,
+     struct IHostapdCallback* cbFunc, const char* ifName)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(hostapdInterfaceData, IHOSTAPDCALLBACK_INTERFACE_DESC, cbFunc)) {
+        HDF_LOGE("%{public}s: write cbFunc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_UNREGISTER_EVENT_CALLBACK, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyHostApdShellCmd(struct IHostapdInterface *self, const char* ifName, const char* cmd)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(hostapdInterfaceData, cmd)) {
+        HDF_LOGE("%{public}s: write cmd failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_HOST_APD_SHELL_CMD, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static int32_t HostapdInterfaceProxyGetVersion(struct IHostapdInterface *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t hostapdInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *hostapdInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *hostapdInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (hostapdInterfaceData == NULL || hostapdInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), hostapdInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    hostapdInterfaceRet = HostapdInterfaceProxyCall(self, CMD_HOSTAPD_INTERFACE_GET_VERSION, hostapdInterfaceData, hostapdInterfaceReply, false);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, hostapdInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(hostapdInterfaceReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(hostapdInterfaceReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        hostapdInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (hostapdInterfaceData != NULL) {
+        HdfSbufRecycle(hostapdInterfaceData);
+    }
+    if (hostapdInterfaceReply != NULL) {
+        HdfSbufRecycle(hostapdInterfaceReply);
+    }
+    return hostapdInterfaceRet;
+}
+
+static struct HdfRemoteService *HostapdInterfaceProxyAsObject(struct IHostapdInterface *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct HostapdInterfaceProxy *proxy = CONTAINER_OF(self, struct HostapdInterfaceProxy, impl);
+    return proxy->remote;
+}
+
+static void HostapdInterfaceProxyConstruct(struct IHostapdInterface *impl)
+{
+    impl->StartAp = HostapdInterfaceProxyStartAp;
+    impl->StopAp = HostapdInterfaceProxyStopAp;
+    impl->EnableAp = HostapdInterfaceProxyEnableAp;
+    impl->DisableAp = HostapdInterfaceProxyDisableAp;
+    impl->SetApPasswd = HostapdInterfaceProxySetApPasswd;
+    impl->SetApName = HostapdInterfaceProxySetApName;
+    impl->SetApWpaValue = HostapdInterfaceProxySetApWpaValue;
+    impl->SetApBand = HostapdInterfaceProxySetApBand;
+    impl->SetAp80211n = HostapdInterfaceProxySetAp80211n;
+    impl->SetApWmm = HostapdInterfaceProxySetApWmm;
+    impl->SetApChannel = HostapdInterfaceProxySetApChannel;
+    impl->SetApMaxConn = HostapdInterfaceProxySetApMaxConn;
+    impl->SetMacFilter = HostapdInterfaceProxySetMacFilter;
+    impl->DelMacFilter = HostapdInterfaceProxyDelMacFilter;
+    impl->GetStaInfos = HostapdInterfaceProxyGetStaInfos;
+    impl->DisassociateSta = HostapdInterfaceProxyDisassociateSta;
+    impl->RegisterEventCallback = HostapdInterfaceProxyRegisterEventCallback;
+    impl->UnregisterEventCallback = HostapdInterfaceProxyUnregisterEventCallback;
+    impl->HostApdShellCmd = HostapdInterfaceProxyHostApdShellCmd;
+    impl->GetVersion = HostapdInterfaceProxyGetVersion;
+    impl->AsObject = HostapdInterfaceProxyAsObject;
+}
+
+struct IHostapdInterface *IHostapdInterfaceGet(bool isStub)
+{
+    return IHostapdInterfaceGetInstance("hostapd_interface_service", isStub);
+}
+
+struct IHostapdInterface *IHostapdInterfaceGetInstance(const char *serviceName, bool isStub)
+{
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "hostapd_interface_service") == 0) {
+            instName = "service";
+        }
+        return LoadHdiImpl(IHOSTAPDINTERFACE_INTERFACE_DESC, instName);
+    }
+
+    struct HDIServiceManager *serviceMgr = HDIServiceManagerGet();
+    if (serviceMgr == NULL) {
+        HDF_LOGE("%{public}s: HDIServiceManager not found!", __func__);
+        return NULL;
+    }
+
+    struct HdfRemoteService *remote = serviceMgr->GetService(serviceMgr, serviceName);
+    HDIServiceManagerRelease(serviceMgr);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: failed to get remote!", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IHOSTAPDINTERFACE_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct HostapdInterfaceProxy *proxy = (struct HostapdInterfaceProxy *)OsalMemCalloc(sizeof(struct HostapdInterfaceProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IHostapdInterface proxy failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    HostapdInterfaceProxyConstruct(&proxy->impl);
+    struct IHostapdInterface *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t hostapdInterfaceRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (hostapdInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IHostapdInterfaceRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IHOSTAPD_INTERFACE_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IHOSTAPD_INTERFACE_MAJOR_VERSION, IHOSTAPD_INTERFACE_MINOR_VERSION);
+        IHostapdInterfaceRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IHostapdInterfaceRelease(struct IHostapdInterface *instance, bool isStub)
+{
+    IHostapdInterfaceReleaseInstance("hostapd_interface_service", instance, isStub);
+}
+
+void IHostapdInterfaceReleaseInstance(const char *serviceName, struct IHostapdInterface *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "hostapd_interface_service") == 0) {
+            instName = "service";
+        }
+        UnloadHdiImpl(IHOSTAPDINTERFACE_INTERFACE_DESC, instName, instance);
+        return;
+    }
+
+    struct HostapdInterfaceProxy *proxy = CONTAINER_OF(instance, struct HostapdInterfaceProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

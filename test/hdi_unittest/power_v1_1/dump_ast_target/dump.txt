@@ -1,0 +1,125 @@
+AST[name: IPowerInterface file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/power_v1_1/foo/power/v1_1/IPowerInterface.idl]
+package ohos.hdi.power.v1_1;
+
+import ohos.hdi.power.v1_1.PowerTypes;
+import ohos.hdi.power.v1_1.RunningLockTypes;
+import ohos.hdi.power.v1_1.IPowerHdiCallback;
+import ohos.hdi.power.v1_1.IPowerRunningLockCallback;
+
+[mini, lite, full] interface IPowerInterface {
+    [mini, lite, full] RegisterCallback(
+      [in] ohos.hdi.power.v1_1.IPowerHdiCallback ipowerHdiCallback);
+
+    [mini, lite, full] StartSuspend();
+
+    [mini, lite, full] StopSuspend();
+
+    [mini, lite, full] ForceSuspend();
+
+    [mini, lite, full] SuspendBlock(
+      [in] std::string name);
+
+    [mini, lite, full] SuspendUnblock(
+      [in] std::string name);
+
+    [mini, lite, full] PowerDump(
+      [out] std::string info);
+
+    [mini, lite, full] HoldRunningLock(
+      [in] ohos.hdi.power.v1_1.RunningLockInfo info);
+
+    [mini, lite, full] UnholdRunningLock(
+      [in] ohos.hdi.power.v1_1.RunningLockInfo info);
+
+    [mini, lite, full] GetWakeupReason(
+      [out] std::string reason);
+
+    [mini, lite, full] HoldRunningLockExt(
+      [in] ohos.hdi.power.v1_1.RunningLockInfo info,
+      [in] unsigned long lockid,
+      [in] std::string bundleName);
+
+    [mini, lite, full] UnholdRunningLockExt(
+      [in] ohos.hdi.power.v1_1.RunningLockInfo info,
+      [in] unsigned long lockid,
+      [in] std::string bundleName);
+
+    [mini, lite, full] RegisterRunningLockCallback(
+      [in] ohos.hdi.power.v1_1.IPowerRunningLockCallback iPowerRunningLockCallback);
+
+    [mini, lite, full] UnRegisterRunningLockCallback();
+}
+
+
+AST[name: PowerTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/power_v1_1/foo/power/v1_1/PowerTypes.idl]
+package ohos.hdi.power.v1_1;
+
+[mini, lite, full] enum PowerHdfCmd : int {
+  CMD_REGISTER_CALLBCK = 0,
+  CMD_START_SUSPEND,
+  CMD_STOP_SUSPEND,
+  CMD_FORCE_SUSPEND,
+  CMD_SUSPEND_BLOCK,
+  CMD_SUSPEND_UNBLOCK,
+  CMD_DUMP,
+};
+
+[mini, lite, full] enum PowerHdfCallbackCmd : int {
+  CMD_ON_SUSPEND = 0,
+  CMD_ON_WAKEUP,
+};
+
+[mini, lite, full] enum PowerHdfState : int {
+  AWAKE = 0,
+  INACTIVE,
+  SLEEP,
+};
+
+
+AST[name: IPowerRunningLockCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/power_v1_1/foo/power/v1_1/IPowerRunningLockCallback.idl]
+package ohos.hdi.power.v1_1;
+
+[mini, lite, full, callback] interface IPowerRunningLockCallback {
+    [mini, lite, full, callback] HandleRunningLockMessage(
+      [in] std::string message);
+}
+
+
+AST[name: RunningLockTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/power_v1_1/foo/power/v1_1/RunningLockTypes.idl]
+package ohos.hdi.power.v1_1;
+
+[mini, lite, full] enum BaseRunningLockType : int {
+  RUNNINGLOCK_SCREEN = 0,
+  RUNNINGLOCK_BACKGROUND = 1,
+  RUNNINGLOCK_PROXIMITY_SCREEN_CONTROL = 2,
+};
+
+[mini, lite, full] enum RunningLockType : int {
+  RUNNINGLOCK_BACKGROUND_PHONE = 3,
+  RUNNINGLOCK_BACKGROUND_NOTIFICATION = 5,
+  RUNNINGLOCK_BACKGROUND_AUDIO = 9,
+  RUNNINGLOCK_BACKGROUND_SPORT = 17,
+  RUNNINGLOCK_BACKGROUND_NAVIGATION = 33,
+  RUNNINGLOCK_BACKGROUND_TASK = 65,
+  RUNNINGLOCK_BUTT,
+};
+
+[mini, lite, full] struct RunningLockInfo {
+  std::string name;
+  ohos.hdi.power.v1_1.RunningLockType type;
+  int timeoutMs;
+  int pid;
+  int uid;
+};
+
+
+AST[name: IPowerHdiCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/power_v1_1/foo/power/v1_1/IPowerHdiCallback.idl]
+package ohos.hdi.power.v1_1;
+
+[mini, lite, full, callback] interface IPowerHdiCallback {
+    [mini, lite, full, callback] OnSuspend();
+
+    [mini, lite, full, callback] OnWakeup();
+}
+
+

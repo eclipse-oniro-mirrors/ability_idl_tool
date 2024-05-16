@@ -1,0 +1,292 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CODEC_V2_0_CODECEXTTYPES_H
+#define OHOS_HDI_CODEC_V2_0_CODECEXTTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include "codec/v2_0/codec_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+using namespace OHOS;
+
+enum CodecVideoExType : int32_t {
+    CODEC_VIDEO_CodingVP9 = 10,
+    CODEC_VIDEO_CodingHEVC = 11,
+};
+
+enum CodecHevcProfile : int32_t {
+    CODEC_HEVC_PROFILE_INVALID = 0x0,
+    CODEC_HEVC_PROFILE_MAIN = 0x1,
+    CODEC_HEVC_PROFILE_MAIN10 = 0x2,
+    CODEC_HEVC_PROFILE_MAIN_STILL = 0x3,
+    CODEC_HEVC_PROFILE_MAIN10_HDR10 = 0x1000,
+    CODEC_HEVC_PROFILE_MAIN10_HDR10_PLUS = 0x2000,
+    CODEC_HEVC_PROFILE_MAX = 0x7FFFFFFF,
+};
+
+enum CodecHevcLevel : int32_t {
+    CODEC_HEVC_LEVEL_INVALID = 0x0,
+    CODEC_HEVC_MAIN_TIER_LEVEL1 = 0x1,
+    CODEC_HEVC_HIGH_TIER_LEVEL1 = 0x2,
+    CODEC_HEVC_MAIN_TIER_LEVEL2 = 0x4,
+    CODEC_HEVC_HIGH_TIER_LEVEL2 = 0x8,
+    CODEC_HEVC_MAIN_TIER_LEVEL21 = 0x10,
+    CODEC_HEVC_HIGH_TIER_LEVEL21 = 0x20,
+    CODEC_HEVC_MAIN_TIER_LEVEL3 = 0x40,
+    CODEC_HEVC_HIGH_TIER_LEVEL3 = 0x80,
+    CODEC_HEVC_MAIN_TIER_LEVEL31 = 0x100,
+    CODEC_HEVC_HIGH_TIER_LEVEL31 = 0x200,
+    CODEC_HEVC_MAIN_TIER_LEVEL4 = 0x400,
+    CODEC_HEVC_HIGH_TIER_LEVEL4 = 0x800,
+    CODEC_HEVC_MAIN_TIER_LEVEL41 = 0x1000,
+    CODEC_HEVC_HIGH_TIER_LEVEL41 = 0x2000,
+    CODEC_HEVC_MAIN_TIER_LEVEL5 = 0x4000,
+    CODEC_HEVC_HIGH_TIER_LEVEL5 = 0x8000,
+    CODEC_HEVC_MAIN_TIER_LEVEL51 = 0x10000,
+    CODEC_HEVC_HIGH_TIER_LEVEL51 = 0x20000,
+    CODEC_HEVC_MAIN_TIER_LEVEL52 = 0x40000,
+    CODEC_HEVC_HIGH_TIER_LEVEL52 = 0x80000,
+    CODEC_HEVC_MAIN_TIER_LEVEL6 = 0x100000,
+    CODEC_HEVC_HIGH_TIER_LEVEL6 = 0x200000,
+    CODEC_HEVC_MAIN_TIER_LEVEL61 = 0x400000,
+    CODEC_HEVC_HIGH_TIER_LEVEL61 = 0x800000,
+    CODEC_HEVC_MAIN_TIER_LEVEL62 = 0x1000000,
+    CODEC_HEVC_HIGH_TIER_LEVEL62 = 0x2000000,
+    CODEC_HEVC_HIGH_TIER_MAX = 0x7FFFFFFF,
+};
+
+enum CodecBufferType : int32_t {
+    CODEC_BUFFER_TYPE_INVALID = 0,
+    CODEC_BUFFER_TYPE_VIRTUAL_ADDR = 0x1,
+    CODEC_BUFFER_TYPE_AVSHARE_MEM_FD = 0x2,
+    CODEC_BUFFER_TYPE_HANDLE = 0x4,
+    CODEC_BUFFER_TYPE_DYNAMIC_HANDLE = 0x8,
+    CODEC_BUFFER_TYPE_DMA_MEM_FD = 0x10,
+};
+
+struct SupportBufferType {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint32_t bufferTypes;
+} __attribute__ ((aligned(8)));
+
+struct UseBufferType {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint32_t bufferType;
+} __attribute__ ((aligned(8)));
+
+struct GetBufferHandleUsageParams {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint64_t usage;
+} __attribute__ ((aligned(8)));
+
+struct CodecVideoPortFormatParam {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint32_t codecColorIndex;
+    uint32_t codecColorFormat;
+    uint32_t codecCompressFormat;
+    uint32_t framerate;
+} __attribute__ ((aligned(8)));
+
+struct ControlRateConstantQuality {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint32_t qualityValue;
+} __attribute__ ((aligned(8)));
+
+struct WorkingFrequencyParam {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t level;
+} __attribute__ ((aligned(8)));
+
+struct ProcessNameParam {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    std::string processName;
+};
+
+enum CodecIndexExType : int32_t {
+    Codec_IndexExtBufferTypeStartUnused = 0x6F000000 + 0x00a00000,
+    Codec_IndexParamSupportBufferType,
+    Codec_IndexParamUseBufferType,
+    Codec_IndexParamGetBufferHandleUsage,
+    Codec_IndexCodecVideoPortFormat,
+    Codec_IndexParamControlRateConstantQuality,
+    Codec_IndexParamVideoHevc = 0x6F000000 + 0x00a00007,
+    Codec_IndexColorAspects,
+    Codec_IndexParamWorkingFrequency,
+    Codec_IndexParamProcessName,
+};
+
+struct CodecVideoParamHevc {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    OHOS::HDI::Codec::V2_0::CodecHevcProfile profile;
+    OHOS::HDI::Codec::V2_0::CodecHevcLevel level;
+    uint32_t keyFrameInterval;
+} __attribute__ ((aligned(8)));
+
+enum RangeType : int32_t {
+    RANGE_UNSPECIFIED,
+    RANGE_FULL,
+    RANGE_LIMITED,
+    RANGE_MAX = 0xff,
+};
+
+enum Primaries : int32_t {
+    PRIMARIES_UNSPECIFIED,
+    PRIMARIES_BT709,
+    PRIMARIES_BT470_6M,
+    PRIMARIES_BT601_625,
+    PRIMARIES_BT601_525,
+    PRIMARIES_GENERICFILM,
+    PRIMARIES_BT2020,
+    PRIMARIES_MAX = 0xff,
+};
+
+enum Transfer : int32_t {
+    TRANSFER_UNSPECIFIED,
+    TRANSFER_LINEAR,
+    TRANSFER_SRGB,
+    TRANSFER_SMPTE170,
+    TRANSFER_GAMMA22,
+    TRANSFER_GAMMA28,
+    TRANSFER_PQ,
+    TRANSFER_HLG,
+    TRANSFER_SMPTE240 = 0x40,
+    TRANSFER_XVYCC,
+    TRANSFER_BT1361,
+    TRANSFER_ST428,
+    TRANSFER_MAX = 0xff,
+};
+
+enum MatrixCoeffs : int32_t {
+    MATRIX_UNSPECIFED,
+    MATRIX_BT709,
+    MATRIX_FCC,
+    MATRIX_BT601,
+    MATRIX_SMPTE240,
+    MATRIX_BT2020,
+    MATRIX_BT2020CONSTANT,
+    MATRIX_MAX = 0xff,
+};
+
+struct ColorAspects {
+    OHOS::HDI::Codec::V2_0::RangeType range;
+    OHOS::HDI::Codec::V2_0::Primaries primaries;
+    OHOS::HDI::Codec::V2_0::Transfer transfer;
+    OHOS::HDI::Codec::V2_0::MatrixCoeffs matrixCoeffs;
+} __attribute__ ((aligned(8)));
+
+struct CodecVideoColorspace {
+    uint32_t size;
+    OHOS::HDI::Codec::V2_0::CodecVersionType version;
+    uint32_t portIndex;
+    uint32_t requestingDataSpace;
+    uint32_t dataSpaceChanged;
+    uint32_t pixeFormat;
+    uint32_t dataSpace;
+    OHOS::HDI::Codec::V2_0::ColorAspects aspects;
+} __attribute__ ((aligned(8)));
+
+bool SupportBufferTypeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::SupportBufferType& dataBlock);
+
+bool SupportBufferTypeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::SupportBufferType& dataBlock);
+
+bool UseBufferTypeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::UseBufferType& dataBlock);
+
+bool UseBufferTypeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::UseBufferType& dataBlock);
+
+bool GetBufferHandleUsageParamsBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::GetBufferHandleUsageParams& dataBlock);
+
+bool GetBufferHandleUsageParamsBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::GetBufferHandleUsageParams& dataBlock);
+
+bool CodecVideoPortFormatParamBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecVideoPortFormatParam& dataBlock);
+
+bool CodecVideoPortFormatParamBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecVideoPortFormatParam& dataBlock);
+
+bool ControlRateConstantQualityBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::ControlRateConstantQuality& dataBlock);
+
+bool ControlRateConstantQualityBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::ControlRateConstantQuality& dataBlock);
+
+bool WorkingFrequencyParamBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::WorkingFrequencyParam& dataBlock);
+
+bool WorkingFrequencyParamBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::WorkingFrequencyParam& dataBlock);
+
+bool ProcessNameParamBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::ProcessNameParam& dataBlock);
+
+bool ProcessNameParamBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::ProcessNameParam& dataBlock);
+
+bool CodecVideoParamHevcBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecVideoParamHevc& dataBlock);
+
+bool CodecVideoParamHevcBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecVideoParamHevc& dataBlock);
+
+bool ColorAspectsBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::ColorAspects& dataBlock);
+
+bool ColorAspectsBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::ColorAspects& dataBlock);
+
+bool CodecVideoColorspaceBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Codec::V2_0::CodecVideoColorspace& dataBlock);
+
+bool CodecVideoColorspaceBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Codec::V2_0::CodecVideoColorspace& dataBlock);
+
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CODEC_V2_0_CODECEXTTYPES_H
+

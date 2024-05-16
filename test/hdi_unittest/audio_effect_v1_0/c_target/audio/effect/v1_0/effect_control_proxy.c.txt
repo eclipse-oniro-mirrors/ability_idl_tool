@@ -1,0 +1,469 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include "v1_0/ieffect_control.h"
+
+#define HDF_LOG_TAG    effect_control_proxy
+
+struct EffectControlProxy {
+    struct IEffectControl impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count);
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count)
+{
+    uint32_t elementCount = 0;
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read array size", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        goto FINISHED;
+    }
+
+    const void * dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read array", __func__);
+        return false;
+    }
+
+    if (memcpy_s(data, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to copy array data", __func__);
+        return false;
+    }
+
+FINISHED:
+    *count = elementCount;
+    return true;
+}
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static int32_t EffectControlProxyCall(struct IEffectControl *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t EffectControlProxyEffectProcess(struct IEffectControl *self, const struct AudioEffectBuffer* input,
+     struct AudioEffectBuffer* output)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+
+    struct HdfSBuf *effectControlData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *effectControlReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (effectControlData == NULL || effectControlReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), effectControlData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockMarshalling(effectControlData, input)) {
+        HDF_LOGE("%{public}s: write input failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    effectControlRet = EffectControlProxyCall(self, CMD_EFFECT_CONTROL_EFFECT_PROCESS, effectControlData, effectControlReply, false);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockUnmarshalling(effectControlReply, output)) {
+        HDF_LOGE("%{public}s: read output failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectControlData != NULL) {
+        HdfSbufRecycle(effectControlData);
+    }
+    if (effectControlReply != NULL) {
+        HdfSbufRecycle(effectControlReply);
+    }
+    return effectControlRet;
+}
+
+static int32_t EffectControlProxySendCommand(struct IEffectControl *self, uint32_t cmdId, const int8_t* cmdData,
+     uint32_t cmdDataLen, int8_t* replyData, uint32_t* replyDataLen)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+
+    struct HdfSBuf *effectControlData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *effectControlReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (effectControlData == NULL || effectControlReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), effectControlData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(effectControlData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(effectControlData, cmdId)) {
+        HDF_LOGE("%{public}s: write cmdId failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(effectControlData, cmdData, sizeof(int8_t), cmdDataLen)) {
+        HDF_LOGE("%{public}s: failed to write cmdData", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (replyData == NULL || replyDataLen == NULL || *replyDataLen == 0) {
+        HDF_LOGE("%{public}s: replyData is invalid", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(effectControlData, *replyDataLen)) {
+        HDF_LOGE("%{public}s: write replyDataLen failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    effectControlRet = EffectControlProxyCall(self, CMD_EFFECT_CONTROL_SEND_COMMAND, effectControlData, effectControlReply, false);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(effectControlReply, replyData, sizeof(int8_t), replyDataLen)) {
+        HDF_LOGE("%{public}s: failed to read replyData", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectControlData != NULL) {
+        HdfSbufRecycle(effectControlData);
+    }
+    if (effectControlReply != NULL) {
+        HdfSbufRecycle(effectControlReply);
+    }
+    return effectControlRet;
+}
+
+static int32_t EffectControlProxyGetEffectDescriptor(struct IEffectControl *self,
+     struct EffectControllerDescriptor* desc)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+
+    struct HdfSBuf *effectControlData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *effectControlReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (effectControlData == NULL || effectControlReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), effectControlData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    effectControlRet = EffectControlProxyCall(self, CMD_EFFECT_CONTROL_GET_EFFECT_DESCRIPTOR, effectControlData, effectControlReply, false);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!EffectControllerDescriptorBlockUnmarshalling(effectControlReply, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectControlData != NULL) {
+        HdfSbufRecycle(effectControlData);
+    }
+    if (effectControlReply != NULL) {
+        HdfSbufRecycle(effectControlReply);
+    }
+    return effectControlRet;
+}
+
+static int32_t EffectControlProxyEffectReverse(struct IEffectControl *self, const struct AudioEffectBuffer* input,
+     struct AudioEffectBuffer* output)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+
+    struct HdfSBuf *effectControlData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *effectControlReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (effectControlData == NULL || effectControlReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), effectControlData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockMarshalling(effectControlData, input)) {
+        HDF_LOGE("%{public}s: write input failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    effectControlRet = EffectControlProxyCall(self, CMD_EFFECT_CONTROL_EFFECT_REVERSE, effectControlData, effectControlReply, false);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!AudioEffectBufferBlockUnmarshalling(effectControlReply, output)) {
+        HDF_LOGE("%{public}s: read output failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectControlData != NULL) {
+        HdfSbufRecycle(effectControlData);
+    }
+    if (effectControlReply != NULL) {
+        HdfSbufRecycle(effectControlReply);
+    }
+    return effectControlRet;
+}
+
+static int32_t EffectControlProxyGetVersion(struct IEffectControl *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t effectControlRet = HDF_FAILURE;
+
+    struct HdfSBuf *effectControlData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *effectControlReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (effectControlData == NULL || effectControlReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        effectControlRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        effectControlRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), effectControlData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    effectControlRet = EffectControlProxyCall(self, CMD_EFFECT_CONTROL_GET_VERSION, effectControlData, effectControlReply, false);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, effectControlRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(effectControlReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(effectControlReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        effectControlRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectControlData != NULL) {
+        HdfSbufRecycle(effectControlData);
+    }
+    if (effectControlReply != NULL) {
+        HdfSbufRecycle(effectControlReply);
+    }
+    return effectControlRet;
+}
+
+static struct HdfRemoteService *EffectControlProxyAsObject(struct IEffectControl *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct EffectControlProxy *proxy = CONTAINER_OF(self, struct EffectControlProxy, impl);
+    return proxy->remote;
+}
+
+static void EffectControlProxyConstruct(struct IEffectControl *impl)
+{
+    impl->EffectProcess = EffectControlProxyEffectProcess;
+    impl->SendCommand = EffectControlProxySendCommand;
+    impl->GetEffectDescriptor = EffectControlProxyGetEffectDescriptor;
+    impl->EffectReverse = EffectControlProxyEffectReverse;
+    impl->GetVersion = EffectControlProxyGetVersion;
+    impl->AsObject = EffectControlProxyAsObject;
+}
+
+struct IEffectControl *IEffectControlGet(struct HdfRemoteService *remote)
+{
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: remote is null", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IEFFECTCONTROL_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct EffectControlProxy *proxy = (struct EffectControlProxy *)OsalMemCalloc(sizeof(struct EffectControlProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IEffectControl proxy failed!", __func__);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    EffectControlProxyConstruct(&proxy->impl);
+    struct IEffectControl *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t effectControlRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (effectControlRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IEffectControlRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IEFFECT_CONTROL_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IEFFECT_CONTROL_MAJOR_VERSION, IEFFECT_CONTROL_MINOR_VERSION);
+        IEffectControlRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IEffectControlImplRelease(struct IEffectControl *instance) __attribute__((weak));
+void IEffectControlRelease(struct IEffectControl *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+    if (isStub) {
+        if (IEffectControlImplRelease != NULL) {
+            IEffectControlImplRelease(instance);
+        }
+        return;
+    }
+    struct EffectControlProxy *proxy = CONTAINER_OF(instance, struct EffectControlProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

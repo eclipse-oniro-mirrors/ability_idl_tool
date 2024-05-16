@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_USB_DDK_V1_0_USBDDKPROXY_H
+#define OHOS_HDI_USB_DDK_V1_0_USBDDKPROXY_H
+
+#include "v1_0/iusb_ddk.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace Ddk {
+namespace V1_0 {
+
+class UsbDdkProxy : public IProxyBroker<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> proxy_;
+    };
+
+    explicit UsbDdkProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~UsbDdkProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t Init() override;
+
+    int32_t Release() override;
+
+    int32_t GetDeviceDescriptor(uint64_t deviceId, OHOS::HDI::Usb::Ddk::V1_0::UsbDeviceDescriptor& desc) override;
+
+    int32_t GetConfigDescriptor(uint64_t deviceId, uint8_t configIndex, std::vector<uint8_t>& configDesc) override;
+
+    int32_t ClaimInterface(uint64_t deviceId, uint8_t interfaceIndex, uint64_t& interfaceHandle) override;
+
+    int32_t ReleaseInterface(uint64_t interfaceHandle) override;
+
+    int32_t SelectInterfaceSetting(uint64_t interfaceHandle, uint8_t settingIndex) override;
+
+    int32_t GetCurrentInterfaceSetting(uint64_t interfaceHandle, uint8_t& settingIndex) override;
+
+    int32_t SendControlReadRequest(uint64_t interfaceHandle,
+         const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, std::vector<uint8_t>& data) override;
+
+    int32_t SendControlWriteRequest(uint64_t interfaceHandle,
+         const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, const std::vector<uint8_t>& data) override;
+
+    int32_t SendPipeRequest(const OHOS::HDI::Usb::Ddk::V1_0::UsbRequestPipe& pipe, uint32_t size, uint32_t offset,
+         uint32_t length, uint32_t& transferedLength) override;
+
+    int32_t GetDeviceMemMapFd(uint64_t deviceId, int& fd) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t Init_(const sptr<IRemoteObject> remote);
+
+    static int32_t Release_(const sptr<IRemoteObject> remote);
+
+    static int32_t GetDeviceDescriptor_(uint64_t deviceId, OHOS::HDI::Usb::Ddk::V1_0::UsbDeviceDescriptor& desc,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetConfigDescriptor_(uint64_t deviceId, uint8_t configIndex, std::vector<uint8_t>& configDesc,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ClaimInterface_(uint64_t deviceId, uint8_t interfaceIndex, uint64_t& interfaceHandle,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReleaseInterface_(uint64_t interfaceHandle, const sptr<IRemoteObject> remote);
+
+    static int32_t SelectInterfaceSetting_(uint64_t interfaceHandle, uint8_t settingIndex,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetCurrentInterfaceSetting_(uint64_t interfaceHandle, uint8_t& settingIndex,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SendControlReadRequest_(uint64_t interfaceHandle,
+         const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t SendControlWriteRequest_(uint64_t interfaceHandle,
+         const OHOS::HDI::Usb::Ddk::V1_0::UsbControlRequestSetup& setup, uint32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t SendPipeRequest_(const OHOS::HDI::Usb::Ddk::V1_0::UsbRequestPipe& pipe, uint32_t size,
+         uint32_t offset, uint32_t length, uint32_t& transferedLength, const sptr<IRemoteObject> remote);
+
+    static int32_t GetDeviceMemMapFd_(uint64_t deviceId, int& fd, const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> delegator_;
+};
+
+} // V1_0
+} // Ddk
+} // Usb
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_USB_DDK_V1_0_USBDDKPROXY_H
+

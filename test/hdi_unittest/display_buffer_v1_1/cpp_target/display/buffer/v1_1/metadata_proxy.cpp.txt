@@ -1,0 +1,433 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/metadata_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    metadata_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Buffer {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> OHOS::HDI::Display::Buffer::V1_1::IMetadata::Get(bool isStub)
+{
+    return IMetadata::Get("metadata_service", isStub);
+}
+
+sptr<OHOS::HDI::Display::Buffer::V1_1::IMetadata> OHOS::HDI::Display::Buffer::V1_1::IMetadata::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "metadata_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Display::Buffer::V1_1::IMetadata *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Display::Buffer::V1_1::MetadataProxy> proxy = new OHOS::HDI::Display::Buffer::V1_1::MetadataProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t metadataRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::Reconnect(
+    sptr<OHOS::HDI::Display::Buffer::V1_1::MetadataProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::RegisterBuffer(const sptr<NativeBuffer>& handle)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::RegisterBuffer_(handle, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::SetMetadata(const sptr<NativeBuffer>& handle, uint32_t key,
+     const std::vector<uint8_t>& value)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::SetMetadata_(handle, key, value, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetMetadata(const sptr<NativeBuffer>& handle, uint32_t key,
+     std::vector<uint8_t>& value)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetMetadata_(handle, key, value, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::ListMetadataKeys(const sptr<NativeBuffer>& handle,
+     std::vector<uint32_t>& keys)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::ListMetadataKeys_(handle, keys, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::EraseMetadataKey(const sptr<NativeBuffer>& handle,
+     uint32_t key)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::EraseMetadataKey_(handle, key, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::RegisterBuffer_(const sptr<NativeBuffer>& handle,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_REGISTER_BUFFER, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::SetMetadata_(const sptr<NativeBuffer>& handle, uint32_t key,
+     const std::vector<uint8_t>& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteUint32(key)) {
+        HDF_LOGE("%{public}s: write key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(metadataData, value)) {
+        HDF_LOGE("%{public}s: failed to write value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_SET_METADATA, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetMetadata_(const sptr<NativeBuffer>& handle, uint32_t key,
+     std::vector<uint8_t>& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteUint32(key)) {
+        HDF_LOGE("%{public}s: write key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_GET_METADATA, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!ReadPodArray(metadataReply, value)) {
+        HDF_LOGE("%{public}s: failed to read value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::ListMetadataKeys_(const sptr<NativeBuffer>& handle,
+     std::vector<uint32_t>& keys, const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_LIST_METADATA_KEYS, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!ReadPodArray(metadataReply, keys)) {
+        HDF_LOGE("%{public}s: failed to read keys", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::EraseMetadataKey_(const sptr<NativeBuffer>& handle,
+     uint32_t key, const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteStrongParcelable(handle)) {
+        HDF_LOGE("%{public}s: failed to write handle", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataData.WriteUint32(key)) {
+        HDF_LOGE("%{public}s: write key failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_ERASE_METADATA_KEY, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    return metadataRet;
+}
+
+int32_t OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel metadataData;
+    MessageParcel metadataReply;
+    MessageOption metadataOption(MessageOption::TF_SYNC);
+
+    if (!metadataData.WriteInterfaceToken(OHOS::HDI::Display::Buffer::V1_1::IMetadata::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t metadataRet = remote->SendRequest(CMD_METADATA_GET_VERSION, metadataData, metadataReply, metadataOption);
+    if (metadataRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, metadataRet);
+        return metadataRet;
+    }
+
+    if (!metadataReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!metadataReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return metadataRet;
+}
+
+} // V1_1
+} // Buffer
+} // Display
+} // HDI
+} // OHOS

@@ -1,0 +1,308 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hid_ddk_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    hid_ddk_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Input {
+namespace Ddk {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> OHOS::HDI::Input::Ddk::V1_0::IHidDdk::Get(bool isStub)
+{
+    return IHidDdk::Get("hid_ddk_service", isStub);
+}
+
+sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> OHOS::HDI::Input::Ddk::V1_0::IHidDdk::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "hid_ddk_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Input::Ddk::V1_0::IHidDdk *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy> proxy = new OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t hidDdkRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::Reconnect(
+    sptr<OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::CreateDevice(const OHOS::HDI::Input::Ddk::V1_0::Hid_Device& hidDevice,
+     const OHOS::HDI::Input::Ddk::V1_0::Hid_EventProperties& hidEventProperties, uint32_t& deviceId)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::CreateDevice_(hidDevice, hidEventProperties, deviceId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::EmitEvent(uint32_t deviceId,
+     const std::vector<OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem>& items)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::EmitEvent_(deviceId, items, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::DestroyDevice(uint32_t deviceId)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::DestroyDevice_(deviceId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::CreateDevice_(const OHOS::HDI::Input::Ddk::V1_0::Hid_Device& hidDevice, const OHOS::HDI::Input::Ddk::V1_0::Hid_EventProperties& hidEventProperties, uint32_t& deviceId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hidDdkData;
+    MessageParcel hidDdkReply;
+    MessageOption hidDdkOption(MessageOption::TF_SYNC);
+
+    if (!hidDdkData.WriteInterfaceToken(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Input::Ddk::V1_0::Hid_DeviceBlockMarshalling(hidDdkData, hidDevice)) {
+        HDF_LOGE("%{public}s: write hidDevice failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Input::Ddk::V1_0::Hid_EventPropertiesBlockMarshalling(hidDdkData, hidEventProperties)) {
+        HDF_LOGE("%{public}s: write hidEventProperties failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hidDdkRet = remote->SendRequest(CMD_HID_DDK_CREATE_DEVICE, hidDdkData, hidDdkReply, hidDdkOption);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    if (!hidDdkReply.ReadUint32(deviceId)) {
+        HDF_LOGE("%{public}s: read deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::EmitEvent_(uint32_t deviceId,
+     const std::vector<OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem>& items, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hidDdkData;
+    MessageParcel hidDdkReply;
+    MessageOption hidDdkOption(MessageOption::TF_SYNC);
+
+    if (!hidDdkData.WriteInterfaceToken(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hidDdkData.WriteUint32(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(hidDdkData, items)) {
+        HDF_LOGE("%{public}s: failed to write items", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hidDdkRet = remote->SendRequest(CMD_HID_DDK_EMIT_EVENT, hidDdkData, hidDdkReply, hidDdkOption);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::DestroyDevice_(uint32_t deviceId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hidDdkData;
+    MessageParcel hidDdkReply;
+    MessageOption hidDdkOption(MessageOption::TF_SYNC);
+
+    if (!hidDdkData.WriteInterfaceToken(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hidDdkData.WriteUint32(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hidDdkRet = remote->SendRequest(CMD_HID_DDK_DESTROY_DEVICE, hidDdkData, hidDdkReply, hidDdkOption);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel hidDdkData;
+    MessageParcel hidDdkReply;
+    MessageOption hidDdkOption(MessageOption::TF_SYNC);
+
+    if (!hidDdkData.WriteInterfaceToken(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hidDdkRet = remote->SendRequest(CMD_HID_DDK_GET_VERSION, hidDdkData, hidDdkReply, hidDdkOption);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    if (!hidDdkReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hidDdkReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hidDdkRet;
+}
+
+} // V1_0
+} // Ddk
+} // Input
+} // HDI
+} // OHOS

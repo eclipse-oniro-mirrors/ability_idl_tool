@@ -1,0 +1,122 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_GNSS_V1_0_IGNSSINTERFACE_H
+#define OHOS_HDI_LOCATION_GNSS_V1_0_IGNSSINTERFACE_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "location/gnss/v1_0/gnss_types.h"
+#include "location/gnss/v1_0/ignss_callback.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Gnss {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_GNSS_INTERFACE_GET_VERSION = 0,
+    CMD_GNSS_INTERFACE_SET_GNSS_CONFIG_PARA = 1,
+    CMD_GNSS_INTERFACE_ENABLE_GNSS = 2,
+    CMD_GNSS_INTERFACE_DISABLE_GNSS = 3,
+    CMD_GNSS_INTERFACE_START_GNSS = 4,
+    CMD_GNSS_INTERFACE_STOP_GNSS = 5,
+    CMD_GNSS_INTERFACE_SET_GNSS_REFERENCE_INFO = 6,
+    CMD_GNSS_INTERFACE_DELETE_AUXILIARY_DATA = 7,
+    CMD_GNSS_INTERFACE_SET_PREDICT_GNSS_DATA = 8,
+    CMD_GNSS_INTERFACE_GET_CACHED_GNSS_LOCATIONS_SIZE = 9,
+    CMD_GNSS_INTERFACE_GET_CACHED_GNSS_LOCATIONS = 10,
+};
+
+class IGnssInterface : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.location.gnss.v1_0.IGnssInterface");
+
+    virtual ~IGnssInterface() = default;
+
+    static sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssInterface> Get(bool isStub = false);
+    static sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssInterface> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t SetGnssConfigPara(const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara& para) = 0;
+
+    virtual int32_t EnableGnss(const sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback>& callbackObj) = 0;
+
+    virtual int32_t DisableGnss() = 0;
+
+    virtual int32_t StartGnss(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type) = 0;
+
+    virtual int32_t StopGnss(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type) = 0;
+
+    virtual int32_t SetGnssReferenceInfo(const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo& refInfo) = 0;
+
+    virtual int32_t DeleteAuxiliaryData(OHOS::HDI::Location::Gnss::V1_0::GnssAuxiliaryData data) = 0;
+
+    virtual int32_t SetPredictGnssData(const std::string& data) = 0;
+
+    virtual int32_t GetCachedGnssLocationsSize(int32_t& size) = 0;
+
+    virtual int32_t GetCachedGnssLocations() = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Gnss
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_GNSS_V1_0_IGNSSINTERFACE_H
+

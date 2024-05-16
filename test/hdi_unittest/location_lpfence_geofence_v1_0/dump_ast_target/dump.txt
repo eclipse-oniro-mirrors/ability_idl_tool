@@ -1,0 +1,188 @@
+AST[name: IGeofenceIntf file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_lpfence_geofence_v1_0/foo/location/lpfence/geofence/v1_0/IGeofenceIntf.idl]
+package ohos.hdi.location.lpfence.geofence.v1_0;
+
+import ohos.hdi.location.lpfence.geofence.v1_0.IGeofenceCallback;
+import ohos.hdi.location.lpfence.geofence.v1_0.GeofenceTypes;
+
+[mini, lite, full] interface IGeofenceIntf {
+    [mini, lite, full] RegisterGeofenceCallback(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.IGeofenceCallback callbackObj);
+
+    [mini, lite, full] UnregisterGeofenceCallback(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.IGeofenceCallback callbackObj);
+
+    [mini, lite, full] AddCircleGeofences(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeofenceCircleRequest[] circleGeofences);
+
+    [mini, lite, full] AddPolygonGeofences(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeofencePolygonRequest[] polygonGeofences);
+
+    [mini, lite, full] RemoveGeofences(
+      [in] int[] geofenceId);
+
+    [mini, lite, full] GetGeofenceStatus(
+      [in] int geofenceId);
+
+    [mini, lite, full] GetGeofenceLocation();
+
+    [mini, lite, full] GetGeofenceSize();
+
+    [mini, lite, full] SendCellOfflineDb(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.OfflineDb dbData,
+      [in] int cellType);
+}
+
+
+AST[name: IGeofenceCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_lpfence_geofence_v1_0/foo/location/lpfence/geofence/v1_0/IGeofenceCallback.idl]
+package ohos.hdi.location.lpfence.geofence.v1_0;
+
+import ohos.hdi.location.lpfence.geofence.v1_0.GeofenceTypes;
+
+[mini, lite, full, callback] interface IGeofenceCallback {
+    [mini, lite, full, callback] OnGeofenceAddResultCb(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeofenceResult[] res);
+
+    [mini, lite, full, callback] OnGeofenceRemoveResultCb(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeofenceResult[] res);
+
+    [mini, lite, full, callback] OnGeofenceTransitionCb(
+      [in] int geofenceId,
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeoLocationInfo location,
+      [in] unsigned char transition,
+      [in] long timestamp);
+
+    [mini, lite, full, callback] OnGetGeofenceSizeCb(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeofenceSize size);
+
+    [mini, lite, full, callback] OnGeofenceRequestCellDb(
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.RequestCellDb req);
+
+    [mini, lite, full, callback] OnGetCurrentLocationCb(
+      [in] int locSource,
+      [in] ohos.hdi.location.lpfence.geofence.v1_0.GeoLocationInfo location);
+
+    [mini, lite, full, callback] OnGeofenceReset();
+}
+
+
+AST[name: GeofenceTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/location_lpfence_geofence_v1_0/foo/location/lpfence/geofence/v1_0/GeofenceTypes.idl]
+package ohos.hdi.location.lpfence.geofence.v1_0;
+
+[mini, lite, full] enum GeofenceTransition : int {
+  GEOFENCE_TRANSITION_ENTERED = (1 << 0),
+  GEOFENCE_TRANSITION_EXITED = (1 << 1),
+  GEOFENCE_TRANSITION_UNCERTAIN = (1 << 2),
+  GEOFENCE_TRANSITION_DWELL = (1 << 3),
+  GEOFENCE_TRANSITION_INDOOR = (1 << 4),
+  GEOFENCE_TRANSITION_OUTDOOR = (1 << 5),
+};
+
+[mini, lite, full] enum GeofenceAttribute : int {
+  GEOFENCE_ATTRI_COORDINATE_WGS84 = 16,
+};
+
+[mini, lite, full] enum GeofenceAccuracy : int {
+  ACCURACY_FINE = 1,
+  ACCURACY_BALANCE = 2,
+  ACCURACY_COARSE = 3,
+};
+
+[mini, lite, full] enum GeofenceCellType : int {
+  GEOFENCE_CELL_G4 = 0,
+  GEOFENCE_CELL_NR = 1,
+};
+
+[mini, lite, full] enum GeofenceLocSource : int {
+  GEOFENCE_GNSS = 1,
+  GEOFENCE_WIFI = 2,
+  GEOFENCE_SENSOR = 4,
+  GEOFENCE_CELL = 8,
+  GEOFENCE_BT = 16,
+};
+
+[mini, lite, full] struct Point {
+  double latitude;
+  double longitude;
+};
+
+[mini, lite, full] struct GeofenceCircleRequest {
+  int geofenceId;
+  ohos.hdi.location.lpfence.geofence.v1_0.Point point;
+  double radius;
+  unsigned short accuracy;
+  unsigned int loiterTimeMs;
+  unsigned char monitorTransitions;
+  unsigned int attribute;
+};
+
+[mini, lite, full] struct GeofencePolygonRequest {
+  int geofenceId;
+  ohos.hdi.location.lpfence.geofence.v1_0.Point[] points;
+  unsigned short accuracy;
+  unsigned int loiterTimeMs;
+  unsigned char monitorTransitions;
+  unsigned int attribute;
+};
+
+[mini, lite, full] struct GeofenceResult {
+  int geofenceId;
+  int result;
+};
+
+[mini, lite, full] struct OfflineDb {
+  unsigned int times;
+  unsigned int totalTimes;
+  unsigned char[] dbs;
+};
+
+[mini, lite, full] struct GeoLocationInfo {
+  unsigned short flags;
+  double latitude;
+  double longitude;
+  double altitude;
+  float accuracy;
+  float speed;
+  float bearing;
+  long timeStamp;
+};
+
+[mini, lite, full] struct GeofenceSize {
+  unsigned int circleMaxNum;
+  unsigned int polygonMaxNum;
+  unsigned int circleUsedNum;
+  unsigned int polygonUsedNum;
+};
+
+[mini, lite, full] struct CurrentCell {
+  long cellId;
+  int lac;
+  unsigned short mcc;
+  unsigned short mnc;
+  short rssi;
+  unsigned short rat;
+  unsigned int pci;
+  int bootTimeLow;
+  int bootTimeHigh;
+};
+
+[mini, lite, full] struct NeighborCell {
+  int physicalId;
+  unsigned short mcc;
+  unsigned short mnc;
+  short rssi;
+  unsigned short rat;
+  unsigned int pci;
+};
+
+[mini, lite, full] struct GeofenceCellInfo {
+  ohos.hdi.location.lpfence.geofence.v1_0.CurrentCell cell;
+  ohos.hdi.location.lpfence.geofence.v1_0.NeighborCell[] neighborCells;
+};
+
+[mini, lite, full] struct RequestCellDb {
+  int requestSize;
+  ohos.hdi.location.lpfence.geofence.v1_0.GeoLocationInfo location;
+  ohos.hdi.location.lpfence.geofence.v1_0.GeofenceCellInfo[] cellInfo;
+};
+
+

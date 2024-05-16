@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hci_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    hci_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Bluetooth {
+namespace Hci {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnInited(OHOS::HDI::Bluetooth::Hci::V1_0::BtStatus status)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnInited_(status, Remote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnReceivedHciPacket(OHOS::HDI::Bluetooth::Hci::V1_0::BtType type, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnReceivedHciPacket_(type, data, Remote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnInited_(OHOS::HDI::Bluetooth::Hci::V1_0::BtStatus status,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciCallbackData;
+    MessageParcel hciCallbackReply;
+    MessageOption hciCallbackOption(MessageOption::TF_SYNC);
+
+    if (!hciCallbackData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciCallbackData.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciCallbackRet = remote->SendRequest(CMD_HCI_CALLBACK_ON_INITED, hciCallbackData, hciCallbackReply, hciCallbackOption);
+    if (hciCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciCallbackRet);
+        return hciCallbackRet;
+    }
+
+    return hciCallbackRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::OnReceivedHciPacket_(OHOS::HDI::Bluetooth::Hci::V1_0::BtType type, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciCallbackData;
+    MessageParcel hciCallbackReply;
+    MessageOption hciCallbackOption(MessageOption::TF_SYNC);
+
+    if (!hciCallbackData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciCallbackData.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(hciCallbackData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciCallbackRet = remote->SendRequest(CMD_HCI_CALLBACK_ON_RECEIVED_HCI_PACKET, hciCallbackData, hciCallbackReply, hciCallbackOption);
+    if (hciCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciCallbackRet);
+        return hciCallbackRet;
+    }
+
+    return hciCallbackRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciCallbackData;
+    MessageParcel hciCallbackReply;
+    MessageOption hciCallbackOption(MessageOption::TF_SYNC);
+
+    if (!hciCallbackData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciCallbackRet = remote->SendRequest(CMD_HCI_CALLBACK_GET_VERSION, hciCallbackData, hciCallbackReply, hciCallbackOption);
+    if (hciCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciCallbackRet);
+        return hciCallbackRet;
+    }
+
+    if (!hciCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hciCallbackRet;
+}
+
+} // V1_0
+} // Hci
+} // Bluetooth
+} // HDI
+} // OHOS

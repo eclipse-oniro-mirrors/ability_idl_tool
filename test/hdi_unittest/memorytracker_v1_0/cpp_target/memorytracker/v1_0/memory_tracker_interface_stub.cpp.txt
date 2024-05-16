@@ -1,0 +1,199 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/memory_tracker_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    memory_tracker_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Memorytracker {
+namespace V1_0 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::Get("memory_tracker_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "memory_tracker_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface *>(impl);
+}
+
+
+OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStub(const sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::~MemoryTrackerInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_MEMORY_TRACKER_INTERFACE_GET_VERSION:
+            return MemoryTrackerInterfaceStubGetVersion(data, reply, option);
+        case CMD_MEMORY_TRACKER_INTERFACE_GET_DEV_MEM:
+            return MemoryTrackerInterfaceStubGetDevMem(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetDevMem(MessageParcel& memoryTrackerInterfaceData, MessageParcel& memoryTrackerInterfaceReply, MessageOption& memoryTrackerInterfaceOption)
+{
+    return OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetDevMem_(memoryTrackerInterfaceData, memoryTrackerInterfaceReply, memoryTrackerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetVersion(MessageParcel& memoryTrackerInterfaceData, MessageParcel& memoryTrackerInterfaceReply, MessageOption& memoryTrackerInterfaceOption)
+{
+    return OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetVersion_(memoryTrackerInterfaceData, memoryTrackerInterfaceReply, memoryTrackerInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetDevMem_(MessageParcel& memoryTrackerInterfaceData, MessageParcel& memoryTrackerInterfaceReply, MessageOption& memoryTrackerInterfaceOption, sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> impl)
+{
+    if (memoryTrackerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool memoryTrackerInterfaceMemSet = false;
+    if (!memoryTrackerInterfaceData.ReadBool(memoryTrackerInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read memoryTrackerInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    int32_t pid = 0;
+    if (!memoryTrackerInterfaceData.ReadInt32(pid)) {
+        HDF_LOGE("%{public}s: read pid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Memorytracker::V1_0::MemoryTrackerType type = static_cast<enum MemoryTrackerType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!memoryTrackerInterfaceData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum MemoryTrackerType>(enumTmp);
+    }
+
+    std::vector<OHOS::HDI::Memorytracker::V1_0::MemoryRecord> records;
+    if (memoryTrackerInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!memoryTrackerInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Memorytracker::V1_0::MemoryRecord), HDF_ERR_INVALID_PARAM);
+        records.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t memoryTrackerInterfaceRet = impl->GetDevMem(pid, type, records);
+    if (memoryTrackerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, memoryTrackerInterfaceRet);
+        return memoryTrackerInterfaceRet;
+    }
+
+    if (!WritePodArray(memoryTrackerInterfaceReply, records)) {
+        HDF_LOGE("%{public}s: failed to write records", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return memoryTrackerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceStub::MemoryTrackerInterfaceStubGetVersion_(MessageParcel& memoryTrackerInterfaceData, MessageParcel& memoryTrackerInterfaceReply, MessageOption& memoryTrackerInterfaceOption, sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> impl)
+{
+    if (memoryTrackerInterfaceData.ReadInterfaceToken() != OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t memoryTrackerInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (memoryTrackerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, memoryTrackerInterfaceRet);
+        return memoryTrackerInterfaceRet;
+    }
+
+    if (!memoryTrackerInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!memoryTrackerInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return memoryTrackerInterfaceRet;
+}
+} // V1_0
+} // Memorytracker
+} // HDI
+} // OHOS

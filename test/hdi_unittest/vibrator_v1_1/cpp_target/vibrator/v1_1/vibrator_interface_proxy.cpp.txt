@@ -1,0 +1,496 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/vibrator_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    vibrator_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Vibrator {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Vibrator::V1_1::IVibratorInterface> OHOS::HDI::Vibrator::V1_1::IVibratorInterface::Get(bool isStub)
+{
+    return IVibratorInterface::Get("vibrator_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Vibrator::V1_1::IVibratorInterface> OHOS::HDI::Vibrator::V1_1::IVibratorInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "vibrator_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Vibrator::V1_1::IVibratorInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy> proxy = new OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t vibratorInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::StartOnce(uint32_t duration)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::StartOnce_(duration, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Start(const std::string& effectType)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Start_(effectType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Stop(OHOS::HDI::Vibrator::V1_1::HdfVibratorMode mode)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Stop_(mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVibratorInfo(std::vector<OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo>& vibratorInfo)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVibratorInfo_(vibratorInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableVibratorModulation(uint32_t duration,
+     uint16_t intensity, int16_t frequency)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableVibratorModulation_(duration, intensity, frequency, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableCompositeEffect(const OHOS::HDI::Vibrator::V1_1::HdfCompositeEffect& effect)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableCompositeEffect_(effect, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetEffectInfo(const std::string& effectType,
+     OHOS::HDI::Vibrator::V1_1::HdfEffectInfo& effectInfo)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetEffectInfo_(effectType, effectInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IsVibratorRunning(bool& state)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IsVibratorRunning_(state, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::StartOnce_(uint32_t duration,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteUint32(duration)) {
+        HDF_LOGE("%{public}s: write duration failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_START_ONCE, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Start_(const std::string& effectType,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteCString(effectType.c_str())) {
+        HDF_LOGE("%{public}s: write effectType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_START, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Stop_(OHOS::HDI::Vibrator::V1_1::HdfVibratorMode mode,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteUint64(static_cast<uint64_t>(mode))) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_STOP, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVibratorInfo_(std::vector<OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo>& vibratorInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_GET_VIBRATOR_INFO, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!ReadPodArray(vibratorInterfaceReply, vibratorInfo)) {
+        HDF_LOGE("%{public}s: failed to read vibratorInfo", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableVibratorModulation_(uint32_t duration,
+     uint16_t intensity, int16_t frequency, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteUint32(duration)) {
+        HDF_LOGE("%{public}s: write duration failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteUint16(intensity)) {
+        HDF_LOGE("%{public}s: write intensity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteInt16(frequency)) {
+        HDF_LOGE("%{public}s: write frequency failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_ENABLE_VIBRATOR_MODULATION, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableCompositeEffect_(const OHOS::HDI::Vibrator::V1_1::HdfCompositeEffect& effect, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Vibrator::V1_1::HdfCompositeEffectBlockMarshalling(vibratorInterfaceData, effect)) {
+        HDF_LOGE("%{public}s: write effect failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_ENABLE_COMPOSITE_EFFECT, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetEffectInfo_(const std::string& effectType,
+     OHOS::HDI::Vibrator::V1_1::HdfEffectInfo& effectInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteCString(effectType.c_str())) {
+        HDF_LOGE("%{public}s: write effectType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_GET_EFFECT_INFO, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!HdfEffectInfoBlockUnmarshalling(vibratorInterfaceReply, effectInfo)) {
+        HDF_LOGE("%{public}s: read effectInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IsVibratorRunning_(bool& state,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_IS_VIBRATOR_RUNNING, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!vibratorInterfaceReply.ReadBool(state)) {
+        HDF_LOGE("%{public}s: read state failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_1::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_GET_VERSION, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!vibratorInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+} // V1_1
+} // Vibrator
+} // HDI
+} // OHOS

@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_LPFENCE_CELLFENCE_V1_0_CELLFENCECALLBACKPROXY_H
+#define OHOS_HDI_LOCATION_LPFENCE_CELLFENCE_V1_0_CELLFENCECALLBACKPROXY_H
+
+#include "v1_0/icellfence_callback.h"
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Cellfence {
+namespace V1_0 {
+
+class CellfenceCallbackProxy : public IProxyBroker<OHOS::HDI::Location::Lpfence::Cellfence::V1_0::ICellfenceCallback> {
+public:
+    explicit CellfenceCallbackProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Location::Lpfence::Cellfence::V1_0::ICellfenceCallback>(remote) {
+    }
+    virtual ~CellfenceCallbackProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t OnCellfenceChanged(const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus& fences) override;
+
+    int32_t OnGetCellfenceSizeCb(const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize& size) override;
+
+    int32_t OnCellfenceReset() override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t OnCellfenceChanged_(const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus& fences,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t OnGetCellfenceSizeCb_(const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize& size,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t OnCellfenceReset_(const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+private:
+    static inline BrokerDelegator<OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceCallbackProxy> delegator_;
+};
+
+} // V1_0
+} // Cellfence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_LPFENCE_CELLFENCE_V1_0_CELLFENCECALLBACKPROXY_H
+

@@ -1,0 +1,122 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_IGEOFENCEINTF_H
+#define OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_IGEOFENCEINTF_H
+
+#include <stdint.h>
+#include <vector>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "location/lpfence/geofence/v1_0/geofence_types.h"
+#include "location/lpfence/geofence/v1_0/igeofence_callback.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Geofence {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_GEOFENCE_INTF_GET_VERSION = 0,
+    CMD_GEOFENCE_INTF_REGISTER_GEOFENCE_CALLBACK = 1,
+    CMD_GEOFENCE_INTF_UNREGISTER_GEOFENCE_CALLBACK = 2,
+    CMD_GEOFENCE_INTF_ADD_CIRCLE_GEOFENCES = 3,
+    CMD_GEOFENCE_INTF_ADD_POLYGON_GEOFENCES = 4,
+    CMD_GEOFENCE_INTF_REMOVE_GEOFENCES = 5,
+    CMD_GEOFENCE_INTF_GET_GEOFENCE_STATUS = 6,
+    CMD_GEOFENCE_INTF_GET_GEOFENCE_LOCATION = 7,
+    CMD_GEOFENCE_INTF_GET_GEOFENCE_SIZE = 8,
+    CMD_GEOFENCE_INTF_SEND_CELL_OFFLINE_DB = 9,
+};
+
+class IGeofenceIntf : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.location.lpfence.geofence.v1_0.IGeofenceIntf");
+
+    virtual ~IGeofenceIntf() = default;
+
+    static sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf> Get(bool isStub = false);
+    static sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t RegisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj) = 0;
+
+    virtual int32_t UnregisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj) = 0;
+
+    virtual int32_t AddCircleGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest>& circleGeofences) = 0;
+
+    virtual int32_t AddPolygonGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest>& polygonGeofences) = 0;
+
+    virtual int32_t RemoveGeofences(const std::vector<int32_t>& geofenceId) = 0;
+
+    virtual int32_t GetGeofenceStatus(int32_t geofenceId) = 0;
+
+    virtual int32_t GetGeofenceLocation() = 0;
+
+    virtual int32_t GetGeofenceSize() = 0;
+
+    virtual int32_t SendCellOfflineDb(const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dbData,
+         int32_t cellType) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Geofence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_IGEOFENCEINTF_H
+

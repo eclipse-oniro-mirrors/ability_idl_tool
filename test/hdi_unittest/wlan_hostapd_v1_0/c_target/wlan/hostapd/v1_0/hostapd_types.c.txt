@@ -1,0 +1,102 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hostapd_types.h"
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+
+
+
+bool HdiApCbParmBlockMarshalling(struct HdfSBuf *data, const struct HdiApCbParm *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteString(data, dataBlock->content)) {
+        HDF_LOGE("%{public}s: write dataBlock->content failed!", __func__);
+        return false;
+    }
+
+    if (!HdfSbufWriteInt32(data, dataBlock->id)) {
+        HDF_LOGE("%{public}s: write dataBlock->id failed!", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+bool HdiApCbParmBlockUnmarshalling(struct HdfSBuf *data, struct HdiApCbParm *dataBlock)
+{
+    if (data == NULL) {
+        HDF_LOGE("%{public}s: invalid sbuf", __func__);
+        return false;
+    }
+
+    if (dataBlock == NULL) {
+        HDF_LOGE("%{public}s: invalid data block", __func__);
+        return false;
+    }
+
+    {
+        const char *contentCp = HdfSbufReadString(data);
+        if (contentCp == NULL) {
+            HDF_LOGE("%{public}s: read contentCp failed!", __func__);
+            goto ERRORS;
+        }
+        dataBlock->content = strdup(contentCp);
+        if (dataBlock->content == NULL) {
+            goto ERRORS;
+        }
+    }
+
+    if (!HdfSbufReadInt32(data, &dataBlock->id)) {
+        HDF_LOGE("%{public}s: read dataBlock->id failed!", __func__);
+        goto ERRORS;
+    }
+
+    return true;
+ERRORS:
+    if (dataBlock->content != NULL) {
+        OsalMemFree(dataBlock->content);
+        dataBlock->content = NULL;
+    }
+
+    return false;
+}
+
+void HdiApCbParmFree(struct HdiApCbParm *dataBlock, bool freeSelf)
+{
+    if (dataBlock == NULL) {
+        return;
+    }
+
+    if (dataBlock->content != NULL) {
+        OsalMemFree(dataBlock->content);
+        dataBlock->content = NULL;
+    }
+
+    if (freeSelf) {
+        OsalMemFree(dataBlock);
+    }
+}

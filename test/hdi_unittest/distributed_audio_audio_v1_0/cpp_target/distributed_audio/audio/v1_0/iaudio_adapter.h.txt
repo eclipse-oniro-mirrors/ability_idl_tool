@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOADAPTER_H
+#define OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOADAPTER_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "distributed_audio/audio/v1_0/audio_types.h"
+#include "distributed_audio/audio/v1_0/iaudio_callback.h"
+#include "distributed_audio/audio/v1_0/iaudio_capture.h"
+#include "distributed_audio/audio/v1_0/iaudio_render.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_AUDIO_ADAPTER_GET_VERSION = 0,
+    CMD_AUDIO_ADAPTER_INIT_ALL_PORTS = 1,
+    CMD_AUDIO_ADAPTER_CREATE_RENDER = 2,
+    CMD_AUDIO_ADAPTER_DESTROY_RENDER = 3,
+    CMD_AUDIO_ADAPTER_CREATE_CAPTURE = 4,
+    CMD_AUDIO_ADAPTER_DESTROY_CAPTURE = 5,
+    CMD_AUDIO_ADAPTER_GET_PORT_CAPABILITY = 6,
+    CMD_AUDIO_ADAPTER_SET_PASSTHROUGH_MODE = 7,
+    CMD_AUDIO_ADAPTER_GET_PASSTHROUGH_MODE = 8,
+    CMD_AUDIO_ADAPTER_GET_DEVICE_STATUS = 9,
+    CMD_AUDIO_ADAPTER_UPDATE_AUDIO_ROUTE = 10,
+    CMD_AUDIO_ADAPTER_RELEASE_AUDIO_ROUTE = 11,
+    CMD_AUDIO_ADAPTER_SET_MIC_MUTE = 12,
+    CMD_AUDIO_ADAPTER_GET_MIC_MUTE = 13,
+    CMD_AUDIO_ADAPTER_SET_VOICE_VOLUME = 14,
+    CMD_AUDIO_ADAPTER_SET_EXTRA_PARAMS = 15,
+    CMD_AUDIO_ADAPTER_GET_EXTRA_PARAMS = 16,
+    CMD_AUDIO_ADAPTER_REG_EXTRA_PARAM_OBSERVER = 17,
+};
+
+class IAudioAdapter : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.distributed_audio.audio.v1_0.IAudioAdapter");
+
+    virtual ~IAudioAdapter() = default;
+
+    virtual int32_t InitAllPorts() = 0;
+
+    virtual int32_t CreateRender(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceDescriptor& desc,
+         const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioRender>& render, uint32_t& renderId) = 0;
+
+    virtual int32_t DestroyRender(uint32_t renderId) = 0;
+
+    virtual int32_t CreateCapture(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceDescriptor& desc,
+         const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture>& capture, uint32_t& captureId) = 0;
+
+    virtual int32_t DestroyCapture(uint32_t captureId) = 0;
+
+    virtual int32_t GetPortCapability(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort& port,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortCapability& capability) = 0;
+
+    virtual int32_t SetPassthroughMode(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort& port,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortPassthroughMode mode) = 0;
+
+    virtual int32_t GetPassthroughMode(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort& port,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortPassthroughMode& mode) = 0;
+
+    virtual int32_t GetDeviceStatus(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus& status) = 0;
+
+    virtual int32_t UpdateAudioRoute(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRoute& route,
+         int32_t& routeHandle) = 0;
+
+    virtual int32_t ReleaseAudioRoute(int32_t routeHandle) = 0;
+
+    virtual int32_t SetMicMute(bool mute) = 0;
+
+    virtual int32_t GetMicMute(bool& mute) = 0;
+
+    virtual int32_t SetVoiceVolume(float volume) = 0;
+
+    virtual int32_t SetExtraParams(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioExtParamKey key,
+         const std::string& condition, const std::string& value) = 0;
+
+    virtual int32_t GetExtraParams(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioExtParamKey key,
+         const std::string& condition, std::string& value) = 0;
+
+    virtual int32_t RegExtraParamObserver(const sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback>& audioCallback, int8_t cookie) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOADAPTER_H
+

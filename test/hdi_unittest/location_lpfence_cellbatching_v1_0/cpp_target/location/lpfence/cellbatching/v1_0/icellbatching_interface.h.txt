@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_LPFENCE_CELLBATCHING_V1_0_ICELLBATCHINGINTERFACE_H
+#define OHOS_HDI_LOCATION_LPFENCE_CELLBATCHING_V1_0_ICELLBATCHINGINTERFACE_H
+
+#include <stdint.h>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "location/lpfence/cellbatching/v1_0/cellbatching_types.h"
+#include "location/lpfence/cellbatching/v1_0/icellbatching_callback.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Cellbatching {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_CELLBATCHING_INTERFACE_GET_VERSION = 0,
+    CMD_CELLBATCHING_INTERFACE_REGISTER_CELL_BATCHING_CALLBACK = 1,
+    CMD_CELLBATCHING_INTERFACE_UNREGISTER_CELL_BATCHING_CALLBACK = 2,
+    CMD_CELLBATCHING_INTERFACE_CELLBATCHING_SWITCH = 3,
+    CMD_CELLBATCHING_INTERFACE_FLUSH_CELLBATCHING = 4,
+};
+
+class ICellbatchingInterface : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.location.lpfence.cellbatching.v1_0.ICellbatchingInterface");
+
+    virtual ~ICellbatchingInterface() = default;
+
+    static sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> Get(bool isStub = false);
+    static sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t RegisterCellBatchingCallback(const sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback>& callbackObj) = 0;
+
+    virtual int32_t UnregisterCellBatchingCallback(const sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback>& callbackObj) = 0;
+
+    virtual int32_t CellbatchingSwitch(const OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingRequest& req) = 0;
+
+    virtual int32_t FlushCellbatching() = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Cellbatching
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_LPFENCE_CELLBATCHING_V1_0_ICELLBATCHINGINTERFACE_H
+

@@ -1,0 +1,169 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/intell_voice_trigger_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Trigger {
+namespace V1_0 {
+
+
+
+bool IntellVoiceTriggerAdapterDsecriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterDsecriptor& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.adapterName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.adapterName failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceTriggerAdapterDsecriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterDsecriptor& dataBlock)
+{
+    const char* adapterNameCp = data.ReadCString();
+    if (adapterNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read adapterNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.adapterName = adapterNameCp;
+    return true;
+}
+
+bool IntellVoiceTriggerPropertiesBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerProperties& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.implementor.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.implementor failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.description.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.description failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.version)) {
+        HDF_LOGE("%{public}s: write dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.maxIntellVoiceModels)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxIntellVoiceModels failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceTriggerPropertiesBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerProperties& dataBlock)
+{
+    const char* implementorCp = data.ReadCString();
+    if (implementorCp == nullptr) {
+        HDF_LOGE("%{public}s: read implementorCp failed", __func__);
+        return false;
+    }
+    dataBlock.implementor = implementorCp;
+
+    const char* descriptionCp = data.ReadCString();
+    if (descriptionCp == nullptr) {
+        HDF_LOGE("%{public}s: read descriptionCp failed", __func__);
+        return false;
+    }
+    dataBlock.description = descriptionCp;
+
+    if (!data.ReadUint32(dataBlock.version)) {
+        HDF_LOGE("%{public}s: read dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.maxIntellVoiceModels)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxIntellVoiceModels failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceTriggerModelBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerModel& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.uid)) {
+        HDF_LOGE("%{public}s: write dataBlock.uid failed!", __func__);
+        return false;
+    }
+
+    if (dataBlock.data == nullptr || !data.WriteAshmem(dataBlock.data)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceTriggerModelBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerModel& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum IntellVoiceTriggerModelType>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.uid)) {
+        HDF_LOGE("%{public}s: read dataBlock.uid failed!", __func__);
+        return false;
+    }
+
+    dataBlock.data = data.ReadAshmem();
+    if (dataBlock.data == nullptr) {
+        HDF_LOGE("%{public}s: failed to read ashmem object", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceRecognitionEventBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent))) {
+        return false;
+    }
+    return true;
+}
+
+bool IntellVoiceRecognitionEventBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent& dataBlock)
+{
+    const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent *dataBlockPtr = reinterpret_cast<const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent), dataBlockPtr, sizeof(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Trigger
+} // IntelligentVoice
+} // HDI
+} // OHOS

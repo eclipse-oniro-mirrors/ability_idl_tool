@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/power_running_lock_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    power_running_lock_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_1 {
+
+
+
+OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStub(const sptr<OHOS::HDI::Power::V1_1::IPowerRunningLockCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Power::V1_1::IPowerRunningLockCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::~PowerRunningLockCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_POWER_RUNNING_LOCK_CALLBACK_GET_VERSION:
+            return PowerRunningLockCallbackStubGetVersion(data, reply, option);
+        case CMD_POWER_RUNNING_LOCK_CALLBACK_HANDLE_RUNNING_LOCK_MESSAGE:
+            return PowerRunningLockCallbackStubHandleRunningLockMessage(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubHandleRunningLockMessage(MessageParcel& powerRunningLockCallbackData, MessageParcel& powerRunningLockCallbackReply, MessageOption& powerRunningLockCallbackOption)
+{
+    return OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubHandleRunningLockMessage_(powerRunningLockCallbackData, powerRunningLockCallbackReply, powerRunningLockCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubGetVersion(MessageParcel& powerRunningLockCallbackData, MessageParcel& powerRunningLockCallbackReply, MessageOption& powerRunningLockCallbackOption)
+{
+    return OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubGetVersion_(powerRunningLockCallbackData, powerRunningLockCallbackReply, powerRunningLockCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubHandleRunningLockMessage_(MessageParcel& powerRunningLockCallbackData, MessageParcel& powerRunningLockCallbackReply, MessageOption& powerRunningLockCallbackOption, sptr<OHOS::HDI::Power::V1_1::IPowerRunningLockCallback> impl)
+{
+    if (powerRunningLockCallbackData.ReadInterfaceToken() != OHOS::HDI::Power::V1_1::IPowerRunningLockCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* messageCp = powerRunningLockCallbackData.ReadCString();
+    if (messageCp == nullptr) {
+        HDF_LOGE("%{public}s: read message failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string message = messageCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerRunningLockCallbackRet = impl->HandleRunningLockMessage(message);
+    if (powerRunningLockCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerRunningLockCallbackRet);
+        return powerRunningLockCallbackRet;
+    }
+
+    return powerRunningLockCallbackRet;
+}
+
+int32_t OHOS::HDI::Power::V1_1::PowerRunningLockCallbackStub::PowerRunningLockCallbackStubGetVersion_(MessageParcel& powerRunningLockCallbackData, MessageParcel& powerRunningLockCallbackReply, MessageOption& powerRunningLockCallbackOption, sptr<OHOS::HDI::Power::V1_1::IPowerRunningLockCallback> impl)
+{
+    if (powerRunningLockCallbackData.ReadInterfaceToken() != OHOS::HDI::Power::V1_1::IPowerRunningLockCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerRunningLockCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (powerRunningLockCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerRunningLockCallbackRet);
+        return powerRunningLockCallbackRet;
+    }
+
+    if (!powerRunningLockCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerRunningLockCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerRunningLockCallbackRet;
+}
+} // V1_1
+} // Power
+} // HDI
+} // OHOS

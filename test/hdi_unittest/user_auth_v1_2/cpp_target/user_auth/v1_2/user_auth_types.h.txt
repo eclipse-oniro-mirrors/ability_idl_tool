@@ -1,0 +1,273 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_USER_AUTH_V1_2_USERAUTHTYPES_H
+#define OHOS_HDI_USER_AUTH_V1_2_USERAUTHTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace UserAuth {
+namespace V1_2 {
+
+using namespace OHOS;
+
+enum AuthType : int32_t {
+    ALL = 0,
+    PIN = 1,
+    FACE = 2,
+    FINGERPRINT = 4,
+};
+
+enum ExecutorRole : int32_t {
+    COLLECTOR = 1,
+    VERIFIER = 2,
+    ALL_IN_ONE = 3,
+};
+
+enum ExecutorSecureLevel : int32_t {
+    ESL0 = 0,
+    ESL1 = 1,
+    ESL2 = 2,
+    ESL3 = 3,
+};
+
+enum PinSubType : int32_t {
+    PIN_SIX = 10000,
+    PIN_NUMBER = 10001,
+    PIN_MIX = 10002,
+};
+
+enum ScheduleMode : int32_t {
+    ENROLL = 0,
+    AUTH = 1,
+    IDENTIFY = 2,
+};
+
+struct ExecutorRegisterInfo {
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    OHOS::HDI::UserAuth::V1_2::ExecutorRole executorRole;
+    uint32_t executorSensorHint;
+    uint32_t executorMatcher;
+    OHOS::HDI::UserAuth::V1_2::ExecutorSecureLevel esl;
+    std::vector<uint8_t> publicKey;
+};
+
+struct ExecutorInfo {
+    uint64_t executorIndex;
+    OHOS::HDI::UserAuth::V1_2::ExecutorRegisterInfo info;
+};
+
+struct ScheduleInfo {
+    uint64_t scheduleId;
+    std::vector<uint64_t> templateIds;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorMatcher;
+    uint32_t scheduleMode;
+    std::vector<OHOS::HDI::UserAuth::V1_2::ExecutorInfo> executors;
+};
+
+struct AuthSolution {
+    int32_t userId;
+    uint32_t authTrustLevel;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorSensorHint;
+    std::vector<uint8_t> challenge;
+};
+
+struct ExecutorSendMsg {
+    uint64_t executorIndex;
+    int32_t commandId;
+    std::vector<uint8_t> msg;
+};
+
+struct AuthResultInfo {
+    int32_t result;
+    int32_t lockoutDuration;
+    int32_t remainAttempts;
+    std::vector<OHOS::HDI::UserAuth::V1_2::ExecutorSendMsg> msgs;
+    std::vector<uint8_t> token;
+    std::vector<uint8_t> rootSecret;
+};
+
+struct IdentifyResultInfo {
+    int32_t result;
+    int32_t userId;
+    std::vector<uint8_t> token;
+};
+
+struct EnrollParam {
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorSensorHint;
+} __attribute__ ((aligned(8)));
+
+struct CredentialInfo {
+    uint64_t credentialId;
+    uint64_t executorIndex;
+    uint64_t templateId;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorMatcher;
+    uint32_t executorSensorHint;
+} __attribute__ ((aligned(8)));
+
+struct EnrolledInfo {
+    uint64_t enrolledId;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+} __attribute__ ((aligned(8)));
+
+struct EnrollResultInfo {
+    uint64_t credentialId;
+    OHOS::HDI::UserAuth::V1_2::CredentialInfo oldInfo;
+    std::vector<uint8_t> rootSecret;
+};
+
+struct ScheduleInfoV1_1 {
+    uint64_t scheduleId;
+    std::vector<uint64_t> templateIds;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorMatcher;
+    uint32_t scheduleMode;
+    std::vector<OHOS::HDI::UserAuth::V1_2::ExecutorInfo> executors;
+    std::vector<uint8_t> extraInfo;
+};
+
+struct UserInfo {
+    uint64_t secureUid;
+    OHOS::HDI::UserAuth::V1_2::PinSubType pinSubType;
+    std::vector<OHOS::HDI::UserAuth::V1_2::EnrolledInfo> enrolledInfos;
+};
+
+struct ExtUserInfo {
+    int32_t userId;
+    OHOS::HDI::UserAuth::V1_2::UserInfo userInfo;
+};
+
+struct AuthSolutionV1_2 {
+    int32_t userId;
+    uint32_t authTrustLevel;
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorSensorHint;
+    std::vector<uint8_t> challenge;
+    std::string callerName;
+    int32_t apiVersion;
+};
+
+struct EnrollParamV1_2 {
+    OHOS::HDI::UserAuth::V1_2::AuthType authType;
+    uint32_t executorSensorHint;
+    std::string callerName;
+    int32_t apiVersion;
+};
+
+bool ExecutorRegisterInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ExecutorRegisterInfo& dataBlock);
+
+bool ExecutorRegisterInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ExecutorRegisterInfo& dataBlock);
+
+bool ExecutorInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ExecutorInfo& dataBlock);
+
+bool ExecutorInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ExecutorInfo& dataBlock);
+
+bool ScheduleInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ScheduleInfo& dataBlock);
+
+bool ScheduleInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ScheduleInfo& dataBlock);
+
+bool AuthSolutionBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::AuthSolution& dataBlock);
+
+bool AuthSolutionBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::AuthSolution& dataBlock);
+
+bool ExecutorSendMsgBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ExecutorSendMsg& dataBlock);
+
+bool ExecutorSendMsgBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ExecutorSendMsg& dataBlock);
+
+bool AuthResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::AuthResultInfo& dataBlock);
+
+bool AuthResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::AuthResultInfo& dataBlock);
+
+bool IdentifyResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::IdentifyResultInfo& dataBlock);
+
+bool IdentifyResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::IdentifyResultInfo& dataBlock);
+
+bool EnrollParamBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::EnrollParam& dataBlock);
+
+bool EnrollParamBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::EnrollParam& dataBlock);
+
+bool CredentialInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::CredentialInfo& dataBlock);
+
+bool CredentialInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::CredentialInfo& dataBlock);
+
+bool EnrolledInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::EnrolledInfo& dataBlock);
+
+bool EnrolledInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::EnrolledInfo& dataBlock);
+
+bool EnrollResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::EnrollResultInfo& dataBlock);
+
+bool EnrollResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::EnrollResultInfo& dataBlock);
+
+bool ScheduleInfoV1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1& dataBlock);
+
+bool ScheduleInfoV1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ScheduleInfoV1_1& dataBlock);
+
+bool UserInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::UserInfo& dataBlock);
+
+bool UserInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::UserInfo& dataBlock);
+
+bool ExtUserInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::ExtUserInfo& dataBlock);
+
+bool ExtUserInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::ExtUserInfo& dataBlock);
+
+bool AuthSolutionV1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::AuthSolutionV1_2& dataBlock);
+
+bool AuthSolutionV1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::AuthSolutionV1_2& dataBlock);
+
+bool EnrollParamV1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_2::EnrollParamV1_2& dataBlock);
+
+bool EnrollParamV1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_2::EnrollParamV1_2& dataBlock);
+
+} // V1_2
+} // UserAuth
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_USER_AUTH_V1_2_USERAUTHTYPES_H
+

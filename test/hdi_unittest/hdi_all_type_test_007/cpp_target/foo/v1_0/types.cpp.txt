@@ -1,0 +1,499 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Foo {
+namespace V1_0 {
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+static bool WriteFileDescriptor(MessageParcel &data, int fd);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool WriteFileDescriptor(MessageParcel &data, int fd)
+{
+    if (!data.WriteBool(fd >= 0 ? true : false)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (fd < 0) {
+        return true;
+    }
+    if (!data.WriteFileDescriptor(fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool FooInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Foo::V1_0::FooInfo& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: write dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.data1)) {
+        HDF_LOGE("%{public}s: write dataBlock.data1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.data2.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.data2.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.data2) {
+        if (!data.WriteBool(it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteInt8(dataBlock.data3)) {
+        HDF_LOGE("%{public}s: write dataBlock.data3 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt16(dataBlock.data4)) {
+        HDF_LOGE("%{public}s: write dataBlock.data4 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.data5)) {
+        HDF_LOGE("%{public}s: write dataBlock.data5 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.data6)) {
+        HDF_LOGE("%{public}s: write dataBlock.data6 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.data7.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.data7 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.data8)) {
+        HDF_LOGE("%{public}s: write dataBlock.data8 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteDouble(dataBlock.data9)) {
+        HDF_LOGE("%{public}s: write dataBlock.data9 failed!", __func__);
+        return false;
+    }
+
+    if (!WriteFileDescriptor(data, dataBlock.data10)) {
+        HDF_LOGE("%{public}s: write dataBlock.data10 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteStrongParcelable(dataBlock.data12)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data12", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.data14)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data14", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.data15.size())) {
+        HDF_LOGE("%{public}s: write dataBlock.data15.size failed!", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.data15) {
+        if (!data.WriteCString((it0.first).c_str())) {
+            HDF_LOGE("%{public}s: write (it0.first) failed!", __func__);
+            return false;
+        }
+        if (!WritePodArray(data, (it0.second))) {
+            HDF_LOGE("%{public}s: failed to write (it0.second)", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.data17)) {
+        HDF_LOGE("%{public}s: write dataBlock.data17 failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.data18)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data18", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.data19)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data19", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.data20)) {
+        HDF_LOGE("%{public}s: write dataBlock.data20 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(dataBlock.data21)) {
+        HDF_LOGE("%{public}s: write dataBlock.data21 failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool FooInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Foo::V1_0::FooInfo& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: read dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum FooType>(enumTmp);
+    }
+
+    if (!data.ReadBool(dataBlock.data1)) {
+        HDF_LOGE("%{public}s: read dataBlock.data1 failed!", __func__);
+        return false;
+    }
+
+    uint32_t data2Size = 0;
+    if (!data.ReadUint32(data2Size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(data2Size, >, HDI_BUFF_MAX_SIZE / sizeof(bool), false);
+    dataBlock.data2.clear();
+    dataBlock.data2.reserve(data2Size);
+    for (uint32_t i0 = 0; i0 < data2Size; ++i0) {
+        bool value0 = false;
+        if (!data.ReadBool(value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.data2.push_back(value0);
+    }
+
+    if (!data.ReadInt8(dataBlock.data3)) {
+        HDF_LOGE("%{public}s: read dataBlock.data3 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt16(dataBlock.data4)) {
+        HDF_LOGE("%{public}s: read dataBlock.data4 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.data5)) {
+        HDF_LOGE("%{public}s: read dataBlock.data5 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.data6)) {
+        HDF_LOGE("%{public}s: read dataBlock.data6 failed!", __func__);
+        return false;
+    }
+
+    const char* data7Cp = data.ReadCString();
+    if (data7Cp == nullptr) {
+        HDF_LOGE("%{public}s: read data7Cp failed", __func__);
+        return false;
+    }
+    dataBlock.data7 = data7Cp;
+
+    if (!data.ReadFloat(dataBlock.data8)) {
+        HDF_LOGE("%{public}s: read dataBlock.data8 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadDouble(dataBlock.data9)) {
+        HDF_LOGE("%{public}s: read dataBlock.data9 failed!", __func__);
+        return false;
+    }
+
+    dataBlock.data10 = -1;
+    if (!ReadFileDescriptor(data, dataBlock.data10)) {
+        HDF_LOGE("%{public}s: read dataBlock.data10 failed!", __func__);
+        return false;
+    }
+
+    dataBlock.data12 = data.ReadStrongParcelable<NativeBuffer>();
+
+    if (!ReadPodArray(data, dataBlock.data14)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.data14", __func__);
+        return false;
+    }
+
+    uint32_t data15Size = 0;
+    if (!data.ReadUint32(data15Size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    for (uint32_t i = 0; i < data15Size; ++i) {
+        const char* key0 = data.ReadCString();
+        if (key0 == nullptr) {
+            HDF_LOGE("%{public}s: read key0 failed", __func__);
+            return false;
+        }
+        std::vector<int8_t> value0;
+        if (!ReadPodArray(data, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return false;
+        }
+        dataBlock.data15[key0] = value0;
+    }
+
+    if (!data.ReadUint32(dataBlock.data17)) {
+        HDF_LOGE("%{public}s: read dataBlock.data17 failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.data18)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.data18", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.data19)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.data19", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.data20)) {
+        HDF_LOGE("%{public}s: read dataBlock.data20 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint64(dataBlock.data21)) {
+        HDF_LOGE("%{public}s: read dataBlock.data21 failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioDeviceDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Foo::V1_0::AudioDeviceDescriptor& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: write dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.pins))) {
+        HDF_LOGE("%{public}s: write dataBlock.pins failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.desc.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioDeviceDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Foo::V1_0::AudioDeviceDescriptor& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: read dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.pins failed!", __func__);
+            return false;
+        }
+        dataBlock.pins = static_cast<enum AudioPortPin>(enumTmp);
+    }
+
+    const char* descCp = data.ReadCString();
+    if (descCp == nullptr) {
+        HDF_LOGE("%{public}s: read descCp failed", __func__);
+        return false;
+    }
+    dataBlock.desc = descCp;
+    return true;
+}
+
+bool AudioSceneDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Foo::V1_0::AudioSceneDescriptor& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock.scene, sizeof(OHOS::HDI::Foo::V1_0::SceneDesc))) {
+        HDF_LOGE("%{public}s: write dataBlock.scene failed!", __func__);
+        return false;
+    }
+
+    if (!AudioDeviceDescriptorBlockMarshalling(data, dataBlock.desc)) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioSceneDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Foo::V1_0::AudioSceneDescriptor& dataBlock)
+{
+    const OHOS::HDI::Foo::V1_0::SceneDesc *sceneCp = reinterpret_cast<const OHOS::HDI::Foo::V1_0::SceneDesc*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Foo::V1_0::SceneDesc)));
+    if (sceneCp == nullptr) {
+        HDF_LOGE("%{public}s: read sceneCp failed!", __func__);
+        return false;
+    }
+    if (memcpy_s(&dataBlock.scene, sizeof(OHOS::HDI::Foo::V1_0::SceneDesc), sceneCp, sizeof(OHOS::HDI::Foo::V1_0::SceneDesc)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy dataBlock.scene", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Foo::V1_0::AudioDeviceDescriptorBlockUnmarshalling(data, dataBlock.desc)) {
+        HDF_LOGE("%{public}s: read dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool RGBColorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Foo::V1_0::RGBColor& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Foo::V1_0::RGBColor))) {
+        return false;
+    }
+    return true;
+}
+
+bool RGBColorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Foo::V1_0::RGBColor& dataBlock)
+{
+    const OHOS::HDI::Foo::V1_0::RGBColor *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Foo::V1_0::RGBColor*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Foo::V1_0::RGBColor)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Foo::V1_0::RGBColor), dataBlockPtr, sizeof(OHOS::HDI::Foo::V1_0::RGBColor)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool WRGBColorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Foo::V1_0::WRGBColor& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Foo::V1_0::WRGBColor))) {
+        return false;
+    }
+    return true;
+}
+
+bool WRGBColorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Foo::V1_0::WRGBColor& dataBlock)
+{
+    const OHOS::HDI::Foo::V1_0::WRGBColor *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Foo::V1_0::WRGBColor*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Foo::V1_0::WRGBColor)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Foo::V1_0::WRGBColor), dataBlockPtr, sizeof(OHOS::HDI::Foo::V1_0::WRGBColor)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+
+} // V1_0
+} // Foo
+} // HDI
+} // OHOS

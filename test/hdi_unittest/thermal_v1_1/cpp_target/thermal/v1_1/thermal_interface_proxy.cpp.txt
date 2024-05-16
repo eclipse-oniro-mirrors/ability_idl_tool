@@ -1,0 +1,481 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/thermal_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    thermal_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Thermal {
+namespace V1_1 {
+
+
+sptr<OHOS::HDI::Thermal::V1_1::IThermalInterface> OHOS::HDI::Thermal::V1_1::IThermalInterface::Get(bool isStub)
+{
+    return IThermalInterface::Get("thermal_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Thermal::V1_1::IThermalInterface> OHOS::HDI::Thermal::V1_1::IThermalInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "thermal_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Thermal::V1_1::IThermalInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy> proxy = new OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t thermalInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetCpuFreq(int32_t freq)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetCpuFreq_(freq, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetGpuFreq(int32_t freq)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetGpuFreq_(freq, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetBatteryCurrent(int32_t current)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetBatteryCurrent_(current, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetThermalZoneInfo(OHOS::HDI::Thermal::V1_1::HdfThermalCallbackInfo& event)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetThermalZoneInfo_(event, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::IsolateCpu(int32_t num)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::IsolateCpu_(num, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Register(const sptr<OHOS::HDI::Thermal::V1_1::IThermalCallback>& callbackObj)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Register_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Unregister()
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Unregister_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::RegisterFanCallback(const sptr<OHOS::HDI::Thermal::V1_1::IFanCallback>& callbackObj)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::RegisterFanCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::UnregisterFanCallback()
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::UnregisterFanCallback_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetCpuFreq_(int32_t freq, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteInt32(freq)) {
+        HDF_LOGE("%{public}s: write freq failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_SET_CPU_FREQ, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetGpuFreq_(int32_t freq, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteInt32(freq)) {
+        HDF_LOGE("%{public}s: write freq failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_SET_GPU_FREQ, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::SetBatteryCurrent_(int32_t current,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteInt32(current)) {
+        HDF_LOGE("%{public}s: write current failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_SET_BATTERY_CURRENT, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetThermalZoneInfo_(OHOS::HDI::Thermal::V1_1::HdfThermalCallbackInfo& event, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_GET_THERMAL_ZONE_INFO, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    if (!HdfThermalCallbackInfoBlockUnmarshalling(thermalInterfaceReply, event)) {
+        HDF_LOGE("%{public}s: read event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::IsolateCpu_(int32_t num, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteInt32(num)) {
+        HDF_LOGE("%{public}s: write num failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_ISOLATE_CPU, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Register_(const sptr<OHOS::HDI::Thermal::V1_1::IThermalCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Thermal::V1_1::IThermalCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_REGISTER, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::Unregister_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_UNREGISTER, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::RegisterFanCallback_(const sptr<OHOS::HDI::Thermal::V1_1::IFanCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Thermal::V1_1::IFanCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_REGISTER_FAN_CALLBACK, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::UnregisterFanCallback_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_UNREGISTER_FAN_CALLBACK, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_1::ThermalInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel thermalInterfaceData;
+    MessageParcel thermalInterfaceReply;
+    MessageOption thermalInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!thermalInterfaceData.WriteInterfaceToken(OHOS::HDI::Thermal::V1_1::IThermalInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t thermalInterfaceRet = remote->SendRequest(CMD_THERMAL_INTERFACE_GET_VERSION, thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    if (!thermalInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return thermalInterfaceRet;
+}
+
+} // V1_1
+} // Thermal
+} // HDI
+} // OHOS

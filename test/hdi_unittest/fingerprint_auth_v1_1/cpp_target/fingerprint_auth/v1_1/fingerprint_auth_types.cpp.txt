@@ -1,0 +1,157 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/fingerprint_auth_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace FingerprintAuth {
+namespace V1_1 {
+
+
+
+bool PropertyBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::FingerprintAuth::V1_1::Property& dataBlock)
+{
+    if (!data.WriteUint64(dataBlock.authSubType)) {
+        HDF_LOGE("%{public}s: write dataBlock.authSubType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.lockoutDuration)) {
+        HDF_LOGE("%{public}s: write dataBlock.lockoutDuration failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.remainAttempts)) {
+        HDF_LOGE("%{public}s: write dataBlock.remainAttempts failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.enrollmentProgress.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.enrollmentProgress failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.sensorInfo.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.sensorInfo failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PropertyBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::FingerprintAuth::V1_1::Property& dataBlock)
+{
+    if (!data.ReadUint64(dataBlock.authSubType)) {
+        HDF_LOGE("%{public}s: read dataBlock.authSubType failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.lockoutDuration)) {
+        HDF_LOGE("%{public}s: read dataBlock.lockoutDuration failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.remainAttempts)) {
+        HDF_LOGE("%{public}s: read dataBlock.remainAttempts failed!", __func__);
+        return false;
+    }
+
+    const char* enrollmentProgressCp = data.ReadCString();
+    if (enrollmentProgressCp == nullptr) {
+        HDF_LOGE("%{public}s: read enrollmentProgressCp failed", __func__);
+        return false;
+    }
+    dataBlock.enrollmentProgress = enrollmentProgressCp;
+
+    const char* sensorInfoCp = data.ReadCString();
+    if (sensorInfoCp == nullptr) {
+        HDF_LOGE("%{public}s: read sensorInfoCp failed", __func__);
+        return false;
+    }
+    dataBlock.sensorInfo = sensorInfoCp;
+    return true;
+}
+
+bool SaCommandParamEnableSensorIlluminationBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination))) {
+        return false;
+    }
+    return true;
+}
+
+bool SaCommandParamEnableSensorIlluminationBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination& dataBlock)
+{
+    const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination *dataBlockPtr = reinterpret_cast<const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination), dataBlockPtr, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamEnableSensorIllumination)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SaCommandParamNoneBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone))) {
+        return false;
+    }
+    return true;
+}
+
+bool SaCommandParamNoneBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone& dataBlock)
+{
+    const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone *dataBlockPtr = reinterpret_cast<const OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone), dataBlockPtr, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommandParamNone)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SaCommandBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::FingerprintAuth::V1_1::SaCommand& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommand))) {
+        return false;
+    }
+    return true;
+}
+
+bool SaCommandBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::FingerprintAuth::V1_1::SaCommand& dataBlock)
+{
+    const OHOS::HDI::FingerprintAuth::V1_1::SaCommand *dataBlockPtr = reinterpret_cast<const OHOS::HDI::FingerprintAuth::V1_1::SaCommand*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommand)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommand), dataBlockPtr, sizeof(OHOS::HDI::FingerprintAuth::V1_1::SaCommand)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+
+} // V1_1
+} // FingerprintAuth
+} // HDI
+} // OHOS

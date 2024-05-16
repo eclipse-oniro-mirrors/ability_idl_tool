@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CAMERA_V1_1_TYPES_H
+#define OHOS_HDI_CAMERA_V1_1_TYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+#include "buffer_producer_sequenceable.h"
+#include "camera/v1_0/types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_1 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::Camera::V1_0;
+
+enum ExtendedStreamInfoType : int32_t {
+    EXTENDED_STREAM_INFO_QUICK_THUMBNAIL = 0,
+};
+
+struct ExtendedStreamInfo {
+    OHOS::HDI::Camera::V1_1::ExtendedStreamInfoType type;
+    int32_t width;
+    int32_t height;
+    int32_t format;
+    int32_t dataspace;
+    sptr<OHOS::HDI::Camera::V1_0::BufferProducerSequenceable> bufferQueue;
+};
+
+struct StreamInfo_V1_1 {
+    OHOS::HDI::Camera::V1_0::StreamInfo v1_0;
+    std::vector<OHOS::HDI::Camera::V1_1::ExtendedStreamInfo> extendedStreamInfos;
+};
+
+struct PrelaunchConfig {
+    std::string cameraId;
+    std::vector<OHOS::HDI::Camera::V1_1::StreamInfo_V1_1> streamInfos_V1_1;
+    std::vector<uint8_t> setting;
+};
+
+enum OperationMode_V1_1 : int32_t {
+    NORMAL = 0,
+    CAPTURE = 1,
+    VIDEO = 2,
+    PORTRAIT = 3,
+    NIGHT = 4,
+    PROFESSIONAL = 5,
+    SLOW_MOTION = 6,
+};
+
+bool ExtendedStreamInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Camera::V1_1::ExtendedStreamInfo& dataBlock);
+
+bool ExtendedStreamInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Camera::V1_1::ExtendedStreamInfo& dataBlock);
+
+bool StreamInfo_V1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Camera::V1_1::StreamInfo_V1_1& dataBlock);
+
+bool StreamInfo_V1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Camera::V1_1::StreamInfo_V1_1& dataBlock);
+
+bool PrelaunchConfigBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Camera::V1_1::PrelaunchConfig& dataBlock);
+
+bool PrelaunchConfigBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Camera::V1_1::PrelaunchConfig& dataBlock);
+
+
+} // V1_1
+} // Camera
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CAMERA_V1_1_TYPES_H
+

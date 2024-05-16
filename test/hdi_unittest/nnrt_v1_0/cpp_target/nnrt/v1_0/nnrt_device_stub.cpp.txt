@@ -1,0 +1,731 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/nnrt_device_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    nnrt_device_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V1_0 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> OHOS::HDI::Nnrt::V1_0::INnrtDevice::Get(bool isStub)
+{
+    return OHOS::HDI::Nnrt::V1_0::INnrtDevice::Get("nnrt_device_service", isStub);
+}
+
+sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> OHOS::HDI::Nnrt::V1_0::INnrtDevice::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "nnrt_device_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Nnrt::V1_0::INnrtDevice *>(impl);
+}
+
+
+OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStub(const sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> &impl)
+    : IPCObjectStub(OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::~NnrtDeviceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_NNRT_DEVICE_GET_VERSION:
+            return NnrtDeviceStubGetVersion(data, reply, option);
+        case CMD_NNRT_DEVICE_GET_DEVICE_NAME:
+            return NnrtDeviceStubGetDeviceName(data, reply, option);
+        case CMD_NNRT_DEVICE_GET_VENDOR_NAME:
+            return NnrtDeviceStubGetVendorName(data, reply, option);
+        case CMD_NNRT_DEVICE_GET_DEVICE_TYPE:
+            return NnrtDeviceStubGetDeviceType(data, reply, option);
+        case CMD_NNRT_DEVICE_GET_DEVICE_STATUS:
+            return NnrtDeviceStubGetDeviceStatus(data, reply, option);
+        case CMD_NNRT_DEVICE_GET_SUPPORTED_OPERATION:
+            return NnrtDeviceStubGetSupportedOperation(data, reply, option);
+        case CMD_NNRT_DEVICE_IS_FLOAT16_PRECISION_SUPPORTED:
+            return NnrtDeviceStubIsFloat16PrecisionSupported(data, reply, option);
+        case CMD_NNRT_DEVICE_IS_PERFORMANCE_MODE_SUPPORTED:
+            return NnrtDeviceStubIsPerformanceModeSupported(data, reply, option);
+        case CMD_NNRT_DEVICE_IS_PRIORITY_SUPPORTED:
+            return NnrtDeviceStubIsPrioritySupported(data, reply, option);
+        case CMD_NNRT_DEVICE_IS_DYNAMIC_INPUT_SUPPORTED:
+            return NnrtDeviceStubIsDynamicInputSupported(data, reply, option);
+        case CMD_NNRT_DEVICE_PREPARE_MODEL:
+            return NnrtDeviceStubPrepareModel(data, reply, option);
+        case CMD_NNRT_DEVICE_IS_MODEL_CACHE_SUPPORTED:
+            return NnrtDeviceStubIsModelCacheSupported(data, reply, option);
+        case CMD_NNRT_DEVICE_PREPARE_MODEL_FROM_MODEL_CACHE:
+            return NnrtDeviceStubPrepareModelFromModelCache(data, reply, option);
+        case CMD_NNRT_DEVICE_ALLOCATE_BUFFER:
+            return NnrtDeviceStubAllocateBuffer(data, reply, option);
+        case CMD_NNRT_DEVICE_RELEASE_BUFFER:
+            return NnrtDeviceStubReleaseBuffer(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceName(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceName_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVendorName(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVendorName_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceType(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceType_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceStatus(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceStatus_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetSupportedOperation(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetSupportedOperation_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsFloat16PrecisionSupported(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsFloat16PrecisionSupported_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPerformanceModeSupported(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPerformanceModeSupported_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPrioritySupported(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPrioritySupported_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsDynamicInputSupported(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsDynamicInputSupported_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModel(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModel_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsModelCacheSupported(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsModelCacheSupported_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModelFromModelCache(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModelFromModelCache_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubAllocateBuffer(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubAllocateBuffer_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubReleaseBuffer(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubReleaseBuffer_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVersion(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption)
+{
+    return OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVersion_(nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceName_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool nnrtDeviceMemSet = false;
+    if (!nnrtDeviceData.ReadBool(nnrtDeviceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read nnrtDeviceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name;
+    if (nnrtDeviceMemSet) {
+        uint32_t capacity = 0;
+        if (!nnrtDeviceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        name.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetDeviceName(name);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVendorName_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool nnrtDeviceMemSet = false;
+    if (!nnrtDeviceData.ReadBool(nnrtDeviceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read nnrtDeviceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name;
+    if (nnrtDeviceMemSet) {
+        uint32_t capacity = 0;
+        if (!nnrtDeviceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        name.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetVendorName(name);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceType_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::DeviceType deviceType;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetDeviceType(deviceType);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteUint64(static_cast<uint64_t>(deviceType))) {
+        HDF_LOGE("%{public}s: write deviceType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetDeviceStatus_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::DeviceStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetDeviceStatus(status);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetSupportedOperation_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool nnrtDeviceMemSet = false;
+    if (!nnrtDeviceData.ReadBool(nnrtDeviceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read nnrtDeviceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Nnrt::V1_0::Model model;
+    if (!ModelBlockUnmarshalling(nnrtDeviceData, model)) {
+        HDF_LOGE("%{public}s: read model failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<bool> ops;
+    if (nnrtDeviceMemSet) {
+        uint32_t capacity = 0;
+        if (!nnrtDeviceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(bool), HDF_ERR_INVALID_PARAM);
+        ops.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetSupportedOperation(model, ops);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteUint32(ops.size())) {
+        HDF_LOGE("%{public}s: write ops size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : ops) {
+        if (!nnrtDeviceReply.WriteBool(it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsFloat16PrecisionSupported_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool isSupported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->IsFloat16PrecisionSupported(isSupported);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteBool(isSupported)) {
+        HDF_LOGE("%{public}s: write isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPerformanceModeSupported_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool isSupported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->IsPerformanceModeSupported(isSupported);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteBool(isSupported)) {
+        HDF_LOGE("%{public}s: write isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsPrioritySupported_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool isSupported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->IsPrioritySupported(isSupported);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteBool(isSupported)) {
+        HDF_LOGE("%{public}s: write isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsDynamicInputSupported_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool isSupported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->IsDynamicInputSupported(isSupported);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteBool(isSupported)) {
+        HDF_LOGE("%{public}s: write isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModel_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::Model model;
+    if (!ModelBlockUnmarshalling(nnrtDeviceData, model)) {
+        HDF_LOGE("%{public}s: read model failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::ModelConfig config;
+    if (!ModelConfigBlockUnmarshalling(nnrtDeviceData, config)) {
+        HDF_LOGE("%{public}s: read config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Nnrt::V1_0::IPreparedModel> preparedModel;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->PrepareModel(model, config, preparedModel);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (preparedModel == nullptr) {
+        HDF_LOGE("%{public}s: parameter preparedModel is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(preparedModel, OHOS::HDI::Nnrt::V1_0::IPreparedModel::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write preparedModel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubIsModelCacheSupported_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool isSupported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->IsModelCacheSupported(isSupported);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteBool(isSupported)) {
+        HDF_LOGE("%{public}s: write isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubPrepareModelFromModelCache_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Nnrt::V1_0::SharedBuffer> modelCache;
+    uint32_t modelCacheSize = 0;
+    if (!nnrtDeviceData.ReadUint32(modelCacheSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(modelCacheSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Nnrt::V1_0::SharedBuffer), HDF_ERR_INVALID_PARAM);
+    modelCache.clear();
+    modelCache.reserve(modelCacheSize);
+    for (uint32_t i0 = 0; i0 < modelCacheSize; ++i0) {
+        OHOS::HDI::Nnrt::V1_0::SharedBuffer value0;
+        if (!SharedBufferBlockUnmarshalling(nnrtDeviceData, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        modelCache.push_back(value0);
+    }
+
+    OHOS::HDI::Nnrt::V1_0::ModelConfig config;
+    if (!ModelConfigBlockUnmarshalling(nnrtDeviceData, config)) {
+        HDF_LOGE("%{public}s: read config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Nnrt::V1_0::IPreparedModel> preparedModel;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->PrepareModelFromModelCache(modelCache, config, preparedModel);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (preparedModel == nullptr) {
+        HDF_LOGE("%{public}s: parameter preparedModel is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(preparedModel, OHOS::HDI::Nnrt::V1_0::IPreparedModel::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write preparedModel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubAllocateBuffer_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t length = 0;
+    if (!nnrtDeviceData.ReadUint32(length)) {
+        HDF_LOGE("%{public}s: read length failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::SharedBuffer buffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->AllocateBuffer(length, buffer);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!OHOS::HDI::Nnrt::V1_0::SharedBufferBlockMarshalling(nnrtDeviceReply, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubReleaseBuffer_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Nnrt::V1_0::SharedBuffer buffer;
+    if (!SharedBufferBlockUnmarshalling(nnrtDeviceData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->ReleaseBuffer(buffer);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::NnrtDeviceStub::NnrtDeviceStubGetVersion_(MessageParcel& nnrtDeviceData, MessageParcel& nnrtDeviceReply, MessageOption& nnrtDeviceOption, sptr<OHOS::HDI::Nnrt::V1_0::INnrtDevice> impl)
+{
+    if (nnrtDeviceData.ReadInterfaceToken() != OHOS::HDI::Nnrt::V1_0::INnrtDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t nnrtDeviceRet = impl->GetVersion(majorVer, minorVer);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+} // V1_0
+} // Nnrt
+} // HDI
+} // OHOS

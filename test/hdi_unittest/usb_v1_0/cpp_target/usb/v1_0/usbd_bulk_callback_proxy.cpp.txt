@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usbd_bulk_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    usbd_bulk_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkWriteCallback(int32_t status, int32_t actLength)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkWriteCallback_(status, actLength, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkReadCallback(int32_t status, int32_t actLength)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkReadCallback_(status, actLength, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkWriteCallback_(int32_t status, int32_t actLength,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdBulkCallbackData;
+    MessageParcel usbdBulkCallbackReply;
+    MessageOption usbdBulkCallbackOption(MessageOption::TF_SYNC);
+
+    if (!usbdBulkCallbackData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackData.WriteInt32(status)) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackData.WriteInt32(actLength)) {
+        HDF_LOGE("%{public}s: write actLength failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdBulkCallbackRet = remote->SendRequest(CMD_USBD_BULK_CALLBACK_ON_BULK_WRITE_CALLBACK, usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    return usbdBulkCallbackRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::OnBulkReadCallback_(int32_t status, int32_t actLength,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdBulkCallbackData;
+    MessageParcel usbdBulkCallbackReply;
+    MessageOption usbdBulkCallbackOption(MessageOption::TF_SYNC);
+
+    if (!usbdBulkCallbackData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackData.WriteInt32(status)) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackData.WriteInt32(actLength)) {
+        HDF_LOGE("%{public}s: write actLength failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdBulkCallbackRet = remote->SendRequest(CMD_USBD_BULK_CALLBACK_ON_BULK_READ_CALLBACK, usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    return usbdBulkCallbackRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdBulkCallbackData;
+    MessageParcel usbdBulkCallbackReply;
+    MessageOption usbdBulkCallbackOption(MessageOption::TF_SYNC);
+
+    if (!usbdBulkCallbackData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdBulkCallbackRet = remote->SendRequest(CMD_USBD_BULK_CALLBACK_GET_VERSION, usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    if (!usbdBulkCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbdBulkCallbackRet;
+}
+
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usbd_bulk_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    usbd_bulk_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStub(const sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::~UsbdBulkCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_USBD_BULK_CALLBACK_GET_VERSION:
+            return UsbdBulkCallbackStubGetVersion(data, reply, option);
+        case CMD_USBD_BULK_CALLBACK_ON_BULK_WRITE_CALLBACK:
+            return UsbdBulkCallbackStubOnBulkWriteCallback(data, reply, option);
+        case CMD_USBD_BULK_CALLBACK_ON_BULK_READ_CALLBACK:
+            return UsbdBulkCallbackStubOnBulkReadCallback(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkWriteCallback(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkWriteCallback_(usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkReadCallback(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkReadCallback_(usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubGetVersion(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubGetVersion_(usbdBulkCallbackData, usbdBulkCallbackReply, usbdBulkCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkWriteCallback_(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback> impl)
+{
+    if (usbdBulkCallbackData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t status = 0;
+    if (!usbdBulkCallbackData.ReadInt32(status)) {
+        HDF_LOGE("%{public}s: read status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t actLength = 0;
+    if (!usbdBulkCallbackData.ReadInt32(actLength)) {
+        HDF_LOGE("%{public}s: read actLength failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdBulkCallbackRet = impl->OnBulkWriteCallback(status, actLength);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    return usbdBulkCallbackRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubOnBulkReadCallback_(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback> impl)
+{
+    if (usbdBulkCallbackData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t status = 0;
+    if (!usbdBulkCallbackData.ReadInt32(status)) {
+        HDF_LOGE("%{public}s: read status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t actLength = 0;
+    if (!usbdBulkCallbackData.ReadInt32(actLength)) {
+        HDF_LOGE("%{public}s: read actLength failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdBulkCallbackRet = impl->OnBulkReadCallback(status, actLength);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    return usbdBulkCallbackRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdBulkCallbackStub::UsbdBulkCallbackStubGetVersion_(MessageParcel& usbdBulkCallbackData, MessageParcel& usbdBulkCallbackReply, MessageOption& usbdBulkCallbackOption, sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback> impl)
+{
+    if (usbdBulkCallbackData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbdBulkCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (usbdBulkCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdBulkCallbackRet);
+        return usbdBulkCallbackRet;
+    }
+
+    if (!usbdBulkCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdBulkCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbdBulkCallbackRet;
+}
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

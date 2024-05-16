@@ -1,0 +1,325 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/partition_slot_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    partition_slot_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Partitionslot {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Partitionslot::V1_0::IPartitionSlot> OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::Get(bool isStub)
+{
+    return IPartitionSlot::Get("partition_slot_service", isStub);
+}
+
+sptr<OHOS::HDI::Partitionslot::V1_0::IPartitionSlot> OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "partition_slot_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Partitionslot::V1_0::IPartitionSlot *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy> proxy = new OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t partitionSlotRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::Reconnect(
+    sptr<OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetCurrentSlot(int32_t& currentSlot, int32_t& numOfSlots)
+{
+    return OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetCurrentSlot_(currentSlot, numOfSlots, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetSlotSuffix(int32_t slot, std::string& suffix)
+{
+    return OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetSlotSuffix_(slot, suffix, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetActiveSlot(int32_t slot)
+{
+    return OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetActiveSlot_(slot, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetSlotUnbootable(int32_t slot)
+{
+    return OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetSlotUnbootable_(slot, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetCurrentSlot_(int32_t& currentSlot, int32_t& numOfSlots,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel partitionSlotData;
+    MessageParcel partitionSlotReply;
+    MessageOption partitionSlotOption(MessageOption::TF_SYNC);
+
+    if (!partitionSlotData.WriteInterfaceToken(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t partitionSlotRet = remote->SendRequest(CMD_PARTITION_SLOT_GET_CURRENT_SLOT, partitionSlotData, partitionSlotReply, partitionSlotOption);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, partitionSlotRet);
+        return partitionSlotRet;
+    }
+
+    if (!partitionSlotReply.ReadInt32(currentSlot)) {
+        HDF_LOGE("%{public}s: read currentSlot failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotReply.ReadInt32(numOfSlots)) {
+        HDF_LOGE("%{public}s: read numOfSlots failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return partitionSlotRet;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetSlotSuffix_(int32_t slot, std::string& suffix,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel partitionSlotData;
+    MessageParcel partitionSlotReply;
+    MessageOption partitionSlotOption(MessageOption::TF_SYNC);
+
+    if (!partitionSlotData.WriteInterfaceToken(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotData.WriteInt32(slot)) {
+        HDF_LOGE("%{public}s: write slot failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t partitionSlotRet = remote->SendRequest(CMD_PARTITION_SLOT_GET_SLOT_SUFFIX, partitionSlotData, partitionSlotReply, partitionSlotOption);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, partitionSlotRet);
+        return partitionSlotRet;
+    }
+
+    const char* suffixCp = partitionSlotReply.ReadCString();
+    if (suffixCp == nullptr) {
+        HDF_LOGE("%{public}s: read suffix failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    suffix = suffixCp;
+
+    return partitionSlotRet;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetActiveSlot_(int32_t slot,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel partitionSlotData;
+    MessageParcel partitionSlotReply;
+    MessageOption partitionSlotOption(MessageOption::TF_SYNC);
+
+    if (!partitionSlotData.WriteInterfaceToken(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotData.WriteInt32(slot)) {
+        HDF_LOGE("%{public}s: write slot failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t partitionSlotRet = remote->SendRequest(CMD_PARTITION_SLOT_SET_ACTIVE_SLOT, partitionSlotData, partitionSlotReply, partitionSlotOption);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, partitionSlotRet);
+        return partitionSlotRet;
+    }
+
+    return partitionSlotRet;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::SetSlotUnbootable_(int32_t slot,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel partitionSlotData;
+    MessageParcel partitionSlotReply;
+    MessageOption partitionSlotOption(MessageOption::TF_SYNC);
+
+    if (!partitionSlotData.WriteInterfaceToken(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotData.WriteInt32(slot)) {
+        HDF_LOGE("%{public}s: write slot failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t partitionSlotRet = remote->SendRequest(CMD_PARTITION_SLOT_SET_SLOT_UNBOOTABLE, partitionSlotData, partitionSlotReply, partitionSlotOption);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, partitionSlotRet);
+        return partitionSlotRet;
+    }
+
+    return partitionSlotRet;
+}
+
+int32_t OHOS::HDI::Partitionslot::V1_0::PartitionSlotProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel partitionSlotData;
+    MessageParcel partitionSlotReply;
+    MessageOption partitionSlotOption(MessageOption::TF_SYNC);
+
+    if (!partitionSlotData.WriteInterfaceToken(OHOS::HDI::Partitionslot::V1_0::IPartitionSlot::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t partitionSlotRet = remote->SendRequest(CMD_PARTITION_SLOT_GET_VERSION, partitionSlotData, partitionSlotReply, partitionSlotOption);
+    if (partitionSlotRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, partitionSlotRet);
+        return partitionSlotRet;
+    }
+
+    if (!partitionSlotReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!partitionSlotReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return partitionSlotRet;
+}
+
+} // V1_0
+} // Partitionslot
+} // HDI
+} // OHOS

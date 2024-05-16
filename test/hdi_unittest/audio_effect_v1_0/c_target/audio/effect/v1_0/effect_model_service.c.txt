@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include "v1_0/ieffect_model.h"
+
+#define HDF_LOG_TAG    effect_model_service
+
+struct EffectModelService {
+    struct IEffectModel interface;
+};
+
+static int32_t EffectModelIsSupplyEffectLibs(struct IEffectModel *self, bool* supply)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t EffectModelGetAllEffectDescriptors(struct IEffectModel *self, struct EffectControllerDescriptor* descs,
+     uint32_t* descsLen)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t EffectModelCreateEffectController(struct IEffectModel *self, const struct EffectInfo* info,
+     struct IEffectControl** contoller, struct ControllerId* id)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t EffectModelDestroyEffectController(struct IEffectModel *self, const struct ControllerId* id)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t EffectModelGetEffectDescriptor(struct IEffectModel *self, const char* effectId,
+     struct EffectControllerDescriptor* desc)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t EffectModelGetVersion(struct IEffectModel *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    *majorVer = IEFFECT_MODEL_MAJOR_VERSION;
+    *minorVer = IEFFECT_MODEL_MINOR_VERSION;
+    return HDF_SUCCESS;
+}
+
+struct IEffectModel *EffectModelImplGetInstance(void)
+{
+    struct EffectModelService *service = (struct EffectModelService *)OsalMemCalloc(sizeof(struct EffectModelService));
+    if (service == NULL) {
+        HDF_LOGE("%{public}s: malloc EffectModelService obj failed!", __func__);
+        return NULL;
+    }
+
+    service->interface.IsSupplyEffectLibs = EffectModelIsSupplyEffectLibs;
+    service->interface.GetAllEffectDescriptors = EffectModelGetAllEffectDescriptors;
+    service->interface.CreateEffectController = EffectModelCreateEffectController;
+    service->interface.DestroyEffectController = EffectModelDestroyEffectController;
+    service->interface.GetEffectDescriptor = EffectModelGetEffectDescriptor;
+    service->interface.GetVersion = EffectModelGetVersion;
+    return &service->interface;
+}
+
+void EffectModelImplRelease(struct IEffectModel *instance)
+{
+    if (instance == NULL) {
+        return;
+    }
+    OsalMemFree(instance);
+}

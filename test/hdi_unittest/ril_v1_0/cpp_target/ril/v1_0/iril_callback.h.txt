@@ -1,0 +1,558 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_0_IRILCALLBACK_H
+#define OHOS_HDI_RIL_V1_0_IRILCALLBACK_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "ril/v1_0/types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_RIL_CALLBACK_GET_VERSION = 0,
+    CMD_RIL_CALLBACK_CALL_EMERGENCY_NOTICE = 1,
+    CMD_RIL_CALLBACK_CALL_STATE_UPDATED = 2,
+    CMD_RIL_CALLBACK_CALL_RINGBACK_VOICE_NOTICE = 3,
+    CMD_RIL_CALLBACK_CALL_SRVCC_STATUS_NOTICE = 4,
+    CMD_RIL_CALLBACK_CALL_USSD_NOTICE = 5,
+    CMD_RIL_CALLBACK_CALL_SS_NOTICE = 6,
+    CMD_RIL_CALLBACK_CALL_RSRVCC_STATUS_NOTIFY = 7,
+    CMD_RIL_CALLBACK_SET_EMERGENCY_CALL_LIST_RESPONSE = 8,
+    CMD_RIL_CALLBACK_GET_EMERGENCY_CALL_LIST_RESPONSE = 9,
+    CMD_RIL_CALLBACK_GET_CALL_LIST_RESPONSE = 10,
+    CMD_RIL_CALLBACK_DIAL_RESPONSE = 11,
+    CMD_RIL_CALLBACK_HANGUP_RESPONSE = 12,
+    CMD_RIL_CALLBACK_REJECT_RESPONSE = 13,
+    CMD_RIL_CALLBACK_ANSWER_RESPONSE = 14,
+    CMD_RIL_CALLBACK_HOLD_CALL_RESPONSE = 15,
+    CMD_RIL_CALLBACK_UN_HOLD_CALL_RESPONSE = 16,
+    CMD_RIL_CALLBACK_SWITCH_CALL_RESPONSE = 17,
+    CMD_RIL_CALLBACK_GET_CLIP_RESPONSE = 18,
+    CMD_RIL_CALLBACK_SET_CLIP_RESPONSE = 19,
+    CMD_RIL_CALLBACK_COMBINE_CONFERENCE_RESPONSE = 20,
+    CMD_RIL_CALLBACK_SEPARATE_CONFERENCE_RESPONSE = 21,
+    CMD_RIL_CALLBACK_CALL_SUPPLEMENT_RESPONSE = 22,
+    CMD_RIL_CALLBACK_GET_CALL_WAITING_RESPONSE = 23,
+    CMD_RIL_CALLBACK_SET_CALL_WAITING_RESPONSE = 24,
+    CMD_RIL_CALLBACK_GET_CALL_TRANSFER_INFO_RESPONSE = 25,
+    CMD_RIL_CALLBACK_SET_CALL_TRANSFER_INFO_RESPONSE = 26,
+    CMD_RIL_CALLBACK_GET_CALL_RESTRICTION_RESPONSE = 27,
+    CMD_RIL_CALLBACK_SET_CALL_RESTRICTION_RESPONSE = 28,
+    CMD_RIL_CALLBACK_GET_CLIR_RESPONSE = 29,
+    CMD_RIL_CALLBACK_SET_CLIR_RESPONSE = 30,
+    CMD_RIL_CALLBACK_START_DTMF_RESPONSE = 31,
+    CMD_RIL_CALLBACK_SEND_DTMF_RESPONSE = 32,
+    CMD_RIL_CALLBACK_STOP_DTMF_RESPONSE = 33,
+    CMD_RIL_CALLBACK_GET_CALL_PREFERENCE_MODE_RESPONSE = 34,
+    CMD_RIL_CALLBACK_SET_CALL_PREFERENCE_MODE_RESPONSE = 35,
+    CMD_RIL_CALLBACK_SET_USSD_RESPONSE = 36,
+    CMD_RIL_CALLBACK_GET_USSD_RESPONSE = 37,
+    CMD_RIL_CALLBACK_SET_MUTE_RESPONSE = 38,
+    CMD_RIL_CALLBACK_GET_MUTE_RESPONSE = 39,
+    CMD_RIL_CALLBACK_GET_CALL_FAIL_REASON_RESPONSE = 40,
+    CMD_RIL_CALLBACK_SET_BARRING_PASSWORD_RESPONSE = 41,
+    CMD_RIL_CALLBACK_PDP_CONTEXT_LIST_UPDATED = 42,
+    CMD_RIL_CALLBACK_ACTIVATE_PDP_CONTEXT_RESPONSE = 43,
+    CMD_RIL_CALLBACK_DEACTIVATE_PDP_CONTEXT_RESPONSE = 44,
+    CMD_RIL_CALLBACK_GET_PDP_CONTEXT_LIST_RESPONSE = 45,
+    CMD_RIL_CALLBACK_SET_INIT_APN_INFO_RESPONSE = 46,
+    CMD_RIL_CALLBACK_GET_LINK_BANDWIDTH_INFO_RESPONSE = 47,
+    CMD_RIL_CALLBACK_SET_LINK_BANDWIDTH_REPORTING_RULE_RESPONSE = 48,
+    CMD_RIL_CALLBACK_SET_DATA_PERMITTED_RESPONSE = 49,
+    CMD_RIL_CALLBACK_RADIO_STATE_UPDATED = 50,
+    CMD_RIL_CALLBACK_VOICE_RADIO_TECH_UPDATED = 51,
+    CMD_RIL_CALLBACK_SHUT_DOWN_RESPONSE = 52,
+    CMD_RIL_CALLBACK_SET_RADIO_STATE_RESPONSE = 53,
+    CMD_RIL_CALLBACK_GET_RADIO_STATE_RESPONSE = 54,
+    CMD_RIL_CALLBACK_GET_IMEI_RESPONSE = 55,
+    CMD_RIL_CALLBACK_GET_MEID_RESPONSE = 56,
+    CMD_RIL_CALLBACK_GET_VOICE_RADIO_TECHNOLOGY_RESPONSE = 57,
+    CMD_RIL_CALLBACK_GET_BASEBAND_VERSION_RESPONSE = 58,
+    CMD_RIL_CALLBACK_SIM_STATE_UPDATED = 59,
+    CMD_RIL_CALLBACK_SIM_STK_SESSION_END_NOTIFY = 60,
+    CMD_RIL_CALLBACK_SIM_STK_PROACTIVE_NOTIFY = 61,
+    CMD_RIL_CALLBACK_SIM_STK_ALPHA_NOTIFY = 62,
+    CMD_RIL_CALLBACK_SIM_STK_EVENT_NOTIFY = 63,
+    CMD_RIL_CALLBACK_SIM_STK_CALL_SETUP_NOTIFY = 64,
+    CMD_RIL_CALLBACK_SIM_REFRESH_NOTIFY = 65,
+    CMD_RIL_CALLBACK_SIM_RADIO_PROTOCOL_UPDATED = 66,
+    CMD_RIL_CALLBACK_GET_SIM_I_O_RESPONSE = 67,
+    CMD_RIL_CALLBACK_GET_SIM_STATUS_RESPONSE = 68,
+    CMD_RIL_CALLBACK_GET_IMSI_RESPONSE = 69,
+    CMD_RIL_CALLBACK_GET_SIM_LOCK_STATUS_RESPONSE = 70,
+    CMD_RIL_CALLBACK_SET_SIM_LOCK_RESPONSE = 71,
+    CMD_RIL_CALLBACK_CHANGE_SIM_PASSWORD_RESPONSE = 72,
+    CMD_RIL_CALLBACK_UNLOCK_PIN_RESPONSE = 73,
+    CMD_RIL_CALLBACK_UNLOCK_PUK_RESPONSE = 74,
+    CMD_RIL_CALLBACK_UNLOCK_PIN2_RESPONSE = 75,
+    CMD_RIL_CALLBACK_UNLOCK_PUK2_RESPONSE = 76,
+    CMD_RIL_CALLBACK_SET_ACTIVE_SIM_RESPONSE = 77,
+    CMD_RIL_CALLBACK_SIM_STK_SEND_TERMINAL_RESPONSE_RESPONSE = 78,
+    CMD_RIL_CALLBACK_SIM_STK_SEND_ENVELOPE_RESPONSE = 79,
+    CMD_RIL_CALLBACK_SIM_STK_SEND_CALL_SETUP_REQUEST_RESULT_RESPONSE = 80,
+    CMD_RIL_CALLBACK_SIM_STK_IS_READY_RESPONSE = 81,
+    CMD_RIL_CALLBACK_GET_RADIO_PROTOCOL_RESPONSE = 82,
+    CMD_RIL_CALLBACK_SET_RADIO_PROTOCOL_RESPONSE = 83,
+    CMD_RIL_CALLBACK_SIM_OPEN_LOGICAL_CHANNEL_RESPONSE = 84,
+    CMD_RIL_CALLBACK_SIM_CLOSE_LOGICAL_CHANNEL_RESPONSE = 85,
+    CMD_RIL_CALLBACK_SIM_TRANSMIT_APDU_LOGICAL_CHANNEL_RESPONSE = 86,
+    CMD_RIL_CALLBACK_SIM_TRANSMIT_APDU_BASIC_CHANNEL_RESPONSE = 87,
+    CMD_RIL_CALLBACK_SIM_AUTHENTICATION_RESPONSE = 88,
+    CMD_RIL_CALLBACK_UNLOCK_SIM_LOCK_RESPONSE = 89,
+    CMD_RIL_CALLBACK_NETWORK_CS_REG_STATUS_UPDATED = 90,
+    CMD_RIL_CALLBACK_NETWORK_PS_REG_STATUS_UPDATED = 91,
+    CMD_RIL_CALLBACK_SIGNAL_STRENGTH_UPDATED = 92,
+    CMD_RIL_CALLBACK_NETWORK_TIME_ZONE_UPDATED = 93,
+    CMD_RIL_CALLBACK_NETWORK_TIME_UPDATED = 94,
+    CMD_RIL_CALLBACK_NETWORK_PHY_CHNL_CFG_UPDATED = 95,
+    CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED = 96,
+    CMD_RIL_CALLBACK_GET_SIGNAL_STRENGTH_RESPONSE = 97,
+    CMD_RIL_CALLBACK_GET_CS_REG_STATUS_RESPONSE = 98,
+    CMD_RIL_CALLBACK_GET_PS_REG_STATUS_RESPONSE = 99,
+    CMD_RIL_CALLBACK_GET_OPERATOR_INFO_RESPONSE = 100,
+    CMD_RIL_CALLBACK_GET_NETWORK_SEARCH_INFORMATION_RESPONSE = 101,
+    CMD_RIL_CALLBACK_GET_NETWORK_SELECTION_MODE_RESPONSE = 102,
+    CMD_RIL_CALLBACK_SET_NETWORK_SELECTION_MODE_RESPONSE = 103,
+    CMD_RIL_CALLBACK_GET_NEIGHBORING_CELL_INFO_LIST_RESPONSE = 104,
+    CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE = 105,
+    CMD_RIL_CALLBACK_SET_PREFERRED_NETWORK_RESPONSE = 106,
+    CMD_RIL_CALLBACK_GET_PREFERRED_NETWORK_RESPONSE = 107,
+    CMD_RIL_CALLBACK_GET_PHYSICAL_CHANNEL_CONFIG_RESPONSE = 108,
+    CMD_RIL_CALLBACK_SET_LOCATE_UPDATES_RESPONSE = 109,
+    CMD_RIL_CALLBACK_SET_NOTIFICATION_FILTER_RESPONSE = 110,
+    CMD_RIL_CALLBACK_SET_DEVICE_STATE_RESPONSE = 111,
+    CMD_RIL_CALLBACK_NEW_SMS_NOTIFY = 112,
+    CMD_RIL_CALLBACK_NEW_CDMA_SMS_NOTIFY = 113,
+    CMD_RIL_CALLBACK_SMS_STATUS_REPORT_NOTIFY = 114,
+    CMD_RIL_CALLBACK_NEW_SMS_STORED_ON_SIM_NOTIFY = 115,
+    CMD_RIL_CALLBACK_CB_CONFIG_NOTIFY = 116,
+    CMD_RIL_CALLBACK_SEND_GSM_SMS_RESPONSE = 117,
+    CMD_RIL_CALLBACK_SEND_CDMA_SMS_RESPONSE = 118,
+    CMD_RIL_CALLBACK_ADD_SIM_MESSAGE_RESPONSE = 119,
+    CMD_RIL_CALLBACK_DEL_SIM_MESSAGE_RESPONSE = 120,
+    CMD_RIL_CALLBACK_UPDATE_SIM_MESSAGE_RESPONSE = 121,
+    CMD_RIL_CALLBACK_ADD_CDMA_SIM_MESSAGE_RESPONSE = 122,
+    CMD_RIL_CALLBACK_DEL_CDMA_SIM_MESSAGE_RESPONSE = 123,
+    CMD_RIL_CALLBACK_UPDATE_CDMA_SIM_MESSAGE_RESPONSE = 124,
+    CMD_RIL_CALLBACK_SET_SMSC_ADDR_RESPONSE = 125,
+    CMD_RIL_CALLBACK_GET_SMSC_ADDR_RESPONSE = 126,
+    CMD_RIL_CALLBACK_SET_C_B_CONFIG_RESPONSE = 127,
+    CMD_RIL_CALLBACK_GET_C_B_CONFIG_RESPONSE = 128,
+    CMD_RIL_CALLBACK_SET_CDMA_C_B_CONFIG_RESPONSE = 129,
+    CMD_RIL_CALLBACK_GET_CDMA_C_B_CONFIG_RESPONSE = 130,
+    CMD_RIL_CALLBACK_SEND_SMS_MORE_MODE_RESPONSE = 131,
+    CMD_RIL_CALLBACK_SEND_SMS_ACK_RESPONSE = 132,
+    CMD_RIL_CALLBACK_COMMON_ERROR_RESPONSE = 133,
+};
+
+class IRilCallback : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.ril.v1_0.IRilCallback");
+
+    virtual ~IRilCallback() = default;
+
+    virtual int32_t CallEmergencyNotice(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::EmergencyInfoList& emergencyInfoList) = 0;
+
+    virtual int32_t CallStateUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t CallRingbackVoiceNotice(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::RingbackVoice& ringbackVoice) = 0;
+
+    virtual int32_t CallSrvccStatusNotice(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SrvccStatus& srvccStatus) = 0;
+
+    virtual int32_t CallUssdNotice(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::UssdNoticeInfo& ussdNoticeInfo) = 0;
+
+    virtual int32_t CallSsNotice(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SsNoticeInfo& ssNoticeInfo) = 0;
+
+    virtual int32_t CallRsrvccStatusNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetEmergencyCallListResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetEmergencyCallListResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::EmergencyInfoList& emergencyInfoList) = 0;
+
+    virtual int32_t GetCallListResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CallInfoList& callList) = 0;
+
+    virtual int32_t DialResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t HangupResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t RejectResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t AnswerResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t HoldCallResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t UnHoldCallResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SwitchCallResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetClipResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::GetClipResult& getClipResult) = 0;
+
+    virtual int32_t SetClipResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t CombineConferenceResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SeparateConferenceResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t CallSupplementResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCallWaitingResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CallWaitResult& callWaitResult) = 0;
+
+    virtual int32_t SetCallWaitingResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCallTransferInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CallForwardQueryInfoList& cFQueryList) = 0;
+
+    virtual int32_t SetCallTransferInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCallRestrictionResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CallRestrictionResult& result) = 0;
+
+    virtual int32_t SetCallRestrictionResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetClirResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::GetClirResult& getClirResult) = 0;
+
+    virtual int32_t SetClirResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t StartDtmfResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SendDtmfResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t StopDtmfResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCallPreferenceModeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t mode) = 0;
+
+    virtual int32_t SetCallPreferenceModeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetUssdResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetUssdResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo, int32_t cusd) = 0;
+
+    virtual int32_t SetMuteResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetMuteResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo, int32_t mute) = 0;
+
+    virtual int32_t GetCallFailReasonResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t callFail) = 0;
+
+    virtual int32_t SetBarringPasswordResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t PdpContextListUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::DataCallResultList& dataCallResultList) = 0;
+
+    virtual int32_t ActivatePdpContextResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SetupDataCallResultInfo& setupDataCallResultInfo) = 0;
+
+    virtual int32_t DeactivatePdpContextResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetPdpContextListResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::DataCallResultList& dataCallResultList) = 0;
+
+    virtual int32_t SetInitApnInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetLinkBandwidthInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::DataLinkBandwidthInfo& dataLinkBandwidthInfo) = 0;
+
+    virtual int32_t SetLinkBandwidthReportingRuleResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetDataPermittedResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t RadioStateUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t state) = 0;
+
+    virtual int32_t VoiceRadioTechUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::VoiceRadioTechnology& voiceRadioTechnology) = 0;
+
+    virtual int32_t ShutDownResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetRadioStateResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetRadioStateResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t state) = 0;
+
+    virtual int32_t GetImeiResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& imei) = 0;
+
+    virtual int32_t GetMeidResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& meid) = 0;
+
+    virtual int32_t GetVoiceRadioTechnologyResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::VoiceRadioTechnology& voiceRadioTechnology) = 0;
+
+    virtual int32_t GetBasebandVersionResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& basebandVersion) = 0;
+
+    virtual int32_t SimStateUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkSessionEndNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkProactiveNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& response) = 0;
+
+    virtual int32_t SimStkAlphaNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& response) = 0;
+
+    virtual int32_t SimStkEventNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& response) = 0;
+
+    virtual int32_t SimStkCallSetupNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimRefreshNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimRadioProtocolUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::RadioProtocol& radioProtocol) = 0;
+
+    virtual int32_t GetSimIOResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::IccIoResultInfo& result) = 0;
+
+    virtual int32_t GetSimStatusResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CardStatusInfo& result) = 0;
+
+    virtual int32_t GetImsiResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& response) = 0;
+
+    virtual int32_t GetSimLockStatusResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t simLockStatus) = 0;
+
+    virtual int32_t SetSimLockResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t ChangeSimPasswordResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t UnlockPinResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t UnlockPukResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t UnlockPin2Response(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t UnlockPuk2Response(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t SetActiveSimResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkSendTerminalResponseResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkSendEnvelopeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkSendCallSetupRequestResultResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimStkIsReadyResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetRadioProtocolResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::RadioProtocol& radioProtocol) = 0;
+
+    virtual int32_t SetRadioProtocolResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::RadioProtocol& radioProtocol) = 0;
+
+    virtual int32_t SimOpenLogicalChannelResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::OpenLogicalChannelResponse& pOpenLogicalChannelResponse) = 0;
+
+    virtual int32_t SimCloseLogicalChannelResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SimTransmitApduLogicalChannelResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo, const OHOS::HDI::Ril::V1_0::IccIoResultInfo& result) = 0;
+
+    virtual int32_t SimTransmitApduBasicChannelResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::IccIoResultInfo& result) = 0;
+
+    virtual int32_t SimAuthenticationResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::IccIoResultInfo& result) = 0;
+
+    virtual int32_t UnlockSimLockResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::LockStatusResp& lockStatus) = 0;
+
+    virtual int32_t NetworkCsRegStatusUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CsRegStatusInfo& csRegStatusInfo) = 0;
+
+    virtual int32_t NetworkPsRegStatusUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::PsRegStatusInfo& psRegStatusInfo) = 0;
+
+    virtual int32_t SignalStrengthUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::Rssi& rssi) = 0;
+
+    virtual int32_t NetworkTimeZoneUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& timeZoneStr) = 0;
+
+    virtual int32_t NetworkTimeUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const std::string& timeStr) = 0;
+
+    virtual int32_t NetworkPhyChnlCfgUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::ChannelConfigInfoList& channelConfigInfoList) = 0;
+
+    virtual int32_t NetworkCurrentCellUpdated(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CellListCurrentInfo& cellListCurrentInfo) = 0;
+
+    virtual int32_t GetSignalStrengthResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::Rssi& rssi) = 0;
+
+    virtual int32_t GetCsRegStatusResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CsRegStatusInfo& csRegStatusInfo) = 0;
+
+    virtual int32_t GetPsRegStatusResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::PsRegStatusInfo& psRegStatusInfo) = 0;
+
+    virtual int32_t GetOperatorInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::OperatorInfo& psRegStatusInfo) = 0;
+
+    virtual int32_t GetNetworkSearchInformationResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::AvailableNetworkList& availableNetworkList) = 0;
+
+    virtual int32_t GetNetworkSelectionModeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SetNetworkModeInfo& setNetworkModeInfo) = 0;
+
+    virtual int32_t SetNetworkSelectionModeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetNeighboringCellInfoListResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CellListNearbyInfo& cellListNearbyInfo) = 0;
+
+    virtual int32_t GetCurrentCellInfoResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CellListCurrentInfo& cellListCurrentInfo) = 0;
+
+    virtual int32_t SetPreferredNetworkResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetPreferredNetworkResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::PreferredNetworkTypeInfo& preferredNetworkTypeInfo) = 0;
+
+    virtual int32_t GetPhysicalChannelConfigResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::ChannelConfigInfoList& channelConfigInfoList) = 0;
+
+    virtual int32_t SetLocateUpdatesResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetNotificationFilterResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetDeviceStateResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t NewSmsNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SmsMessageInfo& smsMessageInfo) = 0;
+
+    virtual int32_t NewCdmaSmsNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SmsMessageInfo& smsMessageInfo) = 0;
+
+    virtual int32_t SmsStatusReportNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SmsMessageInfo& smsMessageInfo) = 0;
+
+    virtual int32_t NewSmsStoredOnSimNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         int32_t recordNumber, int32_t indicationType) = 0;
+
+    virtual int32_t CBConfigNotify(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CBConfigReportInfo& cellBroadConfigReportInfo) = 0;
+
+    virtual int32_t SendGsmSmsResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SendSmsResultInfo& sendSmsResultInfo) = 0;
+
+    virtual int32_t SendCdmaSmsResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SendSmsResultInfo& sendSmsResultInfo) = 0;
+
+    virtual int32_t AddSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t DelSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t UpdateSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t AddCdmaSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t DelCdmaSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t UpdateCdmaSimMessageResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t SetSmscAddrResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetSmscAddrResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::ServiceCenterAddress& serviceCenterAddress) = 0;
+
+    virtual int32_t SetCBConfigResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCBConfigResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CBConfigInfo& cellBroadcastInfo) = 0;
+
+    virtual int32_t SetCdmaCBConfigResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetCdmaCBConfigResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::CdmaCBConfigInfo& cdmaCBConfigInfo) = 0;
+
+    virtual int32_t SendSmsMoreModeResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_0::SendSmsResultInfo& sendSmsResultInfo) = 0;
+
+    virtual int32_t SendSmsAckResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t CommonErrorResponse(const OHOS::HDI::Ril::V1_0::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_0_IRILCALLBACK_H
+

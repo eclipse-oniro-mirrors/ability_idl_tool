@@ -1,0 +1,456 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/intell_voice_engine_adapter_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <iproxy_broker.h>
+#include "intelligent_voice/engine/v1_0/intell_voice_engine_callback_proxy.h"
+
+#define HDF_LOG_TAG    intell_voice_engine_adapter_stub
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Engine {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStub(const sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> &impl)
+    : IPCObjectStub(OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::~IntellVoiceEngineAdapterStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_GET_VERSION:
+            return IntellVoiceEngineAdapterStubGetVersion(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_SET_CALLBACK:
+            return IntellVoiceEngineAdapterStubSetCallback(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_ATTACH:
+            return IntellVoiceEngineAdapterStubAttach(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_DETACH:
+            return IntellVoiceEngineAdapterStubDetach(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_SET_PARAMETER:
+            return IntellVoiceEngineAdapterStubSetParameter(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_GET_PARAMETER:
+            return IntellVoiceEngineAdapterStubGetParameter(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_START:
+            return IntellVoiceEngineAdapterStubStart(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_STOP:
+            return IntellVoiceEngineAdapterStubStop(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_WRITE_AUDIO:
+            return IntellVoiceEngineAdapterStubWriteAudio(data, reply, option);
+        case CMD_INTELL_VOICE_ENGINE_ADAPTER_READ:
+            return IntellVoiceEngineAdapterStubRead(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetCallback(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetCallback_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubAttach(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubAttach_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubDetach(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubDetach_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetParameter(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetParameter_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetParameter(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetParameter_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStart(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStart_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStop(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStop_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubWriteAudio(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubWriteAudio_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubRead(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubRead_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetVersion(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetVersion_(intellVoiceEngineAdapterData, intellVoiceEngineAdapterReply, intellVoiceEngineAdapterOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetCallback_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineCallback> engineCallback;
+    sptr<IRemoteObject> engineCallbackRemote = intellVoiceEngineAdapterData.ReadRemoteObject();
+    if (engineCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    engineCallback = new OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineCallbackProxy(engineCallbackRemote);
+    if (engineCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->SetCallback(engineCallback);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubAttach_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterInfo info;
+    if (!IntellVoiceEngineAdapterInfoBlockUnmarshalling(intellVoiceEngineAdapterData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->Attach(info);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubDetach_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->Detach();
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubSetParameter_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* keyValueListCp = intellVoiceEngineAdapterData.ReadCString();
+    if (keyValueListCp == nullptr) {
+        HDF_LOGE("%{public}s: read keyValueList failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string keyValueList = keyValueListCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->SetParameter(keyValueList);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetParameter_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool intellVoiceEngineAdapterMemSet = false;
+    if (!intellVoiceEngineAdapterData.ReadBool(intellVoiceEngineAdapterMemSet)) {
+        HDF_LOGE("%{public}s: failed to read intellVoiceEngineAdapterMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    const char* keyListCp = intellVoiceEngineAdapterData.ReadCString();
+    if (keyListCp == nullptr) {
+        HDF_LOGE("%{public}s: read keyList failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string keyList = keyListCp;
+
+    std::string valueList;
+    if (intellVoiceEngineAdapterMemSet) {
+        uint32_t capacity = 0;
+        if (!intellVoiceEngineAdapterData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        valueList.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->GetParameter(keyList, valueList);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    if (!intellVoiceEngineAdapterReply.WriteCString(valueList.c_str())) {
+        HDF_LOGE("%{public}s: write valueList failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStart_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Engine::V1_0::StartInfo info;
+    if (!StartInfoBlockUnmarshalling(intellVoiceEngineAdapterData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->Start(info);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubStop_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->Stop();
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubWriteAudio_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> buffer;
+    if (!ReadPodArray(intellVoiceEngineAdapterData, buffer)) {
+        HDF_LOGE("%{public}s: failed to read buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->WriteAudio(buffer);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubRead_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Engine::V1_0::ContentType type = static_cast<enum ContentType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!intellVoiceEngineAdapterData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum ContentType>(enumTmp);
+    }
+
+    sptr<Ashmem> buffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->Read(type, buffer);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    if (buffer == nullptr || !intellVoiceEngineAdapterReply.WriteAshmem(buffer)) {
+        HDF_LOGE("%{public}s: failed to write buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_0::IntellVoiceEngineAdapterStub::IntellVoiceEngineAdapterStubGetVersion_(MessageParcel& intellVoiceEngineAdapterData, MessageParcel& intellVoiceEngineAdapterReply, MessageOption& intellVoiceEngineAdapterOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter> impl)
+{
+    if (intellVoiceEngineAdapterData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_0::IIntellVoiceEngineAdapter::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceEngineAdapterRet = impl->GetVersion(majorVer, minorVer);
+    if (intellVoiceEngineAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceEngineAdapterRet);
+        return intellVoiceEngineAdapterRet;
+    }
+
+    if (!intellVoiceEngineAdapterReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceEngineAdapterReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceEngineAdapterRet;
+}
+} // V1_0
+} // Engine
+} // IntelligentVoice
+} // HDI
+} // OHOS

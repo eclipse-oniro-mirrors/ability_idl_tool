@@ -1,0 +1,423 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include "v1_2/iwlan_callback.h"
+
+#define HDF_LOG_TAG    wlan_callback_proxy
+
+struct WlanCallbackProxy {
+    struct IWlanCallback impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static int32_t WlanCallbackProxyCall(struct IWlanCallback *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t WlanCallbackProxyResetDriverResult(struct IWlanCallback *self, uint32_t event, int32_t code,
+     const char* ifName)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+
+    struct HdfSBuf *wlanCallbackData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wlanCallbackReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wlanCallbackData == NULL || wlanCallbackReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wlanCallbackData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wlanCallbackData, event)) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wlanCallbackData, code)) {
+        HDF_LOGE("%{public}s: write code failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wlanCallbackData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = WlanCallbackProxyCall(self, CMD_WLAN_CALLBACK_RESET_DRIVER_RESULT, wlanCallbackData, wlanCallbackReply, false);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wlanCallbackData != NULL) {
+        HdfSbufRecycle(wlanCallbackData);
+    }
+    if (wlanCallbackReply != NULL) {
+        HdfSbufRecycle(wlanCallbackReply);
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t WlanCallbackProxyScanResult(struct IWlanCallback *self, uint32_t event,
+     const struct HdfWifiScanResult* scanResult, const char* ifName)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+
+    struct HdfSBuf *wlanCallbackData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wlanCallbackReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wlanCallbackData == NULL || wlanCallbackReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wlanCallbackData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wlanCallbackData, event)) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfWifiScanResultBlockMarshalling(wlanCallbackData, scanResult)) {
+        HDF_LOGE("%{public}s: write scanResult failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wlanCallbackData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = WlanCallbackProxyCall(self, CMD_WLAN_CALLBACK_SCAN_RESULT, wlanCallbackData, wlanCallbackReply, false);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wlanCallbackData != NULL) {
+        HdfSbufRecycle(wlanCallbackData);
+    }
+    if (wlanCallbackReply != NULL) {
+        HdfSbufRecycle(wlanCallbackReply);
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t WlanCallbackProxyWifiNetlinkMessage(struct IWlanCallback *self, const uint8_t* recvMsg,
+     uint32_t recvMsgLen)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+
+    struct HdfSBuf *wlanCallbackData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wlanCallbackReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wlanCallbackData == NULL || wlanCallbackReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wlanCallbackData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(wlanCallbackData, recvMsg, sizeof(uint8_t), recvMsgLen)) {
+        HDF_LOGE("%{public}s: failed to write recvMsg", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = WlanCallbackProxyCall(self, CMD_WLAN_CALLBACK_WIFI_NETLINK_MESSAGE, wlanCallbackData, wlanCallbackReply, false);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wlanCallbackData != NULL) {
+        HdfSbufRecycle(wlanCallbackData);
+    }
+    if (wlanCallbackReply != NULL) {
+        HdfSbufRecycle(wlanCallbackReply);
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t WlanCallbackProxyScanResults(struct IWlanCallback *self, uint32_t event,
+     const struct HdfWifiScanResults* scanResults, const char* ifName)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+
+    struct HdfSBuf *wlanCallbackData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wlanCallbackReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wlanCallbackData == NULL || wlanCallbackReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wlanCallbackData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wlanCallbackData, event)) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfWifiScanResultsBlockMarshalling(wlanCallbackData, scanResults)) {
+        HDF_LOGE("%{public}s: write scanResults failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wlanCallbackData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = WlanCallbackProxyCall(self, CMD_WLAN_CALLBACK_SCAN_RESULTS, wlanCallbackData, wlanCallbackReply, false);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wlanCallbackData != NULL) {
+        HdfSbufRecycle(wlanCallbackData);
+    }
+    if (wlanCallbackReply != NULL) {
+        HdfSbufRecycle(wlanCallbackReply);
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t WlanCallbackProxyGetVersion(struct IWlanCallback *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+
+    struct HdfSBuf *wlanCallbackData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wlanCallbackReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wlanCallbackData == NULL || wlanCallbackReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wlanCallbackData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = WlanCallbackProxyCall(self, CMD_WLAN_CALLBACK_GET_VERSION, wlanCallbackData, wlanCallbackReply, false);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(wlanCallbackReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(wlanCallbackReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wlanCallbackData != NULL) {
+        HdfSbufRecycle(wlanCallbackData);
+    }
+    if (wlanCallbackReply != NULL) {
+        HdfSbufRecycle(wlanCallbackReply);
+    }
+    return wlanCallbackRet;
+}
+
+static struct HdfRemoteService *WlanCallbackProxyAsObject(struct IWlanCallback *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct WlanCallbackProxy *proxy = CONTAINER_OF(self, struct WlanCallbackProxy, impl);
+    return proxy->remote;
+}
+
+static void WlanCallbackProxyConstruct(struct IWlanCallback *impl)
+{
+    impl->ResetDriverResult = WlanCallbackProxyResetDriverResult;
+    impl->ScanResult = WlanCallbackProxyScanResult;
+    impl->WifiNetlinkMessage = WlanCallbackProxyWifiNetlinkMessage;
+    impl->ScanResults = WlanCallbackProxyScanResults;
+    impl->GetVersion = WlanCallbackProxyGetVersion;
+    impl->AsObject = WlanCallbackProxyAsObject;
+}
+
+struct IWlanCallback *IWlanCallbackGet(struct HdfRemoteService *remote)
+{
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: remote is null", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IWLANCALLBACK_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct WlanCallbackProxy *proxy = (struct WlanCallbackProxy *)OsalMemCalloc(sizeof(struct WlanCallbackProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IWlanCallback proxy failed!", __func__);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    WlanCallbackProxyConstruct(&proxy->impl);
+    struct IWlanCallback *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t wlanCallbackRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IWlanCallbackRelease(client);
+        return NULL;
+    }
+
+    if (serMajorVer != IWLAN_CALLBACK_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IWLAN_CALLBACK_MAJOR_VERSION, IWLAN_CALLBACK_MINOR_VERSION);
+        IWlanCallbackRelease(client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IWlanCallbackRelease(struct IWlanCallback *instance)
+{
+    if (instance == NULL) {
+        return;
+    }
+
+    struct WlanCallbackProxy *proxy = CONTAINER_OF(instance, struct WlanCallbackProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

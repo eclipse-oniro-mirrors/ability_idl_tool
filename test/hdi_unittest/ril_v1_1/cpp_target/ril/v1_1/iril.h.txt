@@ -1,0 +1,460 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_1_IRIL_H
+#define OHOS_HDI_RIL_V1_1_IRIL_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "ril/v1_1/iril_callback.h"
+#include "ril/v1_1/types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_1 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_RIL_GET_VERSION = 0,
+    CMD_RIL_SET_CALLBACK = 1,
+    CMD_RIL_SET_EMERGENCY_CALL_LIST = 2,
+    CMD_RIL_GET_EMERGENCY_CALL_LIST = 3,
+    CMD_RIL_GET_CALL_LIST = 4,
+    CMD_RIL_DIAL = 5,
+    CMD_RIL_REJECT = 6,
+    CMD_RIL_HANGUP = 7,
+    CMD_RIL_ANSWER = 8,
+    CMD_RIL_HOLD_CALL = 9,
+    CMD_RIL_UN_HOLD_CALL = 10,
+    CMD_RIL_SWITCH_CALL = 11,
+    CMD_RIL_COMBINE_CONFERENCE = 12,
+    CMD_RIL_SEPARATE_CONFERENCE = 13,
+    CMD_RIL_GET_CALL_WAITING = 14,
+    CMD_RIL_SET_CALL_WAITING = 15,
+    CMD_RIL_GET_CALL_TRANSFER_INFO = 16,
+    CMD_RIL_SET_CALL_TRANSFER_INFO = 17,
+    CMD_RIL_GET_CALL_RESTRICTION = 18,
+    CMD_RIL_SET_CALL_RESTRICTION = 19,
+    CMD_RIL_GET_CLIP = 20,
+    CMD_RIL_SET_CLIP = 21,
+    CMD_RIL_GET_CLIR = 22,
+    CMD_RIL_SET_CLIR = 23,
+    CMD_RIL_SET_CALL_PREFERENCE_MODE = 24,
+    CMD_RIL_GET_CALL_PREFERENCE_MODE = 25,
+    CMD_RIL_SET_USSD = 26,
+    CMD_RIL_CLOSE_UN_FINISHED_USSD = 27,
+    CMD_RIL_GET_USSD = 28,
+    CMD_RIL_SET_MUTE = 29,
+    CMD_RIL_GET_MUTE = 30,
+    CMD_RIL_GET_CALL_FAIL_REASON = 31,
+    CMD_RIL_CALL_SUPPLEMENT = 32,
+    CMD_RIL_SEND_DTMF = 33,
+    CMD_RIL_START_DTMF = 34,
+    CMD_RIL_STOP_DTMF = 35,
+    CMD_RIL_SET_BARRING_PASSWORD = 36,
+    CMD_RIL_SET_VONR_SWITCH = 37,
+    CMD_RIL_ACTIVATE_PDP_CONTEXT = 38,
+    CMD_RIL_DEACTIVATE_PDP_CONTEXT = 39,
+    CMD_RIL_GET_PDP_CONTEXT_LIST = 40,
+    CMD_RIL_SET_INIT_APN_INFO = 41,
+    CMD_RIL_GET_LINK_BANDWIDTH_INFO = 42,
+    CMD_RIL_GET_LINK_CAPABILITY = 43,
+    CMD_RIL_SET_LINK_BANDWIDTH_REPORTING_RULE = 44,
+    CMD_RIL_SET_DATA_PERMITTED = 45,
+    CMD_RIL_SET_DATA_PROFILE_INFO = 46,
+    CMD_RIL_SEND_DATA_PERFORMANCE_MODE = 47,
+    CMD_RIL_SEND_DATA_SLEEP_MODE = 48,
+    CMD_RIL_SET_RADIO_STATE = 49,
+    CMD_RIL_GET_RADIO_STATE = 50,
+    CMD_RIL_GET_IMEI = 51,
+    CMD_RIL_GET_MEID = 52,
+    CMD_RIL_GET_VOICE_RADIO_TECHNOLOGY = 53,
+    CMD_RIL_GET_BASEBAND_VERSION = 54,
+    CMD_RIL_SHUT_DOWN = 55,
+    CMD_RIL_GET_SIM_I_O = 56,
+    CMD_RIL_GET_SIM_STATUS = 57,
+    CMD_RIL_GET_IMSI = 58,
+    CMD_RIL_GET_SIM_LOCK_STATUS = 59,
+    CMD_RIL_SET_SIM_LOCK = 60,
+    CMD_RIL_CHANGE_SIM_PASSWORD = 61,
+    CMD_RIL_UNLOCK_PIN = 62,
+    CMD_RIL_UNLOCK_PUK = 63,
+    CMD_RIL_UNLOCK_PIN2 = 64,
+    CMD_RIL_UNLOCK_PUK2 = 65,
+    CMD_RIL_SET_ACTIVE_SIM = 66,
+    CMD_RIL_SIM_STK_SEND_TERMINAL_RESPONSE = 67,
+    CMD_RIL_SIM_STK_SEND_ENVELOPE = 68,
+    CMD_RIL_SIM_STK_SEND_CALL_SETUP_REQUEST_RESULT = 69,
+    CMD_RIL_SIM_STK_IS_READY = 70,
+    CMD_RIL_GET_RADIO_PROTOCOL = 71,
+    CMD_RIL_SET_RADIO_PROTOCOL = 72,
+    CMD_RIL_SIM_OPEN_LOGICAL_CHANNEL = 73,
+    CMD_RIL_SIM_CLOSE_LOGICAL_CHANNEL = 74,
+    CMD_RIL_SIM_TRANSMIT_APDU_LOGICAL_CHANNEL = 75,
+    CMD_RIL_SIM_TRANSMIT_APDU_BASIC_CHANNEL = 76,
+    CMD_RIL_SIM_AUTHENTICATION = 77,
+    CMD_RIL_UNLOCK_SIM_LOCK = 78,
+    CMD_RIL_GET_SIGNAL_STRENGTH = 79,
+    CMD_RIL_GET_CS_REG_STATUS = 80,
+    CMD_RIL_GET_PS_REG_STATUS = 81,
+    CMD_RIL_GET_OPERATOR_INFO = 82,
+    CMD_RIL_GET_NETWORK_SEARCH_INFORMATION = 83,
+    CMD_RIL_GET_NETWORK_SELECTION_MODE = 84,
+    CMD_RIL_SET_NETWORK_SELECTION_MODE = 85,
+    CMD_RIL_GET_NEIGHBORING_CELL_INFO_LIST = 86,
+    CMD_RIL_GET_CURRENT_CELL_INFO = 87,
+    CMD_RIL_SET_PREFERRED_NETWORK = 88,
+    CMD_RIL_GET_PREFERRED_NETWORK = 89,
+    CMD_RIL_GET_PHYSICAL_CHANNEL_CONFIG = 90,
+    CMD_RIL_SET_LOCATE_UPDATES = 91,
+    CMD_RIL_SET_NOTIFICATION_FILTER = 92,
+    CMD_RIL_SET_DEVICE_STATE = 93,
+    CMD_RIL_SEND_GSM_SMS = 94,
+    CMD_RIL_SEND_CDMA_SMS = 95,
+    CMD_RIL_ADD_SIM_MESSAGE = 96,
+    CMD_RIL_DEL_SIM_MESSAGE = 97,
+    CMD_RIL_UPDATE_SIM_MESSAGE = 98,
+    CMD_RIL_ADD_CDMA_SIM_MESSAGE = 99,
+    CMD_RIL_DEL_CDMA_SIM_MESSAGE = 100,
+    CMD_RIL_UPDATE_CDMA_SIM_MESSAGE = 101,
+    CMD_RIL_SET_SMSC_ADDR = 102,
+    CMD_RIL_GET_SMSC_ADDR = 103,
+    CMD_RIL_SET_C_B_CONFIG = 104,
+    CMD_RIL_GET_C_B_CONFIG = 105,
+    CMD_RIL_SET_CDMA_C_B_CONFIG = 106,
+    CMD_RIL_GET_CDMA_C_B_CONFIG = 107,
+    CMD_RIL_SEND_SMS_MORE_MODE = 108,
+    CMD_RIL_SEND_SMS_ACK = 109,
+    CMD_RIL_SEND_RIL_ACK = 110,
+    CMD_RIL_GET_RRC_CONNECTION_STATE = 111,
+    CMD_RIL_SET_NR_OPTION_MODE = 112,
+    CMD_RIL_GET_NR_OPTION_MODE = 113,
+};
+
+class IRil : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.ril.v1_1.IRil");
+
+    virtual ~IRil() = default;
+
+    static sptr<OHOS::HDI::Ril::V1_1::IRil> Get(bool isStub = false);
+    static sptr<OHOS::HDI::Ril::V1_1::IRil> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t SetCallback(const sptr<OHOS::HDI::Ril::V1_1::IRilCallback>& rilCallback) = 0;
+
+    virtual int32_t SetEmergencyCallList(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::EmergencyInfoList& emergencyInfoList) = 0;
+
+    virtual int32_t GetEmergencyCallList(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetCallList(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t Dial(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::DialInfo& dialInfo) = 0;
+
+    virtual int32_t Reject(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t Hangup(int32_t slotId, int32_t serialId, int32_t callId) = 0;
+
+    virtual int32_t Answer(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t HoldCall(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t UnHoldCall(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SwitchCall(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t CombineConference(int32_t slotId, int32_t serialId, int32_t callType) = 0;
+
+    virtual int32_t SeparateConference(int32_t slotId, int32_t serialId, int32_t callId, int32_t callType) = 0;
+
+    virtual int32_t GetCallWaiting(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetCallWaiting(int32_t slotId, int32_t serialId, int32_t activate) = 0;
+
+    virtual int32_t GetCallTransferInfo(int32_t slotId, int32_t serialId, int32_t reason) = 0;
+
+    virtual int32_t SetCallTransferInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::CallForwardSetInfo& callForwardSetInfo) = 0;
+
+    virtual int32_t GetCallRestriction(int32_t slotId, int32_t serialId, const std::string& fac) = 0;
+
+    virtual int32_t SetCallRestriction(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::CallRestrictionInfo& callRestrictionInfo) = 0;
+
+    virtual int32_t GetClip(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetClip(int32_t slotId, int32_t serialId, int32_t action) = 0;
+
+    virtual int32_t GetClir(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetClir(int32_t slotId, int32_t serialId, int32_t action) = 0;
+
+    virtual int32_t SetCallPreferenceMode(int32_t slotId, int32_t serialId, int32_t mode) = 0;
+
+    virtual int32_t GetCallPreferenceMode(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetUssd(int32_t slotId, int32_t serialId, const std::string& str) = 0;
+
+    virtual int32_t CloseUnFinishedUssd(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetUssd(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetMute(int32_t slotId, int32_t serialId, int32_t mute) = 0;
+
+    virtual int32_t GetMute(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetCallFailReason(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t CallSupplement(int32_t slotId, int32_t serialId, int32_t type) = 0;
+
+    virtual int32_t SendDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo) = 0;
+
+    virtual int32_t StartDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo) = 0;
+
+    virtual int32_t StopDtmf(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::DtmfInfo& dtmfInfo) = 0;
+
+    virtual int32_t SetBarringPassword(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SetBarringInfo& setBarringInfo) = 0;
+
+    virtual int32_t SetVonrSwitch(int32_t slotId, int32_t serialId, int32_t status) = 0;
+
+    virtual int32_t ActivatePdpContext(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataCallInfo& dataCallInfo) = 0;
+
+    virtual int32_t DeactivatePdpContext(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::UniInfo& uniInfo) = 0;
+
+    virtual int32_t GetPdpContextList(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::UniInfo& uniInfo) = 0;
+
+    virtual int32_t SetInitApnInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataProfileDataInfo) = 0;
+
+    virtual int32_t GetLinkBandwidthInfo(int32_t slotId, int32_t serialId, int32_t cid) = 0;
+
+    virtual int32_t GetLinkCapability(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetLinkBandwidthReportingRule(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataLinkBandwidthReportingRule) = 0;
+
+    virtual int32_t SetDataPermitted(int32_t slotId, int32_t serialId, int32_t dataPermitted) = 0;
+
+    virtual int32_t SetDataProfileInfo(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataProfilesInfo) = 0;
+
+    virtual int32_t SendDataPerformanceMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataPerformanceInfo) = 0;
+
+    virtual int32_t SendDataSleepMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::DataSleepInfo& dataSleepInfo) = 0;
+
+    virtual int32_t SetRadioState(int32_t slotId, int32_t serialId, int32_t fun, int32_t rst) = 0;
+
+    virtual int32_t GetRadioState(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetImei(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetMeid(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetVoiceRadioTechnology(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetBasebandVersion(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t ShutDown(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetSimIO(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::SimIoRequestInfo& simIO) = 0;
+
+    virtual int32_t GetSimStatus(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetImsi(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetSimLockStatus(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SimLockInfo& simLockInfo) = 0;
+
+    virtual int32_t SetSimLock(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SimLockInfo& simLockInfo) = 0;
+
+    virtual int32_t ChangeSimPassword(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SimPasswordInfo& simPassword) = 0;
+
+    virtual int32_t UnlockPin(int32_t slotId, int32_t serialId, const std::string& pin) = 0;
+
+    virtual int32_t UnlockPuk(int32_t slotId, int32_t serialId, const std::string& puk, const std::string& pin) = 0;
+
+    virtual int32_t UnlockPin2(int32_t slotId, int32_t serialId, const std::string& pin2) = 0;
+
+    virtual int32_t UnlockPuk2(int32_t slotId, int32_t serialId, const std::string& puk2, const std::string& pin2) = 0;
+
+    virtual int32_t SetActiveSim(int32_t slotId, int32_t serialId, int32_t index, int32_t enable) = 0;
+
+    virtual int32_t SimStkSendTerminalResponse(int32_t slotId, int32_t serialId, const std::string& strCmd) = 0;
+
+    virtual int32_t SimStkSendEnvelope(int32_t slotId, int32_t serialId, const std::string& strCmd) = 0;
+
+    virtual int32_t SimStkSendCallSetupRequestResult(int32_t slotId, int32_t serialId, int32_t accept) = 0;
+
+    virtual int32_t SimStkIsReady(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetRadioProtocol(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetRadioProtocol(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::RadioProtocol& radioProtocol) = 0;
+
+    virtual int32_t SimOpenLogicalChannel(int32_t slotId, int32_t serialId, const std::string& appID, int32_t p2) = 0;
+
+    virtual int32_t SimCloseLogicalChannel(int32_t slotId, int32_t serialId, int32_t channelId) = 0;
+
+    virtual int32_t SimTransmitApduLogicalChannel(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& apduSimIO) = 0;
+
+    virtual int32_t SimTransmitApduBasicChannel(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& apduSimIO) = 0;
+
+    virtual int32_t SimAuthentication(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& simAuthInfo) = 0;
+
+    virtual int32_t UnlockSimLock(int32_t slotId, int32_t serialId, int32_t lockType, const std::string& key) = 0;
+
+    virtual int32_t GetSignalStrength(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetCsRegStatus(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetPsRegStatus(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetOperatorInfo(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetNetworkSearchInformation(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetNetworkSelectionMode(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetNetworkSelectionMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& networkModeInfo) = 0;
+
+    virtual int32_t GetNeighboringCellInfoList(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetCurrentCellInfo(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetPreferredNetwork(int32_t slotId, int32_t serialId, int32_t preferredNetworkType) = 0;
+
+    virtual int32_t GetPreferredNetwork(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetPhysicalChannelConfig(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetLocateUpdates(int32_t slotId, int32_t serialId, OHOS::HDI::Ril::V1_1::RilRegNotifyMode mode) = 0;
+
+    virtual int32_t SetNotificationFilter(int32_t slotId, int32_t serialId, int32_t newFilter) = 0;
+
+    virtual int32_t SetDeviceState(int32_t slotId, int32_t serialId, int32_t deviceStateType,
+         int32_t deviceStateOn) = 0;
+
+    virtual int32_t SendGsmSms(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& gsmSmsMessageInfo) = 0;
+
+    virtual int32_t SendCdmaSms(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& cdmaSmsMessageInfo) = 0;
+
+    virtual int32_t AddSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& gsmSmsMessageInfo) = 0;
+
+    virtual int32_t DelSimMessage(int32_t slotId, int32_t serialId, int32_t index) = 0;
+
+    virtual int32_t UpdateSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& gsmSmsMessageInfo) = 0;
+
+    virtual int32_t AddCdmaSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& cdmaSmsMessageInfo) = 0;
+
+    virtual int32_t DelCdmaSimMessage(int32_t slotId, int32_t serialId, int32_t index) = 0;
+
+    virtual int32_t UpdateCdmaSimMessage(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& cdmaSmsMessageInfo) = 0;
+
+    virtual int32_t SetSmscAddr(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::ServiceCenterAddress& serviceCenterAddress) = 0;
+
+    virtual int32_t GetSmscAddr(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetCBConfig(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::CBConfigInfo& cellBroadcastInfo) = 0;
+
+    virtual int32_t GetCBConfig(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetCdmaCBConfig(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& cdmaCBConfigInfoList) = 0;
+
+    virtual int32_t GetCdmaCBConfig(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SendSmsMoreMode(int32_t slotId, int32_t serialId,
+         const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& gsmSmsMessageInfo) = 0;
+
+    virtual int32_t SendSmsAck(int32_t slotId, int32_t serialId, const OHOS::HDI::Ril::V1_1::ModeData& modeData) = 0;
+
+    virtual int32_t SendRilAck() = 0;
+
+    virtual int32_t GetRrcConnectionState(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t SetNrOptionMode(int32_t slotId, int32_t serialId, int32_t mode) = 0;
+
+    virtual int32_t GetNrOptionMode(int32_t slotId, int32_t serialId) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 1;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_1
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_1_IRIL_H
+

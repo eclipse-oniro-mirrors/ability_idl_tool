@@ -1,0 +1,265 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/vibrator_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Vibrator {
+namespace V1_2 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CurvePointBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_2::CurvePoint& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_2::CurvePoint))) {
+        return false;
+    }
+    return true;
+}
+
+bool CurvePointBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_2::CurvePoint& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_2::CurvePoint *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_2::CurvePoint*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_2::CurvePoint)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_2::CurvePoint), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_2::CurvePoint)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool HapticEventBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_2::HapticEvent& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: write dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.duration)) {
+        HDF_LOGE("%{public}s: write dataBlock.duration failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.intensity)) {
+        HDF_LOGE("%{public}s: write dataBlock.intensity failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.frequency)) {
+        HDF_LOGE("%{public}s: write dataBlock.frequency failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: write dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.pointNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.pointNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.points)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.points", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HapticEventBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_2::HapticEvent& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum EVENT_TYPE>(enumTmp);
+    }
+
+    if (!data.ReadInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: read dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.duration)) {
+        HDF_LOGE("%{public}s: read dataBlock.duration failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.intensity)) {
+        HDF_LOGE("%{public}s: read dataBlock.intensity failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.frequency)) {
+        HDF_LOGE("%{public}s: read dataBlock.frequency failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.index)) {
+        HDF_LOGE("%{public}s: read dataBlock.index failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.pointNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.pointNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.points)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.points", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HapticPaketBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_2::HapticPaket& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: write dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.eventNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.eventNum failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.events.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.events.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.events) {
+        if (!HapticEventBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool HapticPaketBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_2::HapticPaket& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.time)) {
+        HDF_LOGE("%{public}s: read dataBlock.time failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.eventNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.eventNum failed!", __func__);
+        return false;
+    }
+
+    uint32_t eventsSize = 0;
+    if (!data.ReadUint32(eventsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(eventsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Vibrator::V1_2::HapticEvent), false);
+    dataBlock.events.clear();
+    dataBlock.events.reserve(eventsSize);
+    for (uint32_t i0 = 0; i0 < eventsSize; ++i0) {
+        OHOS::HDI::Vibrator::V1_2::HapticEvent value0;
+        if (!OHOS::HDI::Vibrator::V1_2::HapticEventBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.events.push_back(value0);
+    }
+    return true;
+}
+
+bool HapticCapacityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_2::HapticCapacity& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_2::HapticCapacity))) {
+        return false;
+    }
+    return true;
+}
+
+bool HapticCapacityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_2::HapticCapacity& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_2::HapticCapacity *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_2::HapticCapacity*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_2::HapticCapacity)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_2::HapticCapacity), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_2::HapticCapacity)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_2
+} // Vibrator
+} // HDI
+} // OHOS

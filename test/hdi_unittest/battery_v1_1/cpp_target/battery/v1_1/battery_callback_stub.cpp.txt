@@ -1,0 +1,127 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/battery_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    battery_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Battery {
+namespace V1_1 {
+
+
+
+OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStub(const sptr<OHOS::HDI::Battery::V1_1::IBatteryCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Battery::V1_1::IBatteryCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Battery::V1_1::BatteryCallbackStub::~BatteryCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Battery::V1_1::BatteryCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_BATTERY_CALLBACK_GET_VERSION:
+            return BatteryCallbackStubGetVersion(data, reply, option);
+        case CMD_BATTERY_CALLBACK_UPDATE:
+            return BatteryCallbackStubUpdate(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubUpdate(MessageParcel& batteryCallbackData, MessageParcel& batteryCallbackReply, MessageOption& batteryCallbackOption)
+{
+    return OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubUpdate_(batteryCallbackData, batteryCallbackReply, batteryCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubGetVersion(MessageParcel& batteryCallbackData, MessageParcel& batteryCallbackReply, MessageOption& batteryCallbackOption)
+{
+    return OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubGetVersion_(batteryCallbackData, batteryCallbackReply, batteryCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubUpdate_(MessageParcel& batteryCallbackData, MessageParcel& batteryCallbackReply, MessageOption& batteryCallbackOption, sptr<OHOS::HDI::Battery::V1_1::IBatteryCallback> impl)
+{
+    if (batteryCallbackData.ReadInterfaceToken() != OHOS::HDI::Battery::V1_1::IBatteryCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V1_1::BatteryInfo event;
+    if (!BatteryInfoBlockUnmarshalling(batteryCallbackData, event)) {
+        HDF_LOGE("%{public}s: read event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryCallbackRet = impl->Update(event);
+    if (batteryCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryCallbackRet);
+        return batteryCallbackRet;
+    }
+
+    return batteryCallbackRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_1::BatteryCallbackStub::BatteryCallbackStubGetVersion_(MessageParcel& batteryCallbackData, MessageParcel& batteryCallbackReply, MessageOption& batteryCallbackOption, sptr<OHOS::HDI::Battery::V1_1::IBatteryCallback> impl)
+{
+    if (batteryCallbackData.ReadInterfaceToken() != OHOS::HDI::Battery::V1_1::IBatteryCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (batteryCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryCallbackRet);
+        return batteryCallbackRet;
+    }
+
+    if (!batteryCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryCallbackRet;
+}
+} // V1_1
+} // Battery
+} // HDI
+} // OHOS

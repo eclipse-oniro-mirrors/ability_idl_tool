@@ -1,0 +1,93 @@
+AST[name: IIntellVoiceTriggerManager file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_trigger_v1_0/foo/intelligent_voice/trigger/v1_0/IIntellVoiceTriggerManager.idl]
+package ohos.hdi.intelligent_voice.trigger.v1_0;
+
+import ohos.hdi.intelligent_voice.trigger.v1_0.IIntellVoiceTriggerAdapter;
+import ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerTypes;
+
+[mini, lite, full] interface IIntellVoiceTriggerManager {
+    [mini, lite, full] LoadAdapter(
+      [in] ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerAdapterDsecriptor descriptor,
+      [out] ohos.hdi.intelligent_voice.trigger.v1_0.IIntellVoiceTriggerAdapter adapter);
+
+    [mini, lite, full] UnloadAdapter(
+      [in] ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerAdapterDsecriptor descriptor);
+}
+
+
+AST[name: IIntellVoiceTriggerAdapter file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_trigger_v1_0/foo/intelligent_voice/trigger/v1_0/IIntellVoiceTriggerAdapter.idl]
+package ohos.hdi.intelligent_voice.trigger.v1_0;
+
+import ohos.hdi.intelligent_voice.trigger.v1_0.IIntellVoiceTriggerCallback;
+import ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerTypes;
+
+[mini, lite, full] interface IIntellVoiceTriggerAdapter {
+    [mini, lite, full] GetProperties(
+      [out] ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerProperties properties);
+
+    [mini, lite, full] LoadModel(
+      [in] ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerModel model,
+      [in] ohos.hdi.intelligent_voice.trigger.v1_0.IIntellVoiceTriggerCallback triggerCallback,
+      [in] int cookie,
+      [out] int handle);
+
+    [mini, lite, full] UnloadModel(
+      [in] int handle);
+
+    [mini, lite, full] Start(
+      [in] int handle);
+
+    [mini, lite, full] Stop(
+      [in] int handle);
+}
+
+
+AST[name: IIntellVoiceTriggerCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_trigger_v1_0/foo/intelligent_voice/trigger/v1_0/IIntellVoiceTriggerCallback.idl]
+package ohos.hdi.intelligent_voice.trigger.v1_0;
+
+import ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerTypes;
+
+[mini, lite, full, callback] interface IIntellVoiceTriggerCallback {
+    [mini, lite, full, callback] OnRecognitionHdiEvent(
+      [in] ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceRecognitionEvent event,
+      [in] int cookie);
+}
+
+
+AST[name: IntellVoiceTriggerTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_trigger_v1_0/foo/intelligent_voice/trigger/v1_0/IntellVoiceTriggerTypes.idl]
+package ohos.hdi.intelligent_voice.trigger.v1_0;
+
+[mini, lite, full] enum IntellVoiceTriggerModelType : int {
+  UNKNOWN = -1,
+  DEFAULT = 1,
+};
+
+[mini, lite, full] enum RecognitionStatus : int {
+  SUCCESS = 0,
+  ABORT = 1,
+  FAILURE = 2,
+};
+
+[mini, lite, full] struct IntellVoiceTriggerAdapterDsecriptor {
+  std::string adapterName;
+};
+
+[mini, lite, full] struct IntellVoiceTriggerProperties {
+  std::string implementor;
+  std::string description;
+  unsigned int version;
+  unsigned int maxIntellVoiceModels;
+};
+
+[mini, lite, full] struct IntellVoiceTriggerModel {
+  ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerModelType type;
+  unsigned int uid;
+  Ashmem data;
+};
+
+[mini, lite, full] struct IntellVoiceRecognitionEvent {
+  ohos.hdi.intelligent_voice.trigger.v1_0.RecognitionStatus status;
+  ohos.hdi.intelligent_voice.trigger.v1_0.IntellVoiceTriggerModelType type;
+  int modelHandle;
+};
+
+

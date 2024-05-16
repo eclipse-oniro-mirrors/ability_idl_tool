@@ -1,0 +1,291 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hostapd_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    hostapd_callback_stub
+
+
+static int32_t SerStubOnEventStaJoin(struct IHostapdCallback *serviceImpl, struct HdfSBuf *hostapdCallbackData, struct HdfSBuf *hostapdCallbackReply)
+{
+    int32_t hostapdCallbackRet = HDF_FAILURE;
+    struct HdiApCbParm* apCbParm = NULL;
+    char* ifName = NULL;
+
+    apCbParm = (struct HdiApCbParm*)OsalMemCalloc(sizeof(struct HdiApCbParm));
+    if (apCbParm == NULL) {
+        HDF_LOGE("%{public}s: malloc apCbParm failed", __func__);
+        hostapdCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiApCbParmBlockUnmarshalling(hostapdCallbackData, apCbParm)) {
+        HDF_LOGE("%{public}s: read apCbParm failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(hostapdCallbackData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->OnEventStaJoin == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function OnEventStaJoin ", __func__);
+        hostapdCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdCallbackRet = serviceImpl->OnEventStaJoin(serviceImpl, apCbParm, ifName);
+    if (hostapdCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (apCbParm != NULL) {
+        HdiApCbParmFree(apCbParm, true);
+        apCbParm = NULL;
+    }
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdCallbackRet;
+}
+
+static int32_t SerStubOnEventApState(struct IHostapdCallback *serviceImpl, struct HdfSBuf *hostapdCallbackData, struct HdfSBuf *hostapdCallbackReply)
+{
+    int32_t hostapdCallbackRet = HDF_FAILURE;
+    struct HdiApCbParm* apCbParm = NULL;
+    char* ifName = NULL;
+
+    apCbParm = (struct HdiApCbParm*)OsalMemCalloc(sizeof(struct HdiApCbParm));
+    if (apCbParm == NULL) {
+        HDF_LOGE("%{public}s: malloc apCbParm failed", __func__);
+        hostapdCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiApCbParmBlockUnmarshalling(hostapdCallbackData, apCbParm)) {
+        HDF_LOGE("%{public}s: read apCbParm failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(hostapdCallbackData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->OnEventApState == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function OnEventApState ", __func__);
+        hostapdCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdCallbackRet = serviceImpl->OnEventApState(serviceImpl, apCbParm, ifName);
+    if (hostapdCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (apCbParm != NULL) {
+        HdiApCbParmFree(apCbParm, true);
+        apCbParm = NULL;
+    }
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdCallbackRet;
+}
+
+static int32_t SerStubOnEventHostApdNotify(struct IHostapdCallback *serviceImpl, struct HdfSBuf *hostapdCallbackData, struct HdfSBuf *hostapdCallbackReply)
+{
+    int32_t hostapdCallbackRet = HDF_FAILURE;
+    char* notifyParam = NULL;
+    char* ifName = NULL;
+
+    const char *notifyParamCp = HdfSbufReadString(hostapdCallbackData);
+    if (notifyParamCp == NULL) {
+        HDF_LOGE("%{public}s: read notifyParamCp failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    notifyParam = strdup(notifyParamCp);
+
+    const char *ifNameCp = HdfSbufReadString(hostapdCallbackData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->OnEventHostApdNotify == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function OnEventHostApdNotify ", __func__);
+        hostapdCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    hostapdCallbackRet = serviceImpl->OnEventHostApdNotify(serviceImpl, notifyParam, ifName);
+    if (hostapdCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hostapdCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (notifyParam != NULL) {
+        OsalMemFree(notifyParam);
+        notifyParam = NULL;
+    }
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return hostapdCallbackRet;
+}
+
+static int32_t SerStubGetVersion(struct IHostapdCallback *serviceImpl, struct HdfSBuf *hostapdCallbackData, struct HdfSBuf *hostapdCallbackReply)
+{
+    int32_t hostapdCallbackRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(hostapdCallbackReply, IHOSTAPD_CALLBACK_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IHOSTAPD_CALLBACK_MAJOR_VERSION failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(hostapdCallbackReply, IHOSTAPD_CALLBACK_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IHOSTAPD_CALLBACK_MINOR_VERSION failed!", __func__);
+        hostapdCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return hostapdCallbackRet;
+}
+
+static struct HdfRemoteService *HostapdCallbackStubAsObject(struct IHostapdCallback *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct HostapdCallbackStub *stub = CONTAINER_OF(self, struct HostapdCallbackStub, interface);
+    return stub->remote;
+}
+
+static int32_t HostapdCallbackOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct HostapdCallbackStub *stub = (struct HostapdCallbackStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_HOSTAPD_CALLBACK_ON_EVENT_STA_JOIN:
+            return SerStubOnEventStaJoin(stub->interface, data, reply);
+        case CMD_HOSTAPD_CALLBACK_ON_EVENT_AP_STATE:
+            return SerStubOnEventApState(stub->interface, data, reply);
+        case CMD_HOSTAPD_CALLBACK_ON_EVENT_HOST_APD_NOTIFY:
+            return SerStubOnEventHostApdNotify(stub->interface, data, reply);
+        case CMD_HOSTAPD_CALLBACK_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteService **HostapdCallbackStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IHostapdCallback *serviceImpl = (struct IHostapdCallback *)impl;
+    struct HostapdCallbackStub *stub = OsalMemCalloc(sizeof(struct HostapdCallbackStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &stub->dispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IHOSTAPDCALLBACK_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = HostapdCallbackOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = HostapdCallbackStubAsObject;
+    return &stub->remote;
+}
+
+static void HostapdCallbackStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct HostapdCallbackStub *stub = CONTAINER_OF(remote, struct HostapdCallbackStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_hostapdcallbackConstructor = {
+    .constructor = HostapdCallbackStubNewInstance,
+    .destructor = HostapdCallbackStubRelease,
+};
+
+__attribute__((constructor)) static void HostapdCallbackStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IHOSTAPDCALLBACK_INTERFACE_DESC);
+    StubConstructorRegister(IHOSTAPDCALLBACK_INTERFACE_DESC, &g_hostapdcallbackConstructor);
+}

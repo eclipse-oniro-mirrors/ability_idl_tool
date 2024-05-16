@@ -1,0 +1,116 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_LPFENCE_WIFIFENCE_V1_0_WIFIFENCEINTERFACEPROXY_H
+#define OHOS_HDI_LOCATION_LPFENCE_WIFIFENCE_V1_0_WIFIFENCEINTERFACEPROXY_H
+
+#include "v1_0/iwififence_interface.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Wififence {
+namespace V1_0 {
+
+class WififenceInterfaceProxy : public IProxyBroker<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceInterface> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceInterfaceProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceInterfaceProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceInterfaceProxy> proxy_;
+    };
+
+    explicit WififenceInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceInterface>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~WififenceInterfaceProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t RegisterWififenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback>& callbackObj) override;
+
+    int32_t UnregisterWififenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback>& callbackObj) override;
+
+    int32_t AddWififences(const std::vector<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceRequest>& wififence) override;
+
+    int32_t RemoveWififences(const std::vector<int32_t>& wififenceId) override;
+
+    int32_t GetWififenceStatus(int32_t wififenceId) override;
+
+    int32_t GetWififenceSize() override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t RegisterWififenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback>& callbackObj, const sptr<IRemoteObject> remote);
+
+    static int32_t UnregisterWififenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::IWififenceCallback>& callbackObj, const sptr<IRemoteObject> remote);
+
+    static int32_t AddWififences_(const std::vector<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceRequest>& wififence, const sptr<IRemoteObject> remote);
+
+    static int32_t RemoveWififences_(const std::vector<int32_t>& wififenceId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetWififenceStatus_(int32_t wififenceId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetWififenceSize_(const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceInterfaceProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Location::Lpfence::Wififence::V1_0::WififenceInterfaceProxy> delegator_;
+};
+
+} // V1_0
+} // Wififence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_LPFENCE_WIFIFENCE_V1_0_WIFIFENCEINTERFACEPROXY_H
+

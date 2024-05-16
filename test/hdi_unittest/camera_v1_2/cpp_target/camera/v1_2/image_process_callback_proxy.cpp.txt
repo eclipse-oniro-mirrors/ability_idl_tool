@@ -1,0 +1,195 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/image_process_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    image_process_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnProcessDone(const std::string& imageId,
+     const OHOS::HDI::Camera::V1_2::ImageBufferInfo& buffer)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnProcessDone_(imageId, buffer, Remote());
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnStatusChanged(OHOS::HDI::Camera::V1_2::SessionStatus status)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnStatusChanged_(status, Remote());
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnError(const std::string& imageId,
+     OHOS::HDI::Camera::V1_2::ErrorCode errorCode)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnError_(imageId, errorCode, Remote());
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnProcessDone_(const std::string& imageId,
+     const OHOS::HDI::Camera::V1_2::ImageBufferInfo& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel imageProcessCallbackData;
+    MessageParcel imageProcessCallbackReply;
+    MessageOption imageProcessCallbackOption(MessageOption::TF_SYNC);
+
+    if (!imageProcessCallbackData.WriteInterfaceToken(OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackData.WriteCString(imageId.c_str())) {
+        HDF_LOGE("%{public}s: write imageId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Camera::V1_2::ImageBufferInfoBlockMarshalling(imageProcessCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t imageProcessCallbackRet = remote->SendRequest(CMD_IMAGE_PROCESS_CALLBACK_ON_PROCESS_DONE, imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnStatusChanged_(OHOS::HDI::Camera::V1_2::SessionStatus status, const sptr<IRemoteObject> remote)
+{
+    MessageParcel imageProcessCallbackData;
+    MessageParcel imageProcessCallbackReply;
+    MessageOption imageProcessCallbackOption(MessageOption::TF_SYNC);
+
+    if (!imageProcessCallbackData.WriteInterfaceToken(OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackData.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t imageProcessCallbackRet = remote->SendRequest(CMD_IMAGE_PROCESS_CALLBACK_ON_STATUS_CHANGED, imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::OnError_(const std::string& imageId,
+     OHOS::HDI::Camera::V1_2::ErrorCode errorCode, const sptr<IRemoteObject> remote)
+{
+    MessageParcel imageProcessCallbackData;
+    MessageParcel imageProcessCallbackReply;
+    MessageOption imageProcessCallbackOption(MessageOption::TF_SYNC);
+
+    if (!imageProcessCallbackData.WriteInterfaceToken(OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackData.WriteCString(imageId.c_str())) {
+        HDF_LOGE("%{public}s: write imageId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackData.WriteUint64(static_cast<uint64_t>(errorCode))) {
+        HDF_LOGE("%{public}s: write errorCode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t imageProcessCallbackRet = remote->SendRequest(CMD_IMAGE_PROCESS_CALLBACK_ON_ERROR, imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel imageProcessCallbackData;
+    MessageParcel imageProcessCallbackReply;
+    MessageOption imageProcessCallbackOption(MessageOption::TF_SYNC);
+
+    if (!imageProcessCallbackData.WriteInterfaceToken(OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t imageProcessCallbackRet = remote->SendRequest(CMD_IMAGE_PROCESS_CALLBACK_GET_VERSION, imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    if (!imageProcessCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS

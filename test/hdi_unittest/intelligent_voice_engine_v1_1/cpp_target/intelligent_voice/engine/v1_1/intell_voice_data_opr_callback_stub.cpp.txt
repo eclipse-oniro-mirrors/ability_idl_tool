@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/intell_voice_data_opr_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    intell_voice_data_opr_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Engine {
+namespace V1_1 {
+
+
+
+OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStub(const sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::~IntellVoiceDataOprCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_INTELL_VOICE_DATA_OPR_CALLBACK_GET_VERSION:
+            return IntellVoiceDataOprCallbackStubGetVersion(data, reply, option);
+        case CMD_INTELL_VOICE_DATA_OPR_CALLBACK_ON_INTELL_VOICE_DATA_OPR_EVENT:
+            return IntellVoiceDataOprCallbackStubOnIntellVoiceDataOprEvent(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubOnIntellVoiceDataOprEvent(MessageParcel& intellVoiceDataOprCallbackData, MessageParcel& intellVoiceDataOprCallbackReply, MessageOption& intellVoiceDataOprCallbackOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubOnIntellVoiceDataOprEvent_(intellVoiceDataOprCallbackData, intellVoiceDataOprCallbackReply, intellVoiceDataOprCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubGetVersion(MessageParcel& intellVoiceDataOprCallbackData, MessageParcel& intellVoiceDataOprCallbackReply, MessageOption& intellVoiceDataOprCallbackOption)
+{
+    return OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubGetVersion_(intellVoiceDataOprCallbackData, intellVoiceDataOprCallbackReply, intellVoiceDataOprCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubOnIntellVoiceDataOprEvent_(MessageParcel& intellVoiceDataOprCallbackData, MessageParcel& intellVoiceDataOprCallbackReply, MessageOption& intellVoiceDataOprCallbackOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback> impl)
+{
+    if (intellVoiceDataOprCallbackData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprType type = static_cast<enum IntellVoiceDataOprType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!intellVoiceDataOprCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum IntellVoiceDataOprType>(enumTmp);
+    }
+
+    sptr<Ashmem> inBuffer = intellVoiceDataOprCallbackData.ReadAshmem();
+    if (inBuffer == nullptr) {
+        HDF_LOGE("%{public}s: failed to read ashmem object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<Ashmem> outBuffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceDataOprCallbackRet = impl->OnIntellVoiceDataOprEvent(type, inBuffer, outBuffer);
+    if (intellVoiceDataOprCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceDataOprCallbackRet);
+        return intellVoiceDataOprCallbackRet;
+    }
+
+    if (outBuffer == nullptr || !intellVoiceDataOprCallbackReply.WriteAshmem(outBuffer)) {
+        HDF_LOGE("%{public}s: failed to write outBuffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceDataOprCallbackRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Engine::V1_1::IntellVoiceDataOprCallbackStub::IntellVoiceDataOprCallbackStubGetVersion_(MessageParcel& intellVoiceDataOprCallbackData, MessageParcel& intellVoiceDataOprCallbackReply, MessageOption& intellVoiceDataOprCallbackOption, sptr<OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback> impl)
+{
+    if (intellVoiceDataOprCallbackData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Engine::V1_1::IIntellVoiceDataOprCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceDataOprCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (intellVoiceDataOprCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceDataOprCallbackRet);
+        return intellVoiceDataOprCallbackRet;
+    }
+
+    if (!intellVoiceDataOprCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceDataOprCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceDataOprCallbackRet;
+}
+} // V1_1
+} // Engine
+} // IntelligentVoice
+} // HDI
+} // OHOS

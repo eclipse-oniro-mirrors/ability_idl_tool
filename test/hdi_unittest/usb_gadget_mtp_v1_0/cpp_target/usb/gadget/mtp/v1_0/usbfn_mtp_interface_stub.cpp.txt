@@ -1,0 +1,459 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usbfn_mtp_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    usbfn_mtp_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace Gadget {
+namespace Mtp {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::Get("usbfn_mtp_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "usbfn_mtp_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface *>(impl);
+}
+
+
+OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStub(const sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::~UsbfnMtpInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_USBFN_MTP_INTERFACE_GET_VERSION:
+            return UsbfnMtpInterfaceStubGetVersion(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_START:
+            return UsbfnMtpInterfaceStubStart(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_STOP:
+            return UsbfnMtpInterfaceStubStop(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_READ:
+            return UsbfnMtpInterfaceStubRead(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_WRITE:
+            return UsbfnMtpInterfaceStubWrite(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_RECEIVE_FILE:
+            return UsbfnMtpInterfaceStubReceiveFile(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_SEND_FILE:
+            return UsbfnMtpInterfaceStubSendFile(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_SEND_EVENT:
+            return UsbfnMtpInterfaceStubSendEvent(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_INIT:
+            return UsbfnMtpInterfaceStubInit(data, reply, option);
+        case CMD_USBFN_MTP_INTERFACE_RELEASE:
+            return UsbfnMtpInterfaceStubRelease(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStart(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStart_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStop(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStop_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRead(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRead_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubWrite(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubWrite_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubReceiveFile(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubReceiveFile_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendFile(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendFile_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendEvent(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendEvent_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubInit(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubInit_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRelease(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRelease_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubGetVersion(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption)
+{
+    return OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubGetVersion_(usbfnMtpInterfaceData, usbfnMtpInterfaceReply, usbfnMtpInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStart_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Start();
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubStop_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Stop();
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRead_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbfnMtpInterfaceMemSet = false;
+    if (!usbfnMtpInterfaceData.ReadBool(usbfnMtpInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbfnMtpInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> data;
+    if (usbfnMtpInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbfnMtpInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        data.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Read(data);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    if (!WritePodArray(usbfnMtpInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubWrite_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (!ReadPodArray(usbfnMtpInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Write(data);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubReceiveFile_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbFnMtpFileSlice mfs;
+    if (!UsbFnMtpFileSliceBlockUnmarshalling(usbfnMtpInterfaceData, mfs)) {
+        HDF_LOGE("%{public}s: read mfs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->ReceiveFile(mfs);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendFile_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbFnMtpFileSlice mfs;
+    if (!UsbFnMtpFileSliceBlockUnmarshalling(usbfnMtpInterfaceData, mfs)) {
+        HDF_LOGE("%{public}s: read mfs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->SendFile(mfs);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubSendEvent_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> eventData;
+    if (!ReadPodArray(usbfnMtpInterfaceData, eventData)) {
+        HDF_LOGE("%{public}s: failed to read eventData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->SendEvent(eventData);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubInit_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Init();
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubRelease_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->Release();
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceStub::UsbfnMtpInterfaceStubGetVersion_(MessageParcel& usbfnMtpInterfaceData, MessageParcel& usbfnMtpInterfaceReply, MessageOption& usbfnMtpInterfaceOption, sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface> impl)
+{
+    if (usbfnMtpInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbfnMtpInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (usbfnMtpInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbfnMtpInterfaceRet);
+        return usbfnMtpInterfaceRet;
+    }
+
+    if (!usbfnMtpInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbfnMtpInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbfnMtpInterfaceRet;
+}
+} // V1_0
+} // Mtp
+} // Gadget
+} // Usb
+} // HDI
+} // OHOS

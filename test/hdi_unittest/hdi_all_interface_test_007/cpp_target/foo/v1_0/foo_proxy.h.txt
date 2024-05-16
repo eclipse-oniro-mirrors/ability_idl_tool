@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_FOO_V1_0_FOOPROXY_H
+#define OHOS_HDI_FOO_V1_0_FOOPROXY_H
+
+#include "v1_0/ifoo.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Foo {
+namespace V1_0 {
+
+class FooProxy : public IProxyBroker<OHOS::HDI::Foo::V1_0::IFoo> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Foo::V1_0::FooProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Foo::V1_0::FooProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Foo::V1_0::FooProxy> proxy_;
+    };
+
+    explicit FooProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Foo::V1_0::IFoo>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~FooProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t Ping(const std::string& sendMsg, std::string& recvMsg) override;
+
+    int32_t GetData(OHOS::HDI::Foo::V1_0::FooInfo& info) override;
+
+    int32_t SetCallback(const sptr<OHOS::HDI::Foo::V1_0::IFooCallback>& cbObj) override;
+
+    int32_t TestFunc1(bool inData, bool& outData) override;
+
+    int32_t TestFunc2(int8_t inData) override;
+
+    int32_t TestFunc3(int16_t inData, int16_t& outData) override;
+
+    int32_t TestFunc4(int32_t inData, int32_t& outData) override;
+
+    int32_t TestFunc5(int64_t inData, int64_t& outData) override;
+
+    int32_t TestFunc6(const std::string& inData) override;
+
+    int32_t TestFunc7(float inData, float& outData) override;
+
+    int32_t TestFunc8(double inData, double& outData) override;
+
+    int32_t TestFunc9(int inData, int& outData) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t Ping_(const std::string& sendMsg, std::string& recvMsg, const sptr<IRemoteObject> remote);
+
+    static int32_t GetData_(OHOS::HDI::Foo::V1_0::FooInfo& info, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallback_(const sptr<OHOS::HDI::Foo::V1_0::IFooCallback>& cbObj,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc1_(bool inData, bool& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc2_(int8_t inData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc3_(int16_t inData, int16_t& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc4_(int32_t inData, int32_t& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc5_(int64_t inData, int64_t& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc6_(const std::string& inData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc7_(float inData, float& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc8_(double inData, double& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t TestFunc9_(int inData, int& outData, const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Foo::V1_0::FooProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Foo::V1_0::FooProxy> delegator_;
+};
+
+} // V1_0
+} // Foo
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_FOO_V1_0_FOOPROXY_H
+

@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_USER_AUTH_V1_1_USERAUTHTYPES_H
+#define OHOS_HDI_USER_AUTH_V1_1_USERAUTHTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <vector>
+#include "user_auth/v1_0/user_auth_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace UserAuth {
+namespace V1_1 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::UserAuth::V1_0;
+
+struct ScheduleInfoV1_1 {
+    uint64_t scheduleId;
+    std::vector<uint64_t> templateIds;
+    OHOS::HDI::UserAuth::V1_0::AuthType authType;
+    uint32_t executorMatcher;
+    uint32_t scheduleMode;
+    std::vector<OHOS::HDI::UserAuth::V1_0::ExecutorInfo> executors;
+    std::vector<uint8_t> extraInfo;
+};
+
+struct UserInfo {
+    uint64_t secureUid;
+    OHOS::HDI::UserAuth::V1_0::PinSubType pinSubType;
+    std::vector<OHOS::HDI::UserAuth::V1_0::EnrolledInfo> enrolledInfos;
+};
+
+bool ScheduleInfoV1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_1::ScheduleInfoV1_1& dataBlock);
+
+bool ScheduleInfoV1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_1::ScheduleInfoV1_1& dataBlock);
+
+bool UserInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::UserAuth::V1_1::UserInfo& dataBlock);
+
+bool UserInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::UserAuth::V1_1::UserInfo& dataBlock);
+
+} // V1_1
+} // UserAuth
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_USER_AUTH_V1_1_USERAUTHTYPES_H
+

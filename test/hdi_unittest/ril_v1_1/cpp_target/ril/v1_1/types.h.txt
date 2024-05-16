@@ -1,0 +1,1292 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_1_TYPES_H
+#define OHOS_HDI_RIL_V1_1_TYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_1 {
+
+using namespace OHOS;
+
+enum EccType : int32_t {
+    TYPE_CATEGORY = 0,
+    TYPE_POLICE = 1,
+    TYPE_AMBULANCE = 2,
+    TYPE_FIRE = 4,
+    TYPE_SEA = 8,
+    TYPE_MOUNTAIN = 16,
+};
+
+enum SimpresentType : int32_t {
+    TYPE_NO_CARD = 0,
+    TYPE_HAS_CARD = 1,
+};
+
+enum AbnormalServiceType : int32_t {
+    TYPE_ALL = 0,
+    TYPE_ONLY_CS = 1,
+};
+
+enum RilErrType : int32_t {
+    NONE = 0,
+    RIL_ERR_GENERIC_FAILURE = 1,
+    RIL_ERR_INVALID_PARAMETER = 2,
+    RIL_ERR_MEMORY_FULL = 3,
+    RIL_ERR_CMD_SEND_FAILURE = 4,
+    RIL_ERR_CMD_NO_CARRIER = 5,
+    RIL_ERR_INVALID_RESPONSE = 6,
+    RIL_ERR_REPEAT_STATUS = 7,
+    RIL_ERR_NETWORK_SEARCHING = 8,
+    RIL_ERR_NETWORK_SEARCHING_INTERRUPTED = 9,
+    RIL_ERR_MODEM_DEVICE_CLOSE = 10,
+    RIL_ERR_NO_SIMCARD_INSERTED = 11,
+    RIL_ERR_NEED_PIN_CODE = 12,
+    RIL_ERR_NEED_PUK_CODE = 13,
+    RIL_ERR_NETWORK_SEARCH_TIMEOUT = 14,
+    RIL_ERR_PINPUK_PASSWORD_NOCORRECT = 15,
+    RIL_ERR_INVALID_MODEM_PARAMETER = 50,
+    RIL_ERR_HDF_IPC_FAILURE = 300,
+    RIL_ERR_NULL_POINT = 301,
+    RIL_ERR_VENDOR_NOT_IMPLEMENT = 302,
+};
+
+enum RilResponseTypes : int32_t {
+    RIL_RESPONSE_REQUEST = 0,
+    RIL_RESPONSE_NOTICE = 1,
+    RIL_RESPONSE_REQUEST_ACK = 2,
+    RIL_RESPONSE_REQUEST_MUST_ACK = 3,
+    RIL_RESPONSE_NOTICE_MUST_ACK = 4,
+};
+
+enum RilSrvStatus : int32_t {
+    RIL_NO_SRV_SERVICE = 0,
+    RIL_RESTRICTED_SERVICE = 1,
+    RIL_SERVICE_VALID = 2,
+    RIL_REGIONAL_SERVICE = 3,
+    RIL_ENERGY_SAVING_SERVICE = 4,
+};
+
+enum RilSrvDomain : int32_t {
+    RIL_NO_DOMAIN_SERVICE = 0,
+    RIL_CS_SERVICE = 1,
+    RIL_PS_SERVICE = 2,
+    RIL_CS_PS_SERVICE = 3,
+    RIL_CS_PS_SEARCHING = 4,
+    RIL_CDMA_NOT_SUPPORT = 255,
+};
+
+enum RilRoamStatus : int32_t {
+    RIL_NO_ROAM = 0,
+    RIL_ROAMING = 1,
+    RIL_ROAM_UNKNOWN = 2,
+};
+
+enum RilSimLockStatus : int32_t {
+    RIL_SIM_CARD_UNLOCK = 0,
+    RIL_SIM_CARD_LOCK = 1,
+};
+
+enum RilSysMode : int32_t {
+    RIL_NO_SYSMODE_SERVICE = 0,
+    RIL_GSM_MODE = 1,
+    RIL_CDMA_MODE = 2,
+    RIL_WCDMA_MODE = 3,
+    RIL_TDSCDMA_MODE = 4,
+    RIL_WIMAX_MODE = 5,
+    RIL_LTE_MODE = 6,
+    RIL_LTE_CA_MODE = 7,
+    RIL_NR_MODE = 8,
+};
+
+enum RilRadioTech : int32_t {
+    RADIO_TECHNOLOGY_INVALID = 65535,
+    RADIO_TECHNOLOGY_UNKNOWN = 0,
+    RADIO_TECHNOLOGY_GSM = 1,
+    RADIO_TECHNOLOGY_1XRTT = 2,
+    RADIO_TECHNOLOGY_WCDMA = 3,
+    RADIO_TECHNOLOGY_HSPA = 4,
+    RADIO_TECHNOLOGY_HSPAP = 5,
+    RADIO_TECHNOLOGY_TD_SCDMA = 6,
+    RADIO_TECHNOLOGY_EVDO = 7,
+    RADIO_TECHNOLOGY_EHRPD = 8,
+    RADIO_TECHNOLOGY_LTE = 9,
+    RADIO_TECHNOLOGY_LTE_CA = 10,
+    RADIO_TECHNOLOGY_IWLAN = 11,
+    RADIO_TECHNOLOGY_NR = 12,
+};
+
+enum RilSimStatus : int32_t {
+    RIL_USIM_INVALID = 0,
+    RIL_USIM_VALID = 1,
+    RIL_USIM_CS_INVALID = 2,
+    RIL_USIM_PS_INVALID = 3,
+    RIL_USIM_CS_PS_INVALID = 4,
+    RIL_ROM_SIM = 240,
+    RIL_NO_USIM = 255,
+};
+
+enum RilRegStatus : int32_t {
+    NO_REG_MT_NO_SEARCH = 0,
+    REG_MT_HOME = 1,
+    NO_REG_MT_SEARCHING = 2,
+    REG_MT_REJECTED = 3,
+    REG_MT_UNKNOWN = 4,
+    REG_MT_ROAMING = 5,
+    REG_MT_EMERGENCY = 6,
+};
+
+enum RilCellConnectionStatus : int32_t {
+    RIL_SERVING_CELL_UNKNOWN = 0,
+    RIL_SERVING_CELL_PRIMARY = 1,
+    RIL_SERVING_CELL_SECONDARY = 2,
+};
+
+enum RilRegNotifyMode : int32_t {
+    REG_NOT_NOTIFY = 0,
+    REG_NOTIFY_STAT_ONLY = 1,
+    REG_NOTIFY_STAT_LAC_CELLID = 2,
+};
+
+enum RadioProtocolPhase : int32_t {
+    RADIO_PROTOCOL_PHASE_INITIAL,
+    RADIO_PROTOCOL_PHASE_CHECK,
+    RADIO_PROTOCOL_PHASE_UPDATE,
+    RADIO_PROTOCOL_PHASE_NOTIFY,
+    RADIO_PROTOCOL_PHASE_COMPLETE,
+};
+
+enum RadioProtocolStatus : int32_t {
+    RADIO_PROTOCOL_STATUS_NONE,
+    RADIO_PROTOCOL_STATUS_SUCCESS,
+    RADIO_PROTOCOL_STATUS_FAIL,
+};
+
+struct EmergencyCall {
+    int32_t index;
+    int32_t total;
+    std::string eccNum;
+    std::string mcc;
+    OHOS::HDI::Ril::V1_1::EccType eccType;
+    OHOS::HDI::Ril::V1_1::SimpresentType simpresent;
+    OHOS::HDI::Ril::V1_1::AbnormalServiceType abnormalService;
+};
+
+struct EmergencyInfoList {
+    int32_t callSize;
+    int32_t flag;
+    std::vector<OHOS::HDI::Ril::V1_1::EmergencyCall> calls;
+};
+
+struct RilRadioResponseInfo {
+    int32_t slotId;
+    int32_t flag;
+    int32_t serial;
+    OHOS::HDI::Ril::V1_1::RilErrType error;
+    OHOS::HDI::Ril::V1_1::RilResponseTypes type;
+} __attribute__ ((aligned(8)));
+
+struct SetupDataCallResultInfo {
+    int32_t flag;
+    int32_t reason;
+    int32_t retryTime;
+    int32_t cid;
+    int32_t active;
+    int32_t maxTransferUnit;
+    int32_t pduSessionId;
+    std::string type;
+    std::string netPortName;
+    std::string address;
+    std::string dns;
+    std::string dnsSec;
+    std::string gateway;
+    std::string pCscfPrimAddr;
+    std::string pCscfSecAddr;
+};
+
+struct DataCallResultList {
+    int32_t size;
+    std::vector<OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo> dcList;
+};
+
+struct DataLinkCapability {
+    int32_t primaryDownlinkKbps;
+    int32_t primaryUplinkKbps;
+    int32_t secondaryDownlinkKbps;
+    int32_t secondaryUplinkKbps;
+} __attribute__ ((aligned(8)));
+
+struct DataProfileDataInfo {
+    int32_t serial;
+    int32_t profileId;
+    int32_t authenticationType;
+    std::string apn;
+    std::string protocol;
+    std::string roamingProtocol;
+    std::string userName;
+    std::string password;
+};
+
+struct DataProfilesInfo {
+    int32_t serial;
+    int32_t profilesSize;
+    bool isRoaming;
+    std::vector<OHOS::HDI::Ril::V1_1::DataProfileDataInfo> profiles;
+};
+
+struct DataCallInfo {
+    int32_t serial;
+    int32_t radioTechnology;
+    bool modemCognitive;
+    bool roamingAllowed;
+    bool isRoaming;
+    OHOS::HDI::Ril::V1_1::DataProfileDataInfo dataProfileInfo;
+};
+
+struct DataLinkBandwidthInfo {
+    int32_t serial;
+    int32_t cid;
+    int32_t qi;
+    int32_t dlGfbr;
+    int32_t ulGfbr;
+    int32_t dlMfbr;
+    int32_t ulMfbr;
+    int32_t ulSambr;
+    int32_t dlSambr;
+    int32_t averagingWindow;
+} __attribute__ ((aligned(8)));
+
+struct DataLinkBandwidthReportingRule {
+    int32_t serial;
+    int32_t rat;
+    int32_t delayMs;
+    int32_t delayUplinkKbps;
+    int32_t delayDownlinkKbps;
+    int32_t maximumUplinkKbpsSize;
+    int32_t maximumDownlinkKbpsSize;
+    std::vector<int32_t> maximumUplinkKbps;
+    std::vector<int32_t> maximumDownlinkKbps;
+};
+
+struct DataPerformanceInfo {
+    int32_t performanceEnable;
+    int32_t enforce;
+} __attribute__ ((aligned(8)));
+
+struct DataSleepInfo {
+    int32_t sleepEnable;
+} __attribute__ ((aligned(8)));
+
+struct UniInfo {
+    int32_t serial;
+    int32_t gsmIndex;
+    bool flag;
+    int32_t arg1;
+    int32_t arg2;
+    std::string strTmp;
+};
+
+struct VoiceRadioTechnology {
+    OHOS::HDI::Ril::V1_1::RilSrvStatus srvStatus;
+    OHOS::HDI::Ril::V1_1::RilSrvDomain srvDomain;
+    OHOS::HDI::Ril::V1_1::RilRoamStatus roamStatus;
+    OHOS::HDI::Ril::V1_1::RilSimStatus simStatus;
+    OHOS::HDI::Ril::V1_1::RilSimLockStatus lockStatus;
+    OHOS::HDI::Ril::V1_1::RilSysMode sysMode;
+    std::string sysModeName;
+    OHOS::HDI::Ril::V1_1::RilRadioTech actType;
+    std::string actName;
+    int32_t flag;
+};
+
+struct DialInfo {
+    int32_t serial;
+    int32_t clir;
+    std::string address;
+};
+
+struct CallInfo {
+    int32_t index;
+    int32_t dir;
+    int32_t state;
+    int32_t mode;
+    int32_t mpty;
+    int32_t voiceDomain;
+    int32_t callType;
+    int32_t type;
+    std::string number;
+    std::string alpha;
+};
+
+struct CallInfoList {
+    int32_t callSize;
+    int32_t flag;
+    std::vector<OHOS::HDI::Ril::V1_1::CallInfo> calls;
+};
+
+struct GetClipResult {
+    int32_t result;
+    int32_t action;
+    int32_t clipStat;
+} __attribute__ ((aligned(8)));
+
+struct GetClirResult {
+    int32_t result;
+    int32_t action;
+    int32_t clirStat;
+} __attribute__ ((aligned(8)));
+
+struct CallWaitResult {
+    int32_t result;
+    int32_t status;
+    int32_t classCw;
+} __attribute__ ((aligned(8)));
+
+struct CallRestrictionInfo {
+    int32_t mode;
+    std::string fac;
+    std::string password;
+};
+
+struct CallRestrictionResult {
+    int32_t result;
+    int32_t status;
+    int32_t classCw;
+} __attribute__ ((aligned(8)));
+
+struct CallForwardSetInfo {
+    int32_t reason;
+    int32_t mode;
+    int32_t classx;
+    std::string number;
+};
+
+struct CallForwardQueryResult {
+    int32_t serial;
+    int32_t result;
+    int32_t status;
+    int32_t classx;
+    int32_t type;
+    int32_t reason;
+    int32_t time;
+    std::string number;
+};
+
+struct CallForwardQueryInfoList {
+    int32_t callSize;
+    int32_t flag;
+    std::vector<OHOS::HDI::Ril::V1_1::CallForwardQueryResult> calls;
+};
+
+struct UssdNoticeInfo {
+    int32_t type;
+    std::string message;
+};
+
+struct SsNoticeInfo {
+    int32_t serviceType;
+    int32_t requestType;
+    int32_t serviceClass;
+    int32_t result;
+} __attribute__ ((aligned(8)));
+
+struct SrvccStatus {
+    int32_t status;
+} __attribute__ ((aligned(8)));
+
+struct RingbackVoice {
+    int32_t status;
+} __attribute__ ((aligned(8)));
+
+struct DtmfInfo {
+    int32_t callId;
+    int32_t onLength;
+    int32_t offLength;
+    int32_t stringLength;
+    std::string dtmfKey;
+};
+
+struct SetBarringInfo {
+    std::string fac;
+    std::string oldPassword;
+    std::string newPassword;
+};
+
+struct CardStatusInfo {
+    int32_t index;
+    int32_t simType;
+    int32_t simState;
+} __attribute__ ((aligned(8)));
+
+struct SimIoRequestInfo {
+    int32_t command;
+    int32_t fileId;
+    int32_t p1;
+    int32_t p2;
+    int32_t p3;
+    int32_t serial;
+    std::string data;
+    std::string path;
+    std::string pin2;
+    std::string aid;
+};
+
+struct IccIoResultInfo {
+    int32_t sw1;
+    int32_t sw2;
+    std::string response;
+};
+
+struct SimLockInfo {
+    int32_t classx;
+    int32_t serial;
+    std::string fac;
+    int32_t mode;
+    int32_t status;
+    std::string passwd;
+};
+
+struct SimPasswordInfo {
+    std::string fac;
+    std::string oldPassword;
+    std::string newPassword;
+    int32_t serial;
+    int32_t passwordLength;
+};
+
+struct SimPinInputTimes {
+    int32_t serial;
+    int32_t times;
+    int32_t pukTimes;
+    int32_t pinTimes;
+    int32_t puk2Times;
+    int32_t pin2Times;
+    std::string code;
+};
+
+struct ApduSimIORequestInfo {
+    int32_t serial;
+    int32_t channelId;
+    int32_t type;
+    int32_t instruction;
+    int32_t p1;
+    int32_t p2;
+    int32_t p3;
+    std::string data;
+};
+
+struct SimAuthenticationRequestInfo {
+    int32_t serial;
+    std::string aid;
+    std::string authData;
+};
+
+struct OpenLogicalChannelResponse {
+    int32_t sw1;
+    int32_t sw2;
+    int32_t channelId;
+    std::string response;
+};
+
+struct LockStatusResp {
+    int32_t result;
+    int32_t remain;
+} __attribute__ ((aligned(8)));
+
+struct RadioProtocol {
+    int32_t slotId;
+    int32_t sessionId;
+    OHOS::HDI::Ril::V1_1::RadioProtocolPhase phase;
+    int32_t technology;
+    int32_t modemId;
+    OHOS::HDI::Ril::V1_1::RadioProtocolStatus status;
+} __attribute__ ((aligned(8)));
+
+struct GsmRssi {
+    int32_t rxlev;
+    int32_t ber;
+} __attribute__ ((aligned(8)));
+
+struct CdmaRssi {
+    int32_t absoluteRssi;
+    int32_t ecno;
+} __attribute__ ((aligned(8)));
+
+struct WcdmaRssi {
+    int32_t rxlev;
+    int32_t ecio;
+    int32_t rscp;
+    int32_t ber;
+} __attribute__ ((aligned(8)));
+
+struct LteRssi {
+    int32_t rxlev;
+    int32_t rsrq;
+    int32_t rsrp;
+    int32_t snr;
+} __attribute__ ((aligned(8)));
+
+struct TdScdmaRssi {
+    int32_t rscp;
+} __attribute__ ((aligned(8)));
+
+struct NrRssi {
+    int32_t rsrp;
+    int32_t rsrq;
+    int32_t sinr;
+} __attribute__ ((aligned(8)));
+
+struct Rssi {
+    OHOS::HDI::Ril::V1_1::GsmRssi gw;
+    OHOS::HDI::Ril::V1_1::CdmaRssi cdma;
+    OHOS::HDI::Ril::V1_1::WcdmaRssi wcdma;
+    OHOS::HDI::Ril::V1_1::LteRssi lte;
+    OHOS::HDI::Ril::V1_1::TdScdmaRssi tdScdma;
+    OHOS::HDI::Ril::V1_1::NrRssi nr;
+} __attribute__ ((aligned(8)));
+
+struct CsRegStatusInfo {
+    int32_t notifyType;
+    OHOS::HDI::Ril::V1_1::RilRegStatus regStatus;
+    int32_t lacCode;
+    int32_t cellId;
+    OHOS::HDI::Ril::V1_1::RilRadioTech radioTechnology;
+    int32_t flag;
+} __attribute__ ((aligned(8)));
+
+struct PsRegStatusInfo {
+    int32_t notifyType;
+    OHOS::HDI::Ril::V1_1::RilRegStatus regStatus;
+    int32_t lacCode;
+    int32_t cellId;
+    OHOS::HDI::Ril::V1_1::RilRadioTech radioTechnology;
+    bool isNrAvailable;
+    bool isEnDcAvailable;
+    bool isDcNrRestricted;
+} __attribute__ ((aligned(8)));
+
+struct OperatorInfo {
+    std::string longName;
+    std::string shortName;
+    std::string numeric;
+};
+
+struct AvailableNetworkInfo {
+    std::string longName;
+    std::string shortName;
+    std::string numeric;
+    int32_t status;
+    int32_t rat;
+};
+
+struct AvailableNetworkList {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_1::AvailableNetworkInfo> availableNetworkInfo;
+    int32_t flag;
+};
+
+struct SetNetworkModeInfo {
+    int32_t selectMode;
+    std::string oper;
+    int32_t flag;
+};
+
+struct CellListRatGsm {
+    int32_t band;
+    int32_t arfcn;
+    int32_t bsic;
+    int32_t cellId;
+    int32_t lac;
+    int32_t rxlev;
+} __attribute__ ((aligned(8)));
+
+struct CellListRatLte {
+    int32_t arfcn;
+    int32_t pci;
+    int32_t rsrp;
+    int32_t rsrq;
+    int32_t rxlev;
+} __attribute__ ((aligned(8)));
+
+struct CellListRatWcdma {
+    int32_t arfcn;
+    int32_t psc;
+    int32_t rscp;
+    int32_t ecno;
+} __attribute__ ((aligned(8)));
+
+struct CellListRatCdma {
+    int32_t systemId;
+    int32_t networkId;
+    int32_t baseId;
+    int32_t zoneId;
+    int32_t pilotPn;
+    int32_t pilotStrength;
+    int32_t channel;
+    int32_t longitude;
+    int32_t latitude;
+} __attribute__ ((aligned(8)));
+
+struct CellListRatTdscdma {
+    int32_t arfcn;
+    int32_t syncId;
+    int32_t sc;
+    int32_t cellId;
+    int32_t lac;
+    int32_t rscp;
+    int32_t drx;
+    int32_t rac;
+    int32_t cpid;
+} __attribute__ ((aligned(8)));
+
+struct CellListRatNr {
+    int32_t nrArfcn;
+    int32_t pci;
+    int32_t tac;
+    int32_t nci;
+} __attribute__ ((aligned(8)));
+
+union ServiceCellParas {
+    OHOS::HDI::Ril::V1_1::CellListRatGsm gsm;
+    OHOS::HDI::Ril::V1_1::CellListRatLte lte;
+    OHOS::HDI::Ril::V1_1::CellListRatWcdma wcdma;
+    OHOS::HDI::Ril::V1_1::CellListRatCdma cdma;
+    OHOS::HDI::Ril::V1_1::CellListRatTdscdma tdscdma;
+    OHOS::HDI::Ril::V1_1::CellListRatNr nr;
+}  __attribute__ ((aligned(8)));
+
+struct CellNearbyInfo {
+    int32_t ratType;
+    OHOS::HDI::Ril::V1_1::ServiceCellParas serviceCells;
+} __attribute__ ((aligned(8)));
+
+struct CellListNearbyInfo {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_1::CellNearbyInfo> cellNearbyInfo;
+};
+
+struct CellRatGsm {
+    int32_t band;
+    int32_t arfcn;
+    int32_t bsic;
+    int32_t cellId;
+    int32_t lac;
+    int32_t rxlev;
+    int32_t rxQuality;
+    int32_t ta;
+} __attribute__ ((aligned(8)));
+
+struct CellRatLte {
+    int32_t arfcn;
+    int32_t cellId;
+    int32_t pci;
+    int32_t tac;
+    int32_t rsrp;
+    int32_t rsrq;
+    int32_t rssi;
+} __attribute__ ((aligned(8)));
+
+struct CellRatWcdma {
+    int32_t arfcn;
+    int32_t psc;
+    int32_t cellId;
+    int32_t lac;
+    int32_t rscp;
+    int32_t rxlev;
+    int32_t ecno;
+    int32_t drx;
+    int32_t ura;
+} __attribute__ ((aligned(8)));
+
+struct CellRatCdma {
+    int32_t systemId;
+    int32_t networkId;
+    int32_t baseId;
+    int32_t zoneId;
+    int32_t pilotPn;
+    int32_t pilotStrength;
+    int32_t channel;
+    int32_t longitude;
+    int32_t latitude;
+} __attribute__ ((aligned(8)));
+
+struct CellRatTdscdma {
+    int32_t arfcn;
+    int32_t syncId;
+    int32_t sc;
+    int32_t cellId;
+    int32_t lac;
+    int32_t rscp;
+    int32_t drx;
+    int32_t rac;
+    int32_t cpid;
+} __attribute__ ((aligned(8)));
+
+struct CellRatNr {
+    int32_t nrArfcn;
+    int32_t pci;
+    int32_t tac;
+    int32_t nci;
+} __attribute__ ((aligned(8)));
+
+union CurrentServiceCellParas {
+    OHOS::HDI::Ril::V1_1::CellRatGsm gsm;
+    OHOS::HDI::Ril::V1_1::CellRatLte lte;
+    OHOS::HDI::Ril::V1_1::CellRatWcdma wcdma;
+    OHOS::HDI::Ril::V1_1::CellRatCdma cdma;
+    OHOS::HDI::Ril::V1_1::CellRatTdscdma tdscdma;
+    OHOS::HDI::Ril::V1_1::CellRatNr nr;
+}  __attribute__ ((aligned(8)));
+
+struct CellRatNr_1_1 {
+    int32_t nrArfcn;
+    int32_t pci;
+    int32_t tac;
+    int32_t nci;
+    int32_t rsrp;
+    int32_t rsrq;
+} __attribute__ ((aligned(8)));
+
+union CurrentServiceCellParas_1_1 {
+    OHOS::HDI::Ril::V1_1::CellRatGsm gsm;
+    OHOS::HDI::Ril::V1_1::CellRatLte lte;
+    OHOS::HDI::Ril::V1_1::CellRatWcdma wcdma;
+    OHOS::HDI::Ril::V1_1::CellRatCdma cdma;
+    OHOS::HDI::Ril::V1_1::CellRatTdscdma tdscdma;
+    OHOS::HDI::Ril::V1_1::CellRatNr_1_1 nr;
+}  __attribute__ ((aligned(8)));
+
+struct CurrentCellInfo_1_1 {
+    int32_t ratType;
+    int32_t mcc;
+    int32_t mnc;
+    OHOS::HDI::Ril::V1_1::CurrentServiceCellParas_1_1 serviceCells;
+} __attribute__ ((aligned(8)));
+
+struct CellListCurrentInfo_1_1 {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1> cellCurrentInfo;
+};
+
+struct CurrentCellInfo {
+    int32_t ratType;
+    int32_t mcc;
+    int32_t mnc;
+    OHOS::HDI::Ril::V1_1::CurrentServiceCellParas serviceCells;
+} __attribute__ ((aligned(8)));
+
+struct CellListCurrentInfo {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_1::CurrentCellInfo> cellCurrentInfo;
+};
+
+struct PreferredNetworkTypeInfo {
+    int32_t preferredNetworkType;
+    int32_t flag;
+} __attribute__ ((aligned(8)));
+
+struct PhysicalChannelConfig {
+    OHOS::HDI::Ril::V1_1::RilCellConnectionStatus cellConnStatus;
+    OHOS::HDI::Ril::V1_1::RilRadioTech ratType;
+    int32_t cellBandwidthDownlinkKhz;
+    int32_t cellBandwidthUplinkKhz;
+    int32_t freqRange;
+    int32_t downlinkChannelNum;
+    int32_t uplinkChannelNum;
+    int32_t physicalCellId;
+    int32_t contextIdNum;
+    std::vector<int32_t> contextIds;
+};
+
+struct ChannelConfigInfoList {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_1::PhysicalChannelConfig> channelConfigInfos;
+    int32_t flag;
+};
+
+struct GsmSmsMessageInfo {
+    int32_t serial;
+    int32_t state;
+    std::string smscPdu;
+    std::string pdu;
+};
+
+struct SendCdmaSmsMessageInfo {
+    int32_t serial;
+    int32_t state;
+    std::string smscPdu;
+};
+
+struct SmsMessageIOInfo {
+    int32_t serial;
+    std::string smscPdu;
+    std::string pdu;
+    int32_t state;
+    int32_t index;
+};
+
+struct ServiceCenterAddress {
+    int32_t serial;
+    int32_t tosca;
+    std::string address;
+};
+
+struct CBConfigInfo {
+    int32_t serial;
+    int32_t mode;
+    int32_t indicationType;
+    std::string mids;
+    std::string dcss;
+};
+
+struct CdmaCBConfigInfo {
+    int32_t service;
+    int32_t language;
+    int32_t checked;
+} __attribute__ ((aligned(8)));
+
+struct CdmaCBConfigInfoList {
+    int32_t serial;
+    int32_t size;
+    std::vector<OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo> list;
+};
+
+struct CBConfigReportInfo {
+    int32_t indicationType;
+    int32_t sn;
+    int32_t mid;
+    int32_t page;
+    int32_t pages;
+    int32_t length;
+    std::string data;
+    std::string dcs;
+    std::string pdu;
+};
+
+struct SmsMessageInfo {
+    int32_t indicationType;
+    int32_t size;
+    std::vector<uint8_t> pdu;
+};
+
+struct ModeData {
+    int32_t serial;
+    bool result;
+    int32_t mode;
+    std::string pdu;
+};
+
+struct SendSmsResultInfo {
+    int32_t msgRef;
+    std::string pdu;
+    int32_t errCode;
+    int32_t flag;
+};
+
+bool EmergencyCallBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::EmergencyCall& dataBlock);
+
+bool EmergencyCallBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::EmergencyCall& dataBlock);
+
+bool EmergencyInfoListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::EmergencyInfoList& dataBlock);
+
+bool EmergencyInfoListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::EmergencyInfoList& dataBlock);
+
+bool RilRadioResponseInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& dataBlock);
+
+bool RilRadioResponseInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& dataBlock);
+
+bool SetupDataCallResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo& dataBlock);
+
+bool SetupDataCallResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SetupDataCallResultInfo& dataBlock);
+
+bool DataCallResultListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataCallResultList& dataBlock);
+
+bool DataCallResultListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataCallResultList& dataBlock);
+
+bool DataLinkCapabilityBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataLinkCapability& dataBlock);
+
+bool DataLinkCapabilityBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataLinkCapability& dataBlock);
+
+bool DataProfileDataInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataBlock);
+
+bool DataProfileDataInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataProfileDataInfo& dataBlock);
+
+bool DataProfilesInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataBlock);
+
+bool DataProfilesInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataProfilesInfo& dataBlock);
+
+bool DataCallInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataCallInfo& dataBlock);
+
+bool DataCallInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataCallInfo& dataBlock);
+
+bool DataLinkBandwidthInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo& dataBlock);
+
+bool DataLinkBandwidthInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataLinkBandwidthInfo& dataBlock);
+
+bool DataLinkBandwidthReportingRuleBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataBlock);
+
+bool DataLinkBandwidthReportingRuleBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataLinkBandwidthReportingRule& dataBlock);
+
+bool DataPerformanceInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataBlock);
+
+bool DataPerformanceInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataPerformanceInfo& dataBlock);
+
+bool DataSleepInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DataSleepInfo& dataBlock);
+
+bool DataSleepInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DataSleepInfo& dataBlock);
+
+bool UniInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::UniInfo& dataBlock);
+
+bool UniInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::UniInfo& dataBlock);
+
+bool VoiceRadioTechnologyBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::VoiceRadioTechnology& dataBlock);
+
+bool VoiceRadioTechnologyBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::VoiceRadioTechnology& dataBlock);
+
+bool DialInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DialInfo& dataBlock);
+
+bool DialInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DialInfo& dataBlock);
+
+bool CallInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallInfo& dataBlock);
+
+bool CallInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallInfo& dataBlock);
+
+bool CallInfoListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallInfoList& dataBlock);
+
+bool CallInfoListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallInfoList& dataBlock);
+
+bool GetClipResultBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::GetClipResult& dataBlock);
+
+bool GetClipResultBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::GetClipResult& dataBlock);
+
+bool GetClirResultBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::GetClirResult& dataBlock);
+
+bool GetClirResultBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::GetClirResult& dataBlock);
+
+bool CallWaitResultBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallWaitResult& dataBlock);
+
+bool CallWaitResultBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallWaitResult& dataBlock);
+
+bool CallRestrictionInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallRestrictionInfo& dataBlock);
+
+bool CallRestrictionInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallRestrictionInfo& dataBlock);
+
+bool CallRestrictionResultBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallRestrictionResult& dataBlock);
+
+bool CallRestrictionResultBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallRestrictionResult& dataBlock);
+
+bool CallForwardSetInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallForwardSetInfo& dataBlock);
+
+bool CallForwardSetInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallForwardSetInfo& dataBlock);
+
+bool CallForwardQueryResultBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallForwardQueryResult& dataBlock);
+
+bool CallForwardQueryResultBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallForwardQueryResult& dataBlock);
+
+bool CallForwardQueryInfoListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CallForwardQueryInfoList& dataBlock);
+
+bool CallForwardQueryInfoListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CallForwardQueryInfoList& dataBlock);
+
+bool UssdNoticeInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::UssdNoticeInfo& dataBlock);
+
+bool UssdNoticeInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::UssdNoticeInfo& dataBlock);
+
+bool SsNoticeInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SsNoticeInfo& dataBlock);
+
+bool SsNoticeInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SsNoticeInfo& dataBlock);
+
+bool SrvccStatusBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SrvccStatus& dataBlock);
+
+bool SrvccStatusBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SrvccStatus& dataBlock);
+
+bool RingbackVoiceBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::RingbackVoice& dataBlock);
+
+bool RingbackVoiceBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::RingbackVoice& dataBlock);
+
+bool DtmfInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::DtmfInfo& dataBlock);
+
+bool DtmfInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::DtmfInfo& dataBlock);
+
+bool SetBarringInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SetBarringInfo& dataBlock);
+
+bool SetBarringInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SetBarringInfo& dataBlock);
+
+bool CardStatusInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CardStatusInfo& dataBlock);
+
+bool CardStatusInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CardStatusInfo& dataBlock);
+
+bool SimIoRequestInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SimIoRequestInfo& dataBlock);
+
+bool SimIoRequestInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SimIoRequestInfo& dataBlock);
+
+bool IccIoResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::IccIoResultInfo& dataBlock);
+
+bool IccIoResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::IccIoResultInfo& dataBlock);
+
+bool SimLockInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SimLockInfo& dataBlock);
+
+bool SimLockInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SimLockInfo& dataBlock);
+
+bool SimPasswordInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SimPasswordInfo& dataBlock);
+
+bool SimPasswordInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SimPasswordInfo& dataBlock);
+
+bool SimPinInputTimesBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SimPinInputTimes& dataBlock);
+
+bool SimPinInputTimesBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SimPinInputTimes& dataBlock);
+
+bool ApduSimIORequestInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& dataBlock);
+
+bool ApduSimIORequestInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::ApduSimIORequestInfo& dataBlock);
+
+bool SimAuthenticationRequestInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& dataBlock);
+
+bool SimAuthenticationRequestInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SimAuthenticationRequestInfo& dataBlock);
+
+bool OpenLogicalChannelResponseBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::OpenLogicalChannelResponse& dataBlock);
+
+bool OpenLogicalChannelResponseBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::OpenLogicalChannelResponse& dataBlock);
+
+bool LockStatusRespBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::LockStatusResp& dataBlock);
+
+bool LockStatusRespBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::LockStatusResp& dataBlock);
+
+bool RadioProtocolBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::RadioProtocol& dataBlock);
+
+bool RadioProtocolBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::RadioProtocol& dataBlock);
+
+bool GsmRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::GsmRssi& dataBlock);
+
+bool GsmRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::GsmRssi& dataBlock);
+
+bool CdmaRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CdmaRssi& dataBlock);
+
+bool CdmaRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CdmaRssi& dataBlock);
+
+bool WcdmaRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::WcdmaRssi& dataBlock);
+
+bool WcdmaRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::WcdmaRssi& dataBlock);
+
+bool LteRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::LteRssi& dataBlock);
+
+bool LteRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::LteRssi& dataBlock);
+
+bool TdScdmaRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::TdScdmaRssi& dataBlock);
+
+bool TdScdmaRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::TdScdmaRssi& dataBlock);
+
+bool NrRssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::NrRssi& dataBlock);
+
+bool NrRssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::NrRssi& dataBlock);
+
+bool RssiBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::Rssi& dataBlock);
+
+bool RssiBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::Rssi& dataBlock);
+
+bool CsRegStatusInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CsRegStatusInfo& dataBlock);
+
+bool CsRegStatusInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CsRegStatusInfo& dataBlock);
+
+bool PsRegStatusInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::PsRegStatusInfo& dataBlock);
+
+bool PsRegStatusInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::PsRegStatusInfo& dataBlock);
+
+bool OperatorInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::OperatorInfo& dataBlock);
+
+bool OperatorInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::OperatorInfo& dataBlock);
+
+bool AvailableNetworkInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::AvailableNetworkInfo& dataBlock);
+
+bool AvailableNetworkInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::AvailableNetworkInfo& dataBlock);
+
+bool AvailableNetworkListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::AvailableNetworkList& dataBlock);
+
+bool AvailableNetworkListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::AvailableNetworkList& dataBlock);
+
+bool SetNetworkModeInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& dataBlock);
+
+bool SetNetworkModeInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SetNetworkModeInfo& dataBlock);
+
+bool CellListRatGsmBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatGsm& dataBlock);
+
+bool CellListRatGsmBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatGsm& dataBlock);
+
+bool CellListRatLteBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatLte& dataBlock);
+
+bool CellListRatLteBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatLte& dataBlock);
+
+bool CellListRatWcdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatWcdma& dataBlock);
+
+bool CellListRatWcdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatWcdma& dataBlock);
+
+bool CellListRatCdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatCdma& dataBlock);
+
+bool CellListRatCdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatCdma& dataBlock);
+
+bool CellListRatTdscdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatTdscdma& dataBlock);
+
+bool CellListRatTdscdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatTdscdma& dataBlock);
+
+bool CellListRatNrBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListRatNr& dataBlock);
+
+bool CellListRatNrBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListRatNr& dataBlock);
+
+bool CellNearbyInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellNearbyInfo& dataBlock);
+
+bool CellNearbyInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellNearbyInfo& dataBlock);
+
+bool CellListNearbyInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListNearbyInfo& dataBlock);
+
+bool CellListNearbyInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListNearbyInfo& dataBlock);
+
+bool CellRatGsmBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatGsm& dataBlock);
+
+bool CellRatGsmBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatGsm& dataBlock);
+
+bool CellRatLteBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatLte& dataBlock);
+
+bool CellRatLteBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatLte& dataBlock);
+
+bool CellRatWcdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatWcdma& dataBlock);
+
+bool CellRatWcdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatWcdma& dataBlock);
+
+bool CellRatCdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatCdma& dataBlock);
+
+bool CellRatCdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatCdma& dataBlock);
+
+bool CellRatTdscdmaBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatTdscdma& dataBlock);
+
+bool CellRatTdscdmaBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatTdscdma& dataBlock);
+
+bool CellRatNrBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatNr& dataBlock);
+
+bool CellRatNrBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatNr& dataBlock);
+
+bool CellRatNr_1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellRatNr_1_1& dataBlock);
+
+bool CellRatNr_1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellRatNr_1_1& dataBlock);
+
+bool CurrentCellInfo_1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1& dataBlock);
+
+bool CurrentCellInfo_1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CurrentCellInfo_1_1& dataBlock);
+
+bool CellListCurrentInfo_1_1BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListCurrentInfo_1_1& dataBlock);
+
+bool CellListCurrentInfo_1_1BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListCurrentInfo_1_1& dataBlock);
+
+bool CurrentCellInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CurrentCellInfo& dataBlock);
+
+bool CurrentCellInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CurrentCellInfo& dataBlock);
+
+bool CellListCurrentInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CellListCurrentInfo& dataBlock);
+
+bool CellListCurrentInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CellListCurrentInfo& dataBlock);
+
+bool PreferredNetworkTypeInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo& dataBlock);
+
+bool PreferredNetworkTypeInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::PreferredNetworkTypeInfo& dataBlock);
+
+bool PhysicalChannelConfigBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::PhysicalChannelConfig& dataBlock);
+
+bool PhysicalChannelConfigBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::PhysicalChannelConfig& dataBlock);
+
+bool ChannelConfigInfoListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::ChannelConfigInfoList& dataBlock);
+
+bool ChannelConfigInfoListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::ChannelConfigInfoList& dataBlock);
+
+bool GsmSmsMessageInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& dataBlock);
+
+bool GsmSmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::GsmSmsMessageInfo& dataBlock);
+
+bool SendCdmaSmsMessageInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& dataBlock);
+
+bool SendCdmaSmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SendCdmaSmsMessageInfo& dataBlock);
+
+bool SmsMessageIOInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& dataBlock);
+
+bool SmsMessageIOInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SmsMessageIOInfo& dataBlock);
+
+bool ServiceCenterAddressBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::ServiceCenterAddress& dataBlock);
+
+bool ServiceCenterAddressBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::ServiceCenterAddress& dataBlock);
+
+bool CBConfigInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CBConfigInfo& dataBlock);
+
+bool CBConfigInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CBConfigInfo& dataBlock);
+
+bool CdmaCBConfigInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo& dataBlock);
+
+bool CdmaCBConfigInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CdmaCBConfigInfo& dataBlock);
+
+bool CdmaCBConfigInfoListBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& dataBlock);
+
+bool CdmaCBConfigInfoListBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CdmaCBConfigInfoList& dataBlock);
+
+bool CBConfigReportInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::CBConfigReportInfo& dataBlock);
+
+bool CBConfigReportInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::CBConfigReportInfo& dataBlock);
+
+bool SmsMessageInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SmsMessageInfo& dataBlock);
+
+bool SmsMessageInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SmsMessageInfo& dataBlock);
+
+bool ModeDataBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::ModeData& dataBlock);
+
+bool ModeDataBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::ModeData& dataBlock);
+
+bool SendSmsResultInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_1::SendSmsResultInfo& dataBlock);
+
+bool SendSmsResultInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_1::SendSmsResultInfo& dataBlock);
+
+} // V1_1
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_1_TYPES_H
+

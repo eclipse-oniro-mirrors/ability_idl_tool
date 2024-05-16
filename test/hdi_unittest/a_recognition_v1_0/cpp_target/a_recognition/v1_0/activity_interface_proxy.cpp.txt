@@ -1,0 +1,488 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/activity_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    activity_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace ARecognition {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::ARecognition::V1_0::IActivityInterface> OHOS::HDI::ARecognition::V1_0::IActivityInterface::Get(bool isStub)
+{
+    return IActivityInterface::Get("activity_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::ARecognition::V1_0::IActivityInterface> OHOS::HDI::ARecognition::V1_0::IActivityInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "activity_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::ARecognition::V1_0::IActivityInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy> proxy = new OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t activityInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::RegisterActRecognitionCallback(const sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback>& callbackObj)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::RegisterActRecognitionCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::UnregisterActRecognitionCallback(const sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback>& callbackObj)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::UnregisterActRecognitionCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetSupportActivity(std::vector<std::string>& activity)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetSupportActivity_(activity, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetCurrentActivity(std::vector<OHOS::HDI::ARecognition::V1_0::ActRecognitionEvent>& event)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetCurrentActivity_(event, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::EnableActRecognitionEvent(int32_t activity,
+     int32_t eventType, int64_t maxReportLatencyNs, int32_t powerMode)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::EnableActRecognitionEvent_(activity, eventType, maxReportLatencyNs, powerMode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::DisableActRecognitionEvent(int32_t activity,
+     int32_t eventType)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::DisableActRecognitionEvent_(activity, eventType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::FlushActivity()
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::FlushActivity_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::RegisterActRecognitionCallback_(const sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_REGISTER_ACT_RECOGNITION_CALLBACK, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::UnregisterActRecognitionCallback_(const sptr<OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::ARecognition::V1_0::IActivityChangedCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_UNREGISTER_ACT_RECOGNITION_CALLBACK, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetSupportActivity_(std::vector<std::string>& activity,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_GET_SUPPORT_ACTIVITY, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    uint32_t activitySize = 0;
+    if (!activityInterfaceReply.ReadUint32(activitySize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(activitySize, >, HDI_BUFF_MAX_SIZE / sizeof(std::string), HDF_ERR_INVALID_PARAM);
+    activity.clear();
+    activity.reserve(activitySize);
+    for (uint32_t i0 = 0; i0 < activitySize; ++i0) {
+        const char* value0Cp = activityInterfaceReply.ReadCString();
+        if (value0Cp == nullptr) {
+            HDF_LOGE("%{public}s: read value0 failed", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        std::string value0 = value0Cp;
+        activity.push_back(value0);
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetCurrentActivity_(std::vector<OHOS::HDI::ARecognition::V1_0::ActRecognitionEvent>& event, const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_GET_CURRENT_ACTIVITY, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    if (!ReadPodArray(activityInterfaceReply, event)) {
+        HDF_LOGE("%{public}s: failed to read event", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::EnableActRecognitionEvent_(int32_t activity,
+     int32_t eventType, int64_t maxReportLatencyNs, int32_t powerMode, const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt32(activity)) {
+        HDF_LOGE("%{public}s: write activity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt32(eventType)) {
+        HDF_LOGE("%{public}s: write eventType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt64(maxReportLatencyNs)) {
+        HDF_LOGE("%{public}s: write maxReportLatencyNs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt32(powerMode)) {
+        HDF_LOGE("%{public}s: write powerMode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_ENABLE_ACT_RECOGNITION_EVENT, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::DisableActRecognitionEvent_(int32_t activity,
+     int32_t eventType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt32(activity)) {
+        HDF_LOGE("%{public}s: write activity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceData.WriteInt32(eventType)) {
+        HDF_LOGE("%{public}s: write eventType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_DISABLE_ACT_RECOGNITION_EVENT, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::FlushActivity_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_FLUSH_ACTIVITY, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    return activityInterfaceRet;
+}
+
+int32_t OHOS::HDI::ARecognition::V1_0::ActivityInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel activityInterfaceData;
+    MessageParcel activityInterfaceReply;
+    MessageOption activityInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!activityInterfaceData.WriteInterfaceToken(OHOS::HDI::ARecognition::V1_0::IActivityInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t activityInterfaceRet = remote->SendRequest(CMD_ACTIVITY_INTERFACE_GET_VERSION, activityInterfaceData, activityInterfaceReply, activityInterfaceOption);
+    if (activityInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, activityInterfaceRet);
+        return activityInterfaceRet;
+    }
+
+    if (!activityInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!activityInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return activityInterfaceRet;
+}
+
+} // V1_0
+} // ARecognition
+} // HDI
+} // OHOS

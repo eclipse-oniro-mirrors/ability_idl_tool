@@ -1,0 +1,778 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/display_composer_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "display/composer/v1_0/refresh_callback_proxy.h"
+#include "display/composer/v1_1/mode_callback_proxy.h"
+#include "display/composer/v1_1/seamless_change_callback_proxy.h"
+
+#define HDF_LOG_TAG    display_composer_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_1 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::Get(bool isStub)
+{
+    return OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::Get("display_composer_service", isStub);
+}
+
+sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "display_composer_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer *>(impl);
+}
+
+
+OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStub(const sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::~DisplayComposerStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_DISPLAY_COMPOSER_GET_VERSION:
+            return DisplayComposerStubGetVersion(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_REG_SEAMLESS_CHANGE_CALLBACK:
+            return DisplayComposerStubRegSeamlessChangeCallback(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_SUPPORTED_MODES_EXT:
+            return DisplayComposerStubGetDisplaySupportedModesExt(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_MODE_ASYNC:
+            return DisplayComposerStubSetDisplayModeAsync(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_V_BLANK_PERIOD:
+            return DisplayComposerStubGetDisplayVBlankPeriod(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_LAYER_PER_FRAME_PARAMETER:
+            return DisplayComposerStubSetLayerPerFrameParameter(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_SUPPORTED_LAYER_PER_FRAME_PARAMETER_KEY:
+            return DisplayComposerStubGetSupportedLayerPerFrameParameterKey(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_OVERLAY_RESOLUTION:
+            return DisplayComposerStubSetDisplayOverlayResolution(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_REG_REFRESH_CALLBACK:
+            return DisplayComposerStubRegRefreshCallback(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_SUPPORTED_COLOR_GAMUTS:
+            return DisplayComposerStubGetDisplaySupportedColorGamuts(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_H_D_R_CAPABILITY_INFOS:
+            return DisplayComposerStubGetHDRCapabilityInfos(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_REG_HOT_PLUG_CALLBACK:
+            return DisplayComposerStubRegHotPlugCallback(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_CLIENT_BUFFER_CACHE_COUNT:
+            return DisplayComposerStubSetClientBufferCacheCount(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_REG_DISPLAY_V_BLANK_CALLBACK:
+            return DisplayComposerStubRegDisplayVBlankCallback(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_CAPABILITY:
+            return DisplayComposerStubGetDisplayCapability(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_SUPPORTED_MODES:
+            return DisplayComposerStubGetDisplaySupportedModes(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_MODE:
+            return DisplayComposerStubGetDisplayMode(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_MODE:
+            return DisplayComposerStubSetDisplayMode(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_POWER_STATUS:
+            return DisplayComposerStubGetDisplayPowerStatus(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_POWER_STATUS:
+            return DisplayComposerStubSetDisplayPowerStatus(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_BACKLIGHT:
+            return DisplayComposerStubGetDisplayBacklight(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_BACKLIGHT:
+            return DisplayComposerStubSetDisplayBacklight(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_VSYNC_ENABLED:
+            return DisplayComposerStubSetDisplayVsyncEnabled(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_CREATE_LAYER:
+            return DisplayComposerStubCreateLayer(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_DESTROY_LAYER:
+            return DisplayComposerStubDestroyLayer(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_CLIENT_CROP:
+            return DisplayComposerStubSetDisplayClientCrop(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_RELEASE_FENCE:
+            return DisplayComposerStubGetDisplayReleaseFence(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_CREATE_VIRTUAL_DISPLAY:
+            return DisplayComposerStubCreateVirtualDisplay(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_DESTROY_VIRTUAL_DISPLAY:
+            return DisplayComposerStubDestroyVirtualDisplay(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_VIRTUAL_DISPLAY_BUFFER:
+            return DisplayComposerStubSetVirtualDisplayBuffer(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_SET_DISPLAY_PROPERTY:
+            return DisplayComposerStubSetDisplayProperty(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_DISPLAY_PROPERTY:
+            return DisplayComposerStubGetDisplayProperty(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_INIT_CMD_REQUEST:
+            return DisplayComposerStubInitCmdRequest(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_CMD_REQUEST:
+            return DisplayComposerStubCmdRequest(data, reply, option);
+        case CMD_DISPLAY_COMPOSER_GET_CMD_REPLY:
+            return DisplayComposerStubGetCmdReply(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegSeamlessChangeCallback(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegSeamlessChangeCallback_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedModesExt(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedModesExt_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayModeAsync(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayModeAsync_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayVBlankPeriod(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayVBlankPeriod_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetLayerPerFrameParameter(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetLayerPerFrameParameter_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetSupportedLayerPerFrameParameterKey(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetSupportedLayerPerFrameParameterKey_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayOverlayResolution(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayOverlayResolution_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegRefreshCallback(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegRefreshCallback_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedColorGamuts(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedColorGamuts_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetHDRCapabilityInfos(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetHDRCapabilityInfos_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegHotPlugCallback(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubRegHotPlugCallback_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetClientBufferCacheCount(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetClientBufferCacheCount_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegDisplayVBlankCallback(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubRegDisplayVBlankCallback_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayCapability(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayCapability_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedModes(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedModes_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayMode(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayMode_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayMode(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayMode_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayPowerStatus(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayPowerStatus_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayPowerStatus(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayPowerStatus_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayBacklight(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayBacklight_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayBacklight(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayBacklight_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayVsyncEnabled(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayVsyncEnabled_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubCreateLayer(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubCreateLayer_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubDestroyLayer(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubDestroyLayer_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayClientCrop(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayClientCrop_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayReleaseFence(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayReleaseFence_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubCreateVirtualDisplay(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubCreateVirtualDisplay_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubDestroyVirtualDisplay(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubDestroyVirtualDisplay_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetVirtualDisplayBuffer(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetVirtualDisplayBuffer_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayProperty(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubSetDisplayProperty_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayProperty(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetDisplayProperty_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubInitCmdRequest(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubInitCmdRequest_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubCmdRequest(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubCmdRequest_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetCmdReply(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetCmdReply_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetVersion(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerStub::DisplayComposerStubGetVersion_(displayComposerData, displayComposerReply, displayComposerOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegSeamlessChangeCallback_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback> cb;
+    sptr<IRemoteObject> cbRemote = displayComposerData.ReadRemoteObject();
+    if (cbRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    cb = new OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackProxy(cbRemote);
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->RegSeamlessChangeCallback(cb);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedModesExt_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool displayComposerMemSet = false;
+    if (!displayComposerData.ReadBool(displayComposerMemSet)) {
+        HDF_LOGE("%{public}s: failed to read displayComposerMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Display::Composer::V1_1::DisplayModeInfoExt> modes;
+    if (displayComposerMemSet) {
+        uint32_t capacity = 0;
+        if (!displayComposerData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Display::Composer::V1_1::DisplayModeInfoExt), HDF_ERR_INVALID_PARAM);
+        modes.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->GetDisplaySupportedModesExt(devId, modes);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!WritePodArray(displayComposerReply, modes)) {
+        HDF_LOGE("%{public}s: failed to write modes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayModeAsync_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t modeId = 0;
+    if (!displayComposerData.ReadUint32(modeId)) {
+        HDF_LOGE("%{public}s: read modeId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Display::Composer::V1_1::IModeCallback> cb;
+    sptr<IRemoteObject> cbRemote = displayComposerData.ReadRemoteObject();
+    if (cbRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    cb = new OHOS::HDI::Display::Composer::V1_1::ModeCallbackProxy(cbRemote);
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->SetDisplayModeAsync(devId, modeId, cb);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplayVBlankPeriod_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t period = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->GetDisplayVBlankPeriod(devId, period);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.WriteUint64(period)) {
+        HDF_LOGE("%{public}s: write period failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetLayerPerFrameParameter_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t layerId = 0;
+    if (!displayComposerData.ReadUint32(layerId)) {
+        HDF_LOGE("%{public}s: read layerId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* keyCp = displayComposerData.ReadCString();
+    if (keyCp == nullptr) {
+        HDF_LOGE("%{public}s: read key failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string key = keyCp;
+
+    std::vector<int8_t> value;
+    if (!ReadPodArray(displayComposerData, value)) {
+        HDF_LOGE("%{public}s: failed to read value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->SetLayerPerFrameParameter(devId, layerId, key, value);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetSupportedLayerPerFrameParameterKey_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool displayComposerMemSet = false;
+    if (!displayComposerData.ReadBool(displayComposerMemSet)) {
+        HDF_LOGE("%{public}s: failed to read displayComposerMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<std::string> keys;
+    if (displayComposerMemSet) {
+        uint32_t capacity = 0;
+        if (!displayComposerData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(std::string), HDF_ERR_INVALID_PARAM);
+        keys.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->GetSupportedLayerPerFrameParameterKey(keys);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.WriteUint32(keys.size())) {
+        HDF_LOGE("%{public}s: write keys size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : keys) {
+        if (!displayComposerReply.WriteCString(it0.c_str())) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubSetDisplayOverlayResolution_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t width = 0;
+    if (!displayComposerData.ReadUint32(width)) {
+        HDF_LOGE("%{public}s: read width failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t height = 0;
+    if (!displayComposerData.ReadUint32(height)) {
+        HDF_LOGE("%{public}s: read height failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->SetDisplayOverlayResolution(devId, width, height);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubRegRefreshCallback_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Display::Composer::V1_0::IRefreshCallback> cb;
+    sptr<IRemoteObject> cbRemote = displayComposerData.ReadRemoteObject();
+    if (cbRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    cb = new OHOS::HDI::Display::Composer::V1_0::RefreshCallbackProxy(cbRemote);
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->RegRefreshCallback(cb);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetDisplaySupportedColorGamuts_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool displayComposerMemSet = false;
+    if (!displayComposerData.ReadBool(displayComposerMemSet)) {
+        HDF_LOGE("%{public}s: failed to read displayComposerMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Display::Composer::V1_0::ColorGamut> gamuts;
+    if (displayComposerMemSet) {
+        uint32_t capacity = 0;
+        if (!displayComposerData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Display::Composer::V1_0::ColorGamut), HDF_ERR_INVALID_PARAM);
+        gamuts.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->GetDisplaySupportedColorGamuts(devId, gamuts);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!WritePodArray(displayComposerReply, gamuts)) {
+        HDF_LOGE("%{public}s: failed to write gamuts", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::DisplayComposerStub::DisplayComposerStubGetHDRCapabilityInfos_(MessageParcel& displayComposerData, MessageParcel& displayComposerReply, MessageOption& displayComposerOption, sptr<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer> impl)
+{
+    if (displayComposerData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::IDisplayComposer::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!displayComposerData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Display::Composer::V1_0::HDRCapability info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t displayComposerRet = impl->GetHDRCapabilityInfos(devId, info);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!OHOS::HDI::Display::Composer::V1_0::HDRCapabilityBlockMarshalling(displayComposerReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+} // V1_1
+} // Composer
+} // Display
+} // HDI
+} // OHOS

@@ -1,0 +1,753 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/battery_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    battery_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Battery {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Battery::V1_0::IBatteryInterface> OHOS::HDI::Battery::V1_0::IBatteryInterface::Get(bool isStub)
+{
+    return IBatteryInterface::Get("battery_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Battery::V1_0::IBatteryInterface> OHOS::HDI::Battery::V1_0::IBatteryInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "battery_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Battery::V1_0::IBatteryInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy> proxy = new OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t batteryInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::Register(const sptr<OHOS::HDI::Battery::V1_0::IBatteryCallback>& event)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::Register_(event, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::UnRegister()
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::UnRegister_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::ChangePath(const std::string& path)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::ChangePath_(path, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCapacity(int32_t& capacity)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCapacity_(capacity, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVoltage(int32_t& voltage)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVoltage_(voltage, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTemperature(int32_t& temperature)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTemperature_(temperature, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetHealthState(OHOS::HDI::Battery::V1_0::BatteryHealthState& healthState)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetHealthState_(healthState, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPluggedType(OHOS::HDI::Battery::V1_0::BatteryPluggedType& pluggedType)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPluggedType_(pluggedType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetChargeState(OHOS::HDI::Battery::V1_0::BatteryChargeState& chargeState)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetChargeState_(chargeState, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPresent(bool& present)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPresent_(present, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTechnology(std::string& technology)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTechnology_(technology, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTotalEnergy(int32_t& totalEnergy)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTotalEnergy_(totalEnergy, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentAverage(int32_t& curAverage)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentAverage_(curAverage, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentNow(int32_t& curNow)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentNow_(curNow, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetRemainEnergy(int32_t& remainEnergy)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetRemainEnergy_(remainEnergy, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetBatteryInfo(OHOS::HDI::Battery::V1_0::BatteryInfo& info)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetBatteryInfo_(info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::Register_(const sptr<OHOS::HDI::Battery::V1_0::IBatteryCallback>& event, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (event == nullptr) {
+        HDF_LOGE("%{public}s: parameter event is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(event, OHOS::HDI::Battery::V1_0::IBatteryCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_REGISTER, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::UnRegister_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_UN_REGISTER, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::ChangePath_(const std::string& path,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryInterfaceData.WriteCString(path.c_str())) {
+        HDF_LOGE("%{public}s: write path failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_CHANGE_PATH, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCapacity_(int32_t& capacity,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_CAPACITY, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(capacity)) {
+        HDF_LOGE("%{public}s: read capacity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVoltage_(int32_t& voltage, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_VOLTAGE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(voltage)) {
+        HDF_LOGE("%{public}s: read voltage failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTemperature_(int32_t& temperature,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_TEMPERATURE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(temperature)) {
+        HDF_LOGE("%{public}s: read temperature failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetHealthState_(OHOS::HDI::Battery::V1_0::BatteryHealthState& healthState, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_HEALTH_STATE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!batteryInterfaceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write healthState failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        healthState = static_cast<enum BatteryHealthState>(enumTmp);
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPluggedType_(OHOS::HDI::Battery::V1_0::BatteryPluggedType& pluggedType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_PLUGGED_TYPE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!batteryInterfaceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write pluggedType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        pluggedType = static_cast<enum BatteryPluggedType>(enumTmp);
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetChargeState_(OHOS::HDI::Battery::V1_0::BatteryChargeState& chargeState, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_CHARGE_STATE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!batteryInterfaceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write chargeState failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        chargeState = static_cast<enum BatteryChargeState>(enumTmp);
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetPresent_(bool& present, const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_PRESENT, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadBool(present)) {
+        HDF_LOGE("%{public}s: read present failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTechnology_(std::string& technology,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_TECHNOLOGY, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    const char* technologyCp = batteryInterfaceReply.ReadCString();
+    if (technologyCp == nullptr) {
+        HDF_LOGE("%{public}s: read technology failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    technology = technologyCp;
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetTotalEnergy_(int32_t& totalEnergy,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_TOTAL_ENERGY, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(totalEnergy)) {
+        HDF_LOGE("%{public}s: read totalEnergy failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentAverage_(int32_t& curAverage,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_CURRENT_AVERAGE, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(curAverage)) {
+        HDF_LOGE("%{public}s: read curAverage failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetCurrentNow_(int32_t& curNow,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_CURRENT_NOW, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(curNow)) {
+        HDF_LOGE("%{public}s: read curNow failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetRemainEnergy_(int32_t& remainEnergy,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_REMAIN_ENERGY, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadInt32(remainEnergy)) {
+        HDF_LOGE("%{public}s: read remainEnergy failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetBatteryInfo_(OHOS::HDI::Battery::V1_0::BatteryInfo& info,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_BATTERY_INFO, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!BatteryInfoBlockUnmarshalling(batteryInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V1_0::BatteryInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel batteryInterfaceData;
+    MessageParcel batteryInterfaceReply;
+    MessageOption batteryInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!batteryInterfaceData.WriteInterfaceToken(OHOS::HDI::Battery::V1_0::IBatteryInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t batteryInterfaceRet = remote->SendRequest(CMD_BATTERY_INTERFACE_GET_VERSION, batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+} // V1_0
+} // Battery
+} // HDI
+} // OHOS

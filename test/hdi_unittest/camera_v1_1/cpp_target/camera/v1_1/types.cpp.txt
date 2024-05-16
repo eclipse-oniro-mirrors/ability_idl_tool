@@ -1,0 +1,250 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExtendedStreamInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Camera::V1_1::ExtendedStreamInfo& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.width)) {
+        HDF_LOGE("%{public}s: write dataBlock.width failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.height)) {
+        HDF_LOGE("%{public}s: write dataBlock.height failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.format)) {
+        HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.dataspace)) {
+        HDF_LOGE("%{public}s: write dataBlock.dataspace failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteStrongParcelable(dataBlock.bufferQueue)) {
+        HDF_LOGE("%{public}s: write dataBlock.bufferQueue failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ExtendedStreamInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Camera::V1_1::ExtendedStreamInfo& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum ExtendedStreamInfoType>(enumTmp);
+    }
+
+    if (!data.ReadInt32(dataBlock.width)) {
+        HDF_LOGE("%{public}s: read dataBlock.width failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.height)) {
+        HDF_LOGE("%{public}s: read dataBlock.height failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.format)) {
+        HDF_LOGE("%{public}s: read dataBlock.format failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.dataspace)) {
+        HDF_LOGE("%{public}s: read dataBlock.dataspace failed!", __func__);
+        return false;
+    }
+
+    dataBlock.bufferQueue = data.ReadStrongParcelable<BufferProducerSequenceable>();
+    return true;
+}
+
+bool StreamInfo_V1_1BlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Camera::V1_1::StreamInfo_V1_1& dataBlock)
+{
+    if (!StreamInfoBlockMarshalling(data, dataBlock.v1_0)) {
+        HDF_LOGE("%{public}s: write dataBlock.v1_0 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.extendedStreamInfos.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.extendedStreamInfos.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.extendedStreamInfos) {
+        if (!ExtendedStreamInfoBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool StreamInfo_V1_1BlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Camera::V1_1::StreamInfo_V1_1& dataBlock)
+{
+    if (!OHOS::HDI::Camera::V1_0::StreamInfoBlockUnmarshalling(data, dataBlock.v1_0)) {
+        HDF_LOGE("%{public}s: read dataBlock.v1_0 failed!", __func__);
+        return false;
+    }
+
+    uint32_t extendedStreamInfosSize = 0;
+    if (!data.ReadUint32(extendedStreamInfosSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(extendedStreamInfosSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Camera::V1_1::ExtendedStreamInfo), false);
+    dataBlock.extendedStreamInfos.clear();
+    dataBlock.extendedStreamInfos.reserve(extendedStreamInfosSize);
+    for (uint32_t i0 = 0; i0 < extendedStreamInfosSize; ++i0) {
+        OHOS::HDI::Camera::V1_1::ExtendedStreamInfo value0;
+        if (!OHOS::HDI::Camera::V1_1::ExtendedStreamInfoBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.extendedStreamInfos.push_back(value0);
+    }
+    return true;
+}
+
+bool PrelaunchConfigBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Camera::V1_1::PrelaunchConfig& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.cameraId.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.cameraId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.streamInfos_V1_1.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.streamInfos_V1_1.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.streamInfos_V1_1) {
+        if (!StreamInfo_V1_1BlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!WritePodArray(data, dataBlock.setting)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.setting", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PrelaunchConfigBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Camera::V1_1::PrelaunchConfig& dataBlock)
+{
+    const char* cameraIdCp = data.ReadCString();
+    if (cameraIdCp == nullptr) {
+        HDF_LOGE("%{public}s: read cameraIdCp failed", __func__);
+        return false;
+    }
+    dataBlock.cameraId = cameraIdCp;
+
+    uint32_t streamInfos_V1_1Size = 0;
+    if (!data.ReadUint32(streamInfos_V1_1Size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(streamInfos_V1_1Size, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Camera::V1_1::StreamInfo_V1_1), false);
+    dataBlock.streamInfos_V1_1.clear();
+    dataBlock.streamInfos_V1_1.reserve(streamInfos_V1_1Size);
+    for (uint32_t i0 = 0; i0 < streamInfos_V1_1Size; ++i0) {
+        OHOS::HDI::Camera::V1_1::StreamInfo_V1_1 value0;
+        if (!OHOS::HDI::Camera::V1_1::StreamInfo_V1_1BlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.streamInfos_V1_1.push_back(value0);
+    }
+
+    if (!ReadPodArray(data, dataBlock.setting)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.setting", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+} // V1_1
+} // Camera
+} // HDI
+} // OHOS

@@ -1,0 +1,118 @@
+AST[name: ICodecImage file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_image_v1_0/foo/codec/image/v1_0/ICodecImage.idl]
+package ohos.hdi.codec.image.v1_0;
+
+import ohos.hdi.codec.image.v1_0.CodecImageType;
+
+[mini, lite, full] interface ICodecImage {
+    [mini, lite, full] GetImageCapability(
+      [out] ohos.hdi.codec.image.v1_0.CodecImageCapability[] capList);
+
+    [mini, lite, full] Init(
+      [in] ohos.hdi.codec.image.v1_0.CodecImageRole role);
+
+    [mini, lite, full] DeInit(
+      [in] ohos.hdi.codec.image.v1_0.CodecImageRole role);
+
+    [mini, lite, full] DoJpegDecode(
+      [in] ohos.hdi.codec.image.v1_0.CodecImageBuffer inBuffer,
+      [in] ohos.hdi.codec.image.v1_0.CodecImageBuffer outBuffer,
+      [in] ohos.hdi.codec.image.v1_0.CodecJpegDecInfo decInfo);
+
+    [mini, lite, full] AllocateInBuffer(
+      [out] ohos.hdi.codec.image.v1_0.CodecImageBuffer inBuffer,
+      [in] unsigned int size,
+      [in] ohos.hdi.codec.image.v1_0.CodecImageRole role);
+
+    [mini, lite, full] FreeInBuffer(
+      [in] ohos.hdi.codec.image.v1_0.CodecImageBuffer inBuffer);
+}
+
+
+AST[name: CodecImageType file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/codec_image_v1_0/foo/codec/image/v1_0/CodecImageType.idl]
+package ohos.hdi.codec.image.v1_0;
+
+[mini, lite, full] struct CodecImageRegion {
+  unsigned int left;
+  unsigned int right;
+  unsigned int top;
+  unsigned int bottom;
+  unsigned int flag;
+  unsigned int rsv;
+};
+
+[mini, lite, full] enum CodecImageRole : int {
+  CODEC_IMAGE_JPEG = 0,
+  CODEC_IMAGE_HEIF,
+  CODEC_IMAGE_INVALID,
+};
+
+[mini, lite, full] struct CodecImageBuffer {
+  unsigned int id;
+  unsigned int size;
+  NativeBuffer buffer;
+  FileDescriptor fenceFd;
+  ohos.hdi.codec.image.v1_0.CodecImageRole bufferRole;
+};
+
+[mini, lite, full] enum CodecImageType : int {
+  CODEC_IMAGE_TYPE_DECODER = 0,
+  CODEC_IMAGE_TYPE_ENCODER,
+  CODEC_IMAGE_TYPE_INVALID,
+};
+
+[mini, lite, full] struct CodecImageCapability {
+  std::string name;
+  ohos.hdi.codec.image.v1_0.CodecImageRole role;
+  ohos.hdi.codec.image.v1_0.CodecImageType type;
+  unsigned int widthAlignment;
+  unsigned int heightAlignment;
+  unsigned int maxSample;
+  unsigned int maxWidth;
+  unsigned int maxHeight;
+  unsigned int minWidth;
+  unsigned int minHeight;
+  unsigned int maxInst;
+  unsigned int[] supportPixFmts;
+  boolean isSoftwareCodec;
+};
+
+[mini, lite, full] struct CodecJpegQuantTable {
+  unsigned short[] quantVal;
+  boolean tableFlag;
+};
+
+[mini, lite, full] struct CodecJpegHuffTable {
+  unsigned char[] bits;
+  unsigned char[] huffVal;
+  boolean tableFlag;
+};
+
+[mini, lite, full] struct CodecJpegCompInfo {
+  unsigned int componentId;
+  unsigned int componentIndex;
+  unsigned int hSampFactor;
+  unsigned int vSampFactor;
+  unsigned int quantTableNo;
+  unsigned int dcTableNo;
+  unsigned int acTableNo;
+  boolean infoFlag;
+};
+
+[mini, lite, full] struct CodecJpegDecInfo {
+  unsigned int imageWidth;
+  unsigned int imageHeight;
+  unsigned int dataPrecision;
+  unsigned int numComponents;
+  unsigned int restartInterval;
+  boolean arithCode;
+  boolean progressiveMode;
+  ohos.hdi.codec.image.v1_0.CodecJpegCompInfo[] compInfo;
+  ohos.hdi.codec.image.v1_0.CodecJpegHuffTable[] dcHuffTbl;
+  ohos.hdi.codec.image.v1_0.CodecJpegHuffTable[] acHuffTbl;
+  ohos.hdi.codec.image.v1_0.CodecJpegQuantTable[] quantTbl;
+  ohos.hdi.codec.image.v1_0.CodecImageRegion region;
+  unsigned int sampleSize;
+  unsigned int compressPos;
+};
+
+

@@ -1,0 +1,4828 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/wpa_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    wpa_interface_stub
+
+struct IWpaInterface *IWpaInterfaceGet(bool isStub)
+{
+    return IWpaInterfaceGetInstance("wpa_interface_service", isStub);
+}
+
+struct IWpaInterface *IWpaInterfaceGetInstance(const char *serviceName, bool isStub)
+{
+    if (!isStub) {
+        return NULL;
+    }
+
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "wpa_interface_service") == 0) {
+        instName = "service";
+    }
+    return (struct IWpaInterface *)LoadHdiImpl(IWPAINTERFACE_INTERFACE_DESC, instName);
+}
+
+void IWpaInterfaceRelease(struct IWpaInterface *instance, bool isStub)
+{
+    IWpaInterfaceReleaseInstance("wpa_interface_service", instance, isStub);
+}
+
+void IWpaInterfaceReleaseInstance(const char *serviceName, struct IWpaInterface *instance, bool isStub)
+{
+    if (serviceName == NULL || !isStub || instance == NULL) {
+        return;
+    }
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "wpa_interface_service") == 0) {
+        instName = "service";
+    }
+    UnloadHdiImpl(IWPAINTERFACE_INTERFACE_DESC, instName, instance);
+}
+
+static struct IWpaCallback *ReadIWpaCallback(struct HdfSBuf *parcel);
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static struct IWpaCallback *ReadIWpaCallback(struct HdfSBuf *parcel)
+{
+    struct HdfRemoteService *remote = HdfSbufReadRemoteService(parcel);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s:  failed to read remote service of 'IWpaCallback'", __func__);
+        return NULL;
+    }
+
+    return IWpaCallbackGet(remote);
+}
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+static int32_t SerStubStart(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Start == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Start ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Start(serviceImpl);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubStop(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Stop == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Stop ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Stop(serviceImpl);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubAddWpaIface(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* confName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *confNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (confNameCp == NULL) {
+        HDF_LOGE("%{public}s: read confNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    confName = strdup(confNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->AddWpaIface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function AddWpaIface ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->AddWpaIface(serviceImpl, ifName, confName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (confName != NULL) {
+        OsalMemFree(confName);
+        confName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubRemoveWpaIface(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RemoveWpaIface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RemoveWpaIface ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->RemoveWpaIface(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubScan(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Scan == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Scan ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Scan(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubScanResult(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    uint8_t* resultBuf = NULL;
+    uint32_t resultBufLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &resultBufLen)) {
+            HDF_LOGE("%{public}s: read resultBuf size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(resultBufLen, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (resultBufLen > 0) {
+            resultBuf = (uint8_t*)OsalMemCalloc(sizeof(uint8_t) * (resultBufLen));
+            if (resultBuf == NULL) {
+                HDF_LOGE("%{public}s: malloc resultBuf failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        resultBuf = (uint8_t*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (resultBuf == NULL) {
+            HDF_LOGE("%{public}s: malloc resultBuf failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        resultBufLen = (HDI_BUFF_MAX_SIZE / sizeof(uint8_t));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->ScanResult == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function ScanResult ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->ScanResult(serviceImpl, ifName, resultBuf, &resultBufLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(wpaInterfaceReply, resultBuf, sizeof(uint8_t), resultBufLen)) {
+        HDF_LOGE("%{public}s: failed to write resultBuf", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (resultBuf != NULL) {
+        OsalMemFree(resultBuf);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubAddNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->AddNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function AddNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->AddNetwork(serviceImpl, ifName, &networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubRemoveNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RemoveNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RemoveNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->RemoveNetwork(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubDisableNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DisableNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DisableNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->DisableNetwork(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSetNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+    char* name = NULL;
+    char* value = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *nameCp = HdfSbufReadString(wpaInterfaceData);
+    if (nameCp == NULL) {
+        HDF_LOGE("%{public}s: read nameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    name = strdup(nameCp);
+
+    const char *valueCp = HdfSbufReadString(wpaInterfaceData);
+    if (valueCp == NULL) {
+        HDF_LOGE("%{public}s: read valueCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    value = strdup(valueCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SetNetwork(serviceImpl, ifName, networkId, name, value);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (name != NULL) {
+        OsalMemFree(name);
+        name = NULL;
+    }
+    if (value != NULL) {
+        OsalMemFree(value);
+        value = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubListNetworks(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    struct HdiWifiWpaNetworkInfo* networkInfo = NULL;
+    uint32_t networkInfoLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &networkInfoLen)) {
+            HDF_LOGE("%{public}s: read networkInfo size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(networkInfoLen, >, HDI_BUFF_MAX_SIZE / sizeof(struct HdiWifiWpaNetworkInfo), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (networkInfoLen > 0) {
+            networkInfo = (struct HdiWifiWpaNetworkInfo*)OsalMemCalloc(sizeof(struct HdiWifiWpaNetworkInfo) * (networkInfoLen));
+            if (networkInfo == NULL) {
+                HDF_LOGE("%{public}s: malloc networkInfo failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        networkInfo = (struct HdiWifiWpaNetworkInfo*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (networkInfo == NULL) {
+            HDF_LOGE("%{public}s: malloc networkInfo failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        networkInfoLen = (HDI_BUFF_MAX_SIZE / sizeof(struct HdiWifiWpaNetworkInfo));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->ListNetworks == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function ListNetworks ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->ListNetworks(serviceImpl, ifName, networkInfo, &networkInfoLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if ((networkInfo == NULL && networkInfoLen != 0) || (networkInfo != NULL && networkInfoLen == 0)) {
+        HDF_LOGE("%{public}s: networkInfo is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceReply, networkInfoLen)) {
+        HDF_LOGE("%{public}s: write networkInfo failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    for (uint32_t i = 0; i < networkInfoLen; i++) {
+        if (!HdiWifiWpaNetworkInfoBlockMarshalling(wpaInterfaceReply, &networkInfo[i])) {
+            HDF_LOGE("%{public}s: write &networkInfo[i] failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (networkInfo != NULL) {
+        for (uint32_t i = 0; i < networkInfoLen; i++) {
+            HdiWifiWpaNetworkInfoFree(&networkInfo[i], false);
+        }
+        OsalMemFree(networkInfo);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSelectNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SelectNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SelectNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SelectNetwork(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubEnableNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->EnableNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function EnableNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->EnableNetwork(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubReconnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Reconnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Reconnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Reconnect(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubDisconnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Disconnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Disconnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Disconnect(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSaveConfig(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SaveConfig == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SaveConfig ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SaveConfig(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSetPowerSave(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &enable)) {
+        HDF_LOGE("%{public}s: read &enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetPowerSave == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetPowerSave ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SetPowerSave(serviceImpl, ifName, enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubAutoConnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &enable)) {
+        HDF_LOGE("%{public}s: read &enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->AutoConnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function AutoConnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->AutoConnect(serviceImpl, ifName, enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubWifiStatus(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiWpaCmdStatus* wifiStatus = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    wifiStatus = (struct HdiWpaCmdStatus*)OsalMemCalloc(sizeof(struct HdiWpaCmdStatus));
+    if (wifiStatus == NULL) {
+        HDF_LOGE("%{public}s: malloc wifiStatus failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->WifiStatus == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function WifiStatus ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->WifiStatus(serviceImpl, ifName, wifiStatus);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiWpaCmdStatusBlockMarshalling(wpaInterfaceReply, wifiStatus)) {
+        HDF_LOGE("%{public}s: write wifiStatus failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (wifiStatus != NULL) {
+        HdiWpaCmdStatusFree(wifiStatus, true);
+        wifiStatus = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubWpsPbcMode(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiWifiWpsParam* wpsParam = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    wpsParam = (struct HdiWifiWpsParam*)OsalMemCalloc(sizeof(struct HdiWifiWpsParam));
+    if (wpsParam == NULL) {
+        HDF_LOGE("%{public}s: malloc wpsParam failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiWifiWpsParamBlockUnmarshalling(wpaInterfaceData, wpsParam)) {
+        HDF_LOGE("%{public}s: read wpsParam failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->WpsPbcMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function WpsPbcMode ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->WpsPbcMode(serviceImpl, ifName, wpsParam);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (wpsParam != NULL) {
+        HdiWifiWpsParamFree(wpsParam, true);
+        wpsParam = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubWpsPinMode(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiWifiWpsParam* wpsParam = NULL;
+    int32_t pinCode = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    wpsParam = (struct HdiWifiWpsParam*)OsalMemCalloc(sizeof(struct HdiWifiWpsParam));
+    if (wpsParam == NULL) {
+        HDF_LOGE("%{public}s: malloc wpsParam failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiWifiWpsParamBlockUnmarshalling(wpaInterfaceData, wpsParam)) {
+        HDF_LOGE("%{public}s: read wpsParam failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->WpsPinMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function WpsPinMode ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->WpsPinMode(serviceImpl, ifName, wpsParam, &pinCode);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, pinCode)) {
+        HDF_LOGE("%{public}s: write pinCode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (wpsParam != NULL) {
+        HdiWifiWpsParamFree(wpsParam, true);
+        wpsParam = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubWpsCancel(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->WpsCancel == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function WpsCancel ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->WpsCancel(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetCountryCode(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    char* countrycode = NULL;
+    uint32_t countrycodeLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &countrycodeLen)) {
+            HDF_LOGE("%{public}s: read countrycode size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(countrycodeLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (countrycodeLen > 0) {
+            countrycode = (char*)OsalMemCalloc(countrycodeLen);
+            if (countrycode == NULL) {
+                HDF_LOGE("%{public}s: malloc countrycode failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        countrycode = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (countrycode == NULL) {
+            HDF_LOGE("%{public}s: malloc countrycode failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        countrycodeLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetCountryCode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetCountryCode ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetCountryCode(serviceImpl, ifName, countrycode, countrycodeLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, countrycode)) {
+        HDF_LOGE("%{public}s: write countrycode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (countrycode != NULL) {
+        OsalMemFree(countrycode);
+        countrycode = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+    char* param = NULL;
+    char* value = NULL;
+    uint32_t valueLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *paramCp = HdfSbufReadString(wpaInterfaceData);
+    if (paramCp == NULL) {
+        HDF_LOGE("%{public}s: read paramCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    param = strdup(paramCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &valueLen)) {
+            HDF_LOGE("%{public}s: read value size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(valueLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (valueLen > 0) {
+            value = (char*)OsalMemCalloc(valueLen);
+            if (value == NULL) {
+                HDF_LOGE("%{public}s: malloc value failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        value = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (value == NULL) {
+            HDF_LOGE("%{public}s: malloc value failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        valueLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetNetwork(serviceImpl, ifName, networkId, param, value, valueLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (param != NULL) {
+        OsalMemFree(param);
+        param = NULL;
+    }
+    if (value != NULL) {
+        OsalMemFree(value);
+        value = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubBlocklistClear(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->BlocklistClear == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function BlocklistClear ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->BlocklistClear(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSetSuspendMode(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t mode = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &mode)) {
+        HDF_LOGE("%{public}s: read &mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetSuspendMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetSuspendMode ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SetSuspendMode(serviceImpl, ifName, mode);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubRegisterEventCallback(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    struct IWpaCallback* cbFunc = NULL;
+    char* ifName = NULL;
+
+    cbFunc = ReadIWpaCallback(wpaInterfaceData);
+    if (cbFunc == NULL) {
+        HDF_LOGE("%{public}s: read cbFunc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RegisterEventCallback == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RegisterEventCallback ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->RegisterEventCallback(serviceImpl, cbFunc, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubUnregisterEventCallback(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    struct IWpaCallback* cbFunc = NULL;
+    char* ifName = NULL;
+
+    cbFunc = ReadIWpaCallback(wpaInterfaceData);
+    if (cbFunc == NULL) {
+        HDF_LOGE("%{public}s: read cbFunc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->UnregisterEventCallback == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function UnregisterEventCallback ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->UnregisterEventCallback(serviceImpl, cbFunc, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetConnectionCapabilities(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct ConnectionCapabilities* connectionCap = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    connectionCap = (struct ConnectionCapabilities*)OsalMemCalloc(sizeof(struct ConnectionCapabilities));
+    if (connectionCap == NULL) {
+        HDF_LOGE("%{public}s: malloc connectionCap failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetConnectionCapabilities == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetConnectionCapabilities ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetConnectionCapabilities(serviceImpl, ifName, connectionCap);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!ConnectionCapabilitiesBlockMarshalling(wpaInterfaceReply, connectionCap)) {
+        HDF_LOGE("%{public}s: write connectionCap failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (connectionCap != NULL) {
+        ConnectionCapabilitiesFree(connectionCap, true);
+        connectionCap = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetScanSsid(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetScanSsid == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetScanSsid ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetScanSsid(serviceImpl, ifName, &enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetPskPassphrase(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    char* psk = NULL;
+    uint32_t pskLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &pskLen)) {
+            HDF_LOGE("%{public}s: read psk size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(pskLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (pskLen > 0) {
+            psk = (char*)OsalMemCalloc(pskLen);
+            if (psk == NULL) {
+                HDF_LOGE("%{public}s: malloc psk failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        psk = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (psk == NULL) {
+            HDF_LOGE("%{public}s: malloc psk failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        pskLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetPskPassphrase == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetPskPassphrase ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetPskPassphrase(serviceImpl, ifName, psk, pskLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, psk)) {
+        HDF_LOGE("%{public}s: write psk failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (psk != NULL) {
+        OsalMemFree(psk);
+        psk = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetPsk(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    uint8_t* psk = NULL;
+    uint32_t pskLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &pskLen)) {
+            HDF_LOGE("%{public}s: read psk size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(pskLen, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (pskLen > 0) {
+            psk = (uint8_t*)OsalMemCalloc(sizeof(uint8_t) * (pskLen));
+            if (psk == NULL) {
+                HDF_LOGE("%{public}s: malloc psk failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        psk = (uint8_t*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (psk == NULL) {
+            HDF_LOGE("%{public}s: malloc psk failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        pskLen = (HDI_BUFF_MAX_SIZE / sizeof(uint8_t));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetPsk == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetPsk ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetPsk(serviceImpl, ifName, psk, &pskLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(wpaInterfaceReply, psk, sizeof(uint8_t), pskLen)) {
+        HDF_LOGE("%{public}s: failed to write psk", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (psk != NULL) {
+        OsalMemFree(psk);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetWepKey(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    int32_t keyIdx = 0;
+    uint8_t* wepKey = NULL;
+    uint32_t wepKeyLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &keyIdx)) {
+        HDF_LOGE("%{public}s: read &keyIdx failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &wepKeyLen)) {
+            HDF_LOGE("%{public}s: read wepKey size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(wepKeyLen, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (wepKeyLen > 0) {
+            wepKey = (uint8_t*)OsalMemCalloc(sizeof(uint8_t) * (wepKeyLen));
+            if (wepKey == NULL) {
+                HDF_LOGE("%{public}s: malloc wepKey failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        wepKey = (uint8_t*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (wepKey == NULL) {
+            HDF_LOGE("%{public}s: malloc wepKey failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        wepKeyLen = (HDI_BUFF_MAX_SIZE / sizeof(uint8_t));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetWepKey == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetWepKey ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetWepKey(serviceImpl, ifName, keyIdx, wepKey, &wepKeyLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(wpaInterfaceReply, wepKey, sizeof(uint8_t), wepKeyLen)) {
+        HDF_LOGE("%{public}s: failed to write wepKey", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (wepKey != NULL) {
+        OsalMemFree(wepKey);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetWepTxKeyIdx(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t keyIdx = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetWepTxKeyIdx == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetWepTxKeyIdx ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetWepTxKeyIdx(serviceImpl, ifName, &keyIdx);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, keyIdx)) {
+        HDF_LOGE("%{public}s: write keyIdx failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetRequirePmf(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetRequirePmf == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetRequirePmf ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->GetRequirePmf(serviceImpl, ifName, &enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubSetCountryCode(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* countrycode = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *countrycodeCp = HdfSbufReadString(wpaInterfaceData);
+    if (countrycodeCp == NULL) {
+        HDF_LOGE("%{public}s: read countrycodeCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    countrycode = strdup(countrycodeCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetCountryCode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetCountryCode ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->SetCountryCode(serviceImpl, ifName, countrycode);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (countrycode != NULL) {
+        OsalMemFree(countrycode);
+        countrycode = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetSsidPostfixName(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* name = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *nameCp = HdfSbufReadString(wpaInterfaceData);
+    if (nameCp == NULL) {
+        HDF_LOGE("%{public}s: read nameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    name = strdup(nameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetSsidPostfixName == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetSsidPostfixName ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetSsidPostfixName(serviceImpl, ifName, name);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (name != NULL) {
+        OsalMemFree(name);
+        name = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetWpsDeviceType(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* type = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *typeCp = HdfSbufReadString(wpaInterfaceData);
+    if (typeCp == NULL) {
+        HDF_LOGE("%{public}s: read typeCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    type = strdup(typeCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetWpsDeviceType == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetWpsDeviceType ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetWpsDeviceType(serviceImpl, ifName, type);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (type != NULL) {
+        OsalMemFree(type);
+        type = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetWpsConfigMethods(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* methods = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *methodsCp = HdfSbufReadString(wpaInterfaceData);
+    if (methodsCp == NULL) {
+        HDF_LOGE("%{public}s: read methodsCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    methods = strdup(methodsCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetWpsConfigMethods == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetWpsConfigMethods ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetWpsConfigMethods(serviceImpl, ifName, methods);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (methods != NULL) {
+        OsalMemFree(methods);
+        methods = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetGroupMaxIdle(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t time = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &time)) {
+        HDF_LOGE("%{public}s: read &time failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetGroupMaxIdle == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetGroupMaxIdle ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetGroupMaxIdle(serviceImpl, ifName, time);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetWfdEnable(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &enable)) {
+        HDF_LOGE("%{public}s: read &enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetWfdEnable == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetWfdEnable ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetWfdEnable(serviceImpl, ifName, enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetPersistentReconnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t status = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &status)) {
+        HDF_LOGE("%{public}s: read &status failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetPersistentReconnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetPersistentReconnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetPersistentReconnect(serviceImpl, ifName, status);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetWpsSecondaryDeviceType(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* type = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *typeCp = HdfSbufReadString(wpaInterfaceData);
+    if (typeCp == NULL) {
+        HDF_LOGE("%{public}s: read typeCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    type = strdup(typeCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetWpsSecondaryDeviceType == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetWpsSecondaryDeviceType ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetWpsSecondaryDeviceType(serviceImpl, ifName, type);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (type != NULL) {
+        OsalMemFree(type);
+        type = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetupWpsPbc(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* address = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *addressCp = HdfSbufReadString(wpaInterfaceData);
+    if (addressCp == NULL) {
+        HDF_LOGE("%{public}s: read addressCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    address = strdup(addressCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetupWpsPbc == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetupWpsPbc ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetupWpsPbc(serviceImpl, ifName, address);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (address != NULL) {
+        OsalMemFree(address);
+        address = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetupWpsPin(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    char* address = NULL;
+    char* pin = NULL;
+    char* result = NULL;
+    uint32_t resultLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *addressCp = HdfSbufReadString(wpaInterfaceData);
+    if (addressCp == NULL) {
+        HDF_LOGE("%{public}s: read addressCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    address = strdup(addressCp);
+
+    const char *pinCp = HdfSbufReadString(wpaInterfaceData);
+    if (pinCp == NULL) {
+        HDF_LOGE("%{public}s: read pinCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    pin = strdup(pinCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &resultLen)) {
+            HDF_LOGE("%{public}s: read result size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(resultLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (resultLen > 0) {
+            result = (char*)OsalMemCalloc(resultLen);
+            if (result == NULL) {
+                HDF_LOGE("%{public}s: malloc result failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        result = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (result == NULL) {
+            HDF_LOGE("%{public}s: malloc result failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        resultLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetupWpsPin == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetupWpsPin ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetupWpsPin(serviceImpl, ifName, address, pin, result, resultLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, result)) {
+        HDF_LOGE("%{public}s: write result failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (address != NULL) {
+        OsalMemFree(address);
+        address = NULL;
+    }
+    if (pin != NULL) {
+        OsalMemFree(pin);
+        pin = NULL;
+    }
+    if (result != NULL) {
+        OsalMemFree(result);
+        result = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetPowerSave(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &enable)) {
+        HDF_LOGE("%{public}s: read &enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetPowerSave == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetPowerSave ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetPowerSave(serviceImpl, ifName, enable);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetDeviceName(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* name = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *nameCp = HdfSbufReadString(wpaInterfaceData);
+    if (nameCp == NULL) {
+        HDF_LOGE("%{public}s: read nameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    name = strdup(nameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetDeviceName == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetDeviceName ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetDeviceName(serviceImpl, ifName, name);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (name != NULL) {
+        OsalMemFree(name);
+        name = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetWfdDeviceConfig(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* config = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *configCp = HdfSbufReadString(wpaInterfaceData);
+    if (configCp == NULL) {
+        HDF_LOGE("%{public}s: read configCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    config = strdup(configCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetWfdDeviceConfig == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetWfdDeviceConfig ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetWfdDeviceConfig(serviceImpl, ifName, config);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (config != NULL) {
+        OsalMemFree(config);
+        config = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetRandomMac(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetRandomMac == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetRandomMac ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetRandomMac(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pStartFind(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t timeout = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &timeout)) {
+        HDF_LOGE("%{public}s: read &timeout failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pStartFind == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pStartFind ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pStartFind(serviceImpl, ifName, timeout);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetExtListen(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t enable = 0;
+    int32_t period = 0;
+    int32_t interval = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &enable)) {
+        HDF_LOGE("%{public}s: read &enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &period)) {
+        HDF_LOGE("%{public}s: read &period failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &interval)) {
+        HDF_LOGE("%{public}s: read &interval failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetExtListen == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetExtListen ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetExtListen(serviceImpl, ifName, enable, period, interval);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetListenChannel(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t channel = 0;
+    int32_t regClass = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &channel)) {
+        HDF_LOGE("%{public}s: read &channel failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &regClass)) {
+        HDF_LOGE("%{public}s: read &regClass failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetListenChannel == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetListenChannel ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetListenChannel(serviceImpl, ifName, channel, regClass);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pProvisionDiscovery(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* peerBssid = NULL;
+    int32_t mode = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *peerBssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (peerBssidCp == NULL) {
+        HDF_LOGE("%{public}s: read peerBssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    peerBssid = strdup(peerBssidCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &mode)) {
+        HDF_LOGE("%{public}s: read &mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pProvisionDiscovery == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pProvisionDiscovery ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pProvisionDiscovery(serviceImpl, ifName, peerBssid, mode);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (peerBssid != NULL) {
+        OsalMemFree(peerBssid);
+        peerBssid = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pAddGroup(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t isPersistent = 0;
+    int32_t networkId = 0;
+    int32_t freq = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &isPersistent)) {
+        HDF_LOGE("%{public}s: read &isPersistent failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &freq)) {
+        HDF_LOGE("%{public}s: read &freq failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pAddGroup == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pAddGroup ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pAddGroup(serviceImpl, ifName, isPersistent, networkId, freq);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pAddService(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiP2pServiceInfo* info = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    info = (struct HdiP2pServiceInfo*)OsalMemCalloc(sizeof(struct HdiP2pServiceInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiP2pServiceInfoBlockUnmarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pAddService == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pAddService ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pAddService(serviceImpl, ifName, info);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (info != NULL) {
+        HdiP2pServiceInfoFree(info, true);
+        info = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pRemoveService(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiP2pServiceInfo* info = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    info = (struct HdiP2pServiceInfo*)OsalMemCalloc(sizeof(struct HdiP2pServiceInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiP2pServiceInfoBlockUnmarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pRemoveService == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pRemoveService ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pRemoveService(serviceImpl, ifName, info);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (info != NULL) {
+        HdiP2pServiceInfoFree(info, true);
+        info = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pStopFind(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pStopFind == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pStopFind ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pStopFind(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pFlush(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pFlush == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pFlush ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pFlush(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pFlushService(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pFlushService == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pFlushService ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pFlushService(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pRemoveNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pRemoveNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pRemoveNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pRemoveNetwork(serviceImpl, ifName, networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetGroupConfig(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+    char* name = NULL;
+    char* value = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *nameCp = HdfSbufReadString(wpaInterfaceData);
+    if (nameCp == NULL) {
+        HDF_LOGE("%{public}s: read nameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    name = strdup(nameCp);
+
+    const char *valueCp = HdfSbufReadString(wpaInterfaceData);
+    if (valueCp == NULL) {
+        HDF_LOGE("%{public}s: read valueCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    value = strdup(valueCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetGroupConfig == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetGroupConfig ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetGroupConfig(serviceImpl, ifName, networkId, name, value);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (name != NULL) {
+        OsalMemFree(name);
+        name = NULL;
+    }
+    if (value != NULL) {
+        OsalMemFree(value);
+        value = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pInvite(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* peerBssid = NULL;
+    char* goBssid = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *peerBssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (peerBssidCp == NULL) {
+        HDF_LOGE("%{public}s: read peerBssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    peerBssid = strdup(peerBssidCp);
+
+    const char *goBssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (goBssidCp == NULL) {
+        HDF_LOGE("%{public}s: read goBssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    goBssid = strdup(goBssidCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pInvite == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pInvite ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pInvite(serviceImpl, ifName, peerBssid, goBssid);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (peerBssid != NULL) {
+        OsalMemFree(peerBssid);
+        peerBssid = NULL;
+    }
+    if (goBssid != NULL) {
+        OsalMemFree(goBssid);
+        goBssid = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pReinvoke(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+    char* bssid = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *bssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (bssidCp == NULL) {
+        HDF_LOGE("%{public}s: read bssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    bssid = strdup(bssidCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pReinvoke == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pReinvoke ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pReinvoke(serviceImpl, ifName, networkId, bssid);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (bssid != NULL) {
+        OsalMemFree(bssid);
+        bssid = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pGetDeviceAddress(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    char* deviceAddress = NULL;
+    uint32_t deviceAddressLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &deviceAddressLen)) {
+            HDF_LOGE("%{public}s: read deviceAddress size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(deviceAddressLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (deviceAddressLen > 0) {
+            deviceAddress = (char*)OsalMemCalloc(deviceAddressLen);
+            if (deviceAddress == NULL) {
+                HDF_LOGE("%{public}s: malloc deviceAddress failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        deviceAddress = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (deviceAddress == NULL) {
+            HDF_LOGE("%{public}s: malloc deviceAddress failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        deviceAddressLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pGetDeviceAddress == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pGetDeviceAddress ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pGetDeviceAddress(serviceImpl, ifName, deviceAddress, deviceAddressLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, deviceAddress)) {
+        HDF_LOGE("%{public}s: write deviceAddress failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (deviceAddress != NULL) {
+        OsalMemFree(deviceAddress);
+        deviceAddress = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pReqServiceDiscovery(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    struct HdiP2pReqService* reqService = NULL;
+    char* replyDisc = NULL;
+    uint32_t replyDiscLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    reqService = (struct HdiP2pReqService*)OsalMemCalloc(sizeof(struct HdiP2pReqService));
+    if (reqService == NULL) {
+        HDF_LOGE("%{public}s: malloc reqService failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiP2pReqServiceBlockUnmarshalling(wpaInterfaceData, reqService)) {
+        HDF_LOGE("%{public}s: read reqService failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &replyDiscLen)) {
+            HDF_LOGE("%{public}s: read replyDisc size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(replyDiscLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (replyDiscLen > 0) {
+            replyDisc = (char*)OsalMemCalloc(replyDiscLen);
+            if (replyDisc == NULL) {
+                HDF_LOGE("%{public}s: malloc replyDisc failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        replyDisc = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (replyDisc == NULL) {
+            HDF_LOGE("%{public}s: malloc replyDisc failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        replyDiscLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pReqServiceDiscovery == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pReqServiceDiscovery ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pReqServiceDiscovery(serviceImpl, ifName, reqService, replyDisc, replyDiscLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, replyDisc)) {
+        HDF_LOGE("%{public}s: write replyDisc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (reqService != NULL) {
+        HdiP2pReqServiceFree(reqService, true);
+        reqService = NULL;
+    }
+    if (replyDisc != NULL) {
+        OsalMemFree(replyDisc);
+        replyDisc = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pCancelServiceDiscovery(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* id = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *idCp = HdfSbufReadString(wpaInterfaceData);
+    if (idCp == NULL) {
+        HDF_LOGE("%{public}s: read idCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    id = strdup(idCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pCancelServiceDiscovery == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pCancelServiceDiscovery ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pCancelServiceDiscovery(serviceImpl, ifName, id);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (id != NULL) {
+        OsalMemFree(id);
+        id = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pRespServerDiscovery(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiP2pServDiscReqInfo* info = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    info = (struct HdiP2pServDiscReqInfo*)OsalMemCalloc(sizeof(struct HdiP2pServDiscReqInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiP2pServDiscReqInfoBlockUnmarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pRespServerDiscovery == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pRespServerDiscovery ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pRespServerDiscovery(serviceImpl, ifName, info);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (info != NULL) {
+        HdiP2pServDiscReqInfoFree(info, true);
+        info = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pConnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    struct HdiP2pConnectInfo* info = NULL;
+    char* replyPin = NULL;
+    uint32_t replyPinLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    info = (struct HdiP2pConnectInfo*)OsalMemCalloc(sizeof(struct HdiP2pConnectInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiP2pConnectInfoBlockUnmarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &replyPinLen)) {
+            HDF_LOGE("%{public}s: read replyPin size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(replyPinLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (replyPinLen > 0) {
+            replyPin = (char*)OsalMemCalloc(replyPinLen);
+            if (replyPin == NULL) {
+                HDF_LOGE("%{public}s: malloc replyPin failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        replyPin = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (replyPin == NULL) {
+            HDF_LOGE("%{public}s: malloc replyPin failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        replyPinLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pConnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pConnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pConnect(serviceImpl, ifName, info, replyPin, replyPinLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, replyPin)) {
+        HDF_LOGE("%{public}s: write replyPin failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (info != NULL) {
+        HdiP2pConnectInfoFree(info, true);
+        info = NULL;
+    }
+    if (replyPin != NULL) {
+        OsalMemFree(replyPin);
+        replyPin = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pHid2dConnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiHid2dConnectInfo* info = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    info = (struct HdiHid2dConnectInfo*)OsalMemCalloc(sizeof(struct HdiHid2dConnectInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdiHid2dConnectInfoBlockUnmarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pHid2dConnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pHid2dConnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pHid2dConnect(serviceImpl, ifName, info);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (info != NULL) {
+        HdiHid2dConnectInfoFree(info, true);
+        info = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSetServDiscExternal(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t mode = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &mode)) {
+        HDF_LOGE("%{public}s: read &mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSetServDiscExternal == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSetServDiscExternal ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSetServDiscExternal(serviceImpl, ifName, mode);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pRemoveGroup(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* groupName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *groupNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (groupNameCp == NULL) {
+        HDF_LOGE("%{public}s: read groupNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    groupName = strdup(groupNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pRemoveGroup == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pRemoveGroup ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pRemoveGroup(serviceImpl, ifName, groupName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (groupName != NULL) {
+        OsalMemFree(groupName);
+        groupName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pCancelConnect(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pCancelConnect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pCancelConnect ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pCancelConnect(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pGetGroupConfig(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    bool wpaInterfaceMemSet = false;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+    char* param = NULL;
+    char* value = NULL;
+    uint32_t valueLen = 0;
+
+    if (!HdfSbufReadUint8(wpaInterfaceData, (uint8_t *)&wpaInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (!HdfSbufReadInt32(wpaInterfaceData, &networkId)) {
+        HDF_LOGE("%{public}s: read &networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *paramCp = HdfSbufReadString(wpaInterfaceData);
+    if (paramCp == NULL) {
+        HDF_LOGE("%{public}s: read paramCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    param = strdup(paramCp);
+
+    if (wpaInterfaceMemSet) {
+        if (!HdfSbufReadUint32(wpaInterfaceData, &valueLen)) {
+            HDF_LOGE("%{public}s: read value size failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(valueLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (valueLen > 0) {
+            value = (char*)OsalMemCalloc(valueLen);
+            if (value == NULL) {
+                HDF_LOGE("%{public}s: malloc value failed", __func__);
+                wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        value = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (value == NULL) {
+            HDF_LOGE("%{public}s: malloc value failed", __func__);
+            wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        valueLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pGetGroupConfig == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pGetGroupConfig ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pGetGroupConfig(serviceImpl, ifName, networkId, param, value, valueLen);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceReply, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (param != NULL) {
+        OsalMemFree(param);
+        param = NULL;
+    }
+    if (value != NULL) {
+        OsalMemFree(value);
+        value = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pAddNetwork(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    int32_t networkId = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pAddNetwork == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pAddNetwork ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pAddNetwork(serviceImpl, ifName, &networkId);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pGetPeer(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* bssid = NULL;
+    struct HdiP2pDeviceInfo* info = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *bssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (bssidCp == NULL) {
+        HDF_LOGE("%{public}s: read bssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    bssid = strdup(bssidCp);
+
+    info = (struct HdiP2pDeviceInfo*)OsalMemCalloc(sizeof(struct HdiP2pDeviceInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pGetPeer == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pGetPeer ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pGetPeer(serviceImpl, ifName, bssid, info);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiP2pDeviceInfoBlockMarshalling(wpaInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (bssid != NULL) {
+        OsalMemFree(bssid);
+        bssid = NULL;
+    }
+    if (info != NULL) {
+        HdiP2pDeviceInfoFree(info, true);
+        info = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pGetGroupCapability(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* bssid = NULL;
+    int32_t cap = 0;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *bssidCp = HdfSbufReadString(wpaInterfaceData);
+    if (bssidCp == NULL) {
+        HDF_LOGE("%{public}s: read bssidCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    bssid = strdup(bssidCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pGetGroupCapability == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pGetGroupCapability ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pGetGroupCapability(serviceImpl, ifName, bssid, &cap);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceReply, cap)) {
+        HDF_LOGE("%{public}s: write cap failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (bssid != NULL) {
+        OsalMemFree(bssid);
+        bssid = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pListNetworks(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    struct HdiP2pNetworkList* infoList = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    infoList = (struct HdiP2pNetworkList*)OsalMemCalloc(sizeof(struct HdiP2pNetworkList));
+    if (infoList == NULL) {
+        HDF_LOGE("%{public}s: malloc infoList failed", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pListNetworks == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pListNetworks ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pListNetworks(serviceImpl, ifName, infoList);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiP2pNetworkListBlockMarshalling(wpaInterfaceReply, infoList)) {
+        HDF_LOGE("%{public}s: write infoList failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (infoList != NULL) {
+        HdiP2pNetworkListFree(infoList, true);
+        infoList = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubP2pSaveConfig(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->P2pSaveConfig == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function P2pSaveConfig ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->P2pSaveConfig(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubReassociate(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Reassociate == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Reassociate ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->Reassociate(serviceImpl, ifName);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubStaShellCmd(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+    char* ifName = NULL;
+    char* cmd = NULL;
+
+    const char *ifNameCp = HdfSbufReadString(wpaInterfaceData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    const char *cmdCp = HdfSbufReadString(wpaInterfaceData);
+    if (cmdCp == NULL) {
+        HDF_LOGE("%{public}s: read cmdCp failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    cmd = strdup(cmdCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->StaShellCmd == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function StaShellCmd ", __func__);
+        wpaInterfaceRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = serviceImpl->StaShellCmd(serviceImpl, ifName, cmd);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    if (cmd != NULL) {
+        OsalMemFree(cmd);
+        cmd = NULL;
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t SerStubGetVersion(struct IWpaInterface *serviceImpl, struct HdfSBuf *wpaInterfaceData, struct HdfSBuf *wpaInterfaceReply)
+{
+    int32_t wpaInterfaceRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(wpaInterfaceReply, IWPA_INTERFACE_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IWPA_INTERFACE_MAJOR_VERSION failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceReply, IWPA_INTERFACE_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IWPA_INTERFACE_MINOR_VERSION failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return wpaInterfaceRet;
+}
+
+static struct HdfRemoteService *WpaInterfaceStubAsObject(struct IWpaInterface *self)
+{
+    return NULL;
+}
+
+static int32_t WpaInterfaceOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct WpaInterfaceStub *stub = (struct WpaInterfaceStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_WPA_INTERFACE_START:
+            return SerStubStart(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_STOP:
+            return SerStubStop(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_ADD_WPA_IFACE:
+            return SerStubAddWpaIface(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_REMOVE_WPA_IFACE:
+            return SerStubRemoveWpaIface(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SCAN:
+            return SerStubScan(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SCAN_RESULT:
+            return SerStubScanResult(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_ADD_NETWORK:
+            return SerStubAddNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_REMOVE_NETWORK:
+            return SerStubRemoveNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_DISABLE_NETWORK:
+            return SerStubDisableNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SET_NETWORK:
+            return SerStubSetNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_LIST_NETWORKS:
+            return SerStubListNetworks(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SELECT_NETWORK:
+            return SerStubSelectNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_ENABLE_NETWORK:
+            return SerStubEnableNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_RECONNECT:
+            return SerStubReconnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_DISCONNECT:
+            return SerStubDisconnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SAVE_CONFIG:
+            return SerStubSaveConfig(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SET_POWER_SAVE:
+            return SerStubSetPowerSave(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_AUTO_CONNECT:
+            return SerStubAutoConnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_WIFI_STATUS:
+            return SerStubWifiStatus(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_WPS_PBC_MODE:
+            return SerStubWpsPbcMode(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_WPS_PIN_MODE:
+            return SerStubWpsPinMode(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_WPS_CANCEL:
+            return SerStubWpsCancel(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_COUNTRY_CODE:
+            return SerStubGetCountryCode(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_NETWORK:
+            return SerStubGetNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_BLOCKLIST_CLEAR:
+            return SerStubBlocklistClear(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SET_SUSPEND_MODE:
+            return SerStubSetSuspendMode(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_REGISTER_EVENT_CALLBACK:
+            return SerStubRegisterEventCallback(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_UNREGISTER_EVENT_CALLBACK:
+            return SerStubUnregisterEventCallback(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_CONNECTION_CAPABILITIES:
+            return SerStubGetConnectionCapabilities(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_SCAN_SSID:
+            return SerStubGetScanSsid(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_PSK_PASSPHRASE:
+            return SerStubGetPskPassphrase(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_PSK:
+            return SerStubGetPsk(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_WEP_KEY:
+            return SerStubGetWepKey(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_WEP_TX_KEY_IDX:
+            return SerStubGetWepTxKeyIdx(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_REQUIRE_PMF:
+            return SerStubGetRequirePmf(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_SET_COUNTRY_CODE:
+            return SerStubSetCountryCode(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_SSID_POSTFIX_NAME:
+            return SerStubP2pSetSsidPostfixName(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_WPS_DEVICE_TYPE:
+            return SerStubP2pSetWpsDeviceType(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_WPS_CONFIG_METHODS:
+            return SerStubP2pSetWpsConfigMethods(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_GROUP_MAX_IDLE:
+            return SerStubP2pSetGroupMaxIdle(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_WFD_ENABLE:
+            return SerStubP2pSetWfdEnable(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_PERSISTENT_RECONNECT:
+            return SerStubP2pSetPersistentReconnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_WPS_SECONDARY_DEVICE_TYPE:
+            return SerStubP2pSetWpsSecondaryDeviceType(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SETUP_WPS_PBC:
+            return SerStubP2pSetupWpsPbc(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SETUP_WPS_PIN:
+            return SerStubP2pSetupWpsPin(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_POWER_SAVE:
+            return SerStubP2pSetPowerSave(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_DEVICE_NAME:
+            return SerStubP2pSetDeviceName(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_WFD_DEVICE_CONFIG:
+            return SerStubP2pSetWfdDeviceConfig(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_RANDOM_MAC:
+            return SerStubP2pSetRandomMac(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_START_FIND:
+            return SerStubP2pStartFind(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_EXT_LISTEN:
+            return SerStubP2pSetExtListen(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_LISTEN_CHANNEL:
+            return SerStubP2pSetListenChannel(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_PROVISION_DISCOVERY:
+            return SerStubP2pProvisionDiscovery(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_ADD_GROUP:
+            return SerStubP2pAddGroup(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_ADD_SERVICE:
+            return SerStubP2pAddService(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_REMOVE_SERVICE:
+            return SerStubP2pRemoveService(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_STOP_FIND:
+            return SerStubP2pStopFind(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_FLUSH:
+            return SerStubP2pFlush(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_FLUSH_SERVICE:
+            return SerStubP2pFlushService(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_REMOVE_NETWORK:
+            return SerStubP2pRemoveNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_GROUP_CONFIG:
+            return SerStubP2pSetGroupConfig(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_INVITE:
+            return SerStubP2pInvite(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_REINVOKE:
+            return SerStubP2pReinvoke(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_GET_DEVICE_ADDRESS:
+            return SerStubP2pGetDeviceAddress(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_REQ_SERVICE_DISCOVERY:
+            return SerStubP2pReqServiceDiscovery(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_CANCEL_SERVICE_DISCOVERY:
+            return SerStubP2pCancelServiceDiscovery(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_RESP_SERVER_DISCOVERY:
+            return SerStubP2pRespServerDiscovery(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_CONNECT:
+            return SerStubP2pConnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_HID2D_CONNECT:
+            return SerStubP2pHid2dConnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SET_SERV_DISC_EXTERNAL:
+            return SerStubP2pSetServDiscExternal(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_REMOVE_GROUP:
+            return SerStubP2pRemoveGroup(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_CANCEL_CONNECT:
+            return SerStubP2pCancelConnect(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_GET_GROUP_CONFIG:
+            return SerStubP2pGetGroupConfig(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_ADD_NETWORK:
+            return SerStubP2pAddNetwork(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_GET_PEER:
+            return SerStubP2pGetPeer(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_GET_GROUP_CAPABILITY:
+            return SerStubP2pGetGroupCapability(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_LIST_NETWORKS:
+            return SerStubP2pListNetworks(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_P2P_SAVE_CONFIG:
+            return SerStubP2pSaveConfig(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_REASSOCIATE:
+            return SerStubReassociate(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_STA_SHELL_CMD:
+            return SerStubStaShellCmd(stub->interface, data, reply);
+        case CMD_WPA_INTERFACE_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteDispatcher g_wpainterfaceDispatcher = {
+    .Dispatch = WpaInterfaceOnRemoteRequest,
+    .DispatchAsync = NULL,
+};
+
+static struct HdfRemoteService **WpaInterfaceStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IWpaInterface *serviceImpl = (struct IWpaInterface *)impl;
+    struct WpaInterfaceStub *stub = OsalMemCalloc(sizeof(struct WpaInterfaceStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &g_wpainterfaceDispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IWPAINTERFACE_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = WpaInterfaceOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = WpaInterfaceStubAsObject;
+    return &stub->remote;
+}
+
+static void WpaInterfaceStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct WpaInterfaceStub *stub = CONTAINER_OF(remote, struct WpaInterfaceStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_wpainterfaceConstructor = {
+    .constructor = WpaInterfaceStubNewInstance,
+    .destructor = WpaInterfaceStubRelease,
+};
+
+__attribute__((constructor)) static void WpaInterfaceStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IWPAINTERFACE_INTERFACE_DESC);
+    StubConstructorRegister(IWPAINTERFACE_INTERFACE_DESC, &g_wpainterfaceConstructor);
+}

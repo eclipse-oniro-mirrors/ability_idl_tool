@@ -1,0 +1,4937 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include <stub_collector.h>
+#include "v1_0/iwpa_interface.h"
+
+#define HDF_LOG_TAG    wpa_interface_proxy
+
+struct WpaInterfaceProxy {
+    struct IWpaInterface impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface);
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count);
+
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface)
+{
+    if (interface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        return false;
+    }
+
+    struct HdfRemoteService **stub = StubCollectorGetOrNewObject(desc, interface);
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub of '%{public}s'", __func__, desc);
+        return false;
+    }
+
+    if (HdfSbufWriteRemoteService(parcel, *stub) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to write remote service", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count)
+{
+    uint32_t elementCount = 0;
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read array size", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        goto FINISHED;
+    }
+
+    const void * dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read array", __func__);
+        return false;
+    }
+
+    if (memcpy_s(data, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to copy array data", __func__);
+        return false;
+    }
+
+FINISHED:
+    *count = elementCount;
+    return true;
+}
+
+static int32_t WpaInterfaceProxyCall(struct IWpaInterface *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t WpaInterfaceProxyStart(struct IWpaInterface *self)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_START, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyStop(struct IWpaInterface *self)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_STOP, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyAddWpaIface(struct IWpaInterface *self, const char* ifName, const char* confName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, confName)) {
+        HDF_LOGE("%{public}s: write confName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_ADD_WPA_IFACE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyRemoveWpaIface(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_REMOVE_WPA_IFACE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyScan(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SCAN, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyScanResult(struct IWpaInterface *self, const char* ifName, uint8_t* resultBuf,
+     uint32_t* resultBufLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (resultBuf == NULL || resultBufLen == NULL || *resultBufLen == 0) {
+        HDF_LOGE("%{public}s: resultBuf is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, *resultBufLen)) {
+        HDF_LOGE("%{public}s: write resultBufLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SCAN_RESULT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(wpaInterfaceReply, resultBuf, sizeof(uint8_t), resultBufLen)) {
+        HDF_LOGE("%{public}s: failed to read resultBuf", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyAddNetwork(struct IWpaInterface *self, const char* ifName, int32_t* networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_ADD_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, networkId)) {
+        HDF_LOGE("%{public}s: read networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyRemoveNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_REMOVE_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyDisableNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_DISABLE_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySetNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId,
+     const char* name, const char* value)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, name)) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SET_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyListNetworks(struct IWpaInterface *self, const char* ifName,
+     struct HdiWifiWpaNetworkInfo* networkInfo, uint32_t* networkInfoLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (networkInfo == NULL || networkInfoLen == NULL || *networkInfoLen == 0) {
+        HDF_LOGE("%{public}s: networkInfo is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, *networkInfoLen)) {
+        HDF_LOGE("%{public}s: write networkInfoLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_LIST_NETWORKS, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(wpaInterfaceReply, networkInfoLen)) {
+        HDF_LOGE("%{public}s: read networkInfo size failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    HDI_CHECK_VALUE_RET_GOTO(*networkInfoLen, >, HDI_BUFF_MAX_SIZE / sizeof(struct HdiWifiWpaNetworkInfo), wpaInterfaceRet, HDF_ERR_INVALID_PARAM, FINISHED);
+    for (uint32_t i = 0; i < *networkInfoLen; i++) {
+        if (!HdiWifiWpaNetworkInfoBlockUnmarshalling(wpaInterfaceReply, &networkInfo[i])) {
+            HDF_LOGE("%{public}s: read &networkInfo[i] failed!", __func__);
+            wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySelectNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SELECT_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyEnableNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_ENABLE_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyReconnect(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_RECONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyDisconnect(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_DISCONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySaveConfig(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SAVE_CONFIG, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySetPowerSave(struct IWpaInterface *self, const char* ifName, int32_t enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SET_POWER_SAVE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyAutoConnect(struct IWpaInterface *self, const char* ifName, int32_t enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_AUTO_CONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyWifiStatus(struct IWpaInterface *self, const char* ifName,
+     struct HdiWpaCmdStatus* wifiStatus)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_WIFI_STATUS, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiWpaCmdStatusBlockUnmarshalling(wpaInterfaceReply, wifiStatus)) {
+        HDF_LOGE("%{public}s: read wifiStatus failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyWpsPbcMode(struct IWpaInterface *self, const char* ifName,
+     const struct HdiWifiWpsParam* wpsParam)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiWifiWpsParamBlockMarshalling(wpaInterfaceData, wpsParam)) {
+        HDF_LOGE("%{public}s: write wpsParam failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_WPS_PBC_MODE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyWpsPinMode(struct IWpaInterface *self, const char* ifName,
+     const struct HdiWifiWpsParam* wpsParam, int32_t* pinCode)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiWifiWpsParamBlockMarshalling(wpaInterfaceData, wpsParam)) {
+        HDF_LOGE("%{public}s: write wpsParam failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_WPS_PIN_MODE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, pinCode)) {
+        HDF_LOGE("%{public}s: read pinCode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyWpsCancel(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_WPS_CANCEL, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetCountryCode(struct IWpaInterface *self, const char* ifName, char* countrycode,
+     uint32_t countrycodeLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (countrycode == NULL || countrycodeLen == 0) {
+        HDF_LOGE("%{public}s: countrycode is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, countrycodeLen)) {
+        HDF_LOGE("%{public}s: write countrycodeLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_COUNTRY_CODE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *countrycodeCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (countrycodeCopy == NULL) {
+        HDF_LOGE("%{public}s: read countrycodeCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(countrycode, countrycodeLen, countrycodeCopy) != EOK) {
+        HDF_LOGE("%{public}s: read countrycode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId,
+     const char* param, char* value, uint32_t valueLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, param)) {
+        HDF_LOGE("%{public}s: write param failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (value == NULL || valueLen == 0) {
+        HDF_LOGE("%{public}s: value is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, valueLen)) {
+        HDF_LOGE("%{public}s: write valueLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *valueCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (valueCopy == NULL) {
+        HDF_LOGE("%{public}s: read valueCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(value, valueLen, valueCopy) != EOK) {
+        HDF_LOGE("%{public}s: read value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyBlocklistClear(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_BLOCKLIST_CLEAR, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySetSuspendMode(struct IWpaInterface *self, const char* ifName, int32_t mode)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SET_SUSPEND_MODE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyRegisterEventCallback(struct IWpaInterface *self, struct IWpaCallback* cbFunc,
+     const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(wpaInterfaceData, IWPACALLBACK_INTERFACE_DESC, cbFunc)) {
+        HDF_LOGE("%{public}s: write cbFunc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_REGISTER_EVENT_CALLBACK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyUnregisterEventCallback(struct IWpaInterface *self, struct IWpaCallback* cbFunc,
+     const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(wpaInterfaceData, IWPACALLBACK_INTERFACE_DESC, cbFunc)) {
+        HDF_LOGE("%{public}s: write cbFunc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_UNREGISTER_EVENT_CALLBACK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetConnectionCapabilities(struct IWpaInterface *self, const char* ifName,
+     struct ConnectionCapabilities* connectionCap)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_CONNECTION_CAPABILITIES, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!ConnectionCapabilitiesBlockUnmarshalling(wpaInterfaceReply, connectionCap)) {
+        HDF_LOGE("%{public}s: read connectionCap failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetScanSsid(struct IWpaInterface *self, const char* ifName, int32_t* enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_SCAN_SSID, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, enable)) {
+        HDF_LOGE("%{public}s: read enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetPskPassphrase(struct IWpaInterface *self, const char* ifName, char* psk,
+     uint32_t pskLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (psk == NULL || pskLen == 0) {
+        HDF_LOGE("%{public}s: psk is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, pskLen)) {
+        HDF_LOGE("%{public}s: write pskLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_PSK_PASSPHRASE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *pskCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (pskCopy == NULL) {
+        HDF_LOGE("%{public}s: read pskCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(psk, pskLen, pskCopy) != EOK) {
+        HDF_LOGE("%{public}s: read psk failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetPsk(struct IWpaInterface *self, const char* ifName, uint8_t* psk, uint32_t* pskLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (psk == NULL || pskLen == NULL || *pskLen == 0) {
+        HDF_LOGE("%{public}s: psk is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, *pskLen)) {
+        HDF_LOGE("%{public}s: write pskLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_PSK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(wpaInterfaceReply, psk, sizeof(uint8_t), pskLen)) {
+        HDF_LOGE("%{public}s: failed to read psk", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetWepKey(struct IWpaInterface *self, const char* ifName, int32_t keyIdx,
+     uint8_t* wepKey, uint32_t* wepKeyLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, keyIdx)) {
+        HDF_LOGE("%{public}s: write keyIdx failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (wepKey == NULL || wepKeyLen == NULL || *wepKeyLen == 0) {
+        HDF_LOGE("%{public}s: wepKey is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, *wepKeyLen)) {
+        HDF_LOGE("%{public}s: write wepKeyLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_WEP_KEY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!ReadPodArray(wpaInterfaceReply, wepKey, sizeof(uint8_t), wepKeyLen)) {
+        HDF_LOGE("%{public}s: failed to read wepKey", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetWepTxKeyIdx(struct IWpaInterface *self, const char* ifName, int32_t* keyIdx)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_WEP_TX_KEY_IDX, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, keyIdx)) {
+        HDF_LOGE("%{public}s: read keyIdx failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetRequirePmf(struct IWpaInterface *self, const char* ifName, int32_t* enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_REQUIRE_PMF, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, enable)) {
+        HDF_LOGE("%{public}s: read enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxySetCountryCode(struct IWpaInterface *self, const char* ifName, const char* countrycode)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, countrycode)) {
+        HDF_LOGE("%{public}s: write countrycode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_SET_COUNTRY_CODE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetSsidPostfixName(struct IWpaInterface *self, const char* ifName, const char* name)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, name)) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_SSID_POSTFIX_NAME, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetWpsDeviceType(struct IWpaInterface *self, const char* ifName, const char* type)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, type)) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_WPS_DEVICE_TYPE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetWpsConfigMethods(struct IWpaInterface *self, const char* ifName,
+     const char* methods)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, methods)) {
+        HDF_LOGE("%{public}s: write methods failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_WPS_CONFIG_METHODS, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetGroupMaxIdle(struct IWpaInterface *self, const char* ifName, int32_t time)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, time)) {
+        HDF_LOGE("%{public}s: write time failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_GROUP_MAX_IDLE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetWfdEnable(struct IWpaInterface *self, const char* ifName, int32_t enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_WFD_ENABLE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetPersistentReconnect(struct IWpaInterface *self, const char* ifName,
+     int32_t status)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, status)) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_PERSISTENT_RECONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetWpsSecondaryDeviceType(struct IWpaInterface *self, const char* ifName,
+     const char* type)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, type)) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_WPS_SECONDARY_DEVICE_TYPE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetupWpsPbc(struct IWpaInterface *self, const char* ifName, const char* address)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, address)) {
+        HDF_LOGE("%{public}s: write address failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SETUP_WPS_PBC, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetupWpsPin(struct IWpaInterface *self, const char* ifName, const char* address,
+     const char* pin, char* result, uint32_t resultLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, address)) {
+        HDF_LOGE("%{public}s: write address failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, pin)) {
+        HDF_LOGE("%{public}s: write pin failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (result == NULL || resultLen == 0) {
+        HDF_LOGE("%{public}s: result is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, resultLen)) {
+        HDF_LOGE("%{public}s: write resultLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SETUP_WPS_PIN, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *resultCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (resultCopy == NULL) {
+        HDF_LOGE("%{public}s: read resultCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(result, resultLen, resultCopy) != EOK) {
+        HDF_LOGE("%{public}s: read result failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetPowerSave(struct IWpaInterface *self, const char* ifName, int32_t enable)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_POWER_SAVE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetDeviceName(struct IWpaInterface *self, const char* ifName, const char* name)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, name)) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_DEVICE_NAME, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetWfdDeviceConfig(struct IWpaInterface *self, const char* ifName,
+     const char* config)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, config)) {
+        HDF_LOGE("%{public}s: write config failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_WFD_DEVICE_CONFIG, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetRandomMac(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_RANDOM_MAC, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pStartFind(struct IWpaInterface *self, const char* ifName, int32_t timeout)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_START_FIND, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetExtListen(struct IWpaInterface *self, const char* ifName, int32_t enable,
+     int32_t period, int32_t interval)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, enable)) {
+        HDF_LOGE("%{public}s: write enable failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, period)) {
+        HDF_LOGE("%{public}s: write period failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, interval)) {
+        HDF_LOGE("%{public}s: write interval failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_EXT_LISTEN, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetListenChannel(struct IWpaInterface *self, const char* ifName, int32_t channel,
+     int32_t regClass)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, channel)) {
+        HDF_LOGE("%{public}s: write channel failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, regClass)) {
+        HDF_LOGE("%{public}s: write regClass failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_LISTEN_CHANNEL, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pProvisionDiscovery(struct IWpaInterface *self, const char* ifName,
+     const char* peerBssid, int32_t mode)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, peerBssid)) {
+        HDF_LOGE("%{public}s: write peerBssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_PROVISION_DISCOVERY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pAddGroup(struct IWpaInterface *self, const char* ifName, int32_t isPersistent,
+     int32_t networkId, int32_t freq)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, isPersistent)) {
+        HDF_LOGE("%{public}s: write isPersistent failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, freq)) {
+        HDF_LOGE("%{public}s: write freq failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_ADD_GROUP, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pAddService(struct IWpaInterface *self, const char* ifName,
+     const struct HdiP2pServiceInfo* info)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiP2pServiceInfoBlockMarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_ADD_SERVICE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pRemoveService(struct IWpaInterface *self, const char* ifName,
+     const struct HdiP2pServiceInfo* info)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiP2pServiceInfoBlockMarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_REMOVE_SERVICE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pStopFind(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_STOP_FIND, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pFlush(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_FLUSH, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pFlushService(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_FLUSH_SERVICE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pRemoveNetwork(struct IWpaInterface *self, const char* ifName, int32_t networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_REMOVE_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetGroupConfig(struct IWpaInterface *self, const char* ifName, int32_t networkId,
+     const char* name, const char* value)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, name)) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_GROUP_CONFIG, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pInvite(struct IWpaInterface *self, const char* ifName, const char* peerBssid,
+     const char* goBssid)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, peerBssid)) {
+        HDF_LOGE("%{public}s: write peerBssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, goBssid)) {
+        HDF_LOGE("%{public}s: write goBssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_INVITE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pReinvoke(struct IWpaInterface *self, const char* ifName, int32_t networkId,
+     const char* bssid)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, bssid)) {
+        HDF_LOGE("%{public}s: write bssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_REINVOKE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pGetDeviceAddress(struct IWpaInterface *self, const char* ifName, char* deviceAddress,
+     uint32_t deviceAddressLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (deviceAddress == NULL || deviceAddressLen == 0) {
+        HDF_LOGE("%{public}s: deviceAddress is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, deviceAddressLen)) {
+        HDF_LOGE("%{public}s: write deviceAddressLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_GET_DEVICE_ADDRESS, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *deviceAddressCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (deviceAddressCopy == NULL) {
+        HDF_LOGE("%{public}s: read deviceAddressCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(deviceAddress, deviceAddressLen, deviceAddressCopy) != EOK) {
+        HDF_LOGE("%{public}s: read deviceAddress failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pReqServiceDiscovery(struct IWpaInterface *self, const char* ifName,
+     const struct HdiP2pReqService* reqService, char* replyDisc, uint32_t replyDiscLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiP2pReqServiceBlockMarshalling(wpaInterfaceData, reqService)) {
+        HDF_LOGE("%{public}s: write reqService failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (replyDisc == NULL || replyDiscLen == 0) {
+        HDF_LOGE("%{public}s: replyDisc is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, replyDiscLen)) {
+        HDF_LOGE("%{public}s: write replyDiscLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_REQ_SERVICE_DISCOVERY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *replyDiscCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (replyDiscCopy == NULL) {
+        HDF_LOGE("%{public}s: read replyDiscCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(replyDisc, replyDiscLen, replyDiscCopy) != EOK) {
+        HDF_LOGE("%{public}s: read replyDisc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pCancelServiceDiscovery(struct IWpaInterface *self, const char* ifName,
+     const char* id)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_CANCEL_SERVICE_DISCOVERY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pRespServerDiscovery(struct IWpaInterface *self, const char* ifName,
+     const struct HdiP2pServDiscReqInfo* info)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiP2pServDiscReqInfoBlockMarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_RESP_SERVER_DISCOVERY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pConnect(struct IWpaInterface *self, const char* ifName,
+     const struct HdiP2pConnectInfo* info, char* replyPin, uint32_t replyPinLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiP2pConnectInfoBlockMarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (replyPin == NULL || replyPinLen == 0) {
+        HDF_LOGE("%{public}s: replyPin is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, replyPinLen)) {
+        HDF_LOGE("%{public}s: write replyPinLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_CONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *replyPinCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (replyPinCopy == NULL) {
+        HDF_LOGE("%{public}s: read replyPinCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(replyPin, replyPinLen, replyPinCopy) != EOK) {
+        HDF_LOGE("%{public}s: read replyPin failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pHid2dConnect(struct IWpaInterface *self, const char* ifName,
+     const struct HdiHid2dConnectInfo* info)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdiHid2dConnectInfoBlockMarshalling(wpaInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_HID2D_CONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSetServDiscExternal(struct IWpaInterface *self, const char* ifName, int32_t mode)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SET_SERV_DISC_EXTERNAL, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pRemoveGroup(struct IWpaInterface *self, const char* ifName, const char* groupName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, groupName)) {
+        HDF_LOGE("%{public}s: write groupName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_REMOVE_GROUP, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pCancelConnect(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_CANCEL_CONNECT, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pGetGroupConfig(struct IWpaInterface *self, const char* ifName, int32_t networkId,
+     const char* param, char* value, uint32_t valueLen)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(wpaInterfaceData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(wpaInterfaceData, networkId)) {
+        HDF_LOGE("%{public}s: write networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, param)) {
+        HDF_LOGE("%{public}s: write param failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (value == NULL || valueLen == 0) {
+        HDF_LOGE("%{public}s: value is invalid", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wpaInterfaceData, valueLen)) {
+        HDF_LOGE("%{public}s: write valueLen failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_GET_GROUP_CONFIG, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    const char *valueCopy = HdfSbufReadString(wpaInterfaceReply);
+    if (valueCopy == NULL) {
+        HDF_LOGE("%{public}s: read valueCopy failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(value, valueLen, valueCopy) != EOK) {
+        HDF_LOGE("%{public}s: read value failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pAddNetwork(struct IWpaInterface *self, const char* ifName, int32_t* networkId)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_ADD_NETWORK, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, networkId)) {
+        HDF_LOGE("%{public}s: read networkId failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pGetPeer(struct IWpaInterface *self, const char* ifName, const char* bssid,
+     struct HdiP2pDeviceInfo* info)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, bssid)) {
+        HDF_LOGE("%{public}s: write bssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_GET_PEER, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiP2pDeviceInfoBlockUnmarshalling(wpaInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pGetGroupCapability(struct IWpaInterface *self, const char* ifName, const char* bssid,
+     int32_t* cap)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, bssid)) {
+        HDF_LOGE("%{public}s: write bssid failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_GET_GROUP_CAPABILITY, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wpaInterfaceReply, cap)) {
+        HDF_LOGE("%{public}s: read cap failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pListNetworks(struct IWpaInterface *self, const char* ifName,
+     struct HdiP2pNetworkList* infoList)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_LIST_NETWORKS, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdiP2pNetworkListBlockUnmarshalling(wpaInterfaceReply, infoList)) {
+        HDF_LOGE("%{public}s: read infoList failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyP2pSaveConfig(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_P2P_SAVE_CONFIG, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyReassociate(struct IWpaInterface *self, const char* ifName)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_REASSOCIATE, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyStaShellCmd(struct IWpaInterface *self, const char* ifName, const char* cmd)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, ifName)) {
+        HDF_LOGE("%{public}s: write ifName failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(wpaInterfaceData, cmd)) {
+        HDF_LOGE("%{public}s: write cmd failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_STA_SHELL_CMD, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static int32_t WpaInterfaceProxyGetVersion(struct IWpaInterface *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t wpaInterfaceRet = HDF_FAILURE;
+
+    struct HdfSBuf *wpaInterfaceData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *wpaInterfaceReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (wpaInterfaceData == NULL || wpaInterfaceReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), wpaInterfaceData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    wpaInterfaceRet = WpaInterfaceProxyCall(self, CMD_WPA_INTERFACE_GET_VERSION, wpaInterfaceData, wpaInterfaceReply, false);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, wpaInterfaceRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(wpaInterfaceReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(wpaInterfaceReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        wpaInterfaceRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (wpaInterfaceData != NULL) {
+        HdfSbufRecycle(wpaInterfaceData);
+    }
+    if (wpaInterfaceReply != NULL) {
+        HdfSbufRecycle(wpaInterfaceReply);
+    }
+    return wpaInterfaceRet;
+}
+
+static struct HdfRemoteService *WpaInterfaceProxyAsObject(struct IWpaInterface *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct WpaInterfaceProxy *proxy = CONTAINER_OF(self, struct WpaInterfaceProxy, impl);
+    return proxy->remote;
+}
+
+static void WpaInterfaceProxyConstruct(struct IWpaInterface *impl)
+{
+    impl->Start = WpaInterfaceProxyStart;
+    impl->Stop = WpaInterfaceProxyStop;
+    impl->AddWpaIface = WpaInterfaceProxyAddWpaIface;
+    impl->RemoveWpaIface = WpaInterfaceProxyRemoveWpaIface;
+    impl->Scan = WpaInterfaceProxyScan;
+    impl->ScanResult = WpaInterfaceProxyScanResult;
+    impl->AddNetwork = WpaInterfaceProxyAddNetwork;
+    impl->RemoveNetwork = WpaInterfaceProxyRemoveNetwork;
+    impl->DisableNetwork = WpaInterfaceProxyDisableNetwork;
+    impl->SetNetwork = WpaInterfaceProxySetNetwork;
+    impl->ListNetworks = WpaInterfaceProxyListNetworks;
+    impl->SelectNetwork = WpaInterfaceProxySelectNetwork;
+    impl->EnableNetwork = WpaInterfaceProxyEnableNetwork;
+    impl->Reconnect = WpaInterfaceProxyReconnect;
+    impl->Disconnect = WpaInterfaceProxyDisconnect;
+    impl->SaveConfig = WpaInterfaceProxySaveConfig;
+    impl->SetPowerSave = WpaInterfaceProxySetPowerSave;
+    impl->AutoConnect = WpaInterfaceProxyAutoConnect;
+    impl->WifiStatus = WpaInterfaceProxyWifiStatus;
+    impl->WpsPbcMode = WpaInterfaceProxyWpsPbcMode;
+    impl->WpsPinMode = WpaInterfaceProxyWpsPinMode;
+    impl->WpsCancel = WpaInterfaceProxyWpsCancel;
+    impl->GetCountryCode = WpaInterfaceProxyGetCountryCode;
+    impl->GetNetwork = WpaInterfaceProxyGetNetwork;
+    impl->BlocklistClear = WpaInterfaceProxyBlocklistClear;
+    impl->SetSuspendMode = WpaInterfaceProxySetSuspendMode;
+    impl->RegisterEventCallback = WpaInterfaceProxyRegisterEventCallback;
+    impl->UnregisterEventCallback = WpaInterfaceProxyUnregisterEventCallback;
+    impl->GetConnectionCapabilities = WpaInterfaceProxyGetConnectionCapabilities;
+    impl->GetScanSsid = WpaInterfaceProxyGetScanSsid;
+    impl->GetPskPassphrase = WpaInterfaceProxyGetPskPassphrase;
+    impl->GetPsk = WpaInterfaceProxyGetPsk;
+    impl->GetWepKey = WpaInterfaceProxyGetWepKey;
+    impl->GetWepTxKeyIdx = WpaInterfaceProxyGetWepTxKeyIdx;
+    impl->GetRequirePmf = WpaInterfaceProxyGetRequirePmf;
+    impl->SetCountryCode = WpaInterfaceProxySetCountryCode;
+    impl->P2pSetSsidPostfixName = WpaInterfaceProxyP2pSetSsidPostfixName;
+    impl->P2pSetWpsDeviceType = WpaInterfaceProxyP2pSetWpsDeviceType;
+    impl->P2pSetWpsConfigMethods = WpaInterfaceProxyP2pSetWpsConfigMethods;
+    impl->P2pSetGroupMaxIdle = WpaInterfaceProxyP2pSetGroupMaxIdle;
+    impl->P2pSetWfdEnable = WpaInterfaceProxyP2pSetWfdEnable;
+    impl->P2pSetPersistentReconnect = WpaInterfaceProxyP2pSetPersistentReconnect;
+    impl->P2pSetWpsSecondaryDeviceType = WpaInterfaceProxyP2pSetWpsSecondaryDeviceType;
+    impl->P2pSetupWpsPbc = WpaInterfaceProxyP2pSetupWpsPbc;
+    impl->P2pSetupWpsPin = WpaInterfaceProxyP2pSetupWpsPin;
+    impl->P2pSetPowerSave = WpaInterfaceProxyP2pSetPowerSave;
+    impl->P2pSetDeviceName = WpaInterfaceProxyP2pSetDeviceName;
+    impl->P2pSetWfdDeviceConfig = WpaInterfaceProxyP2pSetWfdDeviceConfig;
+    impl->P2pSetRandomMac = WpaInterfaceProxyP2pSetRandomMac;
+    impl->P2pStartFind = WpaInterfaceProxyP2pStartFind;
+    impl->P2pSetExtListen = WpaInterfaceProxyP2pSetExtListen;
+    impl->P2pSetListenChannel = WpaInterfaceProxyP2pSetListenChannel;
+    impl->P2pProvisionDiscovery = WpaInterfaceProxyP2pProvisionDiscovery;
+    impl->P2pAddGroup = WpaInterfaceProxyP2pAddGroup;
+    impl->P2pAddService = WpaInterfaceProxyP2pAddService;
+    impl->P2pRemoveService = WpaInterfaceProxyP2pRemoveService;
+    impl->P2pStopFind = WpaInterfaceProxyP2pStopFind;
+    impl->P2pFlush = WpaInterfaceProxyP2pFlush;
+    impl->P2pFlushService = WpaInterfaceProxyP2pFlushService;
+    impl->P2pRemoveNetwork = WpaInterfaceProxyP2pRemoveNetwork;
+    impl->P2pSetGroupConfig = WpaInterfaceProxyP2pSetGroupConfig;
+    impl->P2pInvite = WpaInterfaceProxyP2pInvite;
+    impl->P2pReinvoke = WpaInterfaceProxyP2pReinvoke;
+    impl->P2pGetDeviceAddress = WpaInterfaceProxyP2pGetDeviceAddress;
+    impl->P2pReqServiceDiscovery = WpaInterfaceProxyP2pReqServiceDiscovery;
+    impl->P2pCancelServiceDiscovery = WpaInterfaceProxyP2pCancelServiceDiscovery;
+    impl->P2pRespServerDiscovery = WpaInterfaceProxyP2pRespServerDiscovery;
+    impl->P2pConnect = WpaInterfaceProxyP2pConnect;
+    impl->P2pHid2dConnect = WpaInterfaceProxyP2pHid2dConnect;
+    impl->P2pSetServDiscExternal = WpaInterfaceProxyP2pSetServDiscExternal;
+    impl->P2pRemoveGroup = WpaInterfaceProxyP2pRemoveGroup;
+    impl->P2pCancelConnect = WpaInterfaceProxyP2pCancelConnect;
+    impl->P2pGetGroupConfig = WpaInterfaceProxyP2pGetGroupConfig;
+    impl->P2pAddNetwork = WpaInterfaceProxyP2pAddNetwork;
+    impl->P2pGetPeer = WpaInterfaceProxyP2pGetPeer;
+    impl->P2pGetGroupCapability = WpaInterfaceProxyP2pGetGroupCapability;
+    impl->P2pListNetworks = WpaInterfaceProxyP2pListNetworks;
+    impl->P2pSaveConfig = WpaInterfaceProxyP2pSaveConfig;
+    impl->Reassociate = WpaInterfaceProxyReassociate;
+    impl->StaShellCmd = WpaInterfaceProxyStaShellCmd;
+    impl->GetVersion = WpaInterfaceProxyGetVersion;
+    impl->AsObject = WpaInterfaceProxyAsObject;
+}
+
+struct IWpaInterface *IWpaInterfaceGet(bool isStub)
+{
+    return IWpaInterfaceGetInstance("wpa_interface_service", isStub);
+}
+
+struct IWpaInterface *IWpaInterfaceGetInstance(const char *serviceName, bool isStub)
+{
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "wpa_interface_service") == 0) {
+            instName = "service";
+        }
+        return LoadHdiImpl(IWPAINTERFACE_INTERFACE_DESC, instName);
+    }
+
+    struct HDIServiceManager *serviceMgr = HDIServiceManagerGet();
+    if (serviceMgr == NULL) {
+        HDF_LOGE("%{public}s: HDIServiceManager not found!", __func__);
+        return NULL;
+    }
+
+    struct HdfRemoteService *remote = serviceMgr->GetService(serviceMgr, serviceName);
+    HDIServiceManagerRelease(serviceMgr);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: failed to get remote!", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IWPAINTERFACE_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct WpaInterfaceProxy *proxy = (struct WpaInterfaceProxy *)OsalMemCalloc(sizeof(struct WpaInterfaceProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IWpaInterface proxy failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    WpaInterfaceProxyConstruct(&proxy->impl);
+    struct IWpaInterface *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t wpaInterfaceRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (wpaInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IWpaInterfaceRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IWPA_INTERFACE_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IWPA_INTERFACE_MAJOR_VERSION, IWPA_INTERFACE_MINOR_VERSION);
+        IWpaInterfaceRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IWpaInterfaceRelease(struct IWpaInterface *instance, bool isStub)
+{
+    IWpaInterfaceReleaseInstance("wpa_interface_service", instance, isStub);
+}
+
+void IWpaInterfaceReleaseInstance(const char *serviceName, struct IWpaInterface *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+
+    if (isStub) {
+        const char *instName = serviceName;
+        if (strcmp(instName, "wpa_interface_service") == 0) {
+            instName = "service";
+        }
+        UnloadHdiImpl(IWPAINTERFACE_INTERFACE_DESC, instName, instance);
+        return;
+    }
+
+    struct WpaInterfaceProxy *proxy = CONTAINER_OF(instance, struct WpaInterfaceProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

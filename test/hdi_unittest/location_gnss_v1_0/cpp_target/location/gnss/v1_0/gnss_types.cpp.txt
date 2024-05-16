@@ -1,0 +1,315 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/gnss_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Gnss {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SatelliteStatusInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::SatelliteStatusInfo& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.satellitesNumber)) {
+        HDF_LOGE("%{public}s: write dataBlock.satellitesNumber failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.satelliteIds)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.satelliteIds", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.constellation)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.constellation", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.carrierToNoiseDensitys)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.carrierToNoiseDensitys", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.elevation)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.elevation", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.azimuths)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.azimuths", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.carrierFrequencies)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.carrierFrequencies", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.flags))) {
+        HDF_LOGE("%{public}s: write dataBlock.flags failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SatelliteStatusInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::SatelliteStatusInfo& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.satellitesNumber)) {
+        HDF_LOGE("%{public}s: read dataBlock.satellitesNumber failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.satelliteIds)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.satelliteIds", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.constellation)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.constellation", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.carrierToNoiseDensitys)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.carrierToNoiseDensitys", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.elevation)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.elevation", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.azimuths)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.azimuths", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.carrierFrequencies)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.carrierFrequencies", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.flags failed!", __func__);
+            return false;
+        }
+        dataBlock.flags = static_cast<enum SatellitesStatusFlag>(enumTmp);
+    }
+    return true;
+}
+
+bool GnssBasicConfigBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssBasicConfigBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssBasicConfig)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssCachingConfigBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssCachingConfigBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssCachingConfig)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssConfigParaBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssConfigParaBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefTimeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssRefTime& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefTime))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefTimeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssRefTime& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssRefTime *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssRefTime*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefTime)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefTime), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefTime)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefLocationBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefLocationBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefLocation)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LocationInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::LocationInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::LocationInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool LocationInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::LocationInfo& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::LocationInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::LocationInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::LocationInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::LocationInfo), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::LocationInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssRefInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo& dataBlock)
+{
+    const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo), dataBlockPtr, sizeof(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Gnss
+} // Location
+} // HDI
+} // OHOS
