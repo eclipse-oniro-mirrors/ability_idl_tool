@@ -1,0 +1,318 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#![allow(missing_docs)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+
+extern crate ipc_rust;
+
+use ipc_rust::{
+    IRemoteBroker, IRemoteObj, RemoteStub, Result,
+    RemoteObj, define_remote_object, FIRST_CALL_TRANSACTION
+};
+use ipc_rust::{MsgParcel, BorrowedMsgParcel};
+
+use test::myseq;
+use test::myinterface;
+
+
+pub enum IFooCode {
+    CodeBoolTestFunc  = FIRST_CALL_TRANSACTION,
+    CodeByteTestFunc,
+    CodeShortTestFunc,
+    CodeIntTestFunc,
+    CodeLongTestFunc,
+    CodeStringTestFunc,
+    CodeFloatTestFunc,
+    CodeDoubleTestFunc,
+    CodeCharTestFunc,
+    CodeSeqTestFunc,
+    CodeInterfaceTestFunc,
+}
+
+define_remote_object!(
+    IFoo["test.IFoo"] {
+        stub: FooStub(on_remote_request),
+        proxy: FooProxy,
+    }
+);
+
+pub trait IFoo: IRemoteBroker {
+    fn bool_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>>;
+    fn byte_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>>;
+    fn short_test_func(&self, in_param: &[i16], out_param: &[i16], inout_param: &[i16]) -> Result<Vec<i16>>;
+    fn int_test_func(&self, in_param: &[i32], out_param: &[i32], inout_param: &[i32]) -> Result<Vec<i32>>;
+    fn long_test_func(&self, in_param: &[i64], out_param: &[i64], inout_param: &[i64]) -> Result<Vec<i64>>;
+    fn string_test_func(&self, in_param: &[String], out_param: &[String], inout_param: &[String]) -> Result<Vec<String>>;
+    fn float_test_func(&self, in_param: &[f32], out_param: &[f32], inout_param: &[f32]) -> Result<Vec<f32>>;
+    fn double_test_func(&self, in_param: &[f64], out_param: &[f64], inout_param: &[f64]) -> Result<Vec<f64>>;
+    fn char_test_func(&self, in_param: &[char], out_param: &[char], inout_param: &[char]) -> Result<Vec<char>>;
+    fn seq_test_func(&self, in_param: &[myseq], out_param: &[myseq], inout_param: &[myseq]) -> Result<Vec<myseq>>;
+    fn interface_test_func(&self, in_param: &[myinterface], out_param: &[myinterface], inout_param: &[myinterface]) -> Result<Vec<myinterface>>;
+}
+
+fn on_remote_request(stub: &dyn IFoo, code: u32, data: &BorrowedMsgParcel,
+    reply: &mut BorrowedMsgParcel) -> Result<()> {
+    match code {
+        1 => {
+            let in_param : Vec<bool> = data.read()?;
+            let out_param : Vec<bool> = data.read()?;
+            let inout_param : Vec<bool> = data.read()?;
+            let result = stub.bool_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        2 => {
+            let in_param : Vec<bool> = data.read()?;
+            let out_param : Vec<bool> = data.read()?;
+            let inout_param : Vec<bool> = data.read()?;
+            let result = stub.byte_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        3 => {
+            let in_param : Vec<i16> = data.read()?;
+            let out_param : Vec<i16> = data.read()?;
+            let inout_param : Vec<i16> = data.read()?;
+            let result = stub.short_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        4 => {
+            let in_param : Vec<i32> = data.read()?;
+            let out_param : Vec<i32> = data.read()?;
+            let inout_param : Vec<i32> = data.read()?;
+            let result = stub.int_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        5 => {
+            let in_param : Vec<i64> = data.read()?;
+            let out_param : Vec<i64> = data.read()?;
+            let inout_param : Vec<i64> = data.read()?;
+            let result = stub.long_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        6 => {
+            let in_param : Vec<String> = data.read()?;
+            let out_param : Vec<String> = data.read()?;
+            let inout_param : Vec<String> = data.read()?;
+            let result = stub.string_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        7 => {
+            let in_param : Vec<f32> = data.read()?;
+            let out_param : Vec<f32> = data.read()?;
+            let inout_param : Vec<f32> = data.read()?;
+            let result = stub.float_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        8 => {
+            let in_param : Vec<f64> = data.read()?;
+            let out_param : Vec<f64> = data.read()?;
+            let inout_param : Vec<f64> = data.read()?;
+            let result = stub.double_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        9 => {
+            let in_param : Vec<char> = data.read()?;
+            let out_param : Vec<char> = data.read()?;
+            let inout_param : Vec<char> = data.read()?;
+            let result = stub.char_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        10 => {
+            let in_param : Vec<myseq> = data.read()?;
+            let out_param : Vec<myseq> = data.read()?;
+            let inout_param : Vec<myseq> = data.read()?;
+            let result = stub.seq_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        11 => {
+            let in_param : Vec<myinterface> = data.read()?;
+            let out_param : Vec<myinterface> = data.read()?;
+            let inout_param : Vec<myinterface> = data.read()?;
+            let result = stub.interface_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&result)?;
+            Ok(())
+        }
+        _ => Err(-1)
+    }
+}
+
+impl IFoo for RemoteStub<FooStub> {
+    fn bool_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>> {
+        self.0.bool_test_func(in_param, out_param, inout_param)
+    }
+
+    fn byte_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>> {
+        self.0.byte_test_func(in_param, out_param, inout_param)
+    }
+
+    fn short_test_func(&self, in_param: &[i16], out_param: &[i16], inout_param: &[i16]) -> Result<Vec<i16>> {
+        self.0.short_test_func(in_param, out_param, inout_param)
+    }
+
+    fn int_test_func(&self, in_param: &[i32], out_param: &[i32], inout_param: &[i32]) -> Result<Vec<i32>> {
+        self.0.int_test_func(in_param, out_param, inout_param)
+    }
+
+    fn long_test_func(&self, in_param: &[i64], out_param: &[i64], inout_param: &[i64]) -> Result<Vec<i64>> {
+        self.0.long_test_func(in_param, out_param, inout_param)
+    }
+
+    fn string_test_func(&self, in_param: &[String], out_param: &[String], inout_param: &[String]) -> Result<Vec<String>> {
+        self.0.string_test_func(in_param, out_param, inout_param)
+    }
+
+    fn float_test_func(&self, in_param: &[f32], out_param: &[f32], inout_param: &[f32]) -> Result<Vec<f32>> {
+        self.0.float_test_func(in_param, out_param, inout_param)
+    }
+
+    fn double_test_func(&self, in_param: &[f64], out_param: &[f64], inout_param: &[f64]) -> Result<Vec<f64>> {
+        self.0.double_test_func(in_param, out_param, inout_param)
+    }
+
+    fn char_test_func(&self, in_param: &[char], out_param: &[char], inout_param: &[char]) -> Result<Vec<char>> {
+        self.0.char_test_func(in_param, out_param, inout_param)
+    }
+
+    fn seq_test_func(&self, in_param: &[myseq], out_param: &[myseq], inout_param: &[myseq]) -> Result<Vec<myseq>> {
+        self.0.seq_test_func(in_param, out_param, inout_param)
+    }
+
+    fn interface_test_func(&self, in_param: &[myinterface], out_param: &[myinterface], inout_param: &[myinterface]) -> Result<Vec<myinterface>> {
+        self.0.interface_test_func(in_param, out_param, inout_param)
+    }
+}
+
+impl IFoo for FooProxy {
+    fn bool_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeBoolTestFunc as u32, &data, false)?;
+        let result : Vec<bool> = reply.read()?;
+        Ok(result)
+    }
+
+    fn byte_test_func(&self, in_param: &[bool], out_param: &[bool], inout_param: &[bool]) -> Result<Vec<bool>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeByteTestFunc as u32, &data, false)?;
+        let result : Vec<bool> = reply.read()?;
+        Ok(result)
+    }
+
+    fn short_test_func(&self, in_param: &[i16], out_param: &[i16], inout_param: &[i16]) -> Result<Vec<i16>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeShortTestFunc as u32, &data, false)?;
+        let result : Vec<i16> = reply.read()?;
+        Ok(result)
+    }
+
+    fn int_test_func(&self, in_param: &[i32], out_param: &[i32], inout_param: &[i32]) -> Result<Vec<i32>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeIntTestFunc as u32, &data, false)?;
+        let result : Vec<i32> = reply.read()?;
+        Ok(result)
+    }
+
+    fn long_test_func(&self, in_param: &[i64], out_param: &[i64], inout_param: &[i64]) -> Result<Vec<i64>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeLongTestFunc as u32, &data, false)?;
+        let result : Vec<i64> = reply.read()?;
+        Ok(result)
+    }
+
+    fn string_test_func(&self, in_param: &[String], out_param: &[String], inout_param: &[String]) -> Result<Vec<String>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeStringTestFunc as u32, &data, false)?;
+        let result : Vec<String> = reply.read()?;
+        Ok(result)
+    }
+
+    fn float_test_func(&self, in_param: &[f32], out_param: &[f32], inout_param: &[f32]) -> Result<Vec<f32>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeFloatTestFunc as u32, &data, false)?;
+        let result : Vec<f32> = reply.read()?;
+        Ok(result)
+    }
+
+    fn double_test_func(&self, in_param: &[f64], out_param: &[f64], inout_param: &[f64]) -> Result<Vec<f64>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeDoubleTestFunc as u32, &data, false)?;
+        let result : Vec<f64> = reply.read()?;
+        Ok(result)
+    }
+
+    fn char_test_func(&self, in_param: &[char], out_param: &[char], inout_param: &[char]) -> Result<Vec<char>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeCharTestFunc as u32, &data, false)?;
+        let result : Vec<char> = reply.read()?;
+        Ok(result)
+    }
+
+    fn seq_test_func(&self, in_param: &[myseq], out_param: &[myseq], inout_param: &[myseq]) -> Result<Vec<myseq>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeSeqTestFunc as u32, &data, false)?;
+        let result : Vec<myseq> = reply.read()?;
+        Ok(result)
+    }
+
+    fn interface_test_func(&self, in_param: &[myinterface], out_param: &[myinterface], inout_param: &[myinterface]) -> Result<Vec<myinterface>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let reply = self.remote.send_request(IFooCode::CodeInterfaceTestFunc as u32, &data, false)?;
+        let result : Vec<myinterface> = reply.read()?;
+        Ok(result)
+    }
+}

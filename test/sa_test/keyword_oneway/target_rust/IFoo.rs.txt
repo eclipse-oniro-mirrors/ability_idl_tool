@@ -1,0 +1,268 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#![allow(missing_docs)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+
+extern crate ipc_rust;
+
+use ipc_rust::{
+    IRemoteBroker, IRemoteObj, RemoteStub, Result,
+    RemoteObj, define_remote_object, FIRST_CALL_TRANSACTION
+};
+use ipc_rust::{MsgParcel, BorrowedMsgParcel};
+
+use test::myseq;
+use test::myinterface;
+
+
+pub enum IFooCode {
+    CodeVoidTestFunc  = FIRST_CALL_TRANSACTION,
+    CodeBoolTestFunc,
+    CodeByteTestFunc,
+    CodeShortTestFunc,
+    CodeIntTestFunc,
+    CodeLongTestFunc,
+    CodeStringTestFunc,
+    CodeFloatTestFunc,
+    CodeDoubleTestFunc,
+    CodeCharTestFunc,
+    CodeSeqTestFunc,
+    CodeInterfaceTestFunc,
+}
+
+define_remote_object!(
+    IFoo["test.IFoo"] {
+        stub: FooStub(on_remote_request),
+        proxy: FooProxy,
+    }
+);
+
+pub trait IFoo: IRemoteBroker {
+    fn void_test_func(&self) -> Result<()>;
+    fn bool_test_func(&self, in_param: &bool) -> Result<()>;
+    fn byte_test_func(&self, in_param: &i8) -> Result<()>;
+    fn short_test_func(&self, in_param: &i16) -> Result<()>;
+    fn int_test_func(&self, in_param: &i32) -> Result<()>;
+    fn long_test_func(&self, in_param: &i64) -> Result<()>;
+    fn string_test_func(&self, in_param: &str) -> Result<()>;
+    fn float_test_func(&self, in_param: &f32) -> Result<()>;
+    fn double_test_func(&self, in_param: &f64) -> Result<()>;
+    fn char_test_func(&self, in_param: &char) -> Result<()>;
+    fn seq_test_func(&self, in_param: &myseq) -> Result<()>;
+    fn interface_test_func(&self, in_param: &myinterface) -> Result<()>;
+}
+
+fn on_remote_request(stub: &dyn IFoo, code: u32, data: &BorrowedMsgParcel,
+    reply: &mut BorrowedMsgParcel) -> Result<()> {
+    match code {
+        1 => {
+            stub.void_test_func()?;
+            Ok(())
+        }
+        2 => {
+            let in_param : bool = data.read()?;
+            stub.bool_test_func(&in_param)?;
+            Ok(())
+        }
+        3 => {
+            let in_param : i8 = data.read()?;
+            stub.byte_test_func(&in_param)?;
+            Ok(())
+        }
+        4 => {
+            let in_param : i16 = data.read()?;
+            stub.short_test_func(&in_param)?;
+            Ok(())
+        }
+        5 => {
+            let in_param : i32 = data.read()?;
+            stub.int_test_func(&in_param)?;
+            Ok(())
+        }
+        6 => {
+            let in_param : i64 = data.read()?;
+            stub.long_test_func(&in_param)?;
+            Ok(())
+        }
+        7 => {
+            let in_param : String = data.read()?;
+            stub.string_test_func(&in_param)?;
+            Ok(())
+        }
+        8 => {
+            let in_param : f32 = data.read()?;
+            stub.float_test_func(&in_param)?;
+            Ok(())
+        }
+        9 => {
+            let in_param : f64 = data.read()?;
+            stub.double_test_func(&in_param)?;
+            Ok(())
+        }
+        10 => {
+            let in_param : char = data.read()?;
+            stub.char_test_func(&in_param)?;
+            Ok(())
+        }
+        11 => {
+            let in_param : myseq = data.read()?;
+            stub.seq_test_func(&in_param)?;
+            Ok(())
+        }
+        12 => {
+            let in_param : myinterface = data.read()?;
+            stub.interface_test_func(&in_param)?;
+            Ok(())
+        }
+        _ => Err(-1)
+    }
+}
+
+impl IFoo for RemoteStub<FooStub> {
+    fn void_test_func(&self) -> Result<()> {
+        self.0.void_test_func()
+    }
+
+    fn bool_test_func(&self, in_param: &bool) -> Result<()> {
+        self.0.bool_test_func(in_param)
+    }
+
+    fn byte_test_func(&self, in_param: &i8) -> Result<()> {
+        self.0.byte_test_func(in_param)
+    }
+
+    fn short_test_func(&self, in_param: &i16) -> Result<()> {
+        self.0.short_test_func(in_param)
+    }
+
+    fn int_test_func(&self, in_param: &i32) -> Result<()> {
+        self.0.int_test_func(in_param)
+    }
+
+    fn long_test_func(&self, in_param: &i64) -> Result<()> {
+        self.0.long_test_func(in_param)
+    }
+
+    fn string_test_func(&self, in_param: &str) -> Result<()> {
+        self.0.string_test_func(in_param)
+    }
+
+    fn float_test_func(&self, in_param: &f32) -> Result<()> {
+        self.0.float_test_func(in_param)
+    }
+
+    fn double_test_func(&self, in_param: &f64) -> Result<()> {
+        self.0.double_test_func(in_param)
+    }
+
+    fn char_test_func(&self, in_param: &char) -> Result<()> {
+        self.0.char_test_func(in_param)
+    }
+
+    fn seq_test_func(&self, in_param: &myseq) -> Result<()> {
+        self.0.seq_test_func(in_param)
+    }
+
+    fn interface_test_func(&self, in_param: &myinterface) -> Result<()> {
+        self.0.interface_test_func(in_param)
+    }
+}
+
+impl IFoo for FooProxy {
+    fn void_test_func(&self) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        let _reply = self.remote.send_request(IFooCode::CodeVoidTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn bool_test_func(&self, in_param: &bool) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeBoolTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn byte_test_func(&self, in_param: &i8) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeByteTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn short_test_func(&self, in_param: &i16) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeShortTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn int_test_func(&self, in_param: &i32) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeIntTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn long_test_func(&self, in_param: &i64) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeLongTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn string_test_func(&self, in_param: &str) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeStringTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn float_test_func(&self, in_param: &f32) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeFloatTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn double_test_func(&self, in_param: &f64) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeDoubleTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn char_test_func(&self, in_param: &char) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeCharTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn seq_test_func(&self, in_param: &myseq) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeSeqTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+
+    fn interface_test_func(&self, in_param: &myinterface) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeInterfaceTestFunc as u32, &data, true)?;
+        Ok(())
+    }
+}

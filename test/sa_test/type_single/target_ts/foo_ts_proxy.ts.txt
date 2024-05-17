@@ -1,0 +1,394 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {void_test_funcCallback} from "./i_foo_ts";
+import {bool_test_funcCallback} from "./i_foo_ts";
+import {byte_test_funcCallback} from "./i_foo_ts";
+import {short_test_funcCallback} from "./i_foo_ts";
+import {int_test_funcCallback} from "./i_foo_ts";
+import {long_test_funcCallback} from "./i_foo_ts";
+import {string_test_funcCallback} from "./i_foo_ts";
+import {float_test_funcCallback} from "./i_foo_ts";
+import {double_test_funcCallback} from "./i_foo_ts";
+import {seq_test_funcCallback} from "./i_foo_ts";
+import {interface_test_funcCallback} from "./i_foo_ts";
+import IFooTs from "./i_foo_ts";
+import rpc from "@ohos.rpc";
+import myseq from "./myseq";
+import myinterface from "./myinterface";
+import myinterfaceStub from "./myinterface_stub";
+
+export default class FooTsProxy implements IFooTs {
+    constructor(proxy) {
+        this.proxy = proxy;
+    }
+
+    void_test_func(callback: void_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_VOID_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                callback(errCodeVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    bool_test_func(inParam: boolean, inoutParam: boolean, callback: bool_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam ? 1 : 0);
+        dataSequence.writeInt(inoutParam ? 1 : 0);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_BOOL_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readInt() == 1 ? true : false;
+                let inoutParamVar = result.reply.readInt() == 1 ? true : false;
+                let returnValueVar = result.reply.readInt() == 1 ? true : false;
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    byte_test_func(inParam: number, inoutParam: number, callback: byte_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam);
+        dataSequence.writeInt(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_BYTE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readInt();
+                let inoutParamVar = result.reply.readInt();
+                let returnValueVar = result.reply.readInt();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    short_test_func(inParam: number, inoutParam: number, callback: short_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam);
+        dataSequence.writeInt(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_SHORT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readInt();
+                let inoutParamVar = result.reply.readInt();
+                let returnValueVar = result.reply.readInt();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    int_test_func(inParam: number, inoutParam: number, callback: int_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam);
+        dataSequence.writeInt(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_INT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readInt();
+                let inoutParamVar = result.reply.readInt();
+                let returnValueVar = result.reply.readInt();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    long_test_func(inParam: number, inoutParam: number, callback: long_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeLong(inParam);
+        dataSequence.writeLong(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_LONG_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readLong();
+                let inoutParamVar = result.reply.readLong();
+                let returnValueVar = result.reply.readLong();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    string_test_func(inParam: string, inoutParam: string, callback: string_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeString(inParam);
+        dataSequence.writeString(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_STRING_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readString();
+                let inoutParamVar = result.reply.readString();
+                let returnValueVar = result.reply.readString();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    float_test_func(inParam: number, inoutParam: number, callback: float_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeFloat(inParam);
+        dataSequence.writeFloat(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_FLOAT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readFloat();
+                let inoutParamVar = result.reply.readFloat();
+                let returnValueVar = result.reply.readFloat();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    double_test_func(inParam: number, inoutParam: number, callback: double_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeDouble(inParam);
+        dataSequence.writeDouble(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_DOUBLE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readDouble();
+                let inoutParamVar = result.reply.readDouble();
+                let returnValueVar = result.reply.readDouble();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    seq_test_func(inParam: myseq, inoutParam: myseq, callback: seq_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeParcelable(inParam);
+        dataSequence.writeParcelable(inoutParam);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_SEQ_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new myseq();
+                result.reply.readSequenceable(outParamVar);
+                let inoutParamVar = new myseq();
+                result.reply.readSequenceable(inoutParamVar);
+                let returnValueVar = new myseq();
+                result.reply.readSequenceable(returnValueVar);
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    interface_test_func(inParam: myinterface, inoutParam: myinterface, callback: interface_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeRemoteObject(inParam as myinterfaceStub);
+        dataSequence.writeRemoteObject(inoutParam as myinterfaceStub);
+        this.proxy.sendMessageRequest(FooTsProxy.COMMAND_INTERFACE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = result.reply.readRemoteObject();
+                let inoutParamVar = result.reply.readRemoteObject();
+                let returnValueVar = result.reply.readRemoteObject();
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    static readonly COMMAND_VOID_TEST_FUNC = 1;
+    static readonly COMMAND_BOOL_TEST_FUNC = 2;
+    static readonly COMMAND_BYTE_TEST_FUNC = 3;
+    static readonly COMMAND_SHORT_TEST_FUNC = 4;
+    static readonly COMMAND_INT_TEST_FUNC = 5;
+    static readonly COMMAND_LONG_TEST_FUNC = 6;
+    static readonly COMMAND_STRING_TEST_FUNC = 7;
+    static readonly COMMAND_FLOAT_TEST_FUNC = 8;
+    static readonly COMMAND_DOUBLE_TEST_FUNC = 9;
+    static readonly COMMAND_SEQ_TEST_FUNC = 10;
+    static readonly COMMAND_INTERFACE_TEST_FUNC = 11;
+    private proxy
+}
+

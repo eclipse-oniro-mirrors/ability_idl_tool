@@ -1,0 +1,194 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {void_test_funcCallback} from "./i_foo_ts";
+import {bool_test_funcCallback} from "./i_foo_ts";
+import {byte_test_funcCallback} from "./i_foo_ts";
+import {short_test_funcCallback} from "./i_foo_ts";
+import {int_test_funcCallback} from "./i_foo_ts";
+import {long_test_funcCallback} from "./i_foo_ts";
+import {string_test_funcCallback} from "./i_foo_ts";
+import {float_test_funcCallback} from "./i_foo_ts";
+import {double_test_funcCallback} from "./i_foo_ts";
+import {seq_test_funcCallback} from "./i_foo_ts";
+import {interface_test_funcCallback} from "./i_foo_ts";
+import IFooTs from "./i_foo_ts";
+import rpc from "@ohos.rpc";
+import myseq from "./myseq";
+import myinterface from "./myinterface";
+import myinterfaceStub from "./myinterface_stub";
+
+export default class FooTsStub extends rpc.RemoteObject implements IFooTs {
+    constructor(des: string) {
+        super(des);
+    }
+
+    async onRemoteMessageRequest(code: number, data:rpc.MessageSequence, reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {
+        console.log("onRemoteMessageRequest called, code = " + code);
+        switch(code) {
+            case FooTsStub.COMMAND_VOID_TEST_FUNC: {
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.void_test_func((errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_BOOL_TEST_FUNC: {
+                let inParamVar = data.readInt() == 1 ? true : false;
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.bool_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_BYTE_TEST_FUNC: {
+                let inParamVar = data.readInt();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.byte_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_SHORT_TEST_FUNC: {
+                let inParamVar = data.readInt();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.short_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_INT_TEST_FUNC: {
+                let inParamVar = data.readInt();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.int_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_LONG_TEST_FUNC: {
+                let inParamVar = data.readLong();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.long_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_STRING_TEST_FUNC: {
+                let inParamVar = data.readString();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.string_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_FLOAT_TEST_FUNC: {
+                let inParamVar = data.readFloat();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.float_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_DOUBLE_TEST_FUNC: {
+                let inParamVar = data.readDouble();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.double_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_SEQ_TEST_FUNC: {
+                let inParamVar = new myseq();
+                data.readParcelable(inParamVar);
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.seq_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooTsStub.COMMAND_INTERFACE_TEST_FUNC: {
+                let inParamVar = data.readRemoteObject();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.interface_test_func(inParamVar, (errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            default: {
+                console.log("invalid request code" + code);
+                break;
+            }
+        }
+        return false;
+    }
+
+    void_test_func(callback: void_test_funcCallback): void{}
+    bool_test_func(inParam: boolean, callback: bool_test_funcCallback): void{}
+    byte_test_func(inParam: number, callback: byte_test_funcCallback): void{}
+    short_test_func(inParam: number, callback: short_test_funcCallback): void{}
+    int_test_func(inParam: number, callback: int_test_funcCallback): void{}
+    long_test_func(inParam: number, callback: long_test_funcCallback): void{}
+    string_test_func(inParam: string, callback: string_test_funcCallback): void{}
+    float_test_func(inParam: number, callback: float_test_funcCallback): void{}
+    double_test_func(inParam: number, callback: double_test_funcCallback): void{}
+    seq_test_func(inParam: myseq, callback: seq_test_funcCallback): void{}
+    interface_test_func(inParam: myinterface, callback: interface_test_funcCallback): void{}
+
+    static readonly COMMAND_VOID_TEST_FUNC = 1;
+    static readonly COMMAND_BOOL_TEST_FUNC = 2;
+    static readonly COMMAND_BYTE_TEST_FUNC = 3;
+    static readonly COMMAND_SHORT_TEST_FUNC = 4;
+    static readonly COMMAND_INT_TEST_FUNC = 5;
+    static readonly COMMAND_LONG_TEST_FUNC = 6;
+    static readonly COMMAND_STRING_TEST_FUNC = 7;
+    static readonly COMMAND_FLOAT_TEST_FUNC = 8;
+    static readonly COMMAND_DOUBLE_TEST_FUNC = 9;
+    static readonly COMMAND_SEQ_TEST_FUNC = 10;
+    static readonly COMMAND_INTERFACE_TEST_FUNC = 11;
+}
+

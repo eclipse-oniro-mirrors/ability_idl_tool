@@ -1,0 +1,123 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {seq_test_funcCallback} from "./i_foo";
+import {seq_test_func2Callback} from "./i_foo";
+import {interface_test_funcCallback} from "./i_foo";
+import {interface_test_func2Callback} from "./i_foo";
+import IFoo from "./i_foo";
+import rpc from "@ohos.rpc";
+import myseq from "./myseq";
+import myseq2 from "./myseq2";
+import myinterface from "./myinterface";
+import myinterface2 from "./myinterface2";
+import myinterfaceStub from "./myinterface_stub";
+import myinterface2Stub from "./myinterface2_stub";
+
+export default class FooStub extends rpc.RemoteObject implements IFoo {
+    constructor(des: string) {
+        super(des);
+    }
+    
+    async onRemoteMessageRequest(code: number, data:rpc.MessageSequence, reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {
+        console.log("onRemoteMessageRequest called, code = " + code);
+        switch(code) {
+            case FooStub.COMMAND_SEQ_TEST_FUNC: {
+                let inParamVar = new myseq();
+                data.readParcelable(inParamVar);
+                let inoutParamVar = new myseq();
+                data.readParcelable(inoutParamVar);
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.seq_test_func(inParamVar, inoutParamVar, (errCode, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeParcelable(outParam);
+                            reply.writeParcelable(inoutParam);
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_SEQ_TEST_FUNC2: {
+                let inParamVar = new myseq2();
+                data.readParcelable(inParamVar);
+                let inoutParamVar = new myseq2();
+                data.readParcelable(inoutParamVar);
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.seq_test_func2(inParamVar, inoutParamVar, (errCode, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeParcelable(outParam);
+                            reply.writeParcelable(inoutParam);
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_INTERFACE_TEST_FUNC: {
+                let inParamVar = data.readRemoteObject();
+                let inoutParamVar = data.readRemoteObject();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.interface_test_func(inParamVar, inoutParamVar, (errCode, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeRemoteObject(outParam as myinterface2Stub);
+                            reply.writeRemoteObject(inoutParam as myinterface2Stub);
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_INTERFACE_TEST_FUNC2: {
+                let inParamVar = data.readRemoteObject();
+                let inoutParamVar = data.readRemoteObject();
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.interface_test_func2(inParamVar, inoutParamVar, (errCode, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeRemoteObject(outParam as myinterface2Stub);
+                            reply.writeRemoteObject(inoutParam as myinterface2Stub);
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            default: {
+                console.log("invalid request code" + code);
+                break;
+            }
+        }
+        return false;
+    }
+    
+    seq_test_func(inParam: myseq, inoutParam: myseq, callback: seq_test_funcCallback): void{}
+    seq_test_func2(inParam: myseq2, inoutParam: myseq2, callback: seq_test_func2Callback): void{}
+    interface_test_func(inParam: myinterface2, inoutParam: myinterface2, callback: interface_test_funcCallback): void{}
+    interface_test_func2(inParam: myinterface2, inoutParam: myinterface2, callback: interface_test_func2Callback): void{}
+
+    static readonly COMMAND_SEQ_TEST_FUNC = 1;
+    static readonly COMMAND_SEQ_TEST_FUNC2 = 2;
+    static readonly COMMAND_INTERFACE_TEST_FUNC = 3;
+    static readonly COMMAND_INTERFACE_TEST_FUNC2 = 4;
+}
+

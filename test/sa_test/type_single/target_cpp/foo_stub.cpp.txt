@@ -1,0 +1,350 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (code) {
+        case COMMAND_VOID_TEST_FUNC: {
+            ErrCode errCode = void_test_func();
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_BOOL_TEST_FUNC: {
+            bool inParam = data.ReadInt32() == 1 ? true : false;
+            bool outParam;
+            bool inoutParam = data.ReadInt32() == 1 ? true : false;
+            bool result;
+            ErrCode errCode = bool_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam ? 1 : 0)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam ? 1 : 0)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result ? 1 : 0)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_BYTE_TEST_FUNC: {
+            int8_t inParam = (int8_t)data.ReadInt32();
+            int8_t outParam;
+            int8_t inoutParam = (int8_t)data.ReadInt32();
+            int8_t result;
+            ErrCode errCode = byte_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_SHORT_TEST_FUNC: {
+            short inParam = (short)data.ReadInt32();
+            short outParam;
+            short inoutParam = (short)data.ReadInt32();
+            short result;
+            ErrCode errCode = short_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_INT_TEST_FUNC: {
+            int32_t inParam = data.ReadInt32();
+            int32_t outParam;
+            int32_t inoutParam = data.ReadInt32();
+            int32_t result;
+            ErrCode errCode = int_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_LONG_TEST_FUNC: {
+            long inParam = data.ReadInt64();
+            long outParam;
+            long inoutParam = data.ReadInt64();
+            long result;
+            ErrCode errCode = long_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt64(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt64(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt64(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_STRING_TEST_FUNC: {
+            std::string inParam = Str16ToStr8(data.ReadString16());
+            std::string outParam;
+            std::string inoutParam = Str16ToStr8(data.ReadString16());
+            std::string result;
+            ErrCode errCode = string_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteString16(Str8ToStr16(outParam))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(Str8ToStr16(inoutParam))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(Str8ToStr16(result))) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_FLOAT_TEST_FUNC: {
+            float inParam = data.ReadFloat();
+            float outParam;
+            float inoutParam = data.ReadFloat();
+            float result;
+            ErrCode errCode = float_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFloat(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFloat(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFloat(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_DOUBLE_TEST_FUNC: {
+            double inParam = data.ReadDouble();
+            double outParam;
+            double inoutParam = data.ReadDouble();
+            double result;
+            ErrCode errCode = double_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteDouble(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteDouble(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteDouble(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_CHAR_TEST_FUNC: {
+            zchar inParam = (zchar)data.ReadInt32();
+            zchar outParam;
+            zchar inoutParam = (zchar)data.ReadInt32();
+            zchar result;
+            ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_SEQ_TEST_FUNC: {
+            std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
+
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+            myseq outParam;
+            std::unique_ptr<myseq> inoutParam(data.ReadParcelable<myseq>());
+
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+            const myseq& result = nullptr;
+            ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(&outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(&inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(&result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_INTERFACE_TEST_FUNC: {
+            sptr<myinterface> inParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface> outParam;
+            sptr<myinterface> inoutParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface> result = nullptr;
+            ErrCode errCode = interface_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (result == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_INTERFACE_TEST_FUNC2: {
+            sptr<myinterface2> inParam = iface_cast<myinterface2>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface2> outParam;
+            sptr<myinterface2> inoutParam = iface_cast<myinterface2>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface2> result = nullptr;
+            ErrCode errCode = interface_test_func2(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (result == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

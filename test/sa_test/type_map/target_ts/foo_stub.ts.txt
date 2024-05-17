@@ -1,0 +1,497 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {void_test_funcCallback} from "./i_foo";
+import {bool_test_funcCallback} from "./i_foo";
+import {byte_test_funcCallback} from "./i_foo";
+import {short_test_funcCallback} from "./i_foo";
+import {int_test_funcCallback} from "./i_foo";
+import {long_test_funcCallback} from "./i_foo";
+import {string_test_funcCallback} from "./i_foo";
+import {float_test_funcCallback} from "./i_foo";
+import {double_test_funcCallback} from "./i_foo";
+import {seq_test_funcCallback} from "./i_foo";
+import {interface_test_funcCallback} from "./i_foo";
+import IFoo from "./i_foo";
+import rpc from "@ohos.rpc";
+import myseq from "./myseq";
+import myinterface from "./myinterface";
+import myinterfaceStub from "./myinterface_stub";
+
+export default class FooStub extends rpc.RemoteObject implements IFoo {
+    constructor(des: string) {
+        super(des);
+    }
+    
+    async onRemoteMessageRequest(code: number, data:rpc.MessageSequence, reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {
+        console.log("onRemoteMessageRequest called, code = " + code);
+        switch(code) {
+            case FooStub.COMMAND_VOID_TEST_FUNC: {
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.void_test_func((errCode) => {
+                        reply.writeInt(errCode);
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_BOOL_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readInt() == 1 ? true : false;
+                    let value = data.readInt() == 1 ? true : false;
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readInt() == 1 ? true : false;
+                    let value = data.readInt() == 1 ? true : false;
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.bool_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeInt(key ? 1 : 0);
+                                reply.writeInt(value ? 1 : 0);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeInt(key ? 1 : 0);
+                                reply.writeInt(value ? 1 : 0);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeInt(key ? 1 : 0);
+                                reply.writeInt(value ? 1 : 0);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_BYTE_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.byte_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_SHORT_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.short_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_INT_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readInt();
+                    let value = data.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.int_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeInt(key);
+                                reply.writeInt(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_LONG_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readLong();
+                    let value = data.readLong();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readLong();
+                    let value = data.readLong();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.long_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeLong(key);
+                                reply.writeLong(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeLong(key);
+                                reply.writeLong(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeLong(key);
+                                reply.writeLong(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_STRING_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readString();
+                    let value = data.readString();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readString();
+                    let value = data.readString();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.string_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeString(key);
+                                reply.writeString(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeString(key);
+                                reply.writeString(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeString(key);
+                                reply.writeString(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_FLOAT_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readFloat();
+                    let value = data.readFloat();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readFloat();
+                    let value = data.readFloat();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.float_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeFloat(key);
+                                reply.writeFloat(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeFloat(key);
+                                reply.writeFloat(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeFloat(key);
+                                reply.writeFloat(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_DOUBLE_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readDouble();
+                    let value = data.readDouble();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readDouble();
+                    let value = data.readDouble();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.double_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeDouble(key);
+                                reply.writeDouble(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeDouble(key);
+                                reply.writeDouble(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeDouble(key);
+                                reply.writeDouble(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_SEQ_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = new myseq();
+                    data.readParcelable(key);
+                    let value = new myseq();
+                    data.readParcelable(value);
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = new myseq();
+                    data.readParcelable(key);
+                    let value = new myseq();
+                    data.readParcelable(value);
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.seq_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeParcelable(key);
+                                reply.writeParcelable(value);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeParcelable(key);
+                                reply.writeParcelable(value);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeParcelable(key);
+                                reply.writeParcelable(value);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            case FooStub.COMMAND_INTERFACE_TEST_FUNC: {
+                let inParamVar = new Map();
+                let inParamVarSize = data.readInt();
+                for (let i = 0; i < inParamVarSize; ++i) {
+                    let key = data.readRemoteObject();
+                    let value = data.readRemoteObject();
+                    inParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = data.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = data.readRemoteObject();
+                    let value = data.readRemoteObject();
+                    inoutParamVar.set(key, value);
+                }
+                let promise = new Promise<void>((resolve,reject) => { 
+                    this.interface_test_func(inParamVar, inoutParamVar, (errCode, returnValue, outParam, inoutParam) => {
+                        reply.writeInt(errCode);
+                        if (errCode == 0) {
+                            reply.writeInt(outParam.size);
+                            for (let [key, value] of outParam) {
+                                reply.writeRemoteObject(key as myinterfaceStub);
+                                reply.writeRemoteObject(value as myinterfaceStub);
+                            }
+                            reply.writeInt(inoutParam.size);
+                            for (let [key, value] of inoutParam) {
+                                reply.writeRemoteObject(key as myinterfaceStub);
+                                reply.writeRemoteObject(value as myinterfaceStub);
+                            }
+                            reply.writeInt(returnValue.size);
+                            for (let [key, value] of returnValue) {
+                                reply.writeRemoteObject(key as myinterfaceStub);
+                                reply.writeRemoteObject(value as myinterfaceStub);
+                            }
+                        }
+                        resolve();
+                    });
+                });
+                await promise;
+                return true;
+            }
+            default: {
+                console.log("invalid request code" + code);
+                break;
+            }
+        }
+        return false;
+    }
+    
+    void_test_func(callback: void_test_funcCallback): void{}
+    bool_test_func(inParam: Map<boolean, boolean>, inoutParam: Map<boolean, boolean>, callback: bool_test_funcCallback): void{}
+    byte_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: byte_test_funcCallback): void{}
+    short_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: short_test_funcCallback): void{}
+    int_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: int_test_funcCallback): void{}
+    long_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: long_test_funcCallback): void{}
+    string_test_func(inParam: Map<string, string>, inoutParam: Map<string, string>, callback: string_test_funcCallback): void{}
+    float_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: float_test_funcCallback): void{}
+    double_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: double_test_funcCallback): void{}
+    seq_test_func(inParam: Map<myseq, myseq>, inoutParam: Map<myseq, myseq>, callback: seq_test_funcCallback): void{}
+    interface_test_func(inParam: Map<myinterface, myinterface>, inoutParam: Map<myinterface, myinterface>, callback: interface_test_funcCallback): void{}
+
+    static readonly COMMAND_VOID_TEST_FUNC = 1;
+    static readonly COMMAND_BOOL_TEST_FUNC = 2;
+    static readonly COMMAND_BYTE_TEST_FUNC = 3;
+    static readonly COMMAND_SHORT_TEST_FUNC = 4;
+    static readonly COMMAND_INT_TEST_FUNC = 5;
+    static readonly COMMAND_LONG_TEST_FUNC = 6;
+    static readonly COMMAND_STRING_TEST_FUNC = 7;
+    static readonly COMMAND_FLOAT_TEST_FUNC = 8;
+    static readonly COMMAND_DOUBLE_TEST_FUNC = 9;
+    static readonly COMMAND_SEQ_TEST_FUNC = 10;
+    static readonly COMMAND_INTERFACE_TEST_FUNC = 11;
+}
+

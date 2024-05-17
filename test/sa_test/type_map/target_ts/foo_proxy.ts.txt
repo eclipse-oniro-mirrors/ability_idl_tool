@@ -1,0 +1,657 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {void_test_funcCallback} from "./i_foo";
+import {bool_test_funcCallback} from "./i_foo";
+import {byte_test_funcCallback} from "./i_foo";
+import {short_test_funcCallback} from "./i_foo";
+import {int_test_funcCallback} from "./i_foo";
+import {long_test_funcCallback} from "./i_foo";
+import {string_test_funcCallback} from "./i_foo";
+import {float_test_funcCallback} from "./i_foo";
+import {double_test_funcCallback} from "./i_foo";
+import {seq_test_funcCallback} from "./i_foo";
+import {interface_test_funcCallback} from "./i_foo";
+import IFoo from "./i_foo";
+import rpc from "@ohos.rpc";
+import myseq from "./myseq";
+import myinterface from "./myinterface";
+import myinterfaceStub from "./myinterface_stub";
+
+export default class FooProxy implements IFoo {
+    constructor(proxy) {
+        this.proxy = proxy;
+    }
+
+    void_test_func(callback: void_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_VOID_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                callback(errCodeVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    bool_test_func(inParam: Map<boolean, boolean>, inoutParam: Map<boolean, boolean>, callback: bool_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeInt(key ? 1 : 0);
+            dataSequence.writeInt(value ? 1 : 0);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeInt(key ? 1 : 0);
+            dataSequence.writeInt(value ? 1 : 0);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_BOOL_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readInt() == 1 ? true : false;
+                    let value = result.reply.readInt() == 1 ? true : false;
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readInt() == 1 ? true : false;
+                    let value = result.reply.readInt() == 1 ? true : false;
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readInt() == 1 ? true : false;
+                    let value = result.reply.readInt() == 1 ? true : false;
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    byte_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: byte_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_BYTE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    short_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: short_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_SHORT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    int_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: int_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeInt(key);
+            dataSequence.writeInt(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_INT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readInt();
+                    let value = result.reply.readInt();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    long_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: long_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeLong(key);
+            dataSequence.writeLong(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeLong(key);
+            dataSequence.writeLong(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_LONG_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readLong();
+                    let value = result.reply.readLong();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readLong();
+                    let value = result.reply.readLong();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readLong();
+                    let value = result.reply.readLong();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    string_test_func(inParam: Map<string, string>, inoutParam: Map<string, string>, callback: string_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeString(key);
+            dataSequence.writeString(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeString(key);
+            dataSequence.writeString(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_STRING_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readString();
+                    let value = result.reply.readString();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readString();
+                    let value = result.reply.readString();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readString();
+                    let value = result.reply.readString();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    float_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: float_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeFloat(key);
+            dataSequence.writeFloat(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeFloat(key);
+            dataSequence.writeFloat(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_FLOAT_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readFloat();
+                    let value = result.reply.readFloat();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readFloat();
+                    let value = result.reply.readFloat();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readFloat();
+                    let value = result.reply.readFloat();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    double_test_func(inParam: Map<number, number>, inoutParam: Map<number, number>, callback: double_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeDouble(key);
+            dataSequence.writeDouble(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeDouble(key);
+            dataSequence.writeDouble(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_DOUBLE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readDouble();
+                    let value = result.reply.readDouble();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readDouble();
+                    let value = result.reply.readDouble();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readDouble();
+                    let value = result.reply.readDouble();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    seq_test_func(inParam: Map<myseq, myseq>, inoutParam: Map<myseq, myseq>, callback: seq_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeParcelable(key);
+            dataSequence.writeParcelable(value);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeParcelable(key);
+            dataSequence.writeParcelable(value);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_SEQ_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = new myseq();
+                    result.reply.readParcelable(key);
+                    let value = new myseq();
+                    result.reply.readParcelable(value);
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = new myseq();
+                    result.reply.readParcelable(key);
+                    let value = new myseq();
+                    result.reply.readParcelable(value);
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = new myseq();
+                    result.reply.readParcelable(key);
+                    let value = new myseq();
+                    result.reply.readParcelable(value);
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    interface_test_func(inParam: Map<myinterface, myinterface>, inoutParam: Map<myinterface, myinterface>, callback: interface_test_funcCallback): void
+    {
+        let option = new rpc.MessageOption();
+        let dataSequence = rpc.MessageSequence.create();
+        let replySequence = rpc.MessageSequence.create();
+        dataSequence.writeInt(inParam.size);
+        for (let [key, value] of inParam) {
+            dataSequence.writeRemoteObject(key as myinterfaceStub);
+            dataSequence.writeRemoteObject(value as myinterfaceStub);
+        }
+        dataSequence.writeInt(inoutParam.size);
+        for (let [key, value] of inoutParam) {
+            dataSequence.writeRemoteObject(key as myinterfaceStub);
+            dataSequence.writeRemoteObject(value as myinterfaceStub);
+        }
+        this.proxy.sendMessageRequest(FooProxy.COMMAND_INTERFACE_TEST_FUNC, dataSequence, replySequence, option).then((result: rpc.RequestResult) => {
+            if (result.errCode === 0) {
+                let errCodeVar = result.reply.readInt();
+                if (errCodeVar != 0) {
+                    let outParamVar = undefined;
+                    let inoutParamVar = undefined;
+                    let returnValueVar = undefined;
+                    callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+                    return;
+                }
+                let outParamVar = new Map();
+                let outParamVarSize = result.reply.readInt();
+                for (let i = 0; i < outParamVarSize; ++i) {
+                    let key = result.reply.readRemoteObject();
+                    let value = result.reply.readRemoteObject();
+                    outParamVar.set(key, value);
+                }
+                let inoutParamVar = new Map();
+                let inoutParamVarSize = result.reply.readInt();
+                for (let i = 0; i < inoutParamVarSize; ++i) {
+                    let key = result.reply.readRemoteObject();
+                    let value = result.reply.readRemoteObject();
+                    inoutParamVar.set(key, value);
+                }
+                let returnValueVar = new Map();
+                let returnValueVarSize = result.reply.readInt();
+                for (let i = 0; i < returnValueVarSize; ++i) {
+                    let key = result.reply.readRemoteObject();
+                    let value = result.reply.readRemoteObject();
+                    returnValueVar.set(key, value);
+                }
+                callback(errCodeVar, returnValueVar, outParamVar, inoutParamVar);
+            } else {
+                console.log("sendMessageRequest failed, errCode: " + result.errCode);
+            }
+        }).catch((e: Error) => {
+            console.log('sendMessageRequest failed, message: ' + e.message);
+        }).finally(() => {
+            dataSequence.reclaim();
+            replySequence.reclaim();
+        });
+    }
+
+    static readonly COMMAND_VOID_TEST_FUNC = 1;
+    static readonly COMMAND_BOOL_TEST_FUNC = 2;
+    static readonly COMMAND_BYTE_TEST_FUNC = 3;
+    static readonly COMMAND_SHORT_TEST_FUNC = 4;
+    static readonly COMMAND_INT_TEST_FUNC = 5;
+    static readonly COMMAND_LONG_TEST_FUNC = 6;
+    static readonly COMMAND_STRING_TEST_FUNC = 7;
+    static readonly COMMAND_FLOAT_TEST_FUNC = 8;
+    static readonly COMMAND_DOUBLE_TEST_FUNC = 9;
+    static readonly COMMAND_SEQ_TEST_FUNC = 10;
+    static readonly COMMAND_INTERFACE_TEST_FUNC = 11;
+    private proxy
+}
+
