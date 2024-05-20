@@ -1,0 +1,410 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/gnss_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    gnss_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Gnss {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStub(const sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::~GnssCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_GNSS_CALLBACK_GET_VERSION:
+            return GnssCallbackStubGetVersion(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_LOCATION:
+            return GnssCallbackStubReportLocation(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_GNSS_WORKING_STATUS:
+            return GnssCallbackStubReportGnssWorkingStatus(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_NMEA:
+            return GnssCallbackStubReportNmea(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_GNSS_CAPABILITIES:
+            return GnssCallbackStubReportGnssCapabilities(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_SATELLITE_STATUS_INFO:
+            return GnssCallbackStubReportSatelliteStatusInfo(data, reply, option);
+        case CMD_GNSS_CALLBACK_REQUEST_GNSS_REFERENCE_INFO:
+            return GnssCallbackStubRequestGnssReferenceInfo(data, reply, option);
+        case CMD_GNSS_CALLBACK_REQUEST_PREDICT_GNSS_DATA:
+            return GnssCallbackStubRequestPredictGnssData(data, reply, option);
+        case CMD_GNSS_CALLBACK_REPORT_CACHED_LOCATION:
+            return GnssCallbackStubReportCachedLocation(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportLocation(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportLocation_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssWorkingStatus(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssWorkingStatus_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportNmea(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportNmea_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssCapabilities(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssCapabilities_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportSatelliteStatusInfo(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportSatelliteStatusInfo_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestGnssReferenceInfo(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestGnssReferenceInfo_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestPredictGnssData(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestPredictGnssData_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportCachedLocation(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportCachedLocation_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubGetVersion(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubGetVersion_(gnssCallbackData, gnssCallbackReply, gnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportLocation_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Gnss::V1_0::LocationInfo location;
+    if (!LocationInfoBlockUnmarshalling(gnssCallbackData, location)) {
+        HDF_LOGE("%{public}s: read location failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportLocation(location);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssWorkingStatus_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Gnss::V1_0::GnssWorkingStatus status = static_cast<enum GnssWorkingStatus>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!gnssCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum GnssWorkingStatus>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportGnssWorkingStatus(status);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportNmea_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int64_t timestamp = 0;
+    if (!gnssCallbackData.ReadInt64(timestamp)) {
+        HDF_LOGE("%{public}s: read timestamp failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* nmeaCp = gnssCallbackData.ReadCString();
+    if (nmeaCp == nullptr) {
+        HDF_LOGE("%{public}s: read nmea failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string nmea = nmeaCp;
+
+    int32_t length = 0;
+    if (!gnssCallbackData.ReadInt32(length)) {
+        HDF_LOGE("%{public}s: read length failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportNmea(timestamp, nmea, length);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportGnssCapabilities_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Gnss::V1_0::GnssCapabilities capabilities = static_cast<enum GnssCapabilities>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!gnssCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write capabilities failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        capabilities = static_cast<enum GnssCapabilities>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportGnssCapabilities(capabilities);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportSatelliteStatusInfo_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Gnss::V1_0::SatelliteStatusInfo info;
+    if (!SatelliteStatusInfoBlockUnmarshalling(gnssCallbackData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportSatelliteStatusInfo(info);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestGnssReferenceInfo_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Gnss::V1_0::GnssRefInfoType type = static_cast<enum GnssRefInfoType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!gnssCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum GnssRefInfoType>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->RequestGnssReferenceInfo(type);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubRequestPredictGnssData_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->RequestPredictGnssData();
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubReportCachedLocation_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Location::Gnss::V1_0::LocationInfo> gnssLocations;
+    if (!ReadPodArray(gnssCallbackData, gnssLocations)) {
+        HDF_LOGE("%{public}s: failed to read gnssLocations", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->ReportCachedLocation(gnssLocations);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    return gnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssCallbackStub::GnssCallbackStubGetVersion_(MessageParcel& gnssCallbackData, MessageParcel& gnssCallbackReply, MessageOption& gnssCallbackOption, sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> impl)
+{
+    if (gnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t gnssCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (gnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssCallbackRet);
+        return gnssCallbackRet;
+    }
+
+    if (!gnssCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return gnssCallbackRet;
+}
+} // V1_0
+} // Gnss
+} // Location
+} // HDI
+} // OHOS

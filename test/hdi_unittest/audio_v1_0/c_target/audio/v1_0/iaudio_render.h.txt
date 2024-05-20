@@ -1,0 +1,197 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_AUDIO_V1_0_IAUDIORENDER_H
+#define OHOS_HDI_AUDIO_V1_0_IAUDIORENDER_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <hdf_base.h>
+#include "audio/v1_0/audio_types.h"
+#include "audio/v1_0/iaudio_callback.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfRemoteService;
+
+#define IAUDIORENDER_INTERFACE_DESC "ohos.hdi.audio.v1_0.IAudioRender"
+
+#define IAUDIO_RENDER_MAJOR_VERSION 1
+#define IAUDIO_RENDER_MINOR_VERSION 0
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+enum {
+    CMD_AUDIO_RENDER_GET_VERSION = 0,
+    CMD_AUDIO_RENDER_GET_LATENCY = 1,
+    CMD_AUDIO_RENDER_RENDER_FRAME = 2,
+    CMD_AUDIO_RENDER_GET_RENDER_POSITION = 3,
+    CMD_AUDIO_RENDER_SET_RENDER_SPEED = 4,
+    CMD_AUDIO_RENDER_GET_RENDER_SPEED = 5,
+    CMD_AUDIO_RENDER_SET_CHANNEL_MODE = 6,
+    CMD_AUDIO_RENDER_GET_CHANNEL_MODE = 7,
+    CMD_AUDIO_RENDER_REG_CALLBACK = 8,
+    CMD_AUDIO_RENDER_DRAIN_BUFFER = 9,
+    CMD_AUDIO_RENDER_IS_SUPPORTS_DRAIN = 10,
+    CMD_AUDIO_RENDER_CHECK_SCENE_CAPABILITY = 11,
+    CMD_AUDIO_RENDER_SELECT_SCENE = 12,
+    CMD_AUDIO_RENDER_SET_MUTE = 13,
+    CMD_AUDIO_RENDER_GET_MUTE = 14,
+    CMD_AUDIO_RENDER_SET_VOLUME = 15,
+    CMD_AUDIO_RENDER_GET_VOLUME = 16,
+    CMD_AUDIO_RENDER_GET_GAIN_THRESHOLD = 17,
+    CMD_AUDIO_RENDER_GET_GAIN = 18,
+    CMD_AUDIO_RENDER_SET_GAIN = 19,
+    CMD_AUDIO_RENDER_GET_FRAME_SIZE = 20,
+    CMD_AUDIO_RENDER_GET_FRAME_COUNT = 21,
+    CMD_AUDIO_RENDER_SET_SAMPLE_ATTRIBUTES = 22,
+    CMD_AUDIO_RENDER_GET_SAMPLE_ATTRIBUTES = 23,
+    CMD_AUDIO_RENDER_GET_CURRENT_CHANNEL_ID = 24,
+    CMD_AUDIO_RENDER_SET_EXTRA_PARAMS = 25,
+    CMD_AUDIO_RENDER_GET_EXTRA_PARAMS = 26,
+    CMD_AUDIO_RENDER_REQ_MMAP_BUFFER = 27,
+    CMD_AUDIO_RENDER_GET_MMAP_POSITION = 28,
+    CMD_AUDIO_RENDER_ADD_AUDIO_EFFECT = 29,
+    CMD_AUDIO_RENDER_REMOVE_AUDIO_EFFECT = 30,
+    CMD_AUDIO_RENDER_GET_FRAME_BUFFER_SIZE = 31,
+    CMD_AUDIO_RENDER_START = 32,
+    CMD_AUDIO_RENDER_STOP = 33,
+    CMD_AUDIO_RENDER_PAUSE = 34,
+    CMD_AUDIO_RENDER_RESUME = 35,
+    CMD_AUDIO_RENDER_FLUSH = 36,
+    CMD_AUDIO_RENDER_TURN_STANDBY_MODE = 37,
+    CMD_AUDIO_RENDER_AUDIO_DEV_DUMP = 38,
+    CMD_AUDIO_RENDER_IS_SUPPORTS_PAUSE_AND_RESUME = 39,
+    CMD_AUDIO_RENDER_SET_BUFFER_SIZE = 40,
+};
+
+struct IAudioRender {
+    int32_t (*GetLatency)(struct IAudioRender *self, uint32_t* ms);
+
+    int32_t (*RenderFrame)(struct IAudioRender *self, const int8_t* frame, uint32_t frameLen, uint64_t* replyBytes);
+
+    int32_t (*GetRenderPosition)(struct IAudioRender *self, uint64_t* frames, struct AudioTimeStamp* time);
+
+    int32_t (*SetRenderSpeed)(struct IAudioRender *self, float speed);
+
+    int32_t (*GetRenderSpeed)(struct IAudioRender *self, float* speed);
+
+    int32_t (*SetChannelMode)(struct IAudioRender *self, enum AudioChannelMode mode);
+
+    int32_t (*GetChannelMode)(struct IAudioRender *self, enum AudioChannelMode* mode);
+
+    int32_t (*RegCallback)(struct IAudioRender *self, struct IAudioCallback* audioCallback, int8_t cookie);
+
+    int32_t (*DrainBuffer)(struct IAudioRender *self, enum AudioDrainNotifyType* type);
+
+    int32_t (*IsSupportsDrain)(struct IAudioRender *self, bool* support);
+
+    int32_t (*CheckSceneCapability)(struct IAudioRender *self, const struct AudioSceneDescriptor* scene,
+         bool* supported);
+
+    int32_t (*SelectScene)(struct IAudioRender *self, const struct AudioSceneDescriptor* scene);
+
+    int32_t (*SetMute)(struct IAudioRender *self, bool mute);
+
+    int32_t (*GetMute)(struct IAudioRender *self, bool* mute);
+
+    int32_t (*SetVolume)(struct IAudioRender *self, float volume);
+
+    int32_t (*GetVolume)(struct IAudioRender *self, float* volume);
+
+    int32_t (*GetGainThreshold)(struct IAudioRender *self, float* min, float* max);
+
+    int32_t (*GetGain)(struct IAudioRender *self, float* gain);
+
+    int32_t (*SetGain)(struct IAudioRender *self, float gain);
+
+    int32_t (*GetFrameSize)(struct IAudioRender *self, uint64_t* size);
+
+    int32_t (*GetFrameCount)(struct IAudioRender *self, uint64_t* count);
+
+    int32_t (*SetSampleAttributes)(struct IAudioRender *self, const struct AudioSampleAttributes* attrs);
+
+    int32_t (*GetSampleAttributes)(struct IAudioRender *self, struct AudioSampleAttributes* attrs);
+
+    int32_t (*GetCurrentChannelId)(struct IAudioRender *self, uint32_t* channelId);
+
+    int32_t (*SetExtraParams)(struct IAudioRender *self, const char* keyValueList);
+
+    int32_t (*GetExtraParams)(struct IAudioRender *self, char* keyValueList, uint32_t keyValueListLen);
+
+    int32_t (*ReqMmapBuffer)(struct IAudioRender *self, int32_t reqSize, struct AudioMmapBufferDescriptor* desc);
+
+    int32_t (*GetMmapPosition)(struct IAudioRender *self, uint64_t* frames, struct AudioTimeStamp* time);
+
+    int32_t (*AddAudioEffect)(struct IAudioRender *self, uint64_t effectid);
+
+    int32_t (*RemoveAudioEffect)(struct IAudioRender *self, uint64_t effectid);
+
+    int32_t (*GetFrameBufferSize)(struct IAudioRender *self, uint64_t* bufferSize);
+
+    int32_t (*Start)(struct IAudioRender *self);
+
+    int32_t (*Stop)(struct IAudioRender *self);
+
+    int32_t (*Pause)(struct IAudioRender *self);
+
+    int32_t (*Resume)(struct IAudioRender *self);
+
+    int32_t (*Flush)(struct IAudioRender *self);
+
+    int32_t (*TurnStandbyMode)(struct IAudioRender *self);
+
+    int32_t (*AudioDevDump)(struct IAudioRender *self, int32_t range, int32_t fd);
+
+    int32_t (*IsSupportsPauseAndResume)(struct IAudioRender *self, bool* supportPause, bool* supportResume);
+
+    int32_t (*SetBufferSize)(struct IAudioRender *self, uint32_t size);
+
+    int32_t (*GetVersion)(struct IAudioRender *self, uint32_t* majorVer, uint32_t* minorVer);
+
+    struct HdfRemoteService* (*AsObject)(struct IAudioRender *self);
+};
+
+// no external method used to create client object, it only support ipc mode
+struct IAudioRender *IAudioRenderGet(struct HdfRemoteService *remote);
+
+// external method used to release client object, it support ipc and passthrought mode
+void IAudioRenderRelease(struct IAudioRender *instance, bool isStub);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // OHOS_HDI_AUDIO_V1_0_IAUDIORENDER_H

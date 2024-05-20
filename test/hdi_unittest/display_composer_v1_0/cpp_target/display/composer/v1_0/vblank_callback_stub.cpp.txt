@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/vblank_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    vblank_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStub(const sptr<OHOS::HDI::Display::Composer::V1_0::IVBlankCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Composer::V1_0::IVBlankCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::~VBlankCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_VBLANK_CALLBACK_GET_VERSION:
+            return VBlankCallbackStubGetVersion(data, reply, option);
+        case CMD_VBLANK_CALLBACK_ON_V_BLANK:
+            return VBlankCallbackStubOnVBlank(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubOnVBlank(MessageParcel& vBlankCallbackData, MessageParcel& vBlankCallbackReply, MessageOption& vBlankCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubOnVBlank_(vBlankCallbackData, vBlankCallbackReply, vBlankCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubGetVersion(MessageParcel& vBlankCallbackData, MessageParcel& vBlankCallbackReply, MessageOption& vBlankCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubGetVersion_(vBlankCallbackData, vBlankCallbackReply, vBlankCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubOnVBlank_(MessageParcel& vBlankCallbackData, MessageParcel& vBlankCallbackReply, MessageOption& vBlankCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_0::IVBlankCallback> impl)
+{
+    if (vBlankCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_0::IVBlankCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t sequence = 0;
+    if (!vBlankCallbackData.ReadUint32(sequence)) {
+        HDF_LOGE("%{public}s: read sequence failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t ns = 0;
+    if (!vBlankCallbackData.ReadUint64(ns)) {
+        HDF_LOGE("%{public}s: read ns failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vBlankCallbackRet = impl->OnVBlank(sequence, ns);
+    if (vBlankCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vBlankCallbackRet);
+        return vBlankCallbackRet;
+    }
+
+    return vBlankCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::VBlankCallbackStub::VBlankCallbackStubGetVersion_(MessageParcel& vBlankCallbackData, MessageParcel& vBlankCallbackReply, MessageOption& vBlankCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_0::IVBlankCallback> impl)
+{
+    if (vBlankCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_0::IVBlankCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t vBlankCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (vBlankCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vBlankCallbackRet);
+        return vBlankCallbackRet;
+    }
+
+    if (!vBlankCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vBlankCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vBlankCallbackRet;
+}
+} // V1_0
+} // Composer
+} // Display
+} // HDI
+} // OHOS

@@ -1,0 +1,510 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef AUDIOTYPES_H
+#define AUDIOTYPES_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfSBuf;
+
+enum AudioPortDirection {
+    PORT_OUT = 1,
+    PORT_IN = 2,
+    PORT_OUT_IN = 3,
+};
+
+enum AudioPortPin {
+    PIN_NONE = 0,
+    PIN_OUT_SPEAKER = 1 << 0,
+    PIN_OUT_HEADSET = 1 << 1,
+    PIN_OUT_LINEOUT = 1 << 2,
+    PIN_OUT_HDMI = 1 << 3,
+    PIN_OUT_USB = 1 << 4,
+    PIN_OUT_USB_EXT = 1 << 5,
+    PIN_OUT_EARPIECE = 1 << 5 | 1 << 4,
+    PIN_OUT_BLUETOOTH_SCO = 1 << 6,
+    PIN_OUT_DAUDIO_DEFAULT = 1 << 7,
+    PIN_OUT_HEADPHONE = 1 << 8,
+    PIN_OUT_USB_HEADSET = 1 << 9,
+    PIN_OUT_BLUETOOTH_A2DP = 1 << 10,
+    PIN_IN_MIC = 1 << 27 | 1 << 0,
+    PIN_IN_HS_MIC = 1 << 27 | 1 << 1,
+    PIN_IN_LINEIN = 1 << 27 | 1 << 2,
+    PIN_IN_USB_EXT = 1 << 27 | 1 << 3,
+    PIN_IN_BLUETOOTH_SCO_HEADSET = 1 << 27 | 1 << 4,
+    PIN_IN_DAUDIO_DEFAULT = 1 << 27 | 1 << 5,
+    PIN_IN_USB_HEADSET = 1 << 27 | 1 << 6,
+};
+
+enum AudioCategory {
+    AUDIO_IN_MEDIA = 0,
+    AUDIO_IN_COMMUNICATION = 1,
+    AUDIO_IN_RINGTONE = 2,
+    AUDIO_IN_CALL = 3,
+    AUDIO_MMAP_NOIRQ = 4,
+    AUDIO_OFFLOAD = 5,
+    AUDIO_MULTI_CHANNEL = 6,
+};
+
+enum AudioFormat {
+    AUDIO_FORMAT_TYPE_PCM_8_BIT = 1 << 0,
+    AUDIO_FORMAT_TYPE_PCM_16_BIT = 1 << 1,
+    AUDIO_FORMAT_TYPE_PCM_24_BIT = 1 << 1 | 1 << 0,
+    AUDIO_FORMAT_TYPE_PCM_32_BIT = 1 << 2,
+    AUDIO_FORMAT_TYPE_PCM_FLOAT = 1 << 2 | 1 << 0,
+    AUDIO_FORMAT_TYPE_MP3 = 1 << 24,
+    AUDIO_FORMAT_TYPE_AAC_MAIN = 1 << 24 | 1 << 0,
+    AUDIO_FORMAT_TYPE_AAC_LC = 1 << 24 | 1 << 1,
+    AUDIO_FORMAT_TYPE_AAC_LD = 1 << 24 | 1 << 1 | 1 << 0,
+    AUDIO_FORMAT_TYPE_AAC_ELD = 1 << 24 | 1 << 2,
+    AUDIO_FORMAT_TYPE_AAC_HE_V1 = 1 << 24 | 1 << 2 | 1 << 0,
+    AUDIO_FORMAT_TYPE_AAC_HE_V2 = 1 << 24 | 1 << 2 | 1 << 1,
+    AUDIO_FORMAT_TYPE_G711A = 1 << 25 | 1 << 0,
+    AUDIO_FORMAT_TYPE_G711U = 1 << 25 | 1 << 1,
+    AUDIO_FORMAT_TYPE_G726 = 1 << 25 | 1 << 1 | 1 << 0,
+};
+
+enum AudioChannelMask {
+    AUDIO_CHANNEL_FRONT_LEFT = 1,
+    AUDIO_CHANNEL_FRONT_RIGHT = 2,
+    AUDIO_CHANNEL_MONO = 1,
+    AUDIO_CHANNEL_STEREO = 3,
+};
+
+enum AudioSampleRatesMask {
+    AUDIO_SAMPLE_RATE_MASK_8000 = 1 << 0,
+    AUDIO_SAMPLE_RATE_MASK_12000 = 1 << 1,
+    AUDIO_SAMPLE_RATE_MASK_11025 = 1 << 2,
+    AUDIO_SAMPLE_RATE_MASK_16000 = 1 << 3,
+    AUDIO_SAMPLE_RATE_MASK_22050 = 1 << 4,
+    AUDIO_SAMPLE_RATE_MASK_24000 = 1 << 5,
+    AUDIO_SAMPLE_RATE_MASK_32000 = 1 << 6,
+    AUDIO_SAMPLE_RATE_MASK_44100 = 1 << 7,
+    AUDIO_SAMPLE_RATE_MASK_48000 = 1 << 8,
+    AUDIO_SAMPLE_RATE_MASK_64000 = 1 << 9,
+    AUDIO_SAMPLE_RATE_MASK_96000 = 1 << 10,
+    AUDIO_SAMPLE_RATE_MASK_INVALID = 4294967295,
+};
+
+enum AudioPortPassthroughMode {
+    PORT_PASSTHROUGH_LPCM = 1 << 0,
+    PORT_PASSTHROUGH_RAW = 1 << 1,
+    PORT_PASSTHROUGH_HBR2LBR = 1 << 2,
+    PORT_PASSTHROUGH_AUTO = 1 << 3,
+};
+
+enum AudioSampleFormat {
+    AUDIO_SAMPLE_FORMAT_S8 = 0,
+    AUDIO_SAMPLE_FORMAT_S8P = 1,
+    AUDIO_SAMPLE_FORMAT_U8 = 2,
+    AUDIO_SAMPLE_FORMAT_U8P = 3,
+    AUDIO_SAMPLE_FORMAT_S16 = 4,
+    AUDIO_SAMPLE_FORMAT_S16P = 5,
+    AUDIO_SAMPLE_FORMAT_U16 = 6,
+    AUDIO_SAMPLE_FORMAT_U16P = 7,
+    AUDIO_SAMPLE_FORMAT_S24 = 8,
+    AUDIO_SAMPLE_FORMAT_S24P = 9,
+    AUDIO_SAMPLE_FORMAT_U24 = 10,
+    AUDIO_SAMPLE_FORMAT_U24P = 11,
+    AUDIO_SAMPLE_FORMAT_S32 = 12,
+    AUDIO_SAMPLE_FORMAT_S32P = 13,
+    AUDIO_SAMPLE_FORMAT_U32 = 14,
+    AUDIO_SAMPLE_FORMAT_U32P = 15,
+    AUDIO_SAMPLE_FORMAT_S64 = 16,
+    AUDIO_SAMPLE_FORMAT_S64P = 17,
+    AUDIO_SAMPLE_FORMAT_U64 = 18,
+    AUDIO_SAMPLE_FORMAT_U64P = 19,
+    AUDIO_SAMPLE_FORMAT_F32 = 20,
+    AUDIO_SAMPLE_FORMAT_F32P = 21,
+    AUDIO_SAMPLE_FORMAT_F64 = 22,
+    AUDIO_SAMPLE_FORMAT_F64P = 23,
+};
+
+enum AudioChannelMode {
+    AUDIO_CHANNEL_NORMAL = 0,
+    AUDIO_CHANNEL_BOTH_LEFT = 1,
+    AUDIO_CHANNEL_BOTH_RIGHT = 2,
+    AUDIO_CHANNEL_EXCHANGE = 3,
+    AUDIO_CHANNEL_MIX = 4,
+    AUDIO_CHANNEL_LEFT_MUTE = 5,
+    AUDIO_CHANNEL_RIGHT_MUTE = 6,
+    AUDIO_CHANNEL_BOTH_MUTE = 7,
+};
+
+enum AudioDrainNotifyType {
+    AUDIO_DRAIN_NORMAL_MODE = 0,
+    AUDIO_DRAIN_EARLY_MODE = 1,
+};
+
+enum AudioCallbackType {
+    AUDIO_NONBLOCK_WRITE_COMPLETED = 0,
+    AUDIO_DRAIN_COMPLETED = 1,
+    AUDIO_FLUSH_COMPLETED = 2,
+    AUDIO_RENDER_FULL = 3,
+    AUDIO_ERROR_OCCUR = 4,
+};
+
+enum AudioPortRole {
+    AUDIO_PORT_UNASSIGNED_ROLE = 0,
+    AUDIO_PORT_SOURCE_ROLE = 1,
+    AUDIO_PORT_SINK_ROLE = 2,
+};
+
+enum AudioPortType {
+    AUDIO_PORT_UNASSIGNED_TYPE = 0,
+    AUDIO_PORT_DEVICE_TYPE = 1,
+    AUDIO_PORT_MIX_TYPE = 2,
+    AUDIO_PORT_SESSION_TYPE = 3,
+};
+
+enum AudioSessionType {
+    AUDIO_OUTPUT_STAGE_SESSION = 0,
+    AUDIO_OUTPUT_MIX_SESSION = 1,
+    AUDIO_ALLOCATE_SESSION = 2,
+    AUDIO_INVALID_SESSION = 3,
+};
+
+enum AudioDeviceType {
+    AUDIO_LINEOUT = 1 << 0,
+    AUDIO_HEADPHONE = 1 << 1,
+    AUDIO_HEADSET = 1 << 2,
+    AUDIO_USB_HEADSET = 1 << 3,
+    AUDIO_USB_HEADPHONE = 1 << 4,
+    AUDIO_USBA_HEADSET = 1 << 5,
+    AUDIO_USBA_HEADPHONE = 1 << 6,
+    AUDIO_PRIMARY_DEVICE = 1 << 7,
+    AUDIO_USB_DEVICE = 1 << 8,
+    AUDIO_A2DP_DEVICE = 1 << 9,
+    AUDIO_HDMI_DEVICE = 1 << 10,
+    AUDIO_ADAPTER_DEVICE = 1 << 11,
+    AUDIO_DEVICE_UNKNOWN,
+};
+
+enum AudioEventType {
+    AUDIO_DEVICE_ADD = 1,
+    AUDIO_DEVICE_REMOVE = 2,
+    AUDIO_LOAD_SUCCESS = 3,
+    AUDIO_LOAD_FAILURE = 4,
+    AUDIO_UNLOAD = 5,
+    AUDIO_SERVICE_VALID = 7,
+    AUDIO_SERVICE_INVALID = 8,
+    AUDIO_CAPTURE_THRESHOLD = 9,
+    AUDIO_EVENT_UNKNOWN = 10,
+};
+
+enum AudioExtParamKey {
+    AUDIO_EXT_PARAM_KEY_NONE = 0,
+    AUDIO_EXT_PARAM_KEY_VOLUME = 1,
+    AUDIO_EXT_PARAM_KEY_FOCUS = 2,
+    AUDIO_EXT_PARAM_KEY_BUTTON = 3,
+    AUDIO_EXT_PARAM_KEY_EFFECT = 4,
+    AUDIO_EXT_PARAM_KEY_STATUS = 5,
+    AUDIO_EXT_PARAM_KEY_USB_DEVICE = 101,
+    AUDIO_EXT_PARAM_KEY_PERF_INFO = 201,
+    AUDIO_EXT_PARAM_KEY_MMI = 301,
+    AUDIO_EXT_PARAM_KEY_LOWPOWER = 1000,
+};
+
+struct AudioDeviceStatus {
+    uint32_t pnpStatus;
+} __attribute__ ((aligned(8)));
+
+union SceneDesc {
+    uint32_t id;
+}  __attribute__ ((aligned(8)));
+
+struct AudioPort {
+    enum AudioPortDirection dir;
+    uint32_t portId;
+    char* portName;
+};
+
+struct AudioAdapterDescriptor {
+    char* adapterName;
+    struct AudioPort* ports;
+    uint32_t portsLen;
+};
+
+struct AudioDeviceDescriptor {
+    uint32_t portId;
+    enum AudioPortPin pins;
+    char* desc;
+};
+
+struct AudioSceneDescriptor {
+    union SceneDesc scene;
+    struct AudioDeviceDescriptor desc;
+};
+
+enum AudioInputType {
+    AUDIO_INPUT_DEFAULT_TYPE = 0,
+    AUDIO_INPUT_MIC_TYPE = 1 << 0,
+    AUDIO_INPUT_SPEECH_WAKEUP_TYPE = 1 << 1,
+    AUDIO_INPUT_VOICE_COMMUNICATION_TYPE = 1 << 2,
+    AUDIO_INPUT_VOICE_RECOGNITION_TYPE = 1 << 3,
+    AUDIO_INPUT_VOICE_UPLINK_TYPE = 1 << 4,
+    AUDIO_INPUT_VOICE_DOWNLINK_TYPE = 1 << 5,
+    AUDIO_INPUT_VOICE_CALL_TYPE = 1 << 6,
+    AUDIO_INPUT_CAMCORDER_TYPE = 1 << 7,
+};
+
+struct AudioOffloadInfo {
+    uint32_t sampleRate;
+    uint32_t channelCount;
+    uint64_t channelLayout;
+    uint32_t bitRate;
+    uint32_t bitWidth;
+    enum AudioFormat format;
+    uint32_t offloadBufferSize;
+    uint64_t duration;
+} __attribute__ ((aligned(8)));
+
+struct AudioSampleAttributes {
+    enum AudioCategory type;
+    bool interleaved;
+    enum AudioFormat format;
+    uint32_t sampleRate;
+    uint32_t channelCount;
+    uint64_t channelLayout;
+    uint32_t period;
+    uint32_t frameSize;
+    bool isBigEndian;
+    bool isSignedData;
+    uint32_t startThreshold;
+    uint32_t stopThreshold;
+    uint32_t silenceThreshold;
+    int32_t streamId;
+    int32_t sourceType;
+    struct AudioOffloadInfo offloadInfo;
+} __attribute__ ((aligned(8)));
+
+struct AudioTimeStamp {
+    int64_t tvSec;
+    int64_t tvNSec;
+} __attribute__ ((aligned(8)));
+
+struct AudioSubPortCapability {
+    uint32_t portId;
+    char* desc;
+    enum AudioPortPassthroughMode mask;
+};
+
+struct AudioPortCapability {
+    uint32_t deviceType;
+    uint32_t deviceId;
+    bool hardwareMode;
+    uint32_t formatNum;
+    enum AudioFormat* formats;
+    uint32_t formatsLen;
+    uint32_t sampleRateMasks;
+    enum AudioChannelMask channelMasks;
+    uint32_t channelCount;
+    struct AudioSubPortCapability* subPorts;
+    uint32_t subPortsLen;
+    enum AudioSampleFormat* supportSampleFormats;
+    uint32_t supportSampleFormatsLen;
+};
+
+struct AudioMmapBufferDescriptor {
+    int8_t* memoryAddress;
+    uint32_t memoryAddressLen;
+    int memoryFd;
+    int32_t totalBufferFrames;
+    int32_t transferFrameSize;
+    int32_t isShareable;
+    uint32_t offset;
+    char* filePath;
+};
+
+struct AudioDevExtInfo {
+    int32_t moduleId;
+    enum AudioPortPin type;
+    char* desc;
+};
+
+struct AudioMixExtInfo {
+    int32_t moduleId;
+    int32_t streamId;
+} __attribute__ ((aligned(8)));
+
+struct AudioSessionExtInfo {
+    enum AudioSessionType sessionType;
+} __attribute__ ((aligned(8)));
+
+struct AudioInfo {
+    struct AudioDevExtInfo device;
+    struct AudioMixExtInfo mix;
+    struct AudioSessionExtInfo session;
+};
+
+struct AudioRouteNode {
+    int32_t portId;
+    enum AudioPortRole role;
+    enum AudioPortType type;
+    struct AudioInfo ext;
+};
+
+struct AudioRoute {
+    struct AudioRouteNode* sources;
+    uint32_t sourcesLen;
+    struct AudioRouteNode* sinks;
+    uint32_t sinksLen;
+};
+
+struct AudioEvent {
+    uint32_t eventType;
+    uint32_t deviceType;
+} __attribute__ ((aligned(8)));
+
+bool AudioDeviceStatusBlockMarshalling(struct HdfSBuf *data, const struct AudioDeviceStatus *dataBlock);
+
+bool AudioDeviceStatusBlockUnmarshalling(struct HdfSBuf *data, struct AudioDeviceStatus *dataBlock);
+
+void AudioDeviceStatusFree(struct AudioDeviceStatus *dataBlock, bool freeSelf);
+
+bool AudioPortBlockMarshalling(struct HdfSBuf *data, const struct AudioPort *dataBlock);
+
+bool AudioPortBlockUnmarshalling(struct HdfSBuf *data, struct AudioPort *dataBlock);
+
+void AudioPortFree(struct AudioPort *dataBlock, bool freeSelf);
+
+bool AudioAdapterDescriptorBlockMarshalling(struct HdfSBuf *data, const struct AudioAdapterDescriptor *dataBlock);
+
+bool AudioAdapterDescriptorBlockUnmarshalling(struct HdfSBuf *data, struct AudioAdapterDescriptor *dataBlock);
+
+void AudioAdapterDescriptorFree(struct AudioAdapterDescriptor *dataBlock, bool freeSelf);
+
+bool AudioDeviceDescriptorBlockMarshalling(struct HdfSBuf *data, const struct AudioDeviceDescriptor *dataBlock);
+
+bool AudioDeviceDescriptorBlockUnmarshalling(struct HdfSBuf *data, struct AudioDeviceDescriptor *dataBlock);
+
+void AudioDeviceDescriptorFree(struct AudioDeviceDescriptor *dataBlock, bool freeSelf);
+
+bool AudioSceneDescriptorBlockMarshalling(struct HdfSBuf *data, const struct AudioSceneDescriptor *dataBlock);
+
+bool AudioSceneDescriptorBlockUnmarshalling(struct HdfSBuf *data, struct AudioSceneDescriptor *dataBlock);
+
+void AudioSceneDescriptorFree(struct AudioSceneDescriptor *dataBlock, bool freeSelf);
+
+bool AudioOffloadInfoBlockMarshalling(struct HdfSBuf *data, const struct AudioOffloadInfo *dataBlock);
+
+bool AudioOffloadInfoBlockUnmarshalling(struct HdfSBuf *data, struct AudioOffloadInfo *dataBlock);
+
+void AudioOffloadInfoFree(struct AudioOffloadInfo *dataBlock, bool freeSelf);
+
+bool AudioSampleAttributesBlockMarshalling(struct HdfSBuf *data, const struct AudioSampleAttributes *dataBlock);
+
+bool AudioSampleAttributesBlockUnmarshalling(struct HdfSBuf *data, struct AudioSampleAttributes *dataBlock);
+
+void AudioSampleAttributesFree(struct AudioSampleAttributes *dataBlock, bool freeSelf);
+
+bool AudioTimeStampBlockMarshalling(struct HdfSBuf *data, const struct AudioTimeStamp *dataBlock);
+
+bool AudioTimeStampBlockUnmarshalling(struct HdfSBuf *data, struct AudioTimeStamp *dataBlock);
+
+void AudioTimeStampFree(struct AudioTimeStamp *dataBlock, bool freeSelf);
+
+bool AudioSubPortCapabilityBlockMarshalling(struct HdfSBuf *data, const struct AudioSubPortCapability *dataBlock);
+
+bool AudioSubPortCapabilityBlockUnmarshalling(struct HdfSBuf *data, struct AudioSubPortCapability *dataBlock);
+
+void AudioSubPortCapabilityFree(struct AudioSubPortCapability *dataBlock, bool freeSelf);
+
+bool AudioPortCapabilityBlockMarshalling(struct HdfSBuf *data, const struct AudioPortCapability *dataBlock);
+
+bool AudioPortCapabilityBlockUnmarshalling(struct HdfSBuf *data, struct AudioPortCapability *dataBlock);
+
+void AudioPortCapabilityFree(struct AudioPortCapability *dataBlock, bool freeSelf);
+
+bool AudioMmapBufferDescriptorBlockMarshalling(struct HdfSBuf *data, const struct AudioMmapBufferDescriptor *dataBlock);
+
+bool AudioMmapBufferDescriptorBlockUnmarshalling(struct HdfSBuf *data, struct AudioMmapBufferDescriptor *dataBlock);
+
+void AudioMmapBufferDescriptorFree(struct AudioMmapBufferDescriptor *dataBlock, bool freeSelf);
+
+bool AudioDevExtInfoBlockMarshalling(struct HdfSBuf *data, const struct AudioDevExtInfo *dataBlock);
+
+bool AudioDevExtInfoBlockUnmarshalling(struct HdfSBuf *data, struct AudioDevExtInfo *dataBlock);
+
+void AudioDevExtInfoFree(struct AudioDevExtInfo *dataBlock, bool freeSelf);
+
+bool AudioMixExtInfoBlockMarshalling(struct HdfSBuf *data, const struct AudioMixExtInfo *dataBlock);
+
+bool AudioMixExtInfoBlockUnmarshalling(struct HdfSBuf *data, struct AudioMixExtInfo *dataBlock);
+
+void AudioMixExtInfoFree(struct AudioMixExtInfo *dataBlock, bool freeSelf);
+
+bool AudioSessionExtInfoBlockMarshalling(struct HdfSBuf *data, const struct AudioSessionExtInfo *dataBlock);
+
+bool AudioSessionExtInfoBlockUnmarshalling(struct HdfSBuf *data, struct AudioSessionExtInfo *dataBlock);
+
+void AudioSessionExtInfoFree(struct AudioSessionExtInfo *dataBlock, bool freeSelf);
+
+bool AudioInfoBlockMarshalling(struct HdfSBuf *data, const struct AudioInfo *dataBlock);
+
+bool AudioInfoBlockUnmarshalling(struct HdfSBuf *data, struct AudioInfo *dataBlock);
+
+void AudioInfoFree(struct AudioInfo *dataBlock, bool freeSelf);
+
+bool AudioRouteNodeBlockMarshalling(struct HdfSBuf *data, const struct AudioRouteNode *dataBlock);
+
+bool AudioRouteNodeBlockUnmarshalling(struct HdfSBuf *data, struct AudioRouteNode *dataBlock);
+
+void AudioRouteNodeFree(struct AudioRouteNode *dataBlock, bool freeSelf);
+
+bool AudioRouteBlockMarshalling(struct HdfSBuf *data, const struct AudioRoute *dataBlock);
+
+bool AudioRouteBlockUnmarshalling(struct HdfSBuf *data, struct AudioRoute *dataBlock);
+
+void AudioRouteFree(struct AudioRoute *dataBlock, bool freeSelf);
+
+bool AudioEventBlockMarshalling(struct HdfSBuf *data, const struct AudioEvent *dataBlock);
+
+bool AudioEventBlockUnmarshalling(struct HdfSBuf *data, struct AudioEvent *dataBlock);
+
+void AudioEventFree(struct AudioEvent *dataBlock, bool freeSelf);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // AUDIOTYPES_H

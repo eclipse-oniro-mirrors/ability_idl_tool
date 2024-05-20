@@ -1,0 +1,842 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/nnrt_device_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+#include "nnrt/v2_0/prepared_model_proxy.h"
+
+#define HDF_LOG_TAG    nnrt_device_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V2_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Nnrt::V2_0::INnrtDevice> OHOS::HDI::Nnrt::V2_0::INnrtDevice::Get(bool isStub)
+{
+    return INnrtDevice::Get("nnrt_device_service", isStub);
+}
+
+sptr<OHOS::HDI::Nnrt::V2_0::INnrtDevice> OHOS::HDI::Nnrt::V2_0::INnrtDevice::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "nnrt_device_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Nnrt::V2_0::INnrtDevice *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy> proxy = new OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t nnrtDeviceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 2) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:2.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::Reconnect(
+    sptr<OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceName(std::string& name)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceName_(name, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVendorName(std::string& name)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVendorName_(name, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceType(OHOS::HDI::Nnrt::V2_0::DeviceType& deviceType)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceType_(deviceType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceStatus(OHOS::HDI::Nnrt::V2_0::DeviceStatus& status)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceStatus_(status, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetSupportedOperation(const OHOS::HDI::Nnrt::V2_0::Model& model,
+     std::vector<bool>& ops)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetSupportedOperation_(model, ops, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsFloat16PrecisionSupported(bool& isSupported)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsFloat16PrecisionSupported_(isSupported, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPerformanceModeSupported(bool& isSupported)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPerformanceModeSupported_(isSupported, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPrioritySupported(bool& isSupported)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPrioritySupported_(isSupported, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsDynamicInputSupported(bool& isSupported)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsDynamicInputSupported_(isSupported, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModel(const OHOS::HDI::Nnrt::V2_0::Model& model,
+     const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModel_(model, config, preparedModel, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsModelCacheSupported(bool& isSupported)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsModelCacheSupported_(isSupported, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModelFromModelCache(const std::vector<OHOS::HDI::Nnrt::V2_0::SharedBuffer>& modelCache, const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModelFromModelCache_(modelCache, config, preparedModel, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareOfflineModel(const std::vector<OHOS::HDI::Nnrt::V2_0::SharedBuffer>& offlineModels, const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareOfflineModel_(offlineModels, config, preparedModel, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::AllocateBuffer(uint32_t length,
+     OHOS::HDI::Nnrt::V2_0::SharedBuffer& buffer)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::AllocateBuffer_(length, buffer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::ReleaseBuffer(const OHOS::HDI::Nnrt::V2_0::SharedBuffer& buffer)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::ReleaseBuffer_(buffer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceName_(std::string& name, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_DEVICE_NAME, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    const char* nameCp = nnrtDeviceReply.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    name = nameCp;
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVendorName_(std::string& name, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_VENDOR_NAME, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    const char* nameCp = nnrtDeviceReply.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    name = nameCp;
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceType_(OHOS::HDI::Nnrt::V2_0::DeviceType& deviceType,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_DEVICE_TYPE, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!nnrtDeviceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write deviceType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        deviceType = static_cast<enum DeviceType>(enumTmp);
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetDeviceStatus_(OHOS::HDI::Nnrt::V2_0::DeviceStatus& status,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_DEVICE_STATUS, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!nnrtDeviceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum DeviceStatus>(enumTmp);
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetSupportedOperation_(const OHOS::HDI::Nnrt::V2_0::Model& model,
+     std::vector<bool>& ops, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::ModelBlockMarshalling(nnrtDeviceData, model)) {
+        HDF_LOGE("%{public}s: write model failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_SUPPORTED_OPERATION, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    uint32_t opsSize = 0;
+    if (!nnrtDeviceReply.ReadUint32(opsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(opsSize, >, HDI_BUFF_MAX_SIZE / sizeof(bool), HDF_ERR_INVALID_PARAM);
+    ops.clear();
+    ops.reserve(opsSize);
+    for (uint32_t i0 = 0; i0 < opsSize; ++i0) {
+        bool value0 = false;
+        if (!nnrtDeviceReply.ReadBool(value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        ops.push_back(value0);
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsFloat16PrecisionSupported_(bool& isSupported,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_IS_FLOAT16_PRECISION_SUPPORTED, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadBool(isSupported)) {
+        HDF_LOGE("%{public}s: read isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPerformanceModeSupported_(bool& isSupported,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_IS_PERFORMANCE_MODE_SUPPORTED, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadBool(isSupported)) {
+        HDF_LOGE("%{public}s: read isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsPrioritySupported_(bool& isSupported,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_IS_PRIORITY_SUPPORTED, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadBool(isSupported)) {
+        HDF_LOGE("%{public}s: read isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsDynamicInputSupported_(bool& isSupported,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_IS_DYNAMIC_INPUT_SUPPORTED, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadBool(isSupported)) {
+        HDF_LOGE("%{public}s: read isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModel_(const OHOS::HDI::Nnrt::V2_0::Model& model,
+     const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::ModelBlockMarshalling(nnrtDeviceData, model)) {
+        HDF_LOGE("%{public}s: write model failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::ModelConfigBlockMarshalling(nnrtDeviceData, config)) {
+        HDF_LOGE("%{public}s: write config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_PREPARE_MODEL, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    sptr<IRemoteObject> preparedModelRemote = nnrtDeviceReply.ReadRemoteObject();
+    if (preparedModelRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    preparedModel = new OHOS::HDI::Nnrt::V2_0::PreparedModelProxy(preparedModelRemote);
+    if (preparedModel == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::IsModelCacheSupported_(bool& isSupported,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_IS_MODEL_CACHE_SUPPORTED, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadBool(isSupported)) {
+        HDF_LOGE("%{public}s: read isSupported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareModelFromModelCache_(const std::vector<OHOS::HDI::Nnrt::V2_0::SharedBuffer>& modelCache, const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteUint32(modelCache.size())) {
+        HDF_LOGE("%{public}s: write modelCache size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : modelCache) {
+        if (!OHOS::HDI::Nnrt::V2_0::SharedBufferBlockMarshalling(nnrtDeviceData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::ModelConfigBlockMarshalling(nnrtDeviceData, config)) {
+        HDF_LOGE("%{public}s: write config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_PREPARE_MODEL_FROM_MODEL_CACHE, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    sptr<IRemoteObject> preparedModelRemote = nnrtDeviceReply.ReadRemoteObject();
+    if (preparedModelRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    preparedModel = new OHOS::HDI::Nnrt::V2_0::PreparedModelProxy(preparedModelRemote);
+    if (preparedModel == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::PrepareOfflineModel_(const std::vector<OHOS::HDI::Nnrt::V2_0::SharedBuffer>& offlineModels, const OHOS::HDI::Nnrt::V2_0::ModelConfig& config, sptr<OHOS::HDI::Nnrt::V2_0::IPreparedModel>& preparedModel, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteUint32(offlineModels.size())) {
+        HDF_LOGE("%{public}s: write offlineModels size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : offlineModels) {
+        if (!OHOS::HDI::Nnrt::V2_0::SharedBufferBlockMarshalling(nnrtDeviceData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::ModelConfigBlockMarshalling(nnrtDeviceData, config)) {
+        HDF_LOGE("%{public}s: write config failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_PREPARE_OFFLINE_MODEL, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    sptr<IRemoteObject> preparedModelRemote = nnrtDeviceReply.ReadRemoteObject();
+    if (preparedModelRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    preparedModel = new OHOS::HDI::Nnrt::V2_0::PreparedModelProxy(preparedModelRemote);
+    if (preparedModel == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::AllocateBuffer_(uint32_t length,
+     OHOS::HDI::Nnrt::V2_0::SharedBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceData.WriteUint32(length)) {
+        HDF_LOGE("%{public}s: write length failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_ALLOCATE_BUFFER, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!SharedBufferBlockUnmarshalling(nnrtDeviceReply, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::ReleaseBuffer_(const OHOS::HDI::Nnrt::V2_0::SharedBuffer& buffer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Nnrt::V2_0::SharedBufferBlockMarshalling(nnrtDeviceData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_RELEASE_BUFFER, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    return nnrtDeviceRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V2_0::NnrtDeviceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel nnrtDeviceData;
+    MessageParcel nnrtDeviceReply;
+    MessageOption nnrtDeviceOption(MessageOption::TF_SYNC);
+
+    if (!nnrtDeviceData.WriteInterfaceToken(OHOS::HDI::Nnrt::V2_0::INnrtDevice::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t nnrtDeviceRet = remote->SendRequest(CMD_NNRT_DEVICE_GET_VERSION, nnrtDeviceData, nnrtDeviceReply, nnrtDeviceOption);
+    if (nnrtDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, nnrtDeviceRet);
+        return nnrtDeviceRet;
+    }
+
+    if (!nnrtDeviceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!nnrtDeviceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return nnrtDeviceRet;
+}
+
+} // V2_0
+} // Nnrt
+} // HDI
+} // OHOS

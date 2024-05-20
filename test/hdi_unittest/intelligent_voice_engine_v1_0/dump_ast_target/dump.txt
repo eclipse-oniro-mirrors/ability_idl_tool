@@ -1,0 +1,122 @@
+AST[name: IIntellVoiceEngineManager file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_engine_v1_0/foo/intelligent_voice/engine/v1_0/IIntellVoiceEngineManager.idl]
+package ohos.hdi.intelligent_voice.engine.v1_0;
+
+import ohos.hdi.intelligent_voice.engine.v1_0.IIntellVoiceEngineAdapter;
+import ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineTypes;
+
+[mini, lite, full] interface IIntellVoiceEngineManager {
+    [mini, lite, full] GetAdapterDescriptors(
+      [out] List<ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineAdapterDescriptor> descs);
+
+    [mini, lite, full] CreateAdapter(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineAdapterDescriptor descriptor,
+      [out] ohos.hdi.intelligent_voice.engine.v1_0.IIntellVoiceEngineAdapter adapter);
+
+    [mini, lite, full] ReleaseAdapter(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineAdapterDescriptor descriptor);
+}
+
+
+AST[name: IIntellVoiceEngineAdapter file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_engine_v1_0/foo/intelligent_voice/engine/v1_0/IIntellVoiceEngineAdapter.idl]
+package ohos.hdi.intelligent_voice.engine.v1_0;
+
+import ohos.hdi.intelligent_voice.engine.v1_0.IIntellVoiceEngineCallback;
+import ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineTypes;
+
+[mini, lite, full] interface IIntellVoiceEngineAdapter {
+    [mini, lite, full] SetCallback(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.IIntellVoiceEngineCallback engineCallback);
+
+    [mini, lite, full] Attach(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineAdapterInfo info);
+
+    [mini, lite, full] Detach();
+
+    [mini, lite, full] SetParameter(
+      [in] std::string keyValueList);
+
+    [mini, lite, full] GetParameter(
+      [in] std::string keyList,
+      [out] std::string valueList);
+
+    [mini, lite, full] Start(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.StartInfo info);
+
+    [mini, lite, full] Stop();
+
+    [mini, lite, full] WriteAudio(
+      [in] List<unsigned char> buffer);
+
+    [mini, lite, full] Read(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.ContentType type,
+      [out] Ashmem buffer);
+}
+
+
+AST[name: IIntellVoiceEngineCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_engine_v1_0/foo/intelligent_voice/engine/v1_0/IIntellVoiceEngineCallback.idl]
+package ohos.hdi.intelligent_voice.engine.v1_0;
+
+import ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineTypes;
+
+[mini, lite, full, callback] interface IIntellVoiceEngineCallback {
+    [mini, lite, full, callback] OnIntellVoiceHdiEvent(
+      [in] ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineCallBackEvent event);
+}
+
+
+AST[name: IntellVoiceEngineTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/intelligent_voice_engine_v1_0/foo/intelligent_voice/engine/v1_0/IntellVoiceEngineTypes.idl]
+package ohos.hdi.intelligent_voice.engine.v1_0;
+
+[mini, lite, full] enum IntellVoiceEngineAdapterType : int {
+  ENROLL_ADAPTER_TYPE = 0,
+  WAKEUP_ADAPTER_TYPE = 1,
+  UPDATE_ADAPTER_TYPE = 2,
+  ADAPTER_TYPE_BUT,
+};
+
+[mini, lite, full] enum ContentType : int {
+  DSP_MODLE = 0,
+  CONTENT_TYPE_BUT,
+};
+
+[mini, lite, full] enum IntellVoiceEngineMessageType : int {
+  INTELL_VOICE_ENGINE_MSG_NONE = 0,
+  INTELL_VOICE_ENGINE_MSG_INIT_DONE = 1,
+  INTELL_VOICE_ENGINE_MSG_ENROLL_COMPLETE = 2,
+  INTELL_VOICE_ENGINE_MSG_COMMIT_ENROLL_COMPLETE = 3,
+  INTELL_VOICE_ENGINE_MSG_RECOGNIZE_COMPLETE = 4,
+};
+
+[mini, lite, full] enum IntellVoiceEngineErrors : int {
+  INTELL_VOICE_ENGINE_OK = 0,
+  INTELL_VOICE_ENGINE_ERROR_OFFSET = -100,
+  INTELL_VOICE_ENGINE_INVALID_PARAMS = -101,
+  INTELL_VOICE_ENGINE_INIT_FAILED = -102,
+  INTELL_VOICE_ENGINE_ENROLL_FAILED = -103,
+  INTELL_VOICE_ENGINE_COMMIT_ENROLL_FAILED = -104,
+  INTELL_VOICE_ENGINE_WAKEUP_FAILED = -105,
+};
+
+[mini, lite, full] struct IntellVoiceEngineAdapterDescriptor {
+  ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineAdapterType adapterType;
+};
+
+[mini, lite, full] struct IntellVoiceEngineAdapterInfo {
+  std::string wakeupPhrase;
+  int minBufSize;
+  int sampleChannels;
+  int bitsPerSample;
+  int sampleRate;
+};
+
+[mini, lite, full] struct StartInfo {
+  boolean isLast;
+};
+
+[mini, lite, full] struct IntellVoiceEngineCallBackEvent {
+  ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineMessageType msgId;
+  ohos.hdi.intelligent_voice.engine.v1_0.IntellVoiceEngineErrors result;
+  std::string info;
+};
+
+

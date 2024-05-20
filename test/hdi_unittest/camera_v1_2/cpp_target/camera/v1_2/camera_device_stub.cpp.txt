@@ -1,0 +1,303 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/camera_device_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <iproxy_broker.h>
+#include <object_collector.h>
+#include "camera/v1_2/stream_operator_callback_proxy.h"
+
+#define HDF_LOG_TAG    camera_device_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStub(const sptr<OHOS::HDI::Camera::V1_2::ICameraDevice> &impl)
+    : IPCObjectStub(OHOS::HDI::Camera::V1_2::ICameraDevice::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Camera::V1_2::CameraDeviceStub::~CameraDeviceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CAMERA_DEVICE_GET_VERSION:
+            return CameraDeviceStubGetVersion(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_STREAM_OPERATOR__V1_2:
+            return CameraDeviceStubGetStreamOperator_V1_2(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_STATUS:
+            return CameraDeviceStubGetStatus(data, reply, option);
+        case CMD_CAMERA_DEVICE_RESET:
+            return CameraDeviceStubReset(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_STREAM_OPERATOR__V1_1:
+            return CameraDeviceStubGetStreamOperator_V1_1(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_DEFAULT_SETTINGS:
+            return CameraDeviceStubGetDefaultSettings(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_STREAM_OPERATOR:
+            return CameraDeviceStubGetStreamOperator(data, reply, option);
+        case CMD_CAMERA_DEVICE_UPDATE_SETTINGS:
+            return CameraDeviceStubUpdateSettings(data, reply, option);
+        case CMD_CAMERA_DEVICE_SET_RESULT_MODE:
+            return CameraDeviceStubSetResultMode(data, reply, option);
+        case CMD_CAMERA_DEVICE_GET_ENABLED_RESULTS:
+            return CameraDeviceStubGetEnabledResults(data, reply, option);
+        case CMD_CAMERA_DEVICE_ENABLE_RESULT:
+            return CameraDeviceStubEnableResult(data, reply, option);
+        case CMD_CAMERA_DEVICE_DISABLE_RESULT:
+            return CameraDeviceStubDisableResult(data, reply, option);
+        case CMD_CAMERA_DEVICE_CLOSE:
+            return CameraDeviceStubClose(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStreamOperator_V1_2(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStreamOperator_V1_2_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStatus(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStatus_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubReset(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubReset_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStreamOperator_V1_1(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_1::CameraDeviceStub::CameraDeviceStubGetStreamOperator_V1_1_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetDefaultSettings(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_1::CameraDeviceStub::CameraDeviceStubGetDefaultSettings_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStreamOperator(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubGetStreamOperator_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubUpdateSettings(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubUpdateSettings_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubSetResultMode(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubSetResultMode_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetEnabledResults(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubGetEnabledResults_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubEnableResult(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubEnableResult_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubDisableResult(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubDisableResult_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubClose(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubClose_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetVersion(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption)
+{
+    return OHOS::HDI::Camera::V1_0::CameraDeviceStub::CameraDeviceStubGetVersion_(cameraDeviceData, cameraDeviceReply, cameraDeviceOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStreamOperator_V1_2_(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption, sptr<OHOS::HDI::Camera::V1_2::ICameraDevice> impl)
+{
+    if (cameraDeviceData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Camera::V1_2::IStreamOperatorCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = cameraDeviceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Camera::V1_2::StreamOperatorCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Camera::V1_2::IStreamOperator> streamOperator;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraDeviceRet = impl->GetStreamOperator_V1_2(callbackObj, streamOperator);
+    if (cameraDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraDeviceRet);
+        return cameraDeviceRet;
+    }
+
+    if (streamOperator == nullptr) {
+        HDF_LOGE("%{public}s: parameter streamOperator is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cameraDeviceReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(streamOperator, OHOS::HDI::Camera::V1_2::IStreamOperator::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write streamOperator failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cameraDeviceRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubGetStatus_(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption, sptr<OHOS::HDI::Camera::V1_2::ICameraDevice> impl)
+{
+    if (cameraDeviceData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool cameraDeviceMemSet = false;
+    if (!cameraDeviceData.ReadBool(cameraDeviceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read cameraDeviceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> metaIn;
+    if (!ReadPodArray(cameraDeviceData, metaIn)) {
+        HDF_LOGE("%{public}s: failed to read metaIn", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> metaOut;
+    if (cameraDeviceMemSet) {
+        uint32_t capacity = 0;
+        if (!cameraDeviceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        metaOut.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraDeviceRet = impl->GetStatus(metaIn, metaOut);
+    if (cameraDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraDeviceRet);
+        return cameraDeviceRet;
+    }
+
+    if (!WritePodArray(cameraDeviceReply, metaOut)) {
+        HDF_LOGE("%{public}s: failed to write metaOut", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cameraDeviceRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::CameraDeviceStub::CameraDeviceStubReset_(MessageParcel& cameraDeviceData, MessageParcel& cameraDeviceReply, MessageOption& cameraDeviceOption, sptr<OHOS::HDI::Camera::V1_2::ICameraDevice> impl)
+{
+    if (cameraDeviceData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::ICameraDevice::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cameraDeviceRet = impl->Reset();
+    if (cameraDeviceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cameraDeviceRet);
+        return cameraDeviceRet;
+    }
+
+    return cameraDeviceRet;
+}
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS

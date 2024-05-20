@@ -1,0 +1,2210 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdf_sbuf.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <servmgr_hdi.h>
+#include <stub_collector.h>
+#include "v2_0/iaudio_render.h"
+
+#define HDF_LOG_TAG    audio_render_proxy
+
+struct AudioRenderProxy {
+    struct IAudioRender impl;
+    struct HdfRemoteService *remote;
+};
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface);
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count);
+
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface)
+{
+    if (interface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        return false;
+    }
+
+    struct HdfRemoteService **stub = StubCollectorGetOrNewObject(desc, interface);
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub of '%{public}s'", __func__, desc);
+        return false;
+    }
+
+    if (HdfSbufWriteRemoteService(parcel, *stub) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to write remote service", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static bool WritePodArray(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, uint32_t count)
+{
+    if (!HdfSbufWriteUint32(parcel, count)) {
+        HDF_LOGE("%{public}s: failed to write array size", __func__);
+        return false;
+    }
+
+    if (data == NULL && count == 0) {
+        return true;
+    }
+
+    if (!HdfSbufWriteUnpadBuffer(parcel, (const uint8_t *)data, elementSize * count)) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+static int32_t AudioRenderProxyCall(struct IAudioRender *self, int32_t id, struct HdfSBuf *data,
+    struct HdfSBuf *reply, bool isOneWay)
+{
+    struct HdfRemoteService *remote = self->AsObject(self);
+    if (remote == NULL ||
+        remote->dispatcher == NULL ||
+        remote->dispatcher->Dispatch == NULL ||
+        remote->dispatcher->DispatchAsync == NULL) {
+        HDF_LOGE("%{public}s: Invalid HdfRemoteService obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (isOneWay) {
+        return remote->dispatcher->DispatchAsync(remote, id, data, reply);
+    } else {
+        return remote->dispatcher->Dispatch(remote, id, data, reply);
+    }
+}
+
+static int32_t AudioRenderProxyGetLatency(struct IAudioRender *self, uint32_t* ms)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_LATENCY, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioRenderReply, ms)) {
+        HDF_LOGE("%{public}s: read ms failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyRenderFrame(struct IAudioRender *self, const int8_t* frame, uint32_t frameLen,
+     uint64_t* replyBytes)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WritePodArray(audioRenderData, frame, sizeof(int8_t), frameLen)) {
+        HDF_LOGE("%{public}s: failed to write frame", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_RENDER_FRAME, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, replyBytes)) {
+        HDF_LOGE("%{public}s: read replyBytes failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetRenderPosition(struct IAudioRender *self, uint64_t* frames,
+     struct AudioTimeStamp* time)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_RENDER_POSITION, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioRenderReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetRenderSpeed(struct IAudioRender *self, float speed)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderData, speed)) {
+        HDF_LOGE("%{public}s: write speed failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_RENDER_SPEED, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetRenderSpeed(struct IAudioRender *self, float* speed)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_RENDER_SPEED, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioRenderReply, speed)) {
+        HDF_LOGE("%{public}s: read speed failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetChannelMode(struct IAudioRender *self, enum AudioChannelMode mode)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderData, (uint64_t)mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_CHANNEL_MODE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetChannelMode(struct IAudioRender *self, enum AudioChannelMode* mode)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_CHANNEL_MODE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!HdfSbufReadUint64(audioRenderReply, &enumTmp)) {
+            HDF_LOGE("%{public}s: read mode failed!", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        if (mode == NULL) {
+            HDF_LOGE("%{public}s: invlid parameter mode", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        *mode = (enum AudioChannelMode)enumTmp;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyRegCallback(struct IAudioRender *self, struct IAudioCallback* audioCallback,
+     int8_t cookie)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(audioRenderData, IAUDIOCALLBACK_INTERFACE_DESC, audioCallback)) {
+        HDF_LOGE("%{public}s: write audioCallback failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderData, cookie)) {
+        HDF_LOGE("%{public}s: write cookie failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_REG_CALLBACK, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyDrainBuffer(struct IAudioRender *self, enum AudioDrainNotifyType* type)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_DRAIN_BUFFER, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!HdfSbufReadUint64(audioRenderReply, &enumTmp)) {
+            HDF_LOGE("%{public}s: read type failed!", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        if (type == NULL) {
+            HDF_LOGE("%{public}s: invlid parameter type", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        *type = (enum AudioDrainNotifyType)enumTmp;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyIsSupportsDrain(struct IAudioRender *self, bool* support)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_IS_SUPPORTS_DRAIN, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderReply, (int8_t *)support)) {
+        HDF_LOGE("%{public}s: read support failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyCheckSceneCapability(struct IAudioRender *self, const struct AudioSceneDescriptor* scene,
+     bool* supported)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSceneDescriptorBlockMarshalling(audioRenderData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_CHECK_SCENE_CAPABILITY, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderReply, (int8_t *)supported)) {
+        HDF_LOGE("%{public}s: read supported failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySelectScene(struct IAudioRender *self, const struct AudioSceneDescriptor* scene)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSceneDescriptorBlockMarshalling(audioRenderData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SELECT_SCENE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetMute(struct IAudioRender *self, bool mute)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderData, mute ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write mute failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_MUTE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetMute(struct IAudioRender *self, bool* mute)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_MUTE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderReply, (int8_t *)mute)) {
+        HDF_LOGE("%{public}s: read mute failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetVolume(struct IAudioRender *self, float volume)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderData, volume)) {
+        HDF_LOGE("%{public}s: write volume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_VOLUME, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetVolume(struct IAudioRender *self, float* volume)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_VOLUME, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioRenderReply, volume)) {
+        HDF_LOGE("%{public}s: read volume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetGainThreshold(struct IAudioRender *self, float* min, float* max)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_GAIN_THRESHOLD, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioRenderReply, min)) {
+        HDF_LOGE("%{public}s: read min failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioRenderReply, max)) {
+        HDF_LOGE("%{public}s: read max failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetGain(struct IAudioRender *self, float* gain)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_GAIN, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadFloat(audioRenderReply, gain)) {
+        HDF_LOGE("%{public}s: read gain failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetGain(struct IAudioRender *self, float gain)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderData, gain)) {
+        HDF_LOGE("%{public}s: write gain failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_GAIN, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetFrameSize(struct IAudioRender *self, uint64_t* size)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_FRAME_SIZE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, size)) {
+        HDF_LOGE("%{public}s: read size failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetFrameCount(struct IAudioRender *self, uint64_t* count)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_FRAME_COUNT, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, count)) {
+        HDF_LOGE("%{public}s: read count failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetSampleAttributes(struct IAudioRender *self, const struct AudioSampleAttributes* attrs)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioSampleAttributesBlockMarshalling(audioRenderData, attrs)) {
+        HDF_LOGE("%{public}s: write attrs failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_SAMPLE_ATTRIBUTES, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetSampleAttributes(struct IAudioRender *self, struct AudioSampleAttributes* attrs)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_SAMPLE_ATTRIBUTES, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!AudioSampleAttributesBlockUnmarshalling(audioRenderReply, attrs)) {
+        HDF_LOGE("%{public}s: read attrs failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetCurrentChannelId(struct IAudioRender *self, uint32_t* channelId)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_CURRENT_CHANNEL_ID, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioRenderReply, channelId)) {
+        HDF_LOGE("%{public}s: read channelId failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetExtraParams(struct IAudioRender *self, const char* keyValueList)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(audioRenderData, keyValueList)) {
+        HDF_LOGE("%{public}s: write keyValueList failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_EXTRA_PARAMS, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetExtraParams(struct IAudioRender *self, char* keyValueList, uint32_t keyValueListLen)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint8(audioRenderData, 1)) {
+        HDF_LOGE("%{public}s: write flag of memory setting failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (keyValueList == NULL || keyValueListLen == 0) {
+        HDF_LOGE("%{public}s: keyValueList is invalid", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioRenderData, keyValueListLen)) {
+        HDF_LOGE("%{public}s: write keyValueListLen failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_EXTRA_PARAMS, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    const char *keyValueListCopy = HdfSbufReadString(audioRenderReply);
+    if (keyValueListCopy == NULL) {
+        HDF_LOGE("%{public}s: read keyValueListCopy failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    if (strcpy_s(keyValueList, keyValueListLen, keyValueListCopy) != EOK) {
+        HDF_LOGE("%{public}s: read keyValueList failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyReqMmapBuffer(struct IAudioRender *self, int32_t reqSize,
+     struct AudioMmapBufferDescriptor* desc)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioRenderData, reqSize)) {
+        HDF_LOGE("%{public}s: write reqSize failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_REQ_MMAP_BUFFER, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!AudioMmapBufferDescriptorBlockUnmarshalling(audioRenderReply, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetMmapPosition(struct IAudioRender *self, uint64_t* frames, struct AudioTimeStamp* time)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_MMAP_POSITION, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioRenderReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyAddAudioEffect(struct IAudioRender *self, uint64_t effectid)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderData, effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_ADD_AUDIO_EFFECT, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyRemoveAudioEffect(struct IAudioRender *self, uint64_t effectid)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderData, effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_REMOVE_AUDIO_EFFECT, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetFrameBufferSize(struct IAudioRender *self, uint64_t* bufferSize)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_FRAME_BUFFER_SIZE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint64(audioRenderReply, bufferSize)) {
+        HDF_LOGE("%{public}s: read bufferSize failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyStart(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_START, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyStop(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_STOP, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyPause(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_PAUSE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyResume(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_RESUME, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyFlush(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_FLUSH, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyTurnStandbyMode(struct IAudioRender *self)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_TURN_STANDBY_MODE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyAudioDevDump(struct IAudioRender *self, int32_t range, int32_t fd)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioRenderData, range)) {
+        HDF_LOGE("%{public}s: write range failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt32(audioRenderData, fd)) {
+        HDF_LOGE("%{public}s: write fd failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_AUDIO_DEV_DUMP, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyIsSupportsPauseAndResume(struct IAudioRender *self, bool* supportPause,
+     bool* supportResume)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_IS_SUPPORTS_PAUSE_AND_RESUME, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderReply, (int8_t *)supportPause)) {
+        HDF_LOGE("%{public}s: read supportPause failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderReply, (int8_t *)supportResume)) {
+        HDF_LOGE("%{public}s: read supportResume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxySetBufferSize(struct IAudioRender *self, uint32_t size)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioRenderData, size)) {
+        HDF_LOGE("%{public}s: write size failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_SET_BUFFER_SIZE, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static int32_t AudioRenderProxyGetVersion(struct IAudioRender *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+
+    struct HdfSBuf *audioRenderData = HdfSbufTypedObtain(SBUF_IPC);
+    struct HdfSBuf *audioRenderReply = HdfSbufTypedObtain(SBUF_IPC);
+
+    if (audioRenderData == NULL || audioRenderReply == NULL) {
+        HDF_LOGE("%{public}s: HdfSubf malloc failed!", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (self == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), audioRenderData)) {
+        HDF_LOGE("%{public}s: write interface token failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    audioRenderRet = AudioRenderProxyCall(self, CMD_AUDIO_RENDER_GET_VERSION, audioRenderData, audioRenderReply, false);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: call failed! error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioRenderReply, majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadUint32(audioRenderReply, minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (audioRenderData != NULL) {
+        HdfSbufRecycle(audioRenderData);
+    }
+    if (audioRenderReply != NULL) {
+        HdfSbufRecycle(audioRenderReply);
+    }
+    return audioRenderRet;
+}
+
+static struct HdfRemoteService *AudioRenderProxyAsObject(struct IAudioRender *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct AudioRenderProxy *proxy = CONTAINER_OF(self, struct AudioRenderProxy, impl);
+    return proxy->remote;
+}
+
+static void AudioRenderProxyConstruct(struct IAudioRender *impl)
+{
+    impl->GetLatency = AudioRenderProxyGetLatency;
+    impl->RenderFrame = AudioRenderProxyRenderFrame;
+    impl->GetRenderPosition = AudioRenderProxyGetRenderPosition;
+    impl->SetRenderSpeed = AudioRenderProxySetRenderSpeed;
+    impl->GetRenderSpeed = AudioRenderProxyGetRenderSpeed;
+    impl->SetChannelMode = AudioRenderProxySetChannelMode;
+    impl->GetChannelMode = AudioRenderProxyGetChannelMode;
+    impl->RegCallback = AudioRenderProxyRegCallback;
+    impl->DrainBuffer = AudioRenderProxyDrainBuffer;
+    impl->IsSupportsDrain = AudioRenderProxyIsSupportsDrain;
+    impl->CheckSceneCapability = AudioRenderProxyCheckSceneCapability;
+    impl->SelectScene = AudioRenderProxySelectScene;
+    impl->SetMute = AudioRenderProxySetMute;
+    impl->GetMute = AudioRenderProxyGetMute;
+    impl->SetVolume = AudioRenderProxySetVolume;
+    impl->GetVolume = AudioRenderProxyGetVolume;
+    impl->GetGainThreshold = AudioRenderProxyGetGainThreshold;
+    impl->GetGain = AudioRenderProxyGetGain;
+    impl->SetGain = AudioRenderProxySetGain;
+    impl->GetFrameSize = AudioRenderProxyGetFrameSize;
+    impl->GetFrameCount = AudioRenderProxyGetFrameCount;
+    impl->SetSampleAttributes = AudioRenderProxySetSampleAttributes;
+    impl->GetSampleAttributes = AudioRenderProxyGetSampleAttributes;
+    impl->GetCurrentChannelId = AudioRenderProxyGetCurrentChannelId;
+    impl->SetExtraParams = AudioRenderProxySetExtraParams;
+    impl->GetExtraParams = AudioRenderProxyGetExtraParams;
+    impl->ReqMmapBuffer = AudioRenderProxyReqMmapBuffer;
+    impl->GetMmapPosition = AudioRenderProxyGetMmapPosition;
+    impl->AddAudioEffect = AudioRenderProxyAddAudioEffect;
+    impl->RemoveAudioEffect = AudioRenderProxyRemoveAudioEffect;
+    impl->GetFrameBufferSize = AudioRenderProxyGetFrameBufferSize;
+    impl->Start = AudioRenderProxyStart;
+    impl->Stop = AudioRenderProxyStop;
+    impl->Pause = AudioRenderProxyPause;
+    impl->Resume = AudioRenderProxyResume;
+    impl->Flush = AudioRenderProxyFlush;
+    impl->TurnStandbyMode = AudioRenderProxyTurnStandbyMode;
+    impl->AudioDevDump = AudioRenderProxyAudioDevDump;
+    impl->IsSupportsPauseAndResume = AudioRenderProxyIsSupportsPauseAndResume;
+    impl->SetBufferSize = AudioRenderProxySetBufferSize;
+    impl->GetVersion = AudioRenderProxyGetVersion;
+    impl->AsObject = AudioRenderProxyAsObject;
+}
+
+struct IAudioRender *IAudioRenderGet(struct HdfRemoteService *remote)
+{
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s: remote is null", __func__);
+        return NULL;
+    }
+
+    if (!HdfRemoteServiceSetInterfaceDesc(remote, IAUDIORENDER_INTERFACE_DESC)) {
+        HDF_LOGE("%{public}s: set interface token failed!", __func__);
+        HdfRemoteServiceRecycle(remote);
+        return NULL;
+    }
+
+    struct AudioRenderProxy *proxy = (struct AudioRenderProxy *)OsalMemCalloc(sizeof(struct AudioRenderProxy));
+    if (proxy == NULL) {
+        HDF_LOGE("%{public}s: malloc IAudioRender proxy failed!", __func__);
+        return NULL;
+    }
+
+    proxy->remote = remote;
+    AudioRenderProxyConstruct(&proxy->impl);
+    struct IAudioRender *client = &proxy->impl;
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t audioRenderRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: get version failed!", __func__);
+        IAudioRenderRelease(false, client);
+        return NULL;
+    }
+
+    if (serMajorVer != IAUDIO_RENDER_MAJOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+            serMajorVer, serMinorVer, IAUDIO_RENDER_MAJOR_VERSION, IAUDIO_RENDER_MINOR_VERSION);
+        IAudioRenderRelease(false, client);
+        return NULL;
+    }
+
+    return client;
+}
+
+void IAudioRenderImplRelease(struct IAudioRender *instance) __attribute__((weak));
+void IAudioRenderRelease(struct IAudioRender *instance, bool isStub)
+{
+    if (instance == NULL) {
+        return;
+    }
+    if (isStub) {
+        if (IAudioRenderImplRelease != NULL) {
+            IAudioRenderImplRelease(instance);
+        }
+        return;
+    }
+    struct AudioRenderProxy *proxy = CONTAINER_OF(instance, struct AudioRenderProxy, impl);
+    HdfRemoteServiceRecycle(proxy->remote);
+    OsalMemFree(proxy);
+}

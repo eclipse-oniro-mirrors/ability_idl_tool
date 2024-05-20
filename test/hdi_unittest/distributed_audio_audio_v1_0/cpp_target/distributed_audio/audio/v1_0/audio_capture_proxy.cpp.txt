@@ -1,0 +1,1235 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_capture_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    audio_capture_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CaptureFrame(std::vector<int8_t>& frame,
+     uint64_t& replyBytes)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CaptureFrame_(frame, replyBytes, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCapturePosition(uint64_t& frames,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCapturePosition_(frames, time, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CheckSceneCapability(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene, bool& supported)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CheckSceneCapability_(scene, supported, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SelectScene(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SelectScene_(scene, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetMute(bool mute)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetMute_(mute, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMute(bool& mute)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMute_(mute, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetVolume(float volume)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetVolume_(volume, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVolume(float& volume)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVolume_(volume, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGainThreshold(float& min, float& max)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGainThreshold_(min, max, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGain(float& gain)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGain_(gain, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetGain(float gain)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetGain_(gain, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameSize(uint64_t& size)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameSize_(size, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameCount(uint64_t& count)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameCount_(count, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetSampleAttributes(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetSampleAttributes_(attrs, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetSampleAttributes(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetSampleAttributes_(attrs, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCurrentChannelId(uint32_t& channelId)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCurrentChannelId_(channelId, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetExtraParams(const std::string& keyValueList)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetExtraParams_(keyValueList, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetExtraParams(std::string& keyValueList)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetExtraParams_(keyValueList, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::ReqMmapBuffer(int32_t reqSize,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor& desc)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::ReqMmapBuffer_(reqSize, desc, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMmapPosition(uint64_t& frames,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMmapPosition_(frames, time, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AddAudioEffect(uint64_t effectid)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AddAudioEffect_(effectid, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::RemoveAudioEffect(uint64_t effectid)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::RemoveAudioEffect_(effectid, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameBufferSize(uint64_t& bufferSize)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameBufferSize_(bufferSize, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Start()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Start_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Stop()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Stop_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Pause()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Pause_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Resume()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Resume_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Flush()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Flush_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::TurnStandbyMode()
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::TurnStandbyMode_(Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AudioDevDump(int32_t range, int32_t fd)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AudioDevDump_(range, fd, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::IsSupportsPauseAndResume(bool& supportPause,
+     bool& supportResume)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::IsSupportsPauseAndResume_(supportPause, supportResume, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CaptureFrame_(std::vector<int8_t>& frame,
+     uint64_t& replyBytes, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_CAPTURE_FRAME, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!ReadPodArray(audioCaptureReply, frame)) {
+        HDF_LOGE("%{public}s: failed to read frame", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.ReadUint64(replyBytes)) {
+        HDF_LOGE("%{public}s: read replyBytes failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCapturePosition_(uint64_t& frames,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_CAPTURE_POSITION, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint64(frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::CheckSceneCapability_(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene, bool& supported, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptorBlockMarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_CHECK_SCENE_CAPABILITY, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadBool(supported)) {
+        HDF_LOGE("%{public}s: read supported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SelectScene_(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptorBlockMarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: write scene failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SELECT_SCENE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetMute_(bool mute,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteBool(mute)) {
+        HDF_LOGE("%{public}s: write mute failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SET_MUTE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMute_(bool& mute,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_MUTE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadBool(mute)) {
+        HDF_LOGE("%{public}s: read mute failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetVolume_(float volume,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteFloat(volume)) {
+        HDF_LOGE("%{public}s: write volume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SET_VOLUME, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVolume_(float& volume,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_VOLUME, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadFloat(volume)) {
+        HDF_LOGE("%{public}s: read volume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGainThreshold_(float& min, float& max,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_GAIN_THRESHOLD, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadFloat(min)) {
+        HDF_LOGE("%{public}s: read min failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.ReadFloat(max)) {
+        HDF_LOGE("%{public}s: read max failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetGain_(float& gain,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_GAIN, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadFloat(gain)) {
+        HDF_LOGE("%{public}s: read gain failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetGain_(float gain,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteFloat(gain)) {
+        HDF_LOGE("%{public}s: write gain failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SET_GAIN, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameSize_(uint64_t& size,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_FRAME_SIZE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint64(size)) {
+        HDF_LOGE("%{public}s: read size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameCount_(uint64_t& count,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_FRAME_COUNT, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint64(count)) {
+        HDF_LOGE("%{public}s: read count failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetSampleAttributes_(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributesBlockMarshalling(audioCaptureData, attrs)) {
+        HDF_LOGE("%{public}s: write attrs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SET_SAMPLE_ATTRIBUTES, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetSampleAttributes_(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_SAMPLE_ATTRIBUTES, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!AudioSampleAttributesBlockUnmarshalling(audioCaptureReply, attrs)) {
+        HDF_LOGE("%{public}s: read attrs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetCurrentChannelId_(uint32_t& channelId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_CURRENT_CHANNEL_ID, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint32(channelId)) {
+        HDF_LOGE("%{public}s: read channelId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::SetExtraParams_(const std::string& keyValueList,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteCString(keyValueList.c_str())) {
+        HDF_LOGE("%{public}s: write keyValueList failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_SET_EXTRA_PARAMS, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetExtraParams_(std::string& keyValueList,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_EXTRA_PARAMS, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    const char* keyValueListCp = audioCaptureReply.ReadCString();
+    if (keyValueListCp == nullptr) {
+        HDF_LOGE("%{public}s: read keyValueList failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    keyValueList = keyValueListCp;
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::ReqMmapBuffer_(int32_t reqSize,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor& desc, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteInt32(reqSize)) {
+        HDF_LOGE("%{public}s: write reqSize failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_REQ_MMAP_BUFFER, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!AudioMmapBufferDescriptorBlockUnmarshalling(audioCaptureReply, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetMmapPosition_(uint64_t& frames,
+     OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_MMAP_POSITION, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint64(frames)) {
+        HDF_LOGE("%{public}s: read frames failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!AudioTimeStampBlockUnmarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: read time failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AddAudioEffect_(uint64_t effectid,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteUint64(effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_ADD_AUDIO_EFFECT, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::RemoveAudioEffect_(uint64_t effectid,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteUint64(effectid)) {
+        HDF_LOGE("%{public}s: write effectid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_REMOVE_AUDIO_EFFECT, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetFrameBufferSize_(uint64_t& bufferSize,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_FRAME_BUFFER_SIZE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint64(bufferSize)) {
+        HDF_LOGE("%{public}s: read bufferSize failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Start_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_START, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Stop_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_STOP, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Pause_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_PAUSE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Resume_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_RESUME, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::Flush_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_FLUSH, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::TurnStandbyMode_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_TURN_STANDBY_MODE, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::AudioDevDump_(int32_t range, int32_t fd,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteInt32(range)) {
+        HDF_LOGE("%{public}s: write range failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureData.WriteInt32(fd)) {
+        HDF_LOGE("%{public}s: write fd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_AUDIO_DEV_DUMP, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::IsSupportsPauseAndResume_(bool& supportPause,
+     bool& supportResume, const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_IS_SUPPORTS_PAUSE_AND_RESUME, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadBool(supportPause)) {
+        HDF_LOGE("%{public}s: read supportPause failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.ReadBool(supportResume)) {
+        HDF_LOGE("%{public}s: read supportResume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel audioCaptureData;
+    MessageParcel audioCaptureReply;
+    MessageOption audioCaptureOption(MessageOption::TF_SYNC);
+
+    if (!audioCaptureData.WriteInterfaceToken(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t audioCaptureRet = remote->SendRequest(CMD_AUDIO_CAPTURE_GET_VERSION, audioCaptureData, audioCaptureReply, audioCaptureOption);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS

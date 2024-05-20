@@ -1,0 +1,160 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/audio_adapter_service.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+
+#define HDF_LOG_TAG    audio_adapter_service
+
+static int32_t AudioAdapterInitAllPorts(struct IAudioAdapter *self)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterCreateRender(struct IAudioAdapter *self, const struct AudioDeviceDescriptor* desc,
+     const struct AudioSampleAttributes* attrs, struct IAudioRender** render, uint32_t* renderId)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterDestroyRender(struct IAudioAdapter *self, uint32_t renderId)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterCreateCapture(struct IAudioAdapter *self, const struct AudioDeviceDescriptor* desc,
+     const struct AudioSampleAttributes* attrs, struct IAudioCapture** capture, uint32_t* captureId)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterDestroyCapture(struct IAudioAdapter *self, uint32_t captureId)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetPortCapability(struct IAudioAdapter *self, const struct AudioPort* port,
+     struct AudioPortCapability* capability)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterSetPassthroughMode(struct IAudioAdapter *self, const struct AudioPort* port,
+     enum AudioPortPassthroughMode mode)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetPassthroughMode(struct IAudioAdapter *self, const struct AudioPort* port,
+     enum AudioPortPassthroughMode* mode)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetDeviceStatus(struct IAudioAdapter *self, struct AudioDeviceStatus* status)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterUpdateAudioRoute(struct IAudioAdapter *self, const struct AudioRoute* route,
+     int32_t* routeHandle)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterReleaseAudioRoute(struct IAudioAdapter *self, int32_t routeHandle)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterSetMicMute(struct IAudioAdapter *self, bool mute)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetMicMute(struct IAudioAdapter *self, bool* mute)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterSetVoiceVolume(struct IAudioAdapter *self, float volume)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterSetExtraParams(struct IAudioAdapter *self, enum AudioExtParamKey key, const char* condition,
+     const char* value)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetExtraParams(struct IAudioAdapter *self, enum AudioExtParamKey key, const char* condition,
+     char* value, uint32_t valueLen)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterRegExtraParamObserver(struct IAudioAdapter *self, struct IAudioCallback* audioCallback,
+     int8_t cookie)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t AudioAdapterGetVersion(struct IAudioAdapter *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    *majorVer = IAUDIO_ADAPTER_MAJOR_VERSION;
+    *minorVer = IAUDIO_ADAPTER_MINOR_VERSION;
+    return HDF_SUCCESS;
+}
+
+struct IAudioAdapter *AudioAdapterServiceGet(void)
+{
+    struct AudioAdapterService *service = (struct AudioAdapterService *)OsalMemCalloc(sizeof(struct AudioAdapterService));
+    if (service == NULL) {
+        HDF_LOGE("%{public}s: malloc AudioAdapterService obj failed!", __func__);
+        return NULL;
+    }
+
+    service->interface.InitAllPorts = AudioAdapterInitAllPorts;
+    service->interface.CreateRender = AudioAdapterCreateRender;
+    service->interface.DestroyRender = AudioAdapterDestroyRender;
+    service->interface.CreateCapture = AudioAdapterCreateCapture;
+    service->interface.DestroyCapture = AudioAdapterDestroyCapture;
+    service->interface.GetPortCapability = AudioAdapterGetPortCapability;
+    service->interface.SetPassthroughMode = AudioAdapterSetPassthroughMode;
+    service->interface.GetPassthroughMode = AudioAdapterGetPassthroughMode;
+    service->interface.GetDeviceStatus = AudioAdapterGetDeviceStatus;
+    service->interface.UpdateAudioRoute = AudioAdapterUpdateAudioRoute;
+    service->interface.ReleaseAudioRoute = AudioAdapterReleaseAudioRoute;
+    service->interface.SetMicMute = AudioAdapterSetMicMute;
+    service->interface.GetMicMute = AudioAdapterGetMicMute;
+    service->interface.SetVoiceVolume = AudioAdapterSetVoiceVolume;
+    service->interface.SetExtraParams = AudioAdapterSetExtraParams;
+    service->interface.GetExtraParams = AudioAdapterGetExtraParams;
+    service->interface.RegExtraParamObserver = AudioAdapterRegExtraParamObserver;
+    service->interface.GetVersion = AudioAdapterGetVersion;
+    return &service->interface;
+}
+
+void AudioAdapterServiceRelease(struct IAudioAdapter *instance)
+{
+    if (instance == NULL) {
+        return;
+    }
+    OsalMemFree(instance);
+}

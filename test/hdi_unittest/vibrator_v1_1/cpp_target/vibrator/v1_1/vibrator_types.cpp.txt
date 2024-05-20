@@ -1,0 +1,186 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/vibrator_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Vibrator {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfVibratorInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool HdfVibratorInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool TimeEffectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_1::TimeEffect& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::TimeEffect))) {
+        return false;
+    }
+    return true;
+}
+
+bool TimeEffectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_1::TimeEffect& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_1::TimeEffect *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_1::TimeEffect*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_1::TimeEffect)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::TimeEffect), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_1::TimeEffect)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PrimitiveEffectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_1::PrimitiveEffect& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::PrimitiveEffect))) {
+        return false;
+    }
+    return true;
+}
+
+bool PrimitiveEffectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_1::PrimitiveEffect& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_1::PrimitiveEffect *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_1::PrimitiveEffect*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_1::PrimitiveEffect)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::PrimitiveEffect), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_1::PrimitiveEffect)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool HdfCompositeEffectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_1::HdfCompositeEffect& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.compositeEffects)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.compositeEffects", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfCompositeEffectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_1::HdfCompositeEffect& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.type)) {
+        HDF_LOGE("%{public}s: read dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.compositeEffects)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.compositeEffects", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfEffectInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Vibrator::V1_1::HdfEffectInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::HdfEffectInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool HdfEffectInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Vibrator::V1_1::HdfEffectInfo& dataBlock)
+{
+    const OHOS::HDI::Vibrator::V1_1::HdfEffectInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Vibrator::V1_1::HdfEffectInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Vibrator::V1_1::HdfEffectInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Vibrator::V1_1::HdfEffectInfo), dataBlockPtr, sizeof(OHOS::HDI::Vibrator::V1_1::HdfEffectInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_1
+} // Vibrator
+} // HDI
+} // OHOS

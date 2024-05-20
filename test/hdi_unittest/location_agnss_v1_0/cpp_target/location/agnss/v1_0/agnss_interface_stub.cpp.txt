@@ -1,0 +1,262 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/agnss_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "location/agnss/v1_0/agnss_callback_proxy.h"
+
+#define HDF_LOG_TAG    agnss_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Agnss {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::Get("agnss_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "agnss_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface *>(impl);
+}
+
+
+OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStub(const sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::~AGnssInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_AGNSS_INTERFACE_GET_VERSION:
+            return AGnssInterfaceStubGetVersion(data, reply, option);
+        case CMD_AGNSS_INTERFACE_SET_AGNSS_CALLBACK:
+            return AGnssInterfaceStubSetAgnssCallback(data, reply, option);
+        case CMD_AGNSS_INTERFACE_SET_AGNSS_SERVER:
+            return AGnssInterfaceStubSetAgnssServer(data, reply, option);
+        case CMD_AGNSS_INTERFACE_SET_AGNSS_REF_INFO:
+            return AGnssInterfaceStubSetAgnssRefInfo(data, reply, option);
+        case CMD_AGNSS_INTERFACE_SET_SUBSCRIBER_SET_ID:
+            return AGnssInterfaceStubSetSubscriberSetId(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssCallback(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssCallback_(aGnssInterfaceData, aGnssInterfaceReply, aGnssInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssServer(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssServer_(aGnssInterfaceData, aGnssInterfaceReply, aGnssInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssRefInfo(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssRefInfo_(aGnssInterfaceData, aGnssInterfaceReply, aGnssInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetSubscriberSetId(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetSubscriberSetId_(aGnssInterfaceData, aGnssInterfaceReply, aGnssInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubGetVersion(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubGetVersion_(aGnssInterfaceData, aGnssInterfaceReply, aGnssInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssCallback_(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> impl)
+{
+    if (aGnssInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = aGnssInterfaceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssInterfaceRet = impl->SetAgnssCallback(callbackObj);
+    if (aGnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssInterfaceRet);
+        return aGnssInterfaceRet;
+    }
+
+    return aGnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssServer_(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> impl)
+{
+    if (aGnssInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Agnss::V1_0::AGnssServerInfo server;
+    if (!AGnssServerInfoBlockUnmarshalling(aGnssInterfaceData, server)) {
+        HDF_LOGE("%{public}s: read server failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssInterfaceRet = impl->SetAgnssServer(server);
+    if (aGnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssInterfaceRet);
+        return aGnssInterfaceRet;
+    }
+
+    return aGnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetAgnssRefInfo_(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> impl)
+{
+    if (aGnssInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfo refInfo;
+    if (!AGnssRefInfoBlockUnmarshalling(aGnssInterfaceData, refInfo)) {
+        HDF_LOGE("%{public}s: read refInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssInterfaceRet = impl->SetAgnssRefInfo(refInfo);
+    if (aGnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssInterfaceRet);
+        return aGnssInterfaceRet;
+    }
+
+    return aGnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubSetSubscriberSetId_(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> impl)
+{
+    if (aGnssInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Agnss::V1_0::SubscriberSetId id;
+    if (!SubscriberSetIdBlockUnmarshalling(aGnssInterfaceData, id)) {
+        HDF_LOGE("%{public}s: read id failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssInterfaceRet = impl->SetSubscriberSetId(id);
+    if (aGnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssInterfaceRet);
+        return aGnssInterfaceRet;
+    }
+
+    return aGnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssInterfaceStub::AGnssInterfaceStubGetVersion_(MessageParcel& aGnssInterfaceData, MessageParcel& aGnssInterfaceReply, MessageOption& aGnssInterfaceOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface> impl)
+{
+    if (aGnssInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (aGnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssInterfaceRet);
+        return aGnssInterfaceRet;
+    }
+
+    if (!aGnssInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!aGnssInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return aGnssInterfaceRet;
+}
+} // V1_0
+} // Agnss
+} // Location
+} // HDI
+} // OHOS

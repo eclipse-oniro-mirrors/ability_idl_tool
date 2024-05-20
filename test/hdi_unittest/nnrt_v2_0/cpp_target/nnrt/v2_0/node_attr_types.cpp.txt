@@ -1,0 +1,1522 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/node_attr_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V2_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool ActivationBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Activation& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Activation))) {
+        return false;
+    }
+    return true;
+}
+
+bool ActivationBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Activation& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Activation *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Activation*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Activation)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Activation), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Activation)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AddFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::AddFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::AddFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool AddFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::AddFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::AddFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::AddFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::AddFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::AddFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::AddFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ArgMaxFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::ArgMaxFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ArgMaxFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool ArgMaxFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::ArgMaxFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::ArgMaxFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::ArgMaxFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::ArgMaxFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ArgMaxFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::ArgMaxFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AvgPoolFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::AvgPoolFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.strides)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.strides", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.pad)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.pad", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.padMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.roundMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.roundMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.format))) {
+        HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.global)) {
+        HDF_LOGE("%{public}s: write dataBlock.global failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.activationType))) {
+        HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AvgPoolFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::AvgPoolFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.strides)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.strides", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.pad)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.pad", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+            return false;
+        }
+        dataBlock.padMode = static_cast<enum PadMode>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.roundMode failed!", __func__);
+            return false;
+        }
+        dataBlock.roundMode = static_cast<enum RoundMode>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+            return false;
+        }
+        dataBlock.format = static_cast<enum Format>(enumTmp);
+    }
+
+    if (!data.ReadBool(dataBlock.global)) {
+        HDF_LOGE("%{public}s: read dataBlock.global failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+            return false;
+        }
+        dataBlock.activationType = static_cast<enum ActivationType>(enumTmp);
+    }
+    return true;
+}
+
+bool BatchToSpaceNDBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::BatchToSpaceND& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.blockShape)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.blockShape", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.crops.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.crops.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.crops) {
+        if (!WritePodArray(data, it0)) {
+            HDF_LOGE("%{public}s: failed to write it0", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BatchToSpaceNDBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::BatchToSpaceND& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.blockShape)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.blockShape", __func__);
+        return false;
+    }
+
+    uint32_t cropsSize = 0;
+    if (!data.ReadUint32(cropsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(cropsSize, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<int64_t>), false);
+    dataBlock.crops.clear();
+    dataBlock.crops.reserve(cropsSize);
+    for (uint32_t i0 = 0; i0 < cropsSize; ++i0) {
+        std::vector<int64_t> value0;
+        if (!ReadPodArray(data, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return false;
+        }
+        dataBlock.crops.push_back(value0);
+    }
+    return true;
+}
+
+bool BiasAddBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::BiasAdd& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::BiasAdd))) {
+        return false;
+    }
+    return true;
+}
+
+bool BiasAddBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::BiasAdd& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::BiasAdd *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::BiasAdd*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::BiasAdd)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::BiasAdd), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::BiasAdd)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CastBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Cast& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Cast))) {
+        return false;
+    }
+    return true;
+}
+
+bool CastBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Cast& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Cast *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Cast*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Cast)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Cast), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Cast)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ConcatBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Concat& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Concat))) {
+        return false;
+    }
+    return true;
+}
+
+bool ConcatBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Concat& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Concat *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Concat*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Concat)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Concat), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Concat)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool Conv2DFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Conv2DFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.stride)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.stride", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.dilation)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.dilation", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.padMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.padList)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.padList", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.group)) {
+        HDF_LOGE("%{public}s: write dataBlock.group failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.inChannel)) {
+        HDF_LOGE("%{public}s: write dataBlock.inChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.outChannel)) {
+        HDF_LOGE("%{public}s: write dataBlock.outChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.activationType))) {
+        HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Conv2DFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Conv2DFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.stride)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.stride", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.dilation)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.dilation", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+            return false;
+        }
+        dataBlock.padMode = static_cast<enum PadMode>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.padList)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.padList", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.group)) {
+        HDF_LOGE("%{public}s: read dataBlock.group failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.inChannel)) {
+        HDF_LOGE("%{public}s: read dataBlock.inChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.outChannel)) {
+        HDF_LOGE("%{public}s: read dataBlock.outChannel failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+            return false;
+        }
+        dataBlock.activationType = static_cast<enum ActivationType>(enumTmp);
+    }
+    return true;
+}
+
+bool Conv2dTransposeFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Conv2dTransposeFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.stride)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.stride", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.dilation)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.dilation", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.padMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.padList)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.padList", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.group)) {
+        HDF_LOGE("%{public}s: write dataBlock.group failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.inChannel)) {
+        HDF_LOGE("%{public}s: write dataBlock.inChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.outChannel)) {
+        HDF_LOGE("%{public}s: write dataBlock.outChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.activationType))) {
+        HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.outputPaddings)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.outputPaddings", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool Conv2dTransposeFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Conv2dTransposeFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.stride)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.stride", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.dilation)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.dilation", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+            return false;
+        }
+        dataBlock.padMode = static_cast<enum PadMode>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.padList)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.padList", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.group)) {
+        HDF_LOGE("%{public}s: read dataBlock.group failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.inChannel)) {
+        HDF_LOGE("%{public}s: read dataBlock.inChannel failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.outChannel)) {
+        HDF_LOGE("%{public}s: read dataBlock.outChannel failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+            return false;
+        }
+        dataBlock.activationType = static_cast<enum ActivationType>(enumTmp);
+    }
+
+    if (!ReadPodArray(data, dataBlock.outputPaddings)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.outputPaddings", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool DivFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::DivFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::DivFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool DivFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::DivFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::DivFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::DivFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::DivFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::DivFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::DivFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool EltwiseBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Eltwise& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Eltwise))) {
+        return false;
+    }
+    return true;
+}
+
+bool EltwiseBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Eltwise& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Eltwise *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Eltwise*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Eltwise)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Eltwise), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Eltwise)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ExpandDimsBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::ExpandDims& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ExpandDims))) {
+        return false;
+    }
+    return true;
+}
+
+bool ExpandDimsBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::ExpandDims& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::ExpandDims *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::ExpandDims*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::ExpandDims)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ExpandDims), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::ExpandDims)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool FillBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Fill& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Fill))) {
+        return false;
+    }
+    return true;
+}
+
+bool FillBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Fill& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Fill *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Fill*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Fill)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Fill), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Fill)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool FullConnectionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::FullConnection& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::FullConnection))) {
+        return false;
+    }
+    return true;
+}
+
+bool FullConnectionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::FullConnection& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::FullConnection *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::FullConnection*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::FullConnection)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::FullConnection), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::FullConnection)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool FusedBatchNormBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::FusedBatchNorm& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::FusedBatchNorm))) {
+        return false;
+    }
+    return true;
+}
+
+bool FusedBatchNormBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::FusedBatchNorm& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::FusedBatchNorm *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::FusedBatchNorm*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::FusedBatchNorm)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::FusedBatchNorm), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::FusedBatchNorm)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool GatherBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Gather& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Gather))) {
+        return false;
+    }
+    return true;
+}
+
+bool GatherBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Gather& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Gather *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Gather*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Gather)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Gather), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Gather)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerNormFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::LayerNormFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::LayerNormFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool LayerNormFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::LayerNormFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::LayerNormFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::LayerNormFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::LayerNormFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::LayerNormFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::LayerNormFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool LessEqualBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::LessEqual& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::LessEqual))) {
+        return false;
+    }
+    return true;
+}
+
+bool LessEqualBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::LessEqual& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::LessEqual *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::LessEqual*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::LessEqual)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::LessEqual), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::LessEqual)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool MatMulFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::MatMulFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::MatMulFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool MatMulFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::MatMulFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::MatMulFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::MatMulFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::MatMulFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::MatMulFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::MatMulFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool MaximumBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Maximum& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Maximum))) {
+        return false;
+    }
+    return true;
+}
+
+bool MaximumBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Maximum& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Maximum *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Maximum*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Maximum)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Maximum), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Maximum)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool MaxPoolFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::MaxPoolFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.strides)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.strides", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.pad)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.pad", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.padMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.format))) {
+        HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.roundMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.roundMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.global)) {
+        HDF_LOGE("%{public}s: write dataBlock.global failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.activationType))) {
+        HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool MaxPoolFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::MaxPoolFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.kernelSize)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.kernelSize", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.strides)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.strides", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.pad)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.pad", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.padMode failed!", __func__);
+            return false;
+        }
+        dataBlock.padMode = static_cast<enum PadMode>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.format failed!", __func__);
+            return false;
+        }
+        dataBlock.format = static_cast<enum Format>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.roundMode failed!", __func__);
+            return false;
+        }
+        dataBlock.roundMode = static_cast<enum RoundMode>(enumTmp);
+    }
+
+    if (!data.ReadBool(dataBlock.global)) {
+        HDF_LOGE("%{public}s: read dataBlock.global failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.activationType failed!", __func__);
+            return false;
+        }
+        dataBlock.activationType = static_cast<enum ActivationType>(enumTmp);
+    }
+    return true;
+}
+
+bool MulFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::MulFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::MulFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool MulFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::MulFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::MulFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::MulFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::MulFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::MulFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::MulFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool OneHotBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::OneHot& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::OneHot))) {
+        return false;
+    }
+    return true;
+}
+
+bool OneHotBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::OneHot& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::OneHot *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::OneHot*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::OneHot)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::OneHot), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::OneHot)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PadFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::PadFusion& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.paddings.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.paddings.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.paddings) {
+        if (!WritePodArray(data, it0)) {
+            HDF_LOGE("%{public}s: failed to write it0", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.paddingMode))) {
+        HDF_LOGE("%{public}s: write dataBlock.paddingMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.constantValue)) {
+        HDF_LOGE("%{public}s: write dataBlock.constantValue failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PadFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::PadFusion& dataBlock)
+{
+    uint32_t paddingsSize = 0;
+    if (!data.ReadUint32(paddingsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(paddingsSize, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<int64_t>), false);
+    dataBlock.paddings.clear();
+    dataBlock.paddings.reserve(paddingsSize);
+    for (uint32_t i0 = 0; i0 < paddingsSize; ++i0) {
+        std::vector<int64_t> value0;
+        if (!ReadPodArray(data, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return false;
+        }
+        dataBlock.paddings.push_back(value0);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.paddingMode failed!", __func__);
+            return false;
+        }
+        dataBlock.paddingMode = static_cast<enum PaddingMode>(enumTmp);
+    }
+
+    if (!data.ReadFloat(dataBlock.constantValue)) {
+        HDF_LOGE("%{public}s: read dataBlock.constantValue failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PowFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::PowFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::PowFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool PowFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::PowFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::PowFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::PowFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::PowFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::PowFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::PowFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool PReLUFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::PReLUFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::PReLUFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool PReLUFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::PReLUFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::PReLUFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::PReLUFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::PReLUFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::PReLUFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::PReLUFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool QuantDTypeCastBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::QuantDTypeCast& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::QuantDTypeCast))) {
+        return false;
+    }
+    return true;
+}
+
+bool QuantDTypeCastBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::QuantDTypeCast& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::QuantDTypeCast *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::QuantDTypeCast*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::QuantDTypeCast)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::QuantDTypeCast), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::QuantDTypeCast)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ReduceFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::ReduceFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ReduceFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool ReduceFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::ReduceFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::ReduceFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::ReduceFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::ReduceFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ReduceFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::ReduceFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ReshapeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Reshape& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Reshape))) {
+        return false;
+    }
+    return true;
+}
+
+bool ReshapeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Reshape& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Reshape *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Reshape*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Reshape)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Reshape), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Reshape)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ResizeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Resize& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Resize))) {
+        return false;
+    }
+    return true;
+}
+
+bool ResizeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Resize& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Resize *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Resize*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Resize)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Resize), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Resize)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RsqrtBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Rsqrt& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Rsqrt))) {
+        return false;
+    }
+    return true;
+}
+
+bool RsqrtBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Rsqrt& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Rsqrt *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Rsqrt*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Rsqrt)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Rsqrt), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Rsqrt)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ScaleFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::ScaleFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ScaleFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool ScaleFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::ScaleFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::ScaleFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::ScaleFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::ScaleFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::ScaleFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::ScaleFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool ShapeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Shape& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Shape))) {
+        return false;
+    }
+    return true;
+}
+
+bool ShapeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Shape& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Shape *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Shape*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Shape)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Shape), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Shape)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SliceFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::SliceFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.axes)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.axes", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SliceFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::SliceFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.axes)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.axes", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SoftmaxBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Softmax& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SoftmaxBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Softmax& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SpaceToBatchNDBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::SpaceToBatchND& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.blockShape)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.blockShape", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.paddings.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.paddings.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.paddings) {
+        if (!WritePodArray(data, it0)) {
+            HDF_LOGE("%{public}s: failed to write it0", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool SpaceToBatchNDBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::SpaceToBatchND& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.blockShape)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.blockShape", __func__);
+        return false;
+    }
+
+    uint32_t paddingsSize = 0;
+    if (!data.ReadUint32(paddingsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(paddingsSize, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<int64_t>), false);
+    dataBlock.paddings.clear();
+    dataBlock.paddings.reserve(paddingsSize);
+    for (uint32_t i0 = 0; i0 < paddingsSize; ++i0) {
+        std::vector<int64_t> value0;
+        if (!ReadPodArray(data, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return false;
+        }
+        dataBlock.paddings.push_back(value0);
+    }
+    return true;
+}
+
+bool SplitBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Split& dataBlock)
+{
+    if (!data.WriteInt64(dataBlock.outputNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.outputNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.sizeSplits)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.sizeSplits", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.axis)) {
+        HDF_LOGE("%{public}s: write dataBlock.axis failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SplitBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Split& dataBlock)
+{
+    if (!data.ReadInt64(dataBlock.outputNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.outputNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.sizeSplits)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.sizeSplits", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.axis)) {
+        HDF_LOGE("%{public}s: read dataBlock.axis failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SqrtBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Sqrt& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Sqrt))) {
+        return false;
+    }
+    return true;
+}
+
+bool SqrtBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Sqrt& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Sqrt *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Sqrt*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Sqrt)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Sqrt), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Sqrt)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SquaredDifferenceBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::SquaredDifference& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::SquaredDifference))) {
+        return false;
+    }
+    return true;
+}
+
+bool SquaredDifferenceBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::SquaredDifference& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::SquaredDifference *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::SquaredDifference*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::SquaredDifference)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::SquaredDifference), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::SquaredDifference)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SqueezeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Squeeze& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SqueezeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Squeeze& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool StackBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Stack& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Stack))) {
+        return false;
+    }
+    return true;
+}
+
+bool StackBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Stack& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Stack *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Stack*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Stack)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Stack), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Stack)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool StridedSliceBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::StridedSlice& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::StridedSlice))) {
+        return false;
+    }
+    return true;
+}
+
+bool StridedSliceBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::StridedSlice& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::StridedSlice *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::StridedSlice*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::StridedSlice)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::StridedSlice), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::StridedSlice)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool SubFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::SubFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::SubFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool SubFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::SubFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::SubFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::SubFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::SubFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::SubFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::SubFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool TileFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::TileFusion& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.dims)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.dims", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool TileFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::TileFusion& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.dims)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.dims", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool TopKFusionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::TopKFusion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::TopKFusion))) {
+        return false;
+    }
+    return true;
+}
+
+bool TopKFusionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::TopKFusion& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::TopKFusion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::TopKFusion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::TopKFusion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::TopKFusion), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::TopKFusion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool TransposeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Transpose& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Transpose))) {
+        return false;
+    }
+    return true;
+}
+
+bool TransposeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Transpose& dataBlock)
+{
+    const OHOS::HDI::Nnrt::V2_0::Transpose *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Nnrt::V2_0::Transpose*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Nnrt::V2_0::Transpose)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Nnrt::V2_0::Transpose), dataBlockPtr, sizeof(OHOS::HDI::Nnrt::V2_0::Transpose)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool UnsqueezeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nnrt::V2_0::Unsqueeze& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool UnsqueezeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nnrt::V2_0::Unsqueeze& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.axis)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.axis", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V2_0
+} // Nnrt
+} // HDI
+} // OHOS

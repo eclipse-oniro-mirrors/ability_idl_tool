@@ -1,0 +1,119 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_SECURE_ELEMENT_V1_0_ISECUREELEMENTINTERFACE_H
+#define OHOS_HDI_SECURE_ELEMENT_V1_0_ISECUREELEMENTINTERFACE_H
+
+#include <stdint.h>
+#include <vector>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "secure_element/v1_0/isecure_element_callback.h"
+#include "secure_element/v1_0/secure_element_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace SecureElement {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_SECURE_ELEMENT_INTERFACE_GET_VERSION = 0,
+    CMD_SECURE_ELEMENT_INTERFACE_INIT = 1,
+    CMD_SECURE_ELEMENT_INTERFACE_GET_ATR = 2,
+    CMD_SECURE_ELEMENT_INTERFACE_IS_SECURE_ELEMENT_PRESENT = 3,
+    CMD_SECURE_ELEMENT_INTERFACE_OPEN_LOGICAL_CHANNEL = 4,
+    CMD_SECURE_ELEMENT_INTERFACE_OPEN_BASIC_CHANNEL = 5,
+    CMD_SECURE_ELEMENT_INTERFACE_CLOSE_CHANNEL = 6,
+    CMD_SECURE_ELEMENT_INTERFACE_TRANSMIT = 7,
+    CMD_SECURE_ELEMENT_INTERFACE_RESET = 8,
+};
+
+class ISecureElementInterface : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.secure_element.v1_0.ISecureElementInterface");
+
+    virtual ~ISecureElementInterface() = default;
+
+    static sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> Get(bool isStub = false);
+    static sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> Get(const std::string &serviceName, bool isStub = false);
+
+    virtual int32_t init(const sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementCallback>& clientCallback,
+         OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t getAtr(std::vector<uint8_t>& response) = 0;
+
+    virtual int32_t isSecureElementPresent(bool& present) = 0;
+
+    virtual int32_t openLogicalChannel(const std::vector<uint8_t>& aid, uint8_t p2, std::vector<uint8_t>& response,
+         uint8_t& channelNumber, OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t openBasicChannel(const std::vector<uint8_t>& aid, uint8_t p2, std::vector<uint8_t>& response,
+         OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t closeChannel(uint8_t channelNumber,
+         OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t transmit(const std::vector<uint8_t>& command, std::vector<uint8_t>& response,
+         OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t reset(OHOS::HDI::SecureElement::V1_0::SecureElementStatus& status) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // SecureElement
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_SECURE_ELEMENT_V1_0_ISECUREELEMENTINTERFACE_H
+

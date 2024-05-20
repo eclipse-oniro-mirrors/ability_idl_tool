@@ -1,0 +1,837 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/media_key_system_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <iproxy_broker.h>
+#include <object_collector.h>
+#include "drm/v1_0/media_key_system_callback_proxy.h"
+
+#define HDF_LOG_TAG    media_key_system_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStub(const sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> &impl)
+    : IPCObjectStub(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Drm::V1_0::MediaKeySystemStub::~MediaKeySystemStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_MEDIA_KEY_SYSTEM_GET_VERSION:
+            return MediaKeySystemStubGetVersion(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_CONFIGURATION_STRING:
+            return MediaKeySystemStubGetConfigurationString(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_SET_CONFIGURATION_STRING:
+            return MediaKeySystemStubSetConfigurationString(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_CONFIGURATION_BYTE_ARRAY:
+            return MediaKeySystemStubGetConfigurationByteArray(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_SET_CONFIGURATION_BYTE_ARRAY:
+            return MediaKeySystemStubSetConfigurationByteArray(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_STATISTICS:
+            return MediaKeySystemStubGetStatistics(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_MAX_CONTENT_PROTECTION_LEVEL:
+            return MediaKeySystemStubGetMaxContentProtectionLevel(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GENERATE_KEY_SYSTEM_REQUEST:
+            return MediaKeySystemStubGenerateKeySystemRequest(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_PROCESS_KEY_SYSTEM_RESPONSE:
+            return MediaKeySystemStubProcessKeySystemResponse(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_OEM_CERTIFICATE_STATUS:
+            return MediaKeySystemStubGetOemCertificateStatus(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_SET_CALLBACK:
+            return MediaKeySystemStubSetCallback(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_CREATE_MEDIA_KEY_SESSION:
+            return MediaKeySystemStubCreateMediaKeySession(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_OFFLINE_MEDIA_KEY_IDS:
+            return MediaKeySystemStubGetOfflineMediaKeyIds(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_OFFLINE_MEDIA_KEY_STATUS:
+            return MediaKeySystemStubGetOfflineMediaKeyStatus(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_CLEAR_OFFLINE_MEDIA_KEYS:
+            return MediaKeySystemStubClearOfflineMediaKeys(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_GET_OEM_CERTIFICATE:
+            return MediaKeySystemStubGetOemCertificate(data, reply, option);
+        case CMD_MEDIA_KEY_SYSTEM_DESTROY:
+            return MediaKeySystemStubDestroy(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationString(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationString_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationString(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationString_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationByteArray(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationByteArray_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationByteArray(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationByteArray_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetStatistics(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetStatistics_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetMaxContentProtectionLevel(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetMaxContentProtectionLevel_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGenerateKeySystemRequest(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGenerateKeySystemRequest_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubProcessKeySystemResponse(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubProcessKeySystemResponse_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificateStatus(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificateStatus_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetCallback(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetCallback_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubCreateMediaKeySession(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubCreateMediaKeySession_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyIds(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyIds_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyStatus(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyStatus_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubClearOfflineMediaKeys(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubClearOfflineMediaKeys_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificate(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificate_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubDestroy(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubDestroy_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetVersion(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetVersion_(mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationString_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mediaKeySystemMemSet = false;
+    if (!mediaKeySystemData.ReadBool(mediaKeySystemMemSet)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeySystemMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    const char* nameCp = mediaKeySystemData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    std::string value;
+    if (mediaKeySystemMemSet) {
+        uint32_t capacity = 0;
+        if (!mediaKeySystemData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        value.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetConfigurationString(name, value);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteCString(value.c_str())) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationString_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* nameCp = mediaKeySystemData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    const char* valueCp = mediaKeySystemData.ReadCString();
+    if (valueCp == nullptr) {
+        HDF_LOGE("%{public}s: read value failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string value = valueCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->SetConfigurationString(name, value);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetConfigurationByteArray_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mediaKeySystemMemSet = false;
+    if (!mediaKeySystemData.ReadBool(mediaKeySystemMemSet)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeySystemMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    const char* nameCp = mediaKeySystemData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    std::vector<uint8_t> value;
+    if (mediaKeySystemMemSet) {
+        uint32_t capacity = 0;
+        if (!mediaKeySystemData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        value.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetConfigurationByteArray(name, value);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!WritePodArray(mediaKeySystemReply, value)) {
+        HDF_LOGE("%{public}s: failed to write value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetConfigurationByteArray_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* nameCp = mediaKeySystemData.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read name failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string name = nameCp;
+
+    std::vector<uint8_t> value;
+    if (!ReadPodArray(mediaKeySystemData, value)) {
+        HDF_LOGE("%{public}s: failed to read value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->SetConfigurationByteArray(name, value);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetStatistics_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::map<std::string, std::string> statistics;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetStatistics(statistics);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint32(statistics.size())) {
+        HDF_LOGE("%{public}s: write statistics failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (auto it0 : statistics) {
+        if (!mediaKeySystemReply.WriteCString((it0.first).c_str())) {
+            HDF_LOGE("%{public}s: write (it0.first) failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        if (!mediaKeySystemReply.WriteCString((it0.second).c_str())) {
+            HDF_LOGE("%{public}s: write (it0.second) failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetMaxContentProtectionLevel_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::ContentProtectionLevel level;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetMaxContentProtectionLevel(level);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint64(static_cast<uint64_t>(level))) {
+        HDF_LOGE("%{public}s: write level failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGenerateKeySystemRequest_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mediaKeySystemMemSet = false;
+    if (!mediaKeySystemData.ReadBool(mediaKeySystemMemSet)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeySystemMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string defaultUrl;
+    if (mediaKeySystemMemSet) {
+        uint32_t capacity = 0;
+        if (!mediaKeySystemData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        defaultUrl.reserve(capacity);
+    }
+
+    std::vector<uint8_t> request;
+    if (mediaKeySystemMemSet) {
+        uint32_t capacity = 0;
+        if (!mediaKeySystemData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        request.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GenerateKeySystemRequest(defaultUrl, request);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteCString(defaultUrl.c_str())) {
+        HDF_LOGE("%{public}s: write defaultUrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySystemReply, request)) {
+        HDF_LOGE("%{public}s: failed to write request", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubProcessKeySystemResponse_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> response;
+    if (!ReadPodArray(mediaKeySystemData, response)) {
+        HDF_LOGE("%{public}s: failed to read response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->ProcessKeySystemResponse(response);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificateStatus_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::CertificateStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetOemCertificateStatus(status);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubSetCallback_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystemCallback> systemCallback;
+    sptr<IRemoteObject> systemCallbackRemote = mediaKeySystemData.ReadRemoteObject();
+    if (systemCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    systemCallback = new OHOS::HDI::Drm::V1_0::MediaKeySystemCallbackProxy(systemCallbackRemote);
+    if (systemCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->SetCallback(systemCallback);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubCreateMediaKeySession_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::ContentProtectionLevel level = static_cast<enum ContentProtectionLevel>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!mediaKeySystemData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write level failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        level = static_cast<enum ContentProtectionLevel>(enumTmp);
+    }
+
+    sptr<OHOS::HDI::Drm::V1_0::IMediaKeySession> keySession;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->CreateMediaKeySession(level, keySession);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (keySession == nullptr) {
+        HDF_LOGE("%{public}s: parameter keySession is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(keySession, OHOS::HDI::Drm::V1_0::IMediaKeySession::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write keySession failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyIds_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mediaKeySystemMemSet = false;
+    if (!mediaKeySystemData.ReadBool(mediaKeySystemMemSet)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeySystemMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<std::vector<uint8_t>> mediaKeyIds;
+    if (mediaKeySystemMemSet) {
+        uint32_t capacity = 0;
+        if (!mediaKeySystemData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<uint8_t>), HDF_ERR_INVALID_PARAM);
+        mediaKeyIds.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetOfflineMediaKeyIds(mediaKeyIds);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint32(mediaKeyIds.size())) {
+        HDF_LOGE("%{public}s: write mediaKeyIds size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : mediaKeyIds) {
+        if (!WritePodArray(mediaKeySystemReply, it0)) {
+            HDF_LOGE("%{public}s: failed to write it0", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOfflineMediaKeyStatus_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> mediaKeyId;
+    if (!ReadPodArray(mediaKeySystemData, mediaKeyId)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeyId", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::OfflineMediaKeyStatus mediaKeyStatus;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetOfflineMediaKeyStatus(mediaKeyId, mediaKeyStatus);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint64(static_cast<uint64_t>(mediaKeyStatus))) {
+        HDF_LOGE("%{public}s: write mediaKeyStatus failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubClearOfflineMediaKeys_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> mediaKeyId;
+    if (!ReadPodArray(mediaKeySystemData, mediaKeyId)) {
+        HDF_LOGE("%{public}s: failed to read mediaKeyId", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->ClearOfflineMediaKeys(mediaKeyId);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetOemCertificate_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Drm::V1_0::IOemCertificate> oemCert;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetOemCertificate(oemCert);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (oemCert == nullptr) {
+        HDF_LOGE("%{public}s: parameter oemCert is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(oemCert, OHOS::HDI::Drm::V1_0::IOemCertificate::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write oemCert failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubDestroy_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->Destroy();
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemStub::MediaKeySystemStubGetVersion_(MessageParcel& mediaKeySystemData, MessageParcel& mediaKeySystemReply, MessageOption& mediaKeySystemOption, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystem> impl)
+{
+    if (mediaKeySystemData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaKeySystemRet = impl->GetVersion(majorVer, minorVer);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_MEMORYTRACKER_V1_0_MEMORYTRACKERTYPES_H
+#define OHOS_HDI_MEMORYTRACKER_V1_0_MEMORYTRACKERTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Memorytracker {
+namespace V1_0 {
+
+using namespace OHOS;
+
+enum MemoryTrackerType : int32_t {
+    MEMORY_TRACKER_TYPE_MM = 0,
+    MEMORY_TRACKER_TYPE_GL = 1,
+    MEMORY_TRACKER_TYPE_CAM = 2,
+    MEMORY_TRACKER_TYPE_GRAPH = 3,
+    MEMORY_TRACKER_TYPE_OTHER = 4,
+    MEMORY_TRACKER_TYPE_COUNTS,
+};
+
+enum MemoryTrackerFlag : int32_t {
+    FLAG_SHARED_RSS = 2,
+    FLAG_SHARED_PSS = 4,
+    FLAG_PRIVATE = 8,
+    FLAG_MAPPED = 16,
+    FLAG_UNMAPPED = 32,
+    FLAG_PROTECTED = 64,
+    FLAG_UNPROTECTED = 128,
+    FLAG_SYSTEM = 256,
+    FLAG_SYSTEM_EXCEPT = 512,
+};
+
+struct MemoryRecord {
+    int32_t flags;
+    int64_t size;
+} __attribute__ ((aligned(8)));
+
+bool MemoryRecordBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Memorytracker::V1_0::MemoryRecord& dataBlock);
+
+bool MemoryRecordBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Memorytracker::V1_0::MemoryRecord& dataBlock);
+
+} // V1_0
+} // Memorytracker
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_MEMORYTRACKER_V1_0_MEMORYTRACKERTYPES_H
+

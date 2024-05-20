@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/power_hdi_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    power_hdi_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStub(const sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::~PowerHdiCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_POWER_HDI_CALLBACK_GET_VERSION:
+            return PowerHdiCallbackStubGetVersion(data, reply, option);
+        case CMD_POWER_HDI_CALLBACK_ON_SUSPEND:
+            return PowerHdiCallbackStubOnSuspend(data, reply, option);
+        case CMD_POWER_HDI_CALLBACK_ON_WAKEUP:
+            return PowerHdiCallbackStubOnWakeup(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnSuspend(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnSuspend_(powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnWakeup(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnWakeup_(powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubGetVersion(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption)
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubGetVersion_(powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnSuspend_(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption, sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback> impl)
+{
+    if (powerHdiCallbackData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerHdiCallbackRet = impl->OnSuspend();
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    return powerHdiCallbackRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubOnWakeup_(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption, sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback> impl)
+{
+    if (powerHdiCallbackData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerHdiCallbackRet = impl->OnWakeup();
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    return powerHdiCallbackRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackStub::PowerHdiCallbackStubGetVersion_(MessageParcel& powerHdiCallbackData, MessageParcel& powerHdiCallbackReply, MessageOption& powerHdiCallbackOption, sptr<OHOS::HDI::Power::V1_0::IPowerHdiCallback> impl)
+{
+    if (powerHdiCallbackData.ReadInterfaceToken() != OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerHdiCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    if (!powerHdiCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerHdiCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerHdiCallbackRet;
+}
+} // V1_0
+} // Power
+} // HDI
+} // OHOS

@@ -1,0 +1,262 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hid_ddk_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    hid_ddk_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Input {
+namespace Ddk {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> OHOS::HDI::Input::Ddk::V1_0::IHidDdk::Get(bool isStub)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::IHidDdk::Get("hid_ddk_service", isStub);
+}
+
+sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> OHOS::HDI::Input::Ddk::V1_0::IHidDdk::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "hid_ddk_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Input::Ddk::V1_0::IHidDdk *>(impl);
+}
+
+
+OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStub(const sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> &impl)
+    : IPCObjectStub(OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::~HidDdkStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_HID_DDK_GET_VERSION:
+            return HidDdkStubGetVersion(data, reply, option);
+        case CMD_HID_DDK_CREATE_DEVICE:
+            return HidDdkStubCreateDevice(data, reply, option);
+        case CMD_HID_DDK_EMIT_EVENT:
+            return HidDdkStubEmitEvent(data, reply, option);
+        case CMD_HID_DDK_DESTROY_DEVICE:
+            return HidDdkStubDestroyDevice(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubCreateDevice(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubCreateDevice_(hidDdkData, hidDdkReply, hidDdkOption, impl_);
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubEmitEvent(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubEmitEvent_(hidDdkData, hidDdkReply, hidDdkOption, impl_);
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubDestroyDevice(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubDestroyDevice_(hidDdkData, hidDdkReply, hidDdkOption, impl_);
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubGetVersion(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption)
+{
+    return OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubGetVersion_(hidDdkData, hidDdkReply, hidDdkOption, impl_);
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubCreateDevice_(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption, sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> impl)
+{
+    if (hidDdkData.ReadInterfaceToken() != OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Input::Ddk::V1_0::Hid_Device hidDevice;
+    if (!Hid_DeviceBlockUnmarshalling(hidDdkData, hidDevice)) {
+        HDF_LOGE("%{public}s: read hidDevice failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Input::Ddk::V1_0::Hid_EventProperties hidEventProperties;
+    if (!Hid_EventPropertiesBlockUnmarshalling(hidDdkData, hidEventProperties)) {
+        HDF_LOGE("%{public}s: read hidEventProperties failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t deviceId = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t hidDdkRet = impl->CreateDevice(hidDevice, hidEventProperties, deviceId);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    if (!hidDdkReply.WriteUint32(deviceId)) {
+        HDF_LOGE("%{public}s: write deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubEmitEvent_(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption, sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> impl)
+{
+    if (hidDdkData.ReadInterfaceToken() != OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t deviceId = 0;
+    if (!hidDdkData.ReadUint32(deviceId)) {
+        HDF_LOGE("%{public}s: read deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Input::Ddk::V1_0::Hid_EmitItem> items;
+    if (!ReadPodArray(hidDdkData, items)) {
+        HDF_LOGE("%{public}s: failed to read items", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t hidDdkRet = impl->EmitEvent(deviceId, items);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubDestroyDevice_(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption, sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> impl)
+{
+    if (hidDdkData.ReadInterfaceToken() != OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t deviceId = 0;
+    if (!hidDdkData.ReadUint32(deviceId)) {
+        HDF_LOGE("%{public}s: read deviceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t hidDdkRet = impl->DestroyDevice(deviceId);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    return hidDdkRet;
+}
+
+int32_t OHOS::HDI::Input::Ddk::V1_0::HidDdkStub::HidDdkStubGetVersion_(MessageParcel& hidDdkData, MessageParcel& hidDdkReply, MessageOption& hidDdkOption, sptr<OHOS::HDI::Input::Ddk::V1_0::IHidDdk> impl)
+{
+    if (hidDdkData.ReadInterfaceToken() != OHOS::HDI::Input::Ddk::V1_0::IHidDdk::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t hidDdkRet = impl->GetVersion(majorVer, minorVer);
+    if (hidDdkRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hidDdkRet);
+        return hidDdkRet;
+    }
+
+    if (!hidDdkReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hidDdkReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hidDdkRet;
+}
+} // V1_0
+} // Ddk
+} // Input
+} // HDI
+} // OHOS

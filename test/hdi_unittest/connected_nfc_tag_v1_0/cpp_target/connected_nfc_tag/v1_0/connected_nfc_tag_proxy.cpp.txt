@@ -1,0 +1,303 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/connected_nfc_tag_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    connected_nfc_tag_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace ConnectedNfcTag {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::Get(bool isStub)
+{
+    return IConnectedNfcTag::Get("connected_nfc_tag_service", isStub);
+}
+
+sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "connected_nfc_tag_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy> proxy = new OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t connectedNfcTagRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Reconnect(
+    sptr<OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Init()
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Init_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Uninit()
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Uninit_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::ReadNdefTag(std::string& ndefData)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::ReadNdefTag_(ndefData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::WriteNdefTag(const std::string& ndefData)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::WriteNdefTag_(ndefData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Init_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel connectedNfcTagData;
+    MessageParcel connectedNfcTagReply;
+    MessageOption connectedNfcTagOption(MessageOption::TF_SYNC);
+
+    if (!connectedNfcTagData.WriteInterfaceToken(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t connectedNfcTagRet = remote->SendRequest(CMD_CONNECTED_NFC_TAG_INIT, connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::Uninit_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel connectedNfcTagData;
+    MessageParcel connectedNfcTagReply;
+    MessageOption connectedNfcTagOption(MessageOption::TF_SYNC);
+
+    if (!connectedNfcTagData.WriteInterfaceToken(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t connectedNfcTagRet = remote->SendRequest(CMD_CONNECTED_NFC_TAG_UNINIT, connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::ReadNdefTag_(std::string& ndefData,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel connectedNfcTagData;
+    MessageParcel connectedNfcTagReply;
+    MessageOption connectedNfcTagOption(MessageOption::TF_SYNC);
+
+    if (!connectedNfcTagData.WriteInterfaceToken(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!connectedNfcTagData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t connectedNfcTagRet = remote->SendRequest(CMD_CONNECTED_NFC_TAG_READ_NDEF_TAG, connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    const char* ndefDataCp = connectedNfcTagReply.ReadCString();
+    if (ndefDataCp == nullptr) {
+        HDF_LOGE("%{public}s: read ndefData failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    ndefData = ndefDataCp;
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::WriteNdefTag_(const std::string& ndefData,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel connectedNfcTagData;
+    MessageParcel connectedNfcTagReply;
+    MessageOption connectedNfcTagOption(MessageOption::TF_SYNC);
+
+    if (!connectedNfcTagData.WriteInterfaceToken(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!connectedNfcTagData.WriteCString(ndefData.c_str())) {
+        HDF_LOGE("%{public}s: write ndefData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t connectedNfcTagRet = remote->SendRequest(CMD_CONNECTED_NFC_TAG_WRITE_NDEF_TAG, connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel connectedNfcTagData;
+    MessageParcel connectedNfcTagReply;
+    MessageOption connectedNfcTagOption(MessageOption::TF_SYNC);
+
+    if (!connectedNfcTagData.WriteInterfaceToken(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t connectedNfcTagRet = remote->SendRequest(CMD_CONNECTED_NFC_TAG_GET_VERSION, connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    if (!connectedNfcTagReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!connectedNfcTagReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return connectedNfcTagRet;
+}
+
+} // V1_0
+} // ConnectedNfcTag
+} // HDI
+} // OHOS

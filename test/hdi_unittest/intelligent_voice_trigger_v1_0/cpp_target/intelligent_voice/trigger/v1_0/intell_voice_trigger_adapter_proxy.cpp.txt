@@ -1,0 +1,278 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/intell_voice_trigger_adapter_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    intell_voice_trigger_adapter_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Trigger {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetProperties(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerProperties& properties)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetProperties_(properties, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::LoadModel(const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerModel& model, const sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback>& triggerCallback, int32_t cookie, int32_t& handle)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::LoadModel_(model, triggerCallback, cookie, handle, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::UnloadModel(int32_t handle)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::UnloadModel_(handle, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Start(int32_t handle)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Start_(handle, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Stop(int32_t handle)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Stop_(handle, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetVersion(uint32_t& majorVer,
+     uint32_t& minorVer)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetProperties_(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerProperties& properties, const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_GET_PROPERTIES, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    if (!IntellVoiceTriggerPropertiesBlockUnmarshalling(intellVoiceTriggerAdapterReply, properties)) {
+        HDF_LOGE("%{public}s: read properties failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::LoadModel_(const OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerModel& model, const sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback>& triggerCallback, int32_t cookie, int32_t& handle, const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerModelBlockMarshalling(intellVoiceTriggerAdapterData, model)) {
+        HDF_LOGE("%{public}s: write model failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (triggerCallback == nullptr) {
+        HDF_LOGE("%{public}s: parameter triggerCallback is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(triggerCallback, OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write triggerCallback failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterData.WriteInt32(cookie)) {
+        HDF_LOGE("%{public}s: write cookie failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_LOAD_MODEL, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    if (!intellVoiceTriggerAdapterReply.ReadInt32(handle)) {
+        HDF_LOGE("%{public}s: read handle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::UnloadModel_(int32_t handle,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterData.WriteInt32(handle)) {
+        HDF_LOGE("%{public}s: write handle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_UNLOAD_MODEL, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Start_(int32_t handle,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterData.WriteInt32(handle)) {
+        HDF_LOGE("%{public}s: write handle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_START, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::Stop_(int32_t handle,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterData.WriteInt32(handle)) {
+        HDF_LOGE("%{public}s: write handle failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_STOP, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerAdapterProxy::GetVersion_(uint32_t& majorVer,
+     uint32_t& minorVer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel intellVoiceTriggerAdapterData;
+    MessageParcel intellVoiceTriggerAdapterReply;
+    MessageOption intellVoiceTriggerAdapterOption(MessageOption::TF_SYNC);
+
+    if (!intellVoiceTriggerAdapterData.WriteInterfaceToken(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerAdapter::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t intellVoiceTriggerAdapterRet = remote->SendRequest(CMD_INTELL_VOICE_TRIGGER_ADAPTER_GET_VERSION, intellVoiceTriggerAdapterData, intellVoiceTriggerAdapterReply, intellVoiceTriggerAdapterOption);
+    if (intellVoiceTriggerAdapterRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerAdapterRet);
+        return intellVoiceTriggerAdapterRet;
+    }
+
+    if (!intellVoiceTriggerAdapterReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerAdapterReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceTriggerAdapterRet;
+}
+
+} // V1_0
+} // Trigger
+} // IntelligentVoice
+} // HDI
+} // OHOS

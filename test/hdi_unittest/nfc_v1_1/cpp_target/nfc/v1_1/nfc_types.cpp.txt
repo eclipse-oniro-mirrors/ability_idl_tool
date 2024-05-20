@@ -1,0 +1,242 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/nfc_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Nfc {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool NfcVendorConfigBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Nfc::V1_1::NfcVendorConfig& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.isoDepExtApduLength)) {
+        HDF_LOGE("%{public}s: write dataBlock.isoDepExtApduLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultOffHostRoute)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultOffHostRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultOffHostRouteFelica)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultOffHostRouteFelica failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultSysCodeRoute)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultSysCodeRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultSysCodePwrState)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultSysCodePwrState failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultUnconfiguredRoute)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultUnconfiguredRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.esePipeId)) {
+        HDF_LOGE("%{public}s: write dataBlock.esePipeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.simPipeId)) {
+        HDF_LOGE("%{public}s: write dataBlock.simPipeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.pollBailOutMode)) {
+        HDF_LOGE("%{public}s: write dataBlock.pollBailOutMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.checkAlgorithm)) {
+        HDF_LOGE("%{public}s: write dataBlock.checkAlgorithm failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.vendorProtocalDiscoveryCfg)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.vendorProtocalDiscoveryCfg", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.vendorProtocalDiscoveryCfgSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.vendorProtocalDiscoveryCfgSize failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.hostWhitelist)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.hostWhitelist", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.offHostRouteUicc)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.offHostRouteUicc", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.offHostRouteEse)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.offHostRouteEse", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint8(dataBlock.defaultIsoDepRoute)) {
+        HDF_LOGE("%{public}s: write dataBlock.defaultIsoDepRoute failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool NfcVendorConfigBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Nfc::V1_1::NfcVendorConfig& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.isoDepExtApduLength)) {
+        HDF_LOGE("%{public}s: read dataBlock.isoDepExtApduLength failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultOffHostRoute)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultOffHostRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultOffHostRouteFelica)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultOffHostRouteFelica failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultSysCodeRoute)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultSysCodeRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultSysCodePwrState)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultSysCodePwrState failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultUnconfiguredRoute)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultUnconfiguredRoute failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.esePipeId)) {
+        HDF_LOGE("%{public}s: read dataBlock.esePipeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.simPipeId)) {
+        HDF_LOGE("%{public}s: read dataBlock.simPipeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.pollBailOutMode)) {
+        HDF_LOGE("%{public}s: read dataBlock.pollBailOutMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.checkAlgorithm)) {
+        HDF_LOGE("%{public}s: read dataBlock.checkAlgorithm failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.vendorProtocalDiscoveryCfg)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.vendorProtocalDiscoveryCfg", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.vendorProtocalDiscoveryCfgSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.vendorProtocalDiscoveryCfgSize failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.hostWhitelist)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.hostWhitelist", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.offHostRouteUicc)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.offHostRouteUicc", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.offHostRouteEse)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.offHostRouteEse", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint8(dataBlock.defaultIsoDepRoute)) {
+        HDF_LOGE("%{public}s: read dataBlock.defaultIsoDepRoute failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V1_1
+} // Nfc
+} // HDI
+} // OHOS

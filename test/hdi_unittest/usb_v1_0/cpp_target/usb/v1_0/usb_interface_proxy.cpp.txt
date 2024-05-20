@@ -1,0 +1,1840 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usb_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    usb_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> OHOS::HDI::Usb::V1_0::IUsbInterface::Get(bool isStub)
+{
+    return IUsbInterface::Get("usb_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> OHOS::HDI::Usb::V1_0::IUsbInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "usb_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Usb::V1_0::IUsbInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> proxy = new OHOS::HDI::Usb::V1_0::UsbInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t usbInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::OpenDevice(const OHOS::HDI::Usb::V1_0::UsbDev& dev)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::OpenDevice_(dev, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::CloseDevice(const OHOS::HDI::Usb::V1_0::UsbDev& dev)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::CloseDevice_(dev, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetDeviceDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& descriptor)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetDeviceDescriptor_(dev, descriptor, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetStringDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t descId, std::vector<uint8_t>& descriptor)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetStringDescriptor_(dev, descId, descriptor, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfigDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t descId, std::vector<uint8_t>& descriptor)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfigDescriptor_(dev, descId, descriptor, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetRawDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& descriptor)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetRawDescriptor_(dev, descriptor, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetFileDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, int32_t& fd)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetFileDescriptor_(dev, fd, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetConfig(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t configIndex)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetConfig_(dev, configIndex, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfig(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t& configIndex)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfig_(dev, configIndex, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ClaimInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, uint8_t force)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ClaimInterface_(dev, interfaceid, force, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ManageInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, bool disable)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ManageInterface_(dev, interfaceid, disable, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ReleaseInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ReleaseInterface_(dev, interfaceid, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, uint8_t altIndex)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetInterface_(dev, interfaceid, altIndex, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferRead_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferWrite_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferRead_(dev, ctrl, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferWrite_(dev, ctrl, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferRead_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferWrite_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferRead_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferWrite_(dev, pipe, timeout, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestQueue(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const std::vector<uint8_t>& clientData, const std::vector<uint8_t>& buffer)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestQueue_(dev, pipe, clientData, buffer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestWait(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& clientData, std::vector<uint8_t>& buffer, int32_t timeout)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestWait_(dev, clientData, buffer, timeout, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestCancel(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestCancel_(dev, pipe, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetCurrentFunctions(int32_t& funcs)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetCurrentFunctions_(funcs, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetCurrentFunctions(int32_t funcs)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetCurrentFunctions_(funcs, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetPortRole(int32_t portId, int32_t powerRole, int32_t dataRole)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetPortRole_(portId, powerRole, dataRole, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::QueryPort(int32_t& portId, int32_t& powerRole, int32_t& dataRole,
+     int32_t& mode)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::QueryPort_(portId, powerRole, dataRole, mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BindUsbdSubscriber(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BindUsbdSubscriber_(subscriber, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnbindUsbdSubscriber(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnbindUsbdSubscriber_(subscriber, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RegBulkCallback(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback>& cb)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RegBulkCallback_(dev, pipe, cb, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnRegBulkCallback(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnRegBulkCallback_(dev, pipe, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<Ashmem>& ashmem)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkRead_(dev, pipe, ashmem, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<Ashmem>& ashmem)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkWrite_(dev, pipe, ashmem, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkCancel(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkCancel_(dev, pipe, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::OpenDevice_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_OPEN_DEVICE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::CloseDevice_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_CLOSE_DEVICE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetDeviceDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_DEVICE_DESCRIPTOR, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to read descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetStringDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t descId, std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(descId)) {
+        HDF_LOGE("%{public}s: write descId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_STRING_DESCRIPTOR, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to read descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfigDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t descId, std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(descId)) {
+        HDF_LOGE("%{public}s: write descId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_CONFIG_DESCRIPTOR, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to read descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetRawDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_RAW_DESCRIPTOR, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to read descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetFileDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     int32_t& fd, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_FILE_DESCRIPTOR, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(fd)) {
+        HDF_LOGE("%{public}s: read fd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetConfig_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t configIndex, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(configIndex)) {
+        HDF_LOGE("%{public}s: write configIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_SET_CONFIG, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetConfig_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t& configIndex, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_CONFIG, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.ReadUint8(configIndex)) {
+        HDF_LOGE("%{public}s: read configIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ClaimInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, uint8_t force, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: write interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(force)) {
+        HDF_LOGE("%{public}s: write force failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_CLAIM_INTERFACE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ManageInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, bool disable, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: write interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(disable)) {
+        HDF_LOGE("%{public}s: write disable failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_MANAGE_INTERFACE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ReleaseInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: write interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_RELEASE_INTERFACE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     uint8_t interfaceid, uint8_t altIndex, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: write interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteUint8(altIndex)) {
+        HDF_LOGE("%{public}s: write altIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_SET_INTERFACE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BULK_TRANSFER_READ, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BULK_TRANSFER_WRITE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbCtrlTransferBlockMarshalling(usbInterfaceData, ctrl)) {
+        HDF_LOGE("%{public}s: write ctrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_CONTROL_TRANSFER_READ, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::ControlTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbCtrlTransferBlockMarshalling(usbInterfaceData, ctrl)) {
+        HDF_LOGE("%{public}s: write ctrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_CONTROL_TRANSFER_WRITE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_INTERRUPT_TRANSFER_READ, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::InterruptTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_INTERRUPT_TRANSFER_WRITE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_ISO_TRANSFER_READ, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::IsoTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_ISO_TRANSFER_WRITE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestQueue_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const std::vector<uint8_t>& clientData, const std::vector<uint8_t>& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, clientData)) {
+        HDF_LOGE("%{public}s: failed to write clientData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceData, buffer)) {
+        HDF_LOGE("%{public}s: failed to write buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_REQUEST_QUEUE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestWait_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     std::vector<uint8_t>& clientData, std::vector<uint8_t>& buffer, int32_t timeout, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(timeout)) {
+        HDF_LOGE("%{public}s: write timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_REQUEST_WAIT, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, clientData)) {
+        HDF_LOGE("%{public}s: failed to read clientData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!ReadPodArray(usbInterfaceReply, buffer)) {
+        HDF_LOGE("%{public}s: failed to read buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RequestCancel_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_REQUEST_CANCEL, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetCurrentFunctions_(int32_t& funcs, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_CURRENT_FUNCTIONS, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(funcs)) {
+        HDF_LOGE("%{public}s: read funcs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetCurrentFunctions_(int32_t funcs, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(funcs)) {
+        HDF_LOGE("%{public}s: write funcs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_SET_CURRENT_FUNCTIONS, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::SetPortRole_(int32_t portId, int32_t powerRole, int32_t dataRole,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(portId)) {
+        HDF_LOGE("%{public}s: write portId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(powerRole)) {
+        HDF_LOGE("%{public}s: write powerRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteInt32(dataRole)) {
+        HDF_LOGE("%{public}s: write dataRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_SET_PORT_ROLE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::QueryPort_(int32_t& portId, int32_t& powerRole, int32_t& dataRole,
+     int32_t& mode, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_QUERY_PORT, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(portId)) {
+        HDF_LOGE("%{public}s: read portId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(powerRole)) {
+        HDF_LOGE("%{public}s: read powerRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(dataRole)) {
+        HDF_LOGE("%{public}s: read dataRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.ReadInt32(mode)) {
+        HDF_LOGE("%{public}s: read mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BindUsbdSubscriber_(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (subscriber == nullptr) {
+        HDF_LOGE("%{public}s: parameter subscriber is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(subscriber, OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write subscriber failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BIND_USBD_SUBSCRIBER, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnbindUsbdSubscriber_(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (subscriber == nullptr) {
+        HDF_LOGE("%{public}s: parameter subscriber is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(subscriber, OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write subscriber failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_UNBIND_USBD_SUBSCRIBER, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::RegBulkCallback_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback>& cb, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: parameter cb is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(cb, OHOS::HDI::Usb::V1_0::IUsbdBulkCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write cb failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_REG_BULK_CALLBACK, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::UnRegBulkCallback_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_UN_REG_BULK_CALLBACK, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<Ashmem>& ashmem, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (ashmem == nullptr || !usbInterfaceData.WriteAshmem(ashmem)) {
+        HDF_LOGE("%{public}s: failed to write ashmem", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BULK_READ, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<Ashmem>& ashmem, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (ashmem == nullptr || !usbInterfaceData.WriteAshmem(ashmem)) {
+        HDF_LOGE("%{public}s: failed to write ashmem", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BULK_WRITE, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::BulkCancel_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+     const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbDevBlockMarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: write dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::UsbPipeBlockMarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: write pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_BULK_CANCEL, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbInterfaceData;
+    MessageParcel usbInterfaceReply;
+    MessageOption usbInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!usbInterfaceData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbInterfaceRet = remote->SendRequest(CMD_USB_INTERFACE_GET_VERSION, usbInterfaceData, usbInterfaceReply, usbInterfaceOption);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

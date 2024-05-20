@@ -1,0 +1,186 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOCAPTURE_H
+#define OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOCAPTURE_H
+
+#include <stdint.h>
+#include <string>
+#include <vector>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "distributed_audio/audio/v1_0/audio_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_AUDIO_CAPTURE_GET_VERSION = 0,
+    CMD_AUDIO_CAPTURE_CAPTURE_FRAME = 1,
+    CMD_AUDIO_CAPTURE_GET_CAPTURE_POSITION = 2,
+    CMD_AUDIO_CAPTURE_CHECK_SCENE_CAPABILITY = 3,
+    CMD_AUDIO_CAPTURE_SELECT_SCENE = 4,
+    CMD_AUDIO_CAPTURE_SET_MUTE = 5,
+    CMD_AUDIO_CAPTURE_GET_MUTE = 6,
+    CMD_AUDIO_CAPTURE_SET_VOLUME = 7,
+    CMD_AUDIO_CAPTURE_GET_VOLUME = 8,
+    CMD_AUDIO_CAPTURE_GET_GAIN_THRESHOLD = 9,
+    CMD_AUDIO_CAPTURE_GET_GAIN = 10,
+    CMD_AUDIO_CAPTURE_SET_GAIN = 11,
+    CMD_AUDIO_CAPTURE_GET_FRAME_SIZE = 12,
+    CMD_AUDIO_CAPTURE_GET_FRAME_COUNT = 13,
+    CMD_AUDIO_CAPTURE_SET_SAMPLE_ATTRIBUTES = 14,
+    CMD_AUDIO_CAPTURE_GET_SAMPLE_ATTRIBUTES = 15,
+    CMD_AUDIO_CAPTURE_GET_CURRENT_CHANNEL_ID = 16,
+    CMD_AUDIO_CAPTURE_SET_EXTRA_PARAMS = 17,
+    CMD_AUDIO_CAPTURE_GET_EXTRA_PARAMS = 18,
+    CMD_AUDIO_CAPTURE_REQ_MMAP_BUFFER = 19,
+    CMD_AUDIO_CAPTURE_GET_MMAP_POSITION = 20,
+    CMD_AUDIO_CAPTURE_ADD_AUDIO_EFFECT = 21,
+    CMD_AUDIO_CAPTURE_REMOVE_AUDIO_EFFECT = 22,
+    CMD_AUDIO_CAPTURE_GET_FRAME_BUFFER_SIZE = 23,
+    CMD_AUDIO_CAPTURE_START = 24,
+    CMD_AUDIO_CAPTURE_STOP = 25,
+    CMD_AUDIO_CAPTURE_PAUSE = 26,
+    CMD_AUDIO_CAPTURE_RESUME = 27,
+    CMD_AUDIO_CAPTURE_FLUSH = 28,
+    CMD_AUDIO_CAPTURE_TURN_STANDBY_MODE = 29,
+    CMD_AUDIO_CAPTURE_AUDIO_DEV_DUMP = 30,
+    CMD_AUDIO_CAPTURE_IS_SUPPORTS_PAUSE_AND_RESUME = 31,
+};
+
+class IAudioCapture : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.distributed_audio.audio.v1_0.IAudioCapture");
+
+    virtual ~IAudioCapture() = default;
+
+    virtual int32_t CaptureFrame(std::vector<int8_t>& frame, uint64_t& replyBytes) = 0;
+
+    virtual int32_t GetCapturePosition(uint64_t& frames,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time) = 0;
+
+    virtual int32_t CheckSceneCapability(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene,
+         bool& supported) = 0;
+
+    virtual int32_t SelectScene(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& scene) = 0;
+
+    virtual int32_t SetMute(bool mute) = 0;
+
+    virtual int32_t GetMute(bool& mute) = 0;
+
+    virtual int32_t SetVolume(float volume) = 0;
+
+    virtual int32_t GetVolume(float& volume) = 0;
+
+    virtual int32_t GetGainThreshold(float& min, float& max) = 0;
+
+    virtual int32_t GetGain(float& gain) = 0;
+
+    virtual int32_t SetGain(float gain) = 0;
+
+    virtual int32_t GetFrameSize(uint64_t& size) = 0;
+
+    virtual int32_t GetFrameCount(uint64_t& count) = 0;
+
+    virtual int32_t SetSampleAttributes(const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs) = 0;
+
+    virtual int32_t GetSampleAttributes(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& attrs) = 0;
+
+    virtual int32_t GetCurrentChannelId(uint32_t& channelId) = 0;
+
+    virtual int32_t SetExtraParams(const std::string& keyValueList) = 0;
+
+    virtual int32_t GetExtraParams(std::string& keyValueList) = 0;
+
+    virtual int32_t ReqMmapBuffer(int32_t reqSize,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor& desc) = 0;
+
+    virtual int32_t GetMmapPosition(uint64_t& frames,
+         OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& time) = 0;
+
+    virtual int32_t AddAudioEffect(uint64_t effectid) = 0;
+
+    virtual int32_t RemoveAudioEffect(uint64_t effectid) = 0;
+
+    virtual int32_t GetFrameBufferSize(uint64_t& bufferSize) = 0;
+
+    virtual int32_t Start() = 0;
+
+    virtual int32_t Stop() = 0;
+
+    virtual int32_t Pause() = 0;
+
+    virtual int32_t Resume() = 0;
+
+    virtual int32_t Flush() = 0;
+
+    virtual int32_t TurnStandbyMode() = 0;
+
+    virtual int32_t AudioDevDump(int32_t range, int32_t fd) = 0;
+
+    virtual int32_t IsSupportsPauseAndResume(bool& supportPause, bool& supportResume) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_DISTRIBUTED_AUDIO_AUDIO_V1_0_IAUDIOCAPTURE_H
+

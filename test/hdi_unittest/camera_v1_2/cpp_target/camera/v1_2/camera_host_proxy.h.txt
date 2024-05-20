@@ -1,0 +1,132 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CAMERA_V1_2_CAMERAHOSTPROXY_H
+#define OHOS_HDI_CAMERA_V1_2_CAMERAHOSTPROXY_H
+
+#include "v1_1/camera_host_proxy.h"
+#include "v1_2/icamera_host.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+
+class CameraHostProxy : public IProxyBroker<OHOS::HDI::Camera::V1_2::ICameraHost> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Camera::V1_2::CameraHostProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Camera::V1_2::CameraHostProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Camera::V1_2::CameraHostProxy> proxy_;
+    };
+
+    explicit CameraHostProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Camera::V1_2::ICameraHost>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~CameraHostProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t OpenCamera_V1_2(const std::string& cameraId,
+         const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_2::ICameraDevice>& device) override;
+
+    int32_t NotifyDeviceStateChangeInfo(int32_t notifyType, int32_t deviceState) override;
+
+    int32_t SetCallback_V1_2(const sptr<OHOS::HDI::Camera::V1_2::ICameraHostCallback>& callbackObj) override;
+
+    int32_t SetFlashlight_V1_2(float level) override;
+
+    int32_t PreCameraSwitch(const std::string& cameraId) override;
+
+    int32_t PrelaunchWithOpMode(const OHOS::HDI::Camera::V1_1::PrelaunchConfig& config, int32_t operationMode) override;
+
+    int32_t OpenCamera_V1_1(const std::string& cameraId,
+         const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_1::ICameraDevice>& device) override;
+
+    int32_t Prelaunch(const OHOS::HDI::Camera::V1_1::PrelaunchConfig& config) override;
+
+    int32_t SetCallback(const sptr<OHOS::HDI::Camera::V1_0::ICameraHostCallback>& callbackObj) override;
+
+    int32_t GetCameraIds(std::vector<std::string>& cameraIds) override;
+
+    int32_t GetCameraAbility(const std::string& cameraId, std::vector<uint8_t>& cameraAbility) override;
+
+    int32_t OpenCamera(const std::string& cameraId,
+         const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_0::ICameraDevice>& device) override;
+
+    int32_t SetFlashlight(const std::string& cameraId, bool isEnable) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t OpenCamera_V1_2_(const std::string& cameraId,
+         const sptr<OHOS::HDI::Camera::V1_0::ICameraDeviceCallback>& callbackObj, sptr<OHOS::HDI::Camera::V1_2::ICameraDevice>& device, const sptr<IRemoteObject> remote);
+
+    static int32_t NotifyDeviceStateChangeInfo_(int32_t notifyType, int32_t deviceState,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetCallback_V1_2_(const sptr<OHOS::HDI::Camera::V1_2::ICameraHostCallback>& callbackObj,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetFlashlight_V1_2_(float level, const sptr<IRemoteObject> remote);
+
+    static int32_t PreCameraSwitch_(const std::string& cameraId, const sptr<IRemoteObject> remote);
+
+    static int32_t PrelaunchWithOpMode_(const OHOS::HDI::Camera::V1_1::PrelaunchConfig& config, int32_t operationMode,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Camera::V1_2::CameraHostProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Camera::V1_2::CameraHostProxy> delegator_;
+};
+
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CAMERA_V1_2_CAMERAHOSTPROXY_H
+

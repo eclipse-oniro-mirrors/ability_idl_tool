@@ -1,0 +1,1725 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_render_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    audio_render_stub
+
+static struct IAudioCallback *ReadIAudioCallback(struct HdfSBuf *parcel);
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);
+
+
+static struct IAudioCallback *ReadIAudioCallback(struct HdfSBuf *parcel)
+{
+    struct HdfRemoteService *remote = HdfSbufReadRemoteService(parcel);
+    if (remote == NULL) {
+        HDF_LOGE("%{public}s:  failed to read remote service of 'IAudioCallback'", __func__);
+        return NULL;
+    }
+
+    return IAudioCallbackGet(remote);
+}
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)
+{
+    const void * dataPtr = NULL;
+    void *memPtr = NULL;
+    uint32_t elementCount = 0;
+    if (count == NULL || data == NULL || elementSize == 0) {
+        HDF_LOGE("%{public}s: invalid param", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read element count", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        *count = elementCount;
+        return true;
+    }
+
+    dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        return false;
+    }
+
+    memPtr = OsalMemCalloc(elementSize * elementCount);
+    if (memPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc buffer", __func__);
+        return false;
+    }
+
+    if (memcpy_s(memPtr, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy buffer", __func__);
+        OsalMemFree(memPtr);
+        return false;
+    }
+
+    *data = memPtr;
+    *count = elementCount;
+    return true;
+}
+static int32_t SerStubGetLatency(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint32_t ms = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetLatency == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetLatency ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetLatency(serviceImpl, &ms);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioRenderReply, ms)) {
+        HDF_LOGE("%{public}s: write ms failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubRenderFrame(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    int8_t* frame = NULL;
+    uint32_t frameLen = 0;
+    uint64_t replyBytes = 0;
+
+    if (!ReadPodArray(audioRenderData, (void **)&frame, sizeof(int8_t), &frameLen)) {
+        HDF_LOGE("%{public}s: failed to read frame", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RenderFrame == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RenderFrame ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->RenderFrame(serviceImpl, frame, frameLen, &replyBytes);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, replyBytes)) {
+        HDF_LOGE("%{public}s: write replyBytes failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (frame != NULL) {
+        OsalMemFree(frame);
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetRenderPosition(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t frames = 0;
+    struct AudioTimeStamp* time = NULL;
+
+    time = (struct AudioTimeStamp*)OsalMemCalloc(sizeof(struct AudioTimeStamp));
+    if (time == NULL) {
+        HDF_LOGE("%{public}s: malloc time failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetRenderPosition == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetRenderPosition ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetRenderPosition(serviceImpl, &frames, time);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, frames)) {
+        HDF_LOGE("%{public}s: write frames failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockMarshalling(audioRenderReply, time)) {
+        HDF_LOGE("%{public}s: write time failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (time != NULL) {
+        AudioTimeStampFree(time, true);
+        time = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetRenderSpeed(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float speed = 0;
+
+    if (!HdfSbufReadFloat(audioRenderData, &speed)) {
+        HDF_LOGE("%{public}s: read &speed failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetRenderSpeed == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetRenderSpeed ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetRenderSpeed(serviceImpl, speed);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetRenderSpeed(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float speed = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetRenderSpeed == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetRenderSpeed ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetRenderSpeed(serviceImpl, &speed);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderReply, speed)) {
+        HDF_LOGE("%{public}s: write speed failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetChannelMode(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    enum AudioChannelMode mode;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!HdfSbufReadUint64(audioRenderData, &enumTmp)) {
+            HDF_LOGE("%{public}s: read mode failed!", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+        mode = (enum AudioChannelMode)enumTmp;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetChannelMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetChannelMode ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetChannelMode(serviceImpl, mode);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetChannelMode(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    enum AudioChannelMode mode;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetChannelMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetChannelMode ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetChannelMode(serviceImpl, &mode);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, (uint64_t)mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubRegCallback(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    struct IAudioCallback* audioCallback = NULL;
+    int8_t cookie = 0;
+
+    audioCallback = ReadIAudioCallback(audioRenderData);
+    if (audioCallback == NULL) {
+        HDF_LOGE("%{public}s: read audioCallback failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt8(audioRenderData, &cookie)) {
+        HDF_LOGE("%{public}s: read &cookie failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RegCallback == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RegCallback ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->RegCallback(serviceImpl, audioCallback, cookie);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubDrainBuffer(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    enum AudioDrainNotifyType type;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DrainBuffer == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DrainBuffer ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->DrainBuffer(serviceImpl, &type);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, (uint64_t)type)) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubIsSupportsDrain(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    bool support = false;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->IsSupportsDrain == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function IsSupportsDrain ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->IsSupportsDrain(serviceImpl, &support);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderReply, support ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write support failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubCheckSceneCapability(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    struct AudioSceneDescriptor* scene = NULL;
+    bool supported = false;
+
+    scene = (struct AudioSceneDescriptor*)OsalMemCalloc(sizeof(struct AudioSceneDescriptor));
+    if (scene == NULL) {
+        HDF_LOGE("%{public}s: malloc scene failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!AudioSceneDescriptorBlockUnmarshalling(audioRenderData, scene)) {
+        HDF_LOGE("%{public}s: read scene failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->CheckSceneCapability == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function CheckSceneCapability ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->CheckSceneCapability(serviceImpl, scene, &supported);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderReply, supported ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write supported failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (scene != NULL) {
+        AudioSceneDescriptorFree(scene, true);
+        scene = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubSelectScene(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    struct AudioSceneDescriptor* scene = NULL;
+
+    scene = (struct AudioSceneDescriptor*)OsalMemCalloc(sizeof(struct AudioSceneDescriptor));
+    if (scene == NULL) {
+        HDF_LOGE("%{public}s: malloc scene failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!AudioSceneDescriptorBlockUnmarshalling(audioRenderData, scene)) {
+        HDF_LOGE("%{public}s: read scene failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SelectScene == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SelectScene ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SelectScene(serviceImpl, scene);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (scene != NULL) {
+        AudioSceneDescriptorFree(scene, true);
+        scene = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetMute(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    bool mute = false;
+
+    if (!HdfSbufReadInt8(audioRenderData, (int8_t *)&mute)) {
+        HDF_LOGE("%{public}s: read &mute failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetMute == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetMute ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetMute(serviceImpl, mute);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetMute(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    bool mute = false;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetMute == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetMute ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetMute(serviceImpl, &mute);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderReply, mute ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write mute failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetVolume(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float volume = 0;
+
+    if (!HdfSbufReadFloat(audioRenderData, &volume)) {
+        HDF_LOGE("%{public}s: read &volume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetVolume == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetVolume ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetVolume(serviceImpl, volume);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetVolume(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float volume = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetVolume == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetVolume ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetVolume(serviceImpl, &volume);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderReply, volume)) {
+        HDF_LOGE("%{public}s: write volume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetGainThreshold(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float min = 0;
+    float max = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetGainThreshold == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetGainThreshold ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetGainThreshold(serviceImpl, &min, &max);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderReply, min)) {
+        HDF_LOGE("%{public}s: write min failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderReply, max)) {
+        HDF_LOGE("%{public}s: write max failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetGain(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float gain = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetGain == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetGain ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetGain(serviceImpl, &gain);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteFloat(audioRenderReply, gain)) {
+        HDF_LOGE("%{public}s: write gain failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetGain(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    float gain = 0;
+
+    if (!HdfSbufReadFloat(audioRenderData, &gain)) {
+        HDF_LOGE("%{public}s: read &gain failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetGain == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetGain ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetGain(serviceImpl, gain);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetFrameSize(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t size = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetFrameSize == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetFrameSize ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetFrameSize(serviceImpl, &size);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, size)) {
+        HDF_LOGE("%{public}s: write size failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetFrameCount(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t count = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetFrameCount == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetFrameCount ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetFrameCount(serviceImpl, &count);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, count)) {
+        HDF_LOGE("%{public}s: write count failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetSampleAttributes(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    struct AudioSampleAttributes* attrs = NULL;
+
+    attrs = (struct AudioSampleAttributes*)OsalMemCalloc(sizeof(struct AudioSampleAttributes));
+    if (attrs == NULL) {
+        HDF_LOGE("%{public}s: malloc attrs failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!AudioSampleAttributesBlockUnmarshalling(audioRenderData, attrs)) {
+        HDF_LOGE("%{public}s: read attrs failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetSampleAttributes == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetSampleAttributes ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetSampleAttributes(serviceImpl, attrs);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (attrs != NULL) {
+        AudioSampleAttributesFree(attrs, true);
+        attrs = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetSampleAttributes(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    struct AudioSampleAttributes* attrs = NULL;
+
+    attrs = (struct AudioSampleAttributes*)OsalMemCalloc(sizeof(struct AudioSampleAttributes));
+    if (attrs == NULL) {
+        HDF_LOGE("%{public}s: malloc attrs failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetSampleAttributes == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetSampleAttributes ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetSampleAttributes(serviceImpl, attrs);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!AudioSampleAttributesBlockMarshalling(audioRenderReply, attrs)) {
+        HDF_LOGE("%{public}s: write attrs failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (attrs != NULL) {
+        AudioSampleAttributesFree(attrs, true);
+        attrs = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetCurrentChannelId(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint32_t channelId = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetCurrentChannelId == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetCurrentChannelId ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetCurrentChannelId(serviceImpl, &channelId);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioRenderReply, channelId)) {
+        HDF_LOGE("%{public}s: write channelId failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetExtraParams(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    char* keyValueList = NULL;
+
+    const char *keyValueListCp = HdfSbufReadString(audioRenderData);
+    if (keyValueListCp == NULL) {
+        HDF_LOGE("%{public}s: read keyValueListCp failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    keyValueList = strdup(keyValueListCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetExtraParams == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetExtraParams ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetExtraParams(serviceImpl, keyValueList);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (keyValueList != NULL) {
+        OsalMemFree(keyValueList);
+        keyValueList = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetExtraParams(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    bool audioRenderMemSet = false;
+    char* keyValueList = NULL;
+    uint32_t keyValueListLen = 0;
+
+    if (!HdfSbufReadUint8(audioRenderData, (uint8_t *)&audioRenderMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (audioRenderMemSet) {
+        if (!HdfSbufReadUint32(audioRenderData, &keyValueListLen)) {
+            HDF_LOGE("%{public}s: read keyValueList size failed!", __func__);
+            audioRenderRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(keyValueListLen, >, HDI_BUFF_MAX_SIZE / sizeof(char), audioRenderRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (keyValueListLen > 0) {
+            keyValueList = (char*)OsalMemCalloc(keyValueListLen);
+            if (keyValueList == NULL) {
+                HDF_LOGE("%{public}s: malloc keyValueList failed", __func__);
+                audioRenderRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        keyValueList = (char*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (keyValueList == NULL) {
+            HDF_LOGE("%{public}s: malloc keyValueList failed", __func__);
+            audioRenderRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        keyValueListLen = HDI_BUFF_MAX_SIZE;
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetExtraParams == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetExtraParams ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetExtraParams(serviceImpl, keyValueList, keyValueListLen);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteString(audioRenderReply, keyValueList)) {
+        HDF_LOGE("%{public}s: write keyValueList failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (keyValueList != NULL) {
+        OsalMemFree(keyValueList);
+        keyValueList = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubReqMmapBuffer(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    int32_t reqSize = 0;
+    struct AudioMmapBufferDescriptor* desc = NULL;
+
+    if (!HdfSbufReadInt32(audioRenderData, &reqSize)) {
+        HDF_LOGE("%{public}s: read &reqSize failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    desc = (struct AudioMmapBufferDescriptor*)OsalMemCalloc(sizeof(struct AudioMmapBufferDescriptor));
+    if (desc == NULL) {
+        HDF_LOGE("%{public}s: malloc desc failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->ReqMmapBuffer == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function ReqMmapBuffer ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->ReqMmapBuffer(serviceImpl, reqSize, desc);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!AudioMmapBufferDescriptorBlockMarshalling(audioRenderReply, desc)) {
+        HDF_LOGE("%{public}s: write desc failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (desc != NULL) {
+        AudioMmapBufferDescriptorFree(desc, true);
+        desc = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetMmapPosition(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t frames = 0;
+    struct AudioTimeStamp* time = NULL;
+
+    time = (struct AudioTimeStamp*)OsalMemCalloc(sizeof(struct AudioTimeStamp));
+    if (time == NULL) {
+        HDF_LOGE("%{public}s: malloc time failed", __func__);
+        audioRenderRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetMmapPosition == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetMmapPosition ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetMmapPosition(serviceImpl, &frames, time);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, frames)) {
+        HDF_LOGE("%{public}s: write frames failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!AudioTimeStampBlockMarshalling(audioRenderReply, time)) {
+        HDF_LOGE("%{public}s: write time failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (time != NULL) {
+        AudioTimeStampFree(time, true);
+        time = NULL;
+    }
+    return audioRenderRet;
+}
+
+static int32_t SerStubAddAudioEffect(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t effectid = 0;
+
+    if (!HdfSbufReadUint64(audioRenderData, &effectid)) {
+        HDF_LOGE("%{public}s: read &effectid failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->AddAudioEffect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function AddAudioEffect ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->AddAudioEffect(serviceImpl, effectid);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubRemoveAudioEffect(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t effectid = 0;
+
+    if (!HdfSbufReadUint64(audioRenderData, &effectid)) {
+        HDF_LOGE("%{public}s: read &effectid failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->RemoveAudioEffect == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function RemoveAudioEffect ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->RemoveAudioEffect(serviceImpl, effectid);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetFrameBufferSize(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint64_t bufferSize = 0;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetFrameBufferSize == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetFrameBufferSize ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->GetFrameBufferSize(serviceImpl, &bufferSize);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint64(audioRenderReply, bufferSize)) {
+        HDF_LOGE("%{public}s: write bufferSize failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubStart(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Start == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Start ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->Start(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubStop(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Stop == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Stop ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->Stop(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubPause(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Pause == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Pause ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->Pause(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubResume(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Resume == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Resume ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->Resume(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubFlush(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->Flush == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function Flush ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->Flush(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubTurnStandbyMode(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->TurnStandbyMode == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function TurnStandbyMode ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->TurnStandbyMode(serviceImpl);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubAudioDevDump(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    int32_t range = 0;
+    int32_t fd = 0;
+
+    if (!HdfSbufReadInt32(audioRenderData, &range)) {
+        HDF_LOGE("%{public}s: read &range failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(audioRenderData, &fd)) {
+        HDF_LOGE("%{public}s: read &fd failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->AudioDevDump == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function AudioDevDump ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->AudioDevDump(serviceImpl, range, fd);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubIsSupportsPauseAndResume(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    bool supportPause = false;
+    bool supportResume = false;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->IsSupportsPauseAndResume == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function IsSupportsPauseAndResume ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->IsSupportsPauseAndResume(serviceImpl, &supportPause, &supportResume);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderReply, supportPause ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write supportPause failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(audioRenderReply, supportResume ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write supportResume failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubSetBufferSize(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_FAILURE;
+    uint32_t size = 0;
+
+    if (!HdfSbufReadUint32(audioRenderData, &size)) {
+        HDF_LOGE("%{public}s: read &size failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        audioRenderRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->SetBufferSize == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function SetBufferSize ", __func__);
+        audioRenderRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    audioRenderRet = serviceImpl->SetBufferSize(serviceImpl, size);
+    if (audioRenderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioRenderRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static int32_t SerStubGetVersion(struct IAudioRender *serviceImpl, struct HdfSBuf *audioRenderData, struct HdfSBuf *audioRenderReply)
+{
+    int32_t audioRenderRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(audioRenderReply, IAUDIO_RENDER_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IAUDIO_RENDER_MAJOR_VERSION failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(audioRenderReply, IAUDIO_RENDER_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IAUDIO_RENDER_MINOR_VERSION failed!", __func__);
+        audioRenderRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return audioRenderRet;
+}
+
+static struct HdfRemoteService *AudioRenderStubAsObject(struct IAudioRender *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct AudioRenderStub *stub = CONTAINER_OF(self, struct AudioRenderStub, interface);
+    return stub->remote;
+}
+
+static int32_t AudioRenderOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct AudioRenderStub *stub = (struct AudioRenderStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_AUDIO_RENDER_GET_LATENCY:
+            return SerStubGetLatency(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_RENDER_FRAME:
+            return SerStubRenderFrame(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_RENDER_POSITION:
+            return SerStubGetRenderPosition(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_RENDER_SPEED:
+            return SerStubSetRenderSpeed(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_RENDER_SPEED:
+            return SerStubGetRenderSpeed(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_CHANNEL_MODE:
+            return SerStubSetChannelMode(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_CHANNEL_MODE:
+            return SerStubGetChannelMode(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_REG_CALLBACK:
+            return SerStubRegCallback(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_DRAIN_BUFFER:
+            return SerStubDrainBuffer(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_IS_SUPPORTS_DRAIN:
+            return SerStubIsSupportsDrain(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_CHECK_SCENE_CAPABILITY:
+            return SerStubCheckSceneCapability(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SELECT_SCENE:
+            return SerStubSelectScene(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_MUTE:
+            return SerStubSetMute(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_MUTE:
+            return SerStubGetMute(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_VOLUME:
+            return SerStubSetVolume(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_VOLUME:
+            return SerStubGetVolume(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_GAIN_THRESHOLD:
+            return SerStubGetGainThreshold(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_GAIN:
+            return SerStubGetGain(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_GAIN:
+            return SerStubSetGain(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_FRAME_SIZE:
+            return SerStubGetFrameSize(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_FRAME_COUNT:
+            return SerStubGetFrameCount(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_SAMPLE_ATTRIBUTES:
+            return SerStubSetSampleAttributes(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_SAMPLE_ATTRIBUTES:
+            return SerStubGetSampleAttributes(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_CURRENT_CHANNEL_ID:
+            return SerStubGetCurrentChannelId(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_EXTRA_PARAMS:
+            return SerStubSetExtraParams(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_EXTRA_PARAMS:
+            return SerStubGetExtraParams(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_REQ_MMAP_BUFFER:
+            return SerStubReqMmapBuffer(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_MMAP_POSITION:
+            return SerStubGetMmapPosition(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_ADD_AUDIO_EFFECT:
+            return SerStubAddAudioEffect(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_REMOVE_AUDIO_EFFECT:
+            return SerStubRemoveAudioEffect(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_FRAME_BUFFER_SIZE:
+            return SerStubGetFrameBufferSize(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_START:
+            return SerStubStart(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_STOP:
+            return SerStubStop(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_PAUSE:
+            return SerStubPause(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_RESUME:
+            return SerStubResume(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_FLUSH:
+            return SerStubFlush(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_TURN_STANDBY_MODE:
+            return SerStubTurnStandbyMode(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_AUDIO_DEV_DUMP:
+            return SerStubAudioDevDump(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_IS_SUPPORTS_PAUSE_AND_RESUME:
+            return SerStubIsSupportsPauseAndResume(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_SET_BUFFER_SIZE:
+            return SerStubSetBufferSize(stub->interface, data, reply);
+        case CMD_AUDIO_RENDER_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteService **AudioRenderStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IAudioRender *serviceImpl = (struct IAudioRender *)impl;
+    struct AudioRenderStub *stub = OsalMemCalloc(sizeof(struct AudioRenderStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &stub->dispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IAUDIORENDER_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = AudioRenderOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = AudioRenderStubAsObject;
+    return &stub->remote;
+}
+
+static void AudioRenderStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct AudioRenderStub *stub = CONTAINER_OF(remote, struct AudioRenderStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_audiorenderConstructor = {
+    .constructor = AudioRenderStubNewInstance,
+    .destructor = AudioRenderStubRelease,
+};
+
+__attribute__((constructor)) static void AudioRenderStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IAUDIORENDER_INTERFACE_DESC);
+    StubConstructorRegister(IAUDIORENDER_INTERFACE_DESC, &g_audiorenderConstructor);
+}

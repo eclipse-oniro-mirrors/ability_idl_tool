@@ -1,0 +1,92 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_GNSS_V1_0_GNSSCALLBACKPROXY_H
+#define OHOS_HDI_LOCATION_GNSS_V1_0_GNSSCALLBACKPROXY_H
+
+#include "v1_0/ignss_callback.h"
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Gnss {
+namespace V1_0 {
+
+class GnssCallbackProxy : public IProxyBroker<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback> {
+public:
+    explicit GnssCallbackProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback>(remote) {
+    }
+    virtual ~GnssCallbackProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t ReportLocation(const OHOS::HDI::Location::Gnss::V1_0::LocationInfo& location) override;
+
+    int32_t ReportGnssWorkingStatus(OHOS::HDI::Location::Gnss::V1_0::GnssWorkingStatus status) override;
+
+    int32_t ReportNmea(int64_t timestamp, const std::string& nmea, int32_t length) override;
+
+    int32_t ReportGnssCapabilities(OHOS::HDI::Location::Gnss::V1_0::GnssCapabilities capabilities) override;
+
+    int32_t ReportSatelliteStatusInfo(const OHOS::HDI::Location::Gnss::V1_0::SatelliteStatusInfo& info) override;
+
+    int32_t RequestGnssReferenceInfo(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfoType type) override;
+
+    int32_t RequestPredictGnssData() override;
+
+    int32_t ReportCachedLocation(const std::vector<OHOS::HDI::Location::Gnss::V1_0::LocationInfo>& gnssLocations) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t ReportLocation_(const OHOS::HDI::Location::Gnss::V1_0::LocationInfo& location,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReportGnssWorkingStatus_(OHOS::HDI::Location::Gnss::V1_0::GnssWorkingStatus status,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReportNmea_(int64_t timestamp, const std::string& nmea, int32_t length,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReportGnssCapabilities_(OHOS::HDI::Location::Gnss::V1_0::GnssCapabilities capabilities,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReportSatelliteStatusInfo_(const OHOS::HDI::Location::Gnss::V1_0::SatelliteStatusInfo& info,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t RequestGnssReferenceInfo_(OHOS::HDI::Location::Gnss::V1_0::GnssRefInfoType type,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t RequestPredictGnssData_(const sptr<IRemoteObject> remote);
+
+    static int32_t ReportCachedLocation_(const std::vector<OHOS::HDI::Location::Gnss::V1_0::LocationInfo>& gnssLocations, const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+private:
+    static inline BrokerDelegator<OHOS::HDI::Location::Gnss::V1_0::GnssCallbackProxy> delegator_;
+};
+
+} // V1_0
+} // Gnss
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_GNSS_V1_0_GNSSCALLBACKPROXY_H
+

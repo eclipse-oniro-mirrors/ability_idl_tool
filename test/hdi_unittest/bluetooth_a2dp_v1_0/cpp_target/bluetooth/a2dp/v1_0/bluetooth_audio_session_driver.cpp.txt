@@ -1,0 +1,117 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_device_desc.h>
+#include <hdf_log.h>
+#include <hdf_sbuf_ipc.h>
+#include "v1_0/bluetooth_audio_session_stub.h"
+
+#define HDF_LOG_TAG    bluetooth_audio_session_driver
+
+using namespace OHOS::HDI::Bluetooth::A2dp::V1_0;
+
+struct HdfBluetoothAudioSessionHost {
+    struct IDeviceIoService ioService;
+    OHOS::sptr<OHOS::IRemoteObject> stub;
+};
+
+static int32_t BluetoothAudioSessionDriverDispatch(struct HdfDeviceIoClient *client, int cmdId, struct HdfSBuf *data,
+    struct HdfSBuf *reply)
+{
+    auto *hdfBluetoothAudioSessionHost = CONTAINER_OF(client->device->service, struct HdfBluetoothAudioSessionHost, ioService);
+
+    OHOS::MessageParcel *dataParcel = nullptr;
+    OHOS::MessageParcel *replyParcel = nullptr;
+    OHOS::MessageOption option;
+
+    if (SbufToParcel(data, &dataParcel) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: invalid data sbuf object to dispatch", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    if (SbufToParcel(reply, &replyParcel) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: invalid reply sbuf object to dispatch", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hdfBluetoothAudioSessionHost->stub->SendRequest(cmdId, *dataParcel, *replyParcel, option);
+}
+
+static int HdfBluetoothAudioSessionDriverInit(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver init start", __func__);
+    return HDF_SUCCESS;
+}
+
+static int HdfBluetoothAudioSessionDriverBind(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver bind start", __func__);
+    auto *hdfBluetoothAudioSessionHost = new (std::nothrow) HdfBluetoothAudioSessionHost;
+    if (hdfBluetoothAudioSessionHost == nullptr) {
+        HDF_LOGE("%{public}s: failed to create create HdfBluetoothAudioSessionHost object", __func__);
+        return HDF_FAILURE;
+    }
+
+    hdfBluetoothAudioSessionHost->ioService.Dispatch = BluetoothAudioSessionDriverDispatch;
+    hdfBluetoothAudioSessionHost->ioService.Open = NULL;
+    hdfBluetoothAudioSessionHost->ioService.Release = NULL;
+
+    auto serviceImpl = OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get(true);
+    if (serviceImpl == nullptr) {
+        HDF_LOGE("%{public}s: failed to get of implement service", __func__);
+        delete hdfBluetoothAudioSessionHost;
+        return HDF_FAILURE;
+    }
+
+    hdfBluetoothAudioSessionHost->stub = OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(serviceImpl,
+        OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor());
+    if (hdfBluetoothAudioSessionHost->stub == nullptr) {
+        HDF_LOGE("%{public}s: failed to get stub object", __func__);
+        delete hdfBluetoothAudioSessionHost;
+        return HDF_FAILURE;
+    }
+
+    deviceObject->service = &hdfBluetoothAudioSessionHost->ioService;
+    return HDF_SUCCESS;
+}
+
+static void HdfBluetoothAudioSessionDriverRelease(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver release start", __func__);
+    if (deviceObject->service == nullptr) {
+        return;
+    }
+
+    auto *hdfBluetoothAudioSessionHost = CONTAINER_OF(deviceObject->service, struct HdfBluetoothAudioSessionHost, ioService);
+    if (hdfBluetoothAudioSessionHost != nullptr) {
+        delete hdfBluetoothAudioSessionHost;
+    }
+}
+
+struct HdfDriverEntry g_bluetoothaudiosessionDriverEntry = {
+    .moduleVersion = 1,
+    .moduleName = "",
+    .Bind = HdfBluetoothAudioSessionDriverBind,
+    .Init = HdfBluetoothAudioSessionDriverInit,
+    .Release = HdfBluetoothAudioSessionDriverRelease,
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+HDF_INIT(g_bluetoothaudiosessionDriverEntry);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

@@ -1,0 +1,279 @@
+/*
+ * Copyright (c) 2021-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/sensor_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Sensor {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfSensorInformationBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Sensor::V1_1::HdfSensorInformation& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.sensorName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.sensorName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.vendorName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.vendorName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.firmwareVersion.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.firmwareVersion failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.hardwareVersion.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.hardwareVersion failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.sensorTypeId)) {
+        HDF_LOGE("%{public}s: write dataBlock.sensorTypeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.sensorId)) {
+        HDF_LOGE("%{public}s: write dataBlock.sensorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.maxRange)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxRange failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.accuracy)) {
+        HDF_LOGE("%{public}s: write dataBlock.accuracy failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteFloat(dataBlock.power)) {
+        HDF_LOGE("%{public}s: write dataBlock.power failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.minDelay)) {
+        HDF_LOGE("%{public}s: write dataBlock.minDelay failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.maxDelay)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxDelay failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfSensorInformationBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Sensor::V1_1::HdfSensorInformation& dataBlock)
+{
+    const char* sensorNameCp = data.ReadCString();
+    if (sensorNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read sensorNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.sensorName = sensorNameCp;
+
+    const char* vendorNameCp = data.ReadCString();
+    if (vendorNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read vendorNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.vendorName = vendorNameCp;
+
+    const char* firmwareVersionCp = data.ReadCString();
+    if (firmwareVersionCp == nullptr) {
+        HDF_LOGE("%{public}s: read firmwareVersionCp failed", __func__);
+        return false;
+    }
+    dataBlock.firmwareVersion = firmwareVersionCp;
+
+    const char* hardwareVersionCp = data.ReadCString();
+    if (hardwareVersionCp == nullptr) {
+        HDF_LOGE("%{public}s: read hardwareVersionCp failed", __func__);
+        return false;
+    }
+    dataBlock.hardwareVersion = hardwareVersionCp;
+
+    if (!data.ReadInt32(dataBlock.sensorTypeId)) {
+        HDF_LOGE("%{public}s: read dataBlock.sensorTypeId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.sensorId)) {
+        HDF_LOGE("%{public}s: read dataBlock.sensorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.maxRange)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxRange failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.accuracy)) {
+        HDF_LOGE("%{public}s: read dataBlock.accuracy failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadFloat(dataBlock.power)) {
+        HDF_LOGE("%{public}s: read dataBlock.power failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.minDelay)) {
+        HDF_LOGE("%{public}s: read dataBlock.minDelay failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.maxDelay)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxDelay failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfSensorEventsBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Sensor::V1_1::HdfSensorEvents& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.sensorId)) {
+        HDF_LOGE("%{public}s: write dataBlock.sensorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.version)) {
+        HDF_LOGE("%{public}s: write dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.timestamp)) {
+        HDF_LOGE("%{public}s: write dataBlock.timestamp failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.option)) {
+        HDF_LOGE("%{public}s: write dataBlock.option failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: write dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.data)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.data", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.dataLen)) {
+        HDF_LOGE("%{public}s: write dataBlock.dataLen failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool HdfSensorEventsBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Sensor::V1_1::HdfSensorEvents& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.sensorId)) {
+        HDF_LOGE("%{public}s: read dataBlock.sensorId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.version)) {
+        HDF_LOGE("%{public}s: read dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt64(dataBlock.timestamp)) {
+        HDF_LOGE("%{public}s: read dataBlock.timestamp failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.option)) {
+        HDF_LOGE("%{public}s: read dataBlock.option failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.mode)) {
+        HDF_LOGE("%{public}s: read dataBlock.mode failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.data)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.data", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.dataLen)) {
+        HDF_LOGE("%{public}s: read dataBlock.dataLen failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+} // V1_1
+} // Sensor
+} // HDI
+} // OHOS

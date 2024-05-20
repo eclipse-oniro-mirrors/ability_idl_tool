@@ -1,0 +1,1201 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/user_auth_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    user_auth_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace UserAuth {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::UserAuth::V1_0::IUserAuthInterface> OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::Get(bool isStub)
+{
+    return IUserAuthInterface::Get("user_auth_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::UserAuth::V1_0::IUserAuthInterface> OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "user_auth_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::UserAuth::V1_0::IUserAuthInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy> proxy = new OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t userAuthInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::Init()
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::Init_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::AddExecutor(const OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfo& info, uint64_t& index, std::vector<uint8_t>& publicKey, std::vector<uint64_t>& templateIds)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::AddExecutor_(info, index, publicKey, templateIds, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteExecutor(uint64_t index)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteExecutor_(index, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::OpenSession(int32_t userId, std::vector<uint8_t>& challenge)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::OpenSession_(userId, challenge, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CloseSession(int32_t userId)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CloseSession_(userId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginEnrollment(int32_t userId,
+     const std::vector<uint8_t>& authToken, const OHOS::HDI::UserAuth::V1_0::EnrollParam& param, OHOS::HDI::UserAuth::V1_0::ScheduleInfo& info)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginEnrollment_(userId, authToken, param, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateEnrollmentResult(int32_t userId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::EnrollResultInfo& info)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateEnrollmentResult_(userId, scheduleResult, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelEnrollment(int32_t userId)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelEnrollment_(userId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteCredential(int32_t userId, uint64_t credentialId,
+     const std::vector<uint8_t>& authToken, OHOS::HDI::UserAuth::V1_0::CredentialInfo& info)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteCredential_(userId, credentialId, authToken, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetCredential(int32_t userId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& infos)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetCredential_(userId, authType, infos, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetUserInfo(int32_t userId, uint64_t& secureUid,
+     OHOS::HDI::UserAuth::V1_0::PinSubType& pinSubType, std::vector<OHOS::HDI::UserAuth::V1_0::EnrolledInfo>& infos)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetUserInfo_(userId, secureUid, pinSubType, infos, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteUser(int32_t userId,
+     const std::vector<uint8_t>& authToken, std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& deletedInfos)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteUser_(userId, authToken, deletedInfos, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::EnforceDeleteUser(int32_t userId,
+     std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& deletedInfos)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::EnforceDeleteUser_(userId, deletedInfos, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginAuthentication(uint64_t contextId,
+     const OHOS::HDI::UserAuth::V1_0::AuthSolution& param, std::vector<OHOS::HDI::UserAuth::V1_0::ScheduleInfo>& scheduleInfos)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginAuthentication_(contextId, param, scheduleInfos, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateAuthenticationResult(uint64_t contextId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::AuthResultInfo& info)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateAuthenticationResult_(contextId, scheduleResult, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelAuthentication(uint64_t contextId)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelAuthentication_(contextId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginIdentification(uint64_t contextId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, const std::vector<uint8_t>& challenge, uint32_t executorSensorHint, OHOS::HDI::UserAuth::V1_0::ScheduleInfo& scheduleInfo)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginIdentification_(contextId, authType, challenge, executorSensorHint, scheduleInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateIdentificationResult(uint64_t contextId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::IdentifyResultInfo& info)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateIdentificationResult_(contextId, scheduleResult, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelIdentification(uint64_t contextId)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelIdentification_(contextId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetAuthTrustLevel(int32_t userId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, uint32_t& authTrustLevel)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetAuthTrustLevel_(userId, authType, authTrustLevel, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetValidSolution(int32_t userId,
+     const std::vector<OHOS::HDI::UserAuth::V1_0::AuthType>& authTypes, uint32_t authTrustLevel, std::vector<OHOS::HDI::UserAuth::V1_0::AuthType>& validTypes)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetValidSolution_(userId, authTypes, authTrustLevel, validTypes, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::Init_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_INIT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::AddExecutor_(const OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfo& info, uint64_t& index, std::vector<uint8_t>& publicKey, std::vector<uint64_t>& templateIds, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_0::ExecutorRegisterInfoBlockMarshalling(userAuthInterfaceData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_ADD_EXECUTOR, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.ReadUint64(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, publicKey)) {
+        HDF_LOGE("%{public}s: failed to read publicKey", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, templateIds)) {
+        HDF_LOGE("%{public}s: failed to read templateIds", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteExecutor_(uint64_t index,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_DELETE_EXECUTOR, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::OpenSession_(int32_t userId, std::vector<uint8_t>& challenge,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_OPEN_SESSION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, challenge)) {
+        HDF_LOGE("%{public}s: failed to read challenge", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CloseSession_(int32_t userId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_CLOSE_SESSION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginEnrollment_(int32_t userId,
+     const std::vector<uint8_t>& authToken, const OHOS::HDI::UserAuth::V1_0::EnrollParam& param, OHOS::HDI::UserAuth::V1_0::ScheduleInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to write authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_0::EnrollParamBlockMarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: write param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_BEGIN_ENROLLMENT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ScheduleInfoBlockUnmarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateEnrollmentResult_(int32_t userId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::EnrollResultInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to write scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_UPDATE_ENROLLMENT_RESULT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!EnrollResultInfoBlockUnmarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelEnrollment_(int32_t userId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_CANCEL_ENROLLMENT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteCredential_(int32_t userId, uint64_t credentialId,
+     const std::vector<uint8_t>& authToken, OHOS::HDI::UserAuth::V1_0::CredentialInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(credentialId)) {
+        HDF_LOGE("%{public}s: write credentialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to write authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_DELETE_CREDENTIAL, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!CredentialInfoBlockUnmarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetCredential_(int32_t userId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& infos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(static_cast<uint64_t>(authType))) {
+        HDF_LOGE("%{public}s: write authType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_GET_CREDENTIAL, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, infos)) {
+        HDF_LOGE("%{public}s: failed to read infos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetUserInfo_(int32_t userId, uint64_t& secureUid,
+     OHOS::HDI::UserAuth::V1_0::PinSubType& pinSubType, std::vector<OHOS::HDI::UserAuth::V1_0::EnrolledInfo>& infos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_GET_USER_INFO, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.ReadUint64(secureUid)) {
+        HDF_LOGE("%{public}s: read secureUid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!userAuthInterfaceReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write pinSubType failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        pinSubType = static_cast<enum PinSubType>(enumTmp);
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, infos)) {
+        HDF_LOGE("%{public}s: failed to read infos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::DeleteUser_(int32_t userId,
+     const std::vector<uint8_t>& authToken, std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& deletedInfos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, authToken)) {
+        HDF_LOGE("%{public}s: failed to write authToken", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_DELETE_USER, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, deletedInfos)) {
+        HDF_LOGE("%{public}s: failed to read deletedInfos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::EnforceDeleteUser_(int32_t userId,
+     std::vector<OHOS::HDI::UserAuth::V1_0::CredentialInfo>& deletedInfos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_ENFORCE_DELETE_USER, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, deletedInfos)) {
+        HDF_LOGE("%{public}s: failed to read deletedInfos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginAuthentication_(uint64_t contextId,
+     const OHOS::HDI::UserAuth::V1_0::AuthSolution& param, std::vector<OHOS::HDI::UserAuth::V1_0::ScheduleInfo>& scheduleInfos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::UserAuth::V1_0::AuthSolutionBlockMarshalling(userAuthInterfaceData, param)) {
+        HDF_LOGE("%{public}s: write param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_BEGIN_AUTHENTICATION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    uint32_t scheduleInfosSize = 0;
+    if (!userAuthInterfaceReply.ReadUint32(scheduleInfosSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(scheduleInfosSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::UserAuth::V1_0::ScheduleInfo), HDF_ERR_INVALID_PARAM);
+    scheduleInfos.clear();
+    scheduleInfos.reserve(scheduleInfosSize);
+    for (uint32_t i0 = 0; i0 < scheduleInfosSize; ++i0) {
+        OHOS::HDI::UserAuth::V1_0::ScheduleInfo value0;
+        if (!ScheduleInfoBlockUnmarshalling(userAuthInterfaceReply, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        scheduleInfos.push_back(value0);
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateAuthenticationResult_(uint64_t contextId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::AuthResultInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to write scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_UPDATE_AUTHENTICATION_RESULT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!AuthResultInfoBlockUnmarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelAuthentication_(uint64_t contextId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_CANCEL_AUTHENTICATION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::BeginIdentification_(uint64_t contextId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, const std::vector<uint8_t>& challenge, uint32_t executorSensorHint, OHOS::HDI::UserAuth::V1_0::ScheduleInfo& scheduleInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(static_cast<uint64_t>(authType))) {
+        HDF_LOGE("%{public}s: write authType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, challenge)) {
+        HDF_LOGE("%{public}s: failed to write challenge", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint32(executorSensorHint)) {
+        HDF_LOGE("%{public}s: write executorSensorHint failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_BEGIN_IDENTIFICATION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ScheduleInfoBlockUnmarshalling(userAuthInterfaceReply, scheduleInfo)) {
+        HDF_LOGE("%{public}s: read scheduleInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::UpdateIdentificationResult_(uint64_t contextId,
+     const std::vector<uint8_t>& scheduleResult, OHOS::HDI::UserAuth::V1_0::IdentifyResultInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, scheduleResult)) {
+        HDF_LOGE("%{public}s: failed to write scheduleResult", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_UPDATE_IDENTIFICATION_RESULT, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!IdentifyResultInfoBlockUnmarshalling(userAuthInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::CancelIdentification_(uint64_t contextId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(contextId)) {
+        HDF_LOGE("%{public}s: write contextId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_CANCEL_IDENTIFICATION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetAuthTrustLevel_(int32_t userId,
+     OHOS::HDI::UserAuth::V1_0::AuthType authType, uint32_t& authTrustLevel, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint64(static_cast<uint64_t>(authType))) {
+        HDF_LOGE("%{public}s: write authType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_GET_AUTH_TRUST_LEVEL, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.ReadUint32(authTrustLevel)) {
+        HDF_LOGE("%{public}s: read authTrustLevel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetValidSolution_(int32_t userId,
+     const std::vector<OHOS::HDI::UserAuth::V1_0::AuthType>& authTypes, uint32_t authTrustLevel, std::vector<OHOS::HDI::UserAuth::V1_0::AuthType>& validTypes, const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteInt32(userId)) {
+        HDF_LOGE("%{public}s: write userId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(userAuthInterfaceData, authTypes)) {
+        HDF_LOGE("%{public}s: failed to write authTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceData.WriteUint32(authTrustLevel)) {
+        HDF_LOGE("%{public}s: write authTrustLevel failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_GET_VALID_SOLUTION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!ReadPodArray(userAuthInterfaceReply, validTypes)) {
+        HDF_LOGE("%{public}s: failed to read validTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+int32_t OHOS::HDI::UserAuth::V1_0::UserAuthInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel userAuthInterfaceData;
+    MessageParcel userAuthInterfaceReply;
+    MessageOption userAuthInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!userAuthInterfaceData.WriteInterfaceToken(OHOS::HDI::UserAuth::V1_0::IUserAuthInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t userAuthInterfaceRet = remote->SendRequest(CMD_USER_AUTH_INTERFACE_GET_VERSION, userAuthInterfaceData, userAuthInterfaceReply, userAuthInterfaceOption);
+    if (userAuthInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, userAuthInterfaceRet);
+        return userAuthInterfaceRet;
+    }
+
+    if (!userAuthInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!userAuthInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return userAuthInterfaceRet;
+}
+
+} // V1_0
+} // UserAuth
+} // HDI
+} // OHOS

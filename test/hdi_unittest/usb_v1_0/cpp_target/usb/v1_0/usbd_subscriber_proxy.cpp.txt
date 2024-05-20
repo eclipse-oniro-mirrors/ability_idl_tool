@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usbd_subscriber_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    usbd_subscriber_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::DeviceEvent(const OHOS::HDI::Usb::V1_0::USBDeviceInfo& info)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::DeviceEvent_(info, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::PortChangedEvent(const OHOS::HDI::Usb::V1_0::PortInfo& info)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::PortChangedEvent_(info, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::DeviceEvent_(const OHOS::HDI::Usb::V1_0::USBDeviceInfo& info,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdSubscriberData;
+    MessageParcel usbdSubscriberReply;
+    MessageOption usbdSubscriberOption(MessageOption::TF_SYNC);
+
+    if (!usbdSubscriberData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::USBDeviceInfoBlockMarshalling(usbdSubscriberData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdSubscriberRet = remote->SendRequest(CMD_USBD_SUBSCRIBER_DEVICE_EVENT, usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    return usbdSubscriberRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::PortChangedEvent_(const OHOS::HDI::Usb::V1_0::PortInfo& info,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdSubscriberData;
+    MessageParcel usbdSubscriberReply;
+    MessageOption usbdSubscriberOption(MessageOption::TF_SYNC);
+
+    if (!usbdSubscriberData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Usb::V1_0::PortInfoBlockMarshalling(usbdSubscriberData, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdSubscriberRet = remote->SendRequest(CMD_USBD_SUBSCRIBER_PORT_CHANGED_EVENT, usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    return usbdSubscriberRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel usbdSubscriberData;
+    MessageParcel usbdSubscriberReply;
+    MessageOption usbdSubscriberOption(MessageOption::TF_SYNC);
+
+    if (!usbdSubscriberData.WriteInterfaceToken(OHOS::HDI::Usb::V1_0::IUsbdSubscriber::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t usbdSubscriberRet = remote->SendRequest(CMD_USBD_SUBSCRIBER_GET_VERSION, usbdSubscriberData, usbdSubscriberReply, usbdSubscriberOption);
+    if (usbdSubscriberRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbdSubscriberRet);
+        return usbdSubscriberRet;
+    }
+
+    if (!usbdSubscriberReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbdSubscriberReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbdSubscriberRet;
+}
+
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

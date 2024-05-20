@@ -1,0 +1,946 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/codec_component_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <iproxy_broker.h>
+#include "codec/v1_0/codec_callback_proxy.h"
+
+#define HDF_LOG_TAG    codec_component_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V1_0 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStub(const sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> &impl)
+    : IPCObjectStub(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Codec::V1_0::CodecComponentStub::~CodecComponentStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CODEC_COMPONENT_GET_VERSION:
+            return CodecComponentStubGetVersion(data, reply, option);
+        case CMD_CODEC_COMPONENT_GET_COMPONENT_VERSION:
+            return CodecComponentStubGetComponentVersion(data, reply, option);
+        case CMD_CODEC_COMPONENT_SEND_COMMAND:
+            return CodecComponentStubSendCommand(data, reply, option);
+        case CMD_CODEC_COMPONENT_GET_PARAMETER:
+            return CodecComponentStubGetParameter(data, reply, option);
+        case CMD_CODEC_COMPONENT_SET_PARAMETER:
+            return CodecComponentStubSetParameter(data, reply, option);
+        case CMD_CODEC_COMPONENT_GET_CONFIG:
+            return CodecComponentStubGetConfig(data, reply, option);
+        case CMD_CODEC_COMPONENT_SET_CONFIG:
+            return CodecComponentStubSetConfig(data, reply, option);
+        case CMD_CODEC_COMPONENT_GET_EXTENSION_INDEX:
+            return CodecComponentStubGetExtensionIndex(data, reply, option);
+        case CMD_CODEC_COMPONENT_GET_STATE:
+            return CodecComponentStubGetState(data, reply, option);
+        case CMD_CODEC_COMPONENT_COMPONENT_TUNNEL_REQUEST:
+            return CodecComponentStubComponentTunnelRequest(data, reply, option);
+        case CMD_CODEC_COMPONENT_USE_BUFFER:
+            return CodecComponentStubUseBuffer(data, reply, option);
+        case CMD_CODEC_COMPONENT_ALLOCATE_BUFFER:
+            return CodecComponentStubAllocateBuffer(data, reply, option);
+        case CMD_CODEC_COMPONENT_FREE_BUFFER:
+            return CodecComponentStubFreeBuffer(data, reply, option);
+        case CMD_CODEC_COMPONENT_EMPTY_THIS_BUFFER:
+            return CodecComponentStubEmptyThisBuffer(data, reply, option);
+        case CMD_CODEC_COMPONENT_FILL_THIS_BUFFER:
+            return CodecComponentStubFillThisBuffer(data, reply, option);
+        case CMD_CODEC_COMPONENT_SET_CALLBACKS:
+            return CodecComponentStubSetCallbacks(data, reply, option);
+        case CMD_CODEC_COMPONENT_COMPONENT_DE_INIT:
+            return CodecComponentStubComponentDeInit(data, reply, option);
+        case CMD_CODEC_COMPONENT_USE_EGL_IMAGE:
+            return CodecComponentStubUseEglImage(data, reply, option);
+        case CMD_CODEC_COMPONENT_COMPONENT_ROLE_ENUM:
+            return CodecComponentStubComponentRoleEnum(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetComponentVersion(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetComponentVersion_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSendCommand(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSendCommand_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetParameter(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetParameter_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetParameter(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetParameter_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetConfig(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetConfig_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetConfig(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetConfig_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetExtensionIndex(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetExtensionIndex_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetState(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetState_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentTunnelRequest(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentTunnelRequest_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseBuffer(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseBuffer_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubAllocateBuffer(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubAllocateBuffer_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFreeBuffer(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFreeBuffer_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubEmptyThisBuffer(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubEmptyThisBuffer_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFillThisBuffer(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFillThisBuffer_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetCallbacks(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetCallbacks_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentDeInit(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentDeInit_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseEglImage(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseEglImage_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentRoleEnum(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentRoleEnum_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetVersion(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetVersion_(codecComponentData, codecComponentReply, codecComponentOption, impl_);
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetComponentVersion_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::CompVerInfo verInfo;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetComponentVersion(verInfo);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::CompVerInfoBlockMarshalling(codecComponentReply, verInfo)) {
+        HDF_LOGE("%{public}s: write verInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSendCommand_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::CodecCommandType cmd = static_cast<enum CodecCommandType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!codecComponentData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write cmd failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        cmd = static_cast<enum CodecCommandType>(enumTmp);
+    }
+
+    uint32_t param = 0;
+    if (!codecComponentData.ReadUint32(param)) {
+        HDF_LOGE("%{public}s: read param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> cmdData;
+    if (!ReadPodArray(codecComponentData, cmdData)) {
+        HDF_LOGE("%{public}s: failed to read cmdData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->SendCommand(cmd, param, cmdData);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetParameter_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool codecComponentMemSet = false;
+    if (!codecComponentData.ReadBool(codecComponentMemSet)) {
+        HDF_LOGE("%{public}s: failed to read codecComponentMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint32_t index = 0;
+    if (!codecComponentData.ReadUint32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> inParamStruct;
+    if (!ReadPodArray(codecComponentData, inParamStruct)) {
+        HDF_LOGE("%{public}s: failed to read inParamStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> outParamStruct;
+    if (codecComponentMemSet) {
+        uint32_t capacity = 0;
+        if (!codecComponentData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(int8_t), HDF_ERR_INVALID_PARAM);
+        outParamStruct.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetParameter(index, inParamStruct, outParamStruct);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!WritePodArray(codecComponentReply, outParamStruct)) {
+        HDF_LOGE("%{public}s: failed to write outParamStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetParameter_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t index = 0;
+    if (!codecComponentData.ReadUint32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> paramStruct;
+    if (!ReadPodArray(codecComponentData, paramStruct)) {
+        HDF_LOGE("%{public}s: failed to read paramStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->SetParameter(index, paramStruct);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetConfig_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool codecComponentMemSet = false;
+    if (!codecComponentData.ReadBool(codecComponentMemSet)) {
+        HDF_LOGE("%{public}s: failed to read codecComponentMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    uint32_t index = 0;
+    if (!codecComponentData.ReadUint32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> inCfgStruct;
+    if (!ReadPodArray(codecComponentData, inCfgStruct)) {
+        HDF_LOGE("%{public}s: failed to read inCfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> outCfgStruct;
+    if (codecComponentMemSet) {
+        uint32_t capacity = 0;
+        if (!codecComponentData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(int8_t), HDF_ERR_INVALID_PARAM);
+        outCfgStruct.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetConfig(index, inCfgStruct, outCfgStruct);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!WritePodArray(codecComponentReply, outCfgStruct)) {
+        HDF_LOGE("%{public}s: failed to write outCfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetConfig_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t index = 0;
+    if (!codecComponentData.ReadUint32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<int8_t> cfgStruct;
+    if (!ReadPodArray(codecComponentData, cfgStruct)) {
+        HDF_LOGE("%{public}s: failed to read cfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->SetConfig(index, cfgStruct);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetExtensionIndex_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* paramNameCp = codecComponentData.ReadCString();
+    if (paramNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read paramName failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string paramName = paramNameCp;
+
+    uint32_t indexType = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetExtensionIndex(paramName, indexType);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!codecComponentReply.WriteUint32(indexType)) {
+        HDF_LOGE("%{public}s: write indexType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetState_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::CodecStateType state;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetState(state);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!codecComponentReply.WriteUint64(static_cast<uint64_t>(state))) {
+        HDF_LOGE("%{public}s: write state failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentTunnelRequest_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t port = 0;
+    if (!codecComponentData.ReadUint32(port)) {
+        HDF_LOGE("%{public}s: read port failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t tunneledComp = 0;
+    if (!codecComponentData.ReadInt32(tunneledComp)) {
+        HDF_LOGE("%{public}s: read tunneledComp failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t tunneledPort = 0;
+    if (!codecComponentData.ReadUint32(tunneledPort)) {
+        HDF_LOGE("%{public}s: read tunneledPort failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::CodecTunnelSetupType inTunnelSetup;
+    if (!CodecTunnelSetupTypeBlockUnmarshalling(codecComponentData, inTunnelSetup)) {
+        HDF_LOGE("%{public}s: read inTunnelSetup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::CodecTunnelSetupType outTunnelSetup;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->ComponentTunnelRequest(port, tunneledComp, tunneledPort, inTunnelSetup, outTunnelSetup);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::CodecTunnelSetupTypeBlockMarshalling(codecComponentReply, outTunnelSetup)) {
+        HDF_LOGE("%{public}s: write outTunnelSetup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseBuffer_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t portIndex = 0;
+    if (!codecComponentData.ReadUint32(portIndex)) {
+        HDF_LOGE("%{public}s: read portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer inBuffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: read inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer outBuffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->UseBuffer(portIndex, inBuffer, outBuffer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: write outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubAllocateBuffer_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t portIndex = 0;
+    if (!codecComponentData.ReadUint32(portIndex)) {
+        HDF_LOGE("%{public}s: read portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer inBuffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: read inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer outBuffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->AllocateBuffer(portIndex, inBuffer, outBuffer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: write outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFreeBuffer_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t portIndex = 0;
+    if (!codecComponentData.ReadUint32(portIndex)) {
+        HDF_LOGE("%{public}s: read portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer buffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->FreeBuffer(portIndex, buffer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubEmptyThisBuffer_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer buffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->EmptyThisBuffer(buffer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubFillThisBuffer_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer buffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->FillThisBuffer(buffer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubSetCallbacks_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Codec::V1_0::ICodecCallback> callbacks;
+    sptr<IRemoteObject> callbacksRemote = codecComponentData.ReadRemoteObject();
+    if (callbacksRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbacks = new OHOS::HDI::Codec::V1_0::CodecCallbackProxy(callbacksRemote);
+    if (callbacks == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int64_t appData = 0;
+    if (!codecComponentData.ReadInt64(appData)) {
+        HDF_LOGE("%{public}s: read appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->SetCallbacks(callbacks, appData);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentDeInit_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->ComponentDeInit();
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubUseEglImage_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t portIndex = 0;
+    if (!codecComponentData.ReadUint32(portIndex)) {
+        HDF_LOGE("%{public}s: read portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer inBuffer;
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: read inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Codec::V1_0::OmxCodecBuffer outBuffer;
+
+    std::vector<int8_t> eglImage;
+    if (!ReadPodArray(codecComponentData, eglImage)) {
+        HDF_LOGE("%{public}s: failed to read eglImage", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->UseEglImage(portIndex, inBuffer, outBuffer, eglImage);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: write outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubComponentRoleEnum_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool codecComponentMemSet = false;
+    if (!codecComponentData.ReadBool(codecComponentMemSet)) {
+        HDF_LOGE("%{public}s: failed to read codecComponentMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> role;
+    if (codecComponentMemSet) {
+        uint32_t capacity = 0;
+        if (!codecComponentData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        role.reserve(capacity);
+    }
+
+    uint32_t index = 0;
+    if (!codecComponentData.ReadUint32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->ComponentRoleEnum(role, index);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!WritePodArray(codecComponentReply, role)) {
+        HDF_LOGE("%{public}s: failed to write role", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentStub::CodecComponentStubGetVersion_(MessageParcel& codecComponentData, MessageParcel& codecComponentReply, MessageOption& codecComponentOption, sptr<OHOS::HDI::Codec::V1_0::ICodecComponent> impl)
+{
+    if (codecComponentData.ReadInterfaceToken() != OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t codecComponentRet = impl->GetVersion(majorVer, minorVer);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!codecComponentReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+} // V1_0
+} // Codec
+} // HDI
+} // OHOS

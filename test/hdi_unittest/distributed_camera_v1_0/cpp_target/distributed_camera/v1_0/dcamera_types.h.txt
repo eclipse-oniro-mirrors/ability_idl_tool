@@ -1,0 +1,168 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_DCAMERATYPES_H
+#define OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_DCAMERATYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <base/native_buffer.h>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedCamera {
+namespace V1_0 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::Base;
+
+enum DCSettingsType : int32_t {
+    UPDATE_METADATA = 0,
+    ENABLE_METADATA = 1,
+    DISABLE_METADATA = 2,
+    METADATA_RESULT = 3,
+    SET_FLASH_LIGHT = 4,
+    FPS_RANGE = 5,
+    UPDATE_FRAME_METADATA = 6,
+};
+
+enum DCamRetCode : int32_t {
+    SUCCESS = 0,
+    CAMERA_BUSY = 1,
+    INVALID_ARGUMENT = 2,
+    METHOD_NOT_SUPPORTED = 3,
+    CAMERA_OFFLINE = 4,
+    EXCEED_MAX_NUMBER = 5,
+    DEVICE_NOT_INIT = 6,
+    FAILED = 7,
+};
+
+enum DCEncodeType : int32_t {
+    ENCODE_TYPE_NULL = 0,
+    ENCODE_TYPE_H264 = 1,
+    ENCODE_TYPE_H265 = 2,
+    ENCODE_TYPE_JPEG = 3,
+    ENCODE_TYPE_MPEG4_ES = 4,
+};
+
+enum DCStreamType : int32_t {
+    CONTINUOUS_FRAME = 0,
+    SNAPSHOT_FRAME = 1,
+};
+
+struct DHBase {
+    std::string deviceId_;
+    std::string dhId_;
+};
+
+struct DCameraSettings {
+    OHOS::HDI::DistributedCamera::V1_0::DCSettingsType type_;
+    std::string value_;
+};
+
+struct DCStreamInfo {
+    int32_t streamId_;
+    int32_t width_;
+    int32_t height_;
+    int32_t stride_;
+    int32_t format_;
+    int32_t dataspace_;
+    OHOS::HDI::DistributedCamera::V1_0::DCEncodeType encodeType_;
+    OHOS::HDI::DistributedCamera::V1_0::DCStreamType type_;
+} __attribute__ ((aligned(8)));
+
+struct DCCaptureInfo {
+    std::vector<int32_t> streamIds_;
+    int32_t width_;
+    int32_t height_;
+    int32_t stride_;
+    int32_t format_;
+    int32_t dataspace_;
+    bool isCapture_;
+    OHOS::HDI::DistributedCamera::V1_0::DCEncodeType encodeType_;
+    OHOS::HDI::DistributedCamera::V1_0::DCStreamType type_;
+    std::vector<OHOS::HDI::DistributedCamera::V1_0::DCameraSettings> captureSettings_;
+};
+
+struct DCameraBuffer {
+    int32_t index_;
+    uint32_t size_;
+    sptr<NativeBuffer> bufferHandle_;
+};
+
+struct DCameraHDFEvent {
+    int32_t type_;
+    int32_t result_;
+    std::string content_;
+};
+
+bool DHBaseBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DHBase& dataBlock);
+
+bool DHBaseBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DHBase& dataBlock);
+
+bool DCameraSettingsBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DCameraSettings& dataBlock);
+
+bool DCameraSettingsBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DCameraSettings& dataBlock);
+
+bool DCStreamInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DCStreamInfo& dataBlock);
+
+bool DCStreamInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DCStreamInfo& dataBlock);
+
+bool DCCaptureInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfo& dataBlock);
+
+bool DCCaptureInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfo& dataBlock);
+
+bool DCameraBufferBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DCameraBuffer& dataBlock);
+
+bool DCameraBufferBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DCameraBuffer& dataBlock);
+
+bool DCameraHDFEventBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedCamera::V1_0::DCameraHDFEvent& dataBlock);
+
+bool DCameraHDFEventBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedCamera::V1_0::DCameraHDFEvent& dataBlock);
+
+} // V1_0
+} // DistributedCamera
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_DCAMERATYPES_H
+

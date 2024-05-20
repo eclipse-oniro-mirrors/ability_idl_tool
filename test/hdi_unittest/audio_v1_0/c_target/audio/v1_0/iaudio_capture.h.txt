@@ -1,0 +1,169 @@
+/*
+ * Copyright (c) 2022-2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_AUDIO_V1_0_IAUDIOCAPTURE_H
+#define OHOS_HDI_AUDIO_V1_0_IAUDIOCAPTURE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <hdf_base.h>
+#include "audio/v1_0/audio_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfRemoteService;
+
+#define IAUDIOCAPTURE_INTERFACE_DESC "ohos.hdi.audio.v1_0.IAudioCapture"
+
+#define IAUDIO_CAPTURE_MAJOR_VERSION 1
+#define IAUDIO_CAPTURE_MINOR_VERSION 0
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+enum {
+    CMD_AUDIO_CAPTURE_GET_VERSION = 0,
+    CMD_AUDIO_CAPTURE_CAPTURE_FRAME = 1,
+    CMD_AUDIO_CAPTURE_GET_CAPTURE_POSITION = 2,
+    CMD_AUDIO_CAPTURE_CHECK_SCENE_CAPABILITY = 3,
+    CMD_AUDIO_CAPTURE_SELECT_SCENE = 4,
+    CMD_AUDIO_CAPTURE_SET_MUTE = 5,
+    CMD_AUDIO_CAPTURE_GET_MUTE = 6,
+    CMD_AUDIO_CAPTURE_SET_VOLUME = 7,
+    CMD_AUDIO_CAPTURE_GET_VOLUME = 8,
+    CMD_AUDIO_CAPTURE_GET_GAIN_THRESHOLD = 9,
+    CMD_AUDIO_CAPTURE_GET_GAIN = 10,
+    CMD_AUDIO_CAPTURE_SET_GAIN = 11,
+    CMD_AUDIO_CAPTURE_GET_FRAME_SIZE = 12,
+    CMD_AUDIO_CAPTURE_GET_FRAME_COUNT = 13,
+    CMD_AUDIO_CAPTURE_SET_SAMPLE_ATTRIBUTES = 14,
+    CMD_AUDIO_CAPTURE_GET_SAMPLE_ATTRIBUTES = 15,
+    CMD_AUDIO_CAPTURE_GET_CURRENT_CHANNEL_ID = 16,
+    CMD_AUDIO_CAPTURE_SET_EXTRA_PARAMS = 17,
+    CMD_AUDIO_CAPTURE_GET_EXTRA_PARAMS = 18,
+    CMD_AUDIO_CAPTURE_REQ_MMAP_BUFFER = 19,
+    CMD_AUDIO_CAPTURE_GET_MMAP_POSITION = 20,
+    CMD_AUDIO_CAPTURE_ADD_AUDIO_EFFECT = 21,
+    CMD_AUDIO_CAPTURE_REMOVE_AUDIO_EFFECT = 22,
+    CMD_AUDIO_CAPTURE_GET_FRAME_BUFFER_SIZE = 23,
+    CMD_AUDIO_CAPTURE_START = 24,
+    CMD_AUDIO_CAPTURE_STOP = 25,
+    CMD_AUDIO_CAPTURE_PAUSE = 26,
+    CMD_AUDIO_CAPTURE_RESUME = 27,
+    CMD_AUDIO_CAPTURE_FLUSH = 28,
+    CMD_AUDIO_CAPTURE_TURN_STANDBY_MODE = 29,
+    CMD_AUDIO_CAPTURE_AUDIO_DEV_DUMP = 30,
+    CMD_AUDIO_CAPTURE_IS_SUPPORTS_PAUSE_AND_RESUME = 31,
+};
+
+struct IAudioCapture {
+    int32_t (*CaptureFrame)(struct IAudioCapture *self, int8_t* frame, uint32_t* frameLen, uint64_t* replyBytes);
+
+    int32_t (*GetCapturePosition)(struct IAudioCapture *self, uint64_t* frames, struct AudioTimeStamp* time);
+
+    int32_t (*CheckSceneCapability)(struct IAudioCapture *self, const struct AudioSceneDescriptor* scene,
+         bool* supported);
+
+    int32_t (*SelectScene)(struct IAudioCapture *self, const struct AudioSceneDescriptor* scene);
+
+    int32_t (*SetMute)(struct IAudioCapture *self, bool mute);
+
+    int32_t (*GetMute)(struct IAudioCapture *self, bool* mute);
+
+    int32_t (*SetVolume)(struct IAudioCapture *self, float volume);
+
+    int32_t (*GetVolume)(struct IAudioCapture *self, float* volume);
+
+    int32_t (*GetGainThreshold)(struct IAudioCapture *self, float* min, float* max);
+
+    int32_t (*GetGain)(struct IAudioCapture *self, float* gain);
+
+    int32_t (*SetGain)(struct IAudioCapture *self, float gain);
+
+    int32_t (*GetFrameSize)(struct IAudioCapture *self, uint64_t* size);
+
+    int32_t (*GetFrameCount)(struct IAudioCapture *self, uint64_t* count);
+
+    int32_t (*SetSampleAttributes)(struct IAudioCapture *self, const struct AudioSampleAttributes* attrs);
+
+    int32_t (*GetSampleAttributes)(struct IAudioCapture *self, struct AudioSampleAttributes* attrs);
+
+    int32_t (*GetCurrentChannelId)(struct IAudioCapture *self, uint32_t* channelId);
+
+    int32_t (*SetExtraParams)(struct IAudioCapture *self, const char* keyValueList);
+
+    int32_t (*GetExtraParams)(struct IAudioCapture *self, char* keyValueList, uint32_t keyValueListLen);
+
+    int32_t (*ReqMmapBuffer)(struct IAudioCapture *self, int32_t reqSize, struct AudioMmapBufferDescriptor* desc);
+
+    int32_t (*GetMmapPosition)(struct IAudioCapture *self, uint64_t* frames, struct AudioTimeStamp* time);
+
+    int32_t (*AddAudioEffect)(struct IAudioCapture *self, uint64_t effectid);
+
+    int32_t (*RemoveAudioEffect)(struct IAudioCapture *self, uint64_t effectid);
+
+    int32_t (*GetFrameBufferSize)(struct IAudioCapture *self, uint64_t* bufferSize);
+
+    int32_t (*Start)(struct IAudioCapture *self);
+
+    int32_t (*Stop)(struct IAudioCapture *self);
+
+    int32_t (*Pause)(struct IAudioCapture *self);
+
+    int32_t (*Resume)(struct IAudioCapture *self);
+
+    int32_t (*Flush)(struct IAudioCapture *self);
+
+    int32_t (*TurnStandbyMode)(struct IAudioCapture *self);
+
+    int32_t (*AudioDevDump)(struct IAudioCapture *self, int32_t range, int32_t fd);
+
+    int32_t (*IsSupportsPauseAndResume)(struct IAudioCapture *self, bool* supportPause, bool* supportResume);
+
+    int32_t (*GetVersion)(struct IAudioCapture *self, uint32_t* majorVer, uint32_t* minorVer);
+
+    struct HdfRemoteService* (*AsObject)(struct IAudioCapture *self);
+};
+
+// no external method used to create client object, it only support ipc mode
+struct IAudioCapture *IAudioCaptureGet(struct HdfRemoteService *remote);
+
+// external method used to release client object, it support ipc and passthrought mode
+void IAudioCaptureRelease(struct IAudioCapture *instance, bool isStub);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // OHOS_HDI_AUDIO_V1_0_IAUDIOCAPTURE_H

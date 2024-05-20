@@ -1,0 +1,4858 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/ril_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "ril/v1_0/ril_callback_proxy.h"
+
+#define HDF_LOG_TAG    ril_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Ril::V1_0::IRil> OHOS::HDI::Ril::V1_0::IRil::Get(bool isStub)
+{
+    return OHOS::HDI::Ril::V1_0::IRil::Get("ril_service", isStub);
+}
+
+sptr<OHOS::HDI::Ril::V1_0::IRil> OHOS::HDI::Ril::V1_0::IRil::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Ril::V1_0::IRil::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "ril_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Ril::V1_0::IRil *>(impl);
+}
+
+
+OHOS::HDI::Ril::V1_0::RilStub::RilStub(const sptr<OHOS::HDI::Ril::V1_0::IRil> &impl)
+    : IPCObjectStub(OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Ril::V1_0::RilStub::~RilStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_RIL_GET_VERSION:
+            return RilStubGetVersion(data, reply, option);
+        case CMD_RIL_SET_CALLBACK:
+            return RilStubSetCallback(data, reply, option);
+        case CMD_RIL_SET_EMERGENCY_CALL_LIST:
+            return RilStubSetEmergencyCallList(data, reply, option);
+        case CMD_RIL_GET_EMERGENCY_CALL_LIST:
+            return RilStubGetEmergencyCallList(data, reply, option);
+        case CMD_RIL_GET_CALL_LIST:
+            return RilStubGetCallList(data, reply, option);
+        case CMD_RIL_DIAL:
+            return RilStubDial(data, reply, option);
+        case CMD_RIL_REJECT:
+            return RilStubReject(data, reply, option);
+        case CMD_RIL_HANGUP:
+            return RilStubHangup(data, reply, option);
+        case CMD_RIL_ANSWER:
+            return RilStubAnswer(data, reply, option);
+        case CMD_RIL_HOLD_CALL:
+            return RilStubHoldCall(data, reply, option);
+        case CMD_RIL_UN_HOLD_CALL:
+            return RilStubUnHoldCall(data, reply, option);
+        case CMD_RIL_SWITCH_CALL:
+            return RilStubSwitchCall(data, reply, option);
+        case CMD_RIL_COMBINE_CONFERENCE:
+            return RilStubCombineConference(data, reply, option);
+        case CMD_RIL_SEPARATE_CONFERENCE:
+            return RilStubSeparateConference(data, reply, option);
+        case CMD_RIL_GET_CALL_WAITING:
+            return RilStubGetCallWaiting(data, reply, option);
+        case CMD_RIL_SET_CALL_WAITING:
+            return RilStubSetCallWaiting(data, reply, option);
+        case CMD_RIL_GET_CALL_TRANSFER_INFO:
+            return RilStubGetCallTransferInfo(data, reply, option);
+        case CMD_RIL_SET_CALL_TRANSFER_INFO:
+            return RilStubSetCallTransferInfo(data, reply, option);
+        case CMD_RIL_GET_CALL_RESTRICTION:
+            return RilStubGetCallRestriction(data, reply, option);
+        case CMD_RIL_SET_CALL_RESTRICTION:
+            return RilStubSetCallRestriction(data, reply, option);
+        case CMD_RIL_GET_CLIP:
+            return RilStubGetClip(data, reply, option);
+        case CMD_RIL_SET_CLIP:
+            return RilStubSetClip(data, reply, option);
+        case CMD_RIL_GET_CLIR:
+            return RilStubGetClir(data, reply, option);
+        case CMD_RIL_SET_CLIR:
+            return RilStubSetClir(data, reply, option);
+        case CMD_RIL_SET_CALL_PREFERENCE_MODE:
+            return RilStubSetCallPreferenceMode(data, reply, option);
+        case CMD_RIL_GET_CALL_PREFERENCE_MODE:
+            return RilStubGetCallPreferenceMode(data, reply, option);
+        case CMD_RIL_SET_USSD:
+            return RilStubSetUssd(data, reply, option);
+        case CMD_RIL_GET_USSD:
+            return RilStubGetUssd(data, reply, option);
+        case CMD_RIL_SET_MUTE:
+            return RilStubSetMute(data, reply, option);
+        case CMD_RIL_GET_MUTE:
+            return RilStubGetMute(data, reply, option);
+        case CMD_RIL_GET_CALL_FAIL_REASON:
+            return RilStubGetCallFailReason(data, reply, option);
+        case CMD_RIL_CALL_SUPPLEMENT:
+            return RilStubCallSupplement(data, reply, option);
+        case CMD_RIL_SEND_DTMF:
+            return RilStubSendDtmf(data, reply, option);
+        case CMD_RIL_START_DTMF:
+            return RilStubStartDtmf(data, reply, option);
+        case CMD_RIL_STOP_DTMF:
+            return RilStubStopDtmf(data, reply, option);
+        case CMD_RIL_SET_BARRING_PASSWORD:
+            return RilStubSetBarringPassword(data, reply, option);
+        case CMD_RIL_ACTIVATE_PDP_CONTEXT:
+            return RilStubActivatePdpContext(data, reply, option);
+        case CMD_RIL_DEACTIVATE_PDP_CONTEXT:
+            return RilStubDeactivatePdpContext(data, reply, option);
+        case CMD_RIL_GET_PDP_CONTEXT_LIST:
+            return RilStubGetPdpContextList(data, reply, option);
+        case CMD_RIL_SET_INIT_APN_INFO:
+            return RilStubSetInitApnInfo(data, reply, option);
+        case CMD_RIL_GET_LINK_BANDWIDTH_INFO:
+            return RilStubGetLinkBandwidthInfo(data, reply, option);
+        case CMD_RIL_SET_LINK_BANDWIDTH_REPORTING_RULE:
+            return RilStubSetLinkBandwidthReportingRule(data, reply, option);
+        case CMD_RIL_SET_DATA_PERMITTED:
+            return RilStubSetDataPermitted(data, reply, option);
+        case CMD_RIL_SET_DATA_PROFILE_INFO:
+            return RilStubSetDataProfileInfo(data, reply, option);
+        case CMD_RIL_SEND_DATA_PERFORMANCE_MODE:
+            return RilStubSendDataPerformanceMode(data, reply, option);
+        case CMD_RIL_SEND_DATA_SLEEP_MODE:
+            return RilStubSendDataSleepMode(data, reply, option);
+        case CMD_RIL_SET_RADIO_STATE:
+            return RilStubSetRadioState(data, reply, option);
+        case CMD_RIL_GET_RADIO_STATE:
+            return RilStubGetRadioState(data, reply, option);
+        case CMD_RIL_GET_IMEI:
+            return RilStubGetImei(data, reply, option);
+        case CMD_RIL_GET_MEID:
+            return RilStubGetMeid(data, reply, option);
+        case CMD_RIL_GET_VOICE_RADIO_TECHNOLOGY:
+            return RilStubGetVoiceRadioTechnology(data, reply, option);
+        case CMD_RIL_GET_BASEBAND_VERSION:
+            return RilStubGetBasebandVersion(data, reply, option);
+        case CMD_RIL_SHUT_DOWN:
+            return RilStubShutDown(data, reply, option);
+        case CMD_RIL_GET_SIM_I_O:
+            return RilStubGetSimIO(data, reply, option);
+        case CMD_RIL_GET_SIM_STATUS:
+            return RilStubGetSimStatus(data, reply, option);
+        case CMD_RIL_GET_IMSI:
+            return RilStubGetImsi(data, reply, option);
+        case CMD_RIL_GET_SIM_LOCK_STATUS:
+            return RilStubGetSimLockStatus(data, reply, option);
+        case CMD_RIL_SET_SIM_LOCK:
+            return RilStubSetSimLock(data, reply, option);
+        case CMD_RIL_CHANGE_SIM_PASSWORD:
+            return RilStubChangeSimPassword(data, reply, option);
+        case CMD_RIL_UNLOCK_PIN:
+            return RilStubUnlockPin(data, reply, option);
+        case CMD_RIL_UNLOCK_PUK:
+            return RilStubUnlockPuk(data, reply, option);
+        case CMD_RIL_UNLOCK_PIN2:
+            return RilStubUnlockPin2(data, reply, option);
+        case CMD_RIL_UNLOCK_PUK2:
+            return RilStubUnlockPuk2(data, reply, option);
+        case CMD_RIL_SET_ACTIVE_SIM:
+            return RilStubSetActiveSim(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_TERMINAL_RESPONSE:
+            return RilStubSimStkSendTerminalResponse(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_ENVELOPE:
+            return RilStubSimStkSendEnvelope(data, reply, option);
+        case CMD_RIL_SIM_STK_SEND_CALL_SETUP_REQUEST_RESULT:
+            return RilStubSimStkSendCallSetupRequestResult(data, reply, option);
+        case CMD_RIL_SIM_STK_IS_READY:
+            return RilStubSimStkIsReady(data, reply, option);
+        case CMD_RIL_GET_RADIO_PROTOCOL:
+            return RilStubGetRadioProtocol(data, reply, option);
+        case CMD_RIL_SET_RADIO_PROTOCOL:
+            return RilStubSetRadioProtocol(data, reply, option);
+        case CMD_RIL_SIM_OPEN_LOGICAL_CHANNEL:
+            return RilStubSimOpenLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_CLOSE_LOGICAL_CHANNEL:
+            return RilStubSimCloseLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_TRANSMIT_APDU_LOGICAL_CHANNEL:
+            return RilStubSimTransmitApduLogicalChannel(data, reply, option);
+        case CMD_RIL_SIM_TRANSMIT_APDU_BASIC_CHANNEL:
+            return RilStubSimTransmitApduBasicChannel(data, reply, option);
+        case CMD_RIL_SIM_AUTHENTICATION:
+            return RilStubSimAuthentication(data, reply, option);
+        case CMD_RIL_UNLOCK_SIM_LOCK:
+            return RilStubUnlockSimLock(data, reply, option);
+        case CMD_RIL_GET_SIGNAL_STRENGTH:
+            return RilStubGetSignalStrength(data, reply, option);
+        case CMD_RIL_GET_CS_REG_STATUS:
+            return RilStubGetCsRegStatus(data, reply, option);
+        case CMD_RIL_GET_PS_REG_STATUS:
+            return RilStubGetPsRegStatus(data, reply, option);
+        case CMD_RIL_GET_OPERATOR_INFO:
+            return RilStubGetOperatorInfo(data, reply, option);
+        case CMD_RIL_GET_NETWORK_SEARCH_INFORMATION:
+            return RilStubGetNetworkSearchInformation(data, reply, option);
+        case CMD_RIL_GET_NETWORK_SELECTION_MODE:
+            return RilStubGetNetworkSelectionMode(data, reply, option);
+        case CMD_RIL_SET_NETWORK_SELECTION_MODE:
+            return RilStubSetNetworkSelectionMode(data, reply, option);
+        case CMD_RIL_GET_NEIGHBORING_CELL_INFO_LIST:
+            return RilStubGetNeighboringCellInfoList(data, reply, option);
+        case CMD_RIL_GET_CURRENT_CELL_INFO:
+            return RilStubGetCurrentCellInfo(data, reply, option);
+        case CMD_RIL_SET_PREFERRED_NETWORK:
+            return RilStubSetPreferredNetwork(data, reply, option);
+        case CMD_RIL_GET_PREFERRED_NETWORK:
+            return RilStubGetPreferredNetwork(data, reply, option);
+        case CMD_RIL_GET_PHYSICAL_CHANNEL_CONFIG:
+            return RilStubGetPhysicalChannelConfig(data, reply, option);
+        case CMD_RIL_SET_LOCATE_UPDATES:
+            return RilStubSetLocateUpdates(data, reply, option);
+        case CMD_RIL_SET_NOTIFICATION_FILTER:
+            return RilStubSetNotificationFilter(data, reply, option);
+        case CMD_RIL_SET_DEVICE_STATE:
+            return RilStubSetDeviceState(data, reply, option);
+        case CMD_RIL_SEND_GSM_SMS:
+            return RilStubSendGsmSms(data, reply, option);
+        case CMD_RIL_SEND_CDMA_SMS:
+            return RilStubSendCdmaSms(data, reply, option);
+        case CMD_RIL_ADD_SIM_MESSAGE:
+            return RilStubAddSimMessage(data, reply, option);
+        case CMD_RIL_DEL_SIM_MESSAGE:
+            return RilStubDelSimMessage(data, reply, option);
+        case CMD_RIL_UPDATE_SIM_MESSAGE:
+            return RilStubUpdateSimMessage(data, reply, option);
+        case CMD_RIL_ADD_CDMA_SIM_MESSAGE:
+            return RilStubAddCdmaSimMessage(data, reply, option);
+        case CMD_RIL_DEL_CDMA_SIM_MESSAGE:
+            return RilStubDelCdmaSimMessage(data, reply, option);
+        case CMD_RIL_UPDATE_CDMA_SIM_MESSAGE:
+            return RilStubUpdateCdmaSimMessage(data, reply, option);
+        case CMD_RIL_SET_SMSC_ADDR:
+            return RilStubSetSmscAddr(data, reply, option);
+        case CMD_RIL_GET_SMSC_ADDR:
+            return RilStubGetSmscAddr(data, reply, option);
+        case CMD_RIL_SET_C_B_CONFIG:
+            return RilStubSetCBConfig(data, reply, option);
+        case CMD_RIL_GET_C_B_CONFIG:
+            return RilStubGetCBConfig(data, reply, option);
+        case CMD_RIL_SET_CDMA_C_B_CONFIG:
+            return RilStubSetCdmaCBConfig(data, reply, option);
+        case CMD_RIL_GET_CDMA_C_B_CONFIG:
+            return RilStubGetCdmaCBConfig(data, reply, option);
+        case CMD_RIL_SEND_SMS_MORE_MODE:
+            return RilStubSendSmsMoreMode(data, reply, option);
+        case CMD_RIL_SEND_SMS_ACK:
+            return RilStubSendSmsAck(data, reply, option);
+        case CMD_RIL_SEND_RIL_ACK:
+            return RilStubSendRilAck(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallback(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallback_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetEmergencyCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetEmergencyCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetEmergencyCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetEmergencyCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDial(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubDial_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubReject(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubReject_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubHangup(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubHangup_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAnswer(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubAnswer_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubHoldCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubHoldCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnHoldCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnHoldCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSwitchCall(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSwitchCall_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubCombineConference(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubCombineConference_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSeparateConference(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSeparateConference_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallWaiting(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallWaiting_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallWaiting(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallWaiting_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallTransferInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallTransferInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallTransferInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallTransferInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallRestriction(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallRestriction_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallRestriction(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallRestriction_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClip(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClip_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClip(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClip_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClir(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClir_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClir(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClir_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallPreferenceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallPreferenceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallPreferenceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallPreferenceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetUssd(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetUssd_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetUssd(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetUssd_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetMute(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetMute_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMute(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMute_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallFailReason(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallFailReason_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubCallSupplement(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubCallSupplement_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubStartDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubStartDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubStopDtmf(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubStopDtmf_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetBarringPassword(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetBarringPassword_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubActivatePdpContext(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubActivatePdpContext_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDeactivatePdpContext(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubDeactivatePdpContext_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPdpContextList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPdpContextList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetInitApnInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetInitApnInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetLinkBandwidthInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetLinkBandwidthInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLinkBandwidthReportingRule(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLinkBandwidthReportingRule_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataPermitted(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataPermitted_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataProfileInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataProfileInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataPerformanceMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataPerformanceMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataSleepMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataSleepMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImei(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImei_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMeid(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMeid_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVoiceRadioTechnology(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVoiceRadioTechnology_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetBasebandVersion(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetBasebandVersion_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubShutDown(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubShutDown_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimIO(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimIO_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImsi(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImsi_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimLockStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimLockStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSimLock(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSimLock_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubChangeSimPassword(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubChangeSimPassword_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin2(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin2_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk2(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk2_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetActiveSim(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetActiveSim_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendTerminalResponse(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendTerminalResponse_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendEnvelope(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendEnvelope_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendCallSetupRequestResult(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendCallSetupRequestResult_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkIsReady(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkIsReady_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioProtocol(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioProtocol_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioProtocol(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioProtocol_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimOpenLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimOpenLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimCloseLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimCloseLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduLogicalChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduLogicalChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduBasicChannel(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduBasicChannel_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimAuthentication(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSimAuthentication_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockSimLock(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockSimLock_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSignalStrength(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSignalStrength_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCsRegStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCsRegStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPsRegStatus(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPsRegStatus_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetOperatorInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetOperatorInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSearchInformation(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSearchInformation_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSelectionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSelectionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNetworkSelectionMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNetworkSelectionMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNeighboringCellInfoList(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNeighboringCellInfoList_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCurrentCellInfo(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCurrentCellInfo_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetPreferredNetwork(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetPreferredNetwork_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPreferredNetwork(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPreferredNetwork_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPhysicalChannelConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPhysicalChannelConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLocateUpdates(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLocateUpdates_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNotificationFilter(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNotificationFilter_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDeviceState(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDeviceState_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendGsmSms(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendGsmSms_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendCdmaSms(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendCdmaSms_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAddSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubAddSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDelSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubDelSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAddCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubAddCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDelCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubDelCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateCdmaSimMessage(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateCdmaSimMessage_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSmscAddr(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSmscAddr_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSmscAddr(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSmscAddr_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCdmaCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCdmaCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCdmaCBConfig(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCdmaCBConfig_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsMoreMode(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsMoreMode_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsAck(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsAck_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendRilAck(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubSendRilAck_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVersion(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption)
+{
+    return OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVersion_(rilData, rilReply, rilOption, impl_);
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallback_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Ril::V1_0::IRilCallback> rilCallback;
+    sptr<IRemoteObject> rilCallbackRemote = rilData.ReadRemoteObject();
+    if (rilCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    rilCallback = new OHOS::HDI::Ril::V1_0::RilCallbackProxy(rilCallbackRemote);
+    if (rilCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallback(rilCallback);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetEmergencyCallList_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::EmergencyInfoList emergencyInfoList;
+    if (!EmergencyInfoListBlockUnmarshalling(rilData, emergencyInfoList)) {
+        HDF_LOGE("%{public}s: read emergencyInfoList failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetEmergencyCallList(slotId, serialId, emergencyInfoList);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetEmergencyCallList_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetEmergencyCallList(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallList_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallList(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDial_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DialInfo dialInfo;
+    if (!DialInfoBlockUnmarshalling(rilData, dialInfo)) {
+        HDF_LOGE("%{public}s: read dialInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->Dial(slotId, serialId, dialInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubReject_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->Reject(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubHangup_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t callId = 0;
+    if (!rilData.ReadInt32(callId)) {
+        HDF_LOGE("%{public}s: read callId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->Hangup(slotId, serialId, callId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAnswer_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->Answer(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubHoldCall_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->HoldCall(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnHoldCall_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnHoldCall(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSwitchCall_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SwitchCall(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubCombineConference_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t callType = 0;
+    if (!rilData.ReadInt32(callType)) {
+        HDF_LOGE("%{public}s: read callType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->CombineConference(slotId, serialId, callType);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSeparateConference_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t callId = 0;
+    if (!rilData.ReadInt32(callId)) {
+        HDF_LOGE("%{public}s: read callId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t callType = 0;
+    if (!rilData.ReadInt32(callType)) {
+        HDF_LOGE("%{public}s: read callType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SeparateConference(slotId, serialId, callId, callType);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallWaiting_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallWaiting(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallWaiting_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t activate = 0;
+    if (!rilData.ReadInt32(activate)) {
+        HDF_LOGE("%{public}s: read activate failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallWaiting(slotId, serialId, activate);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallTransferInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t reason = 0;
+    if (!rilData.ReadInt32(reason)) {
+        HDF_LOGE("%{public}s: read reason failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallTransferInfo(slotId, serialId, reason);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallTransferInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::CallForwardSetInfo callForwardSetInfo;
+    if (!CallForwardSetInfoBlockUnmarshalling(rilData, callForwardSetInfo)) {
+        HDF_LOGE("%{public}s: read callForwardSetInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallTransferInfo(slotId, serialId, callForwardSetInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallRestriction_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* facCp = rilData.ReadCString();
+    if (facCp == nullptr) {
+        HDF_LOGE("%{public}s: read fac failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string fac = facCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallRestriction(slotId, serialId, fac);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallRestriction_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::CallRestrictionInfo callRestrictionInfo;
+    if (!CallRestrictionInfoBlockUnmarshalling(rilData, callRestrictionInfo)) {
+        HDF_LOGE("%{public}s: read callRestrictionInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallRestriction(slotId, serialId, callRestrictionInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClip_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetClip(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClip_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t action = 0;
+    if (!rilData.ReadInt32(action)) {
+        HDF_LOGE("%{public}s: read action failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetClip(slotId, serialId, action);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetClir_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetClir(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetClir_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t action = 0;
+    if (!rilData.ReadInt32(action)) {
+        HDF_LOGE("%{public}s: read action failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetClir(slotId, serialId, action);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCallPreferenceMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mode = 0;
+    if (!rilData.ReadInt32(mode)) {
+        HDF_LOGE("%{public}s: read mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCallPreferenceMode(slotId, serialId, mode);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallPreferenceMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallPreferenceMode(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetUssd_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* strCp = rilData.ReadCString();
+    if (strCp == nullptr) {
+        HDF_LOGE("%{public}s: read str failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string str = strCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetUssd(slotId, serialId, str);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetUssd_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetUssd(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetMute_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mute = 0;
+    if (!rilData.ReadInt32(mute)) {
+        HDF_LOGE("%{public}s: read mute failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetMute(slotId, serialId, mute);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMute_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetMute(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCallFailReason_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCallFailReason(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubCallSupplement_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t type = 0;
+    if (!rilData.ReadInt32(type)) {
+        HDF_LOGE("%{public}s: read type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->CallSupplement(slotId, serialId, type);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDtmf_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DtmfInfo dtmfInfo;
+    if (!DtmfInfoBlockUnmarshalling(rilData, dtmfInfo)) {
+        HDF_LOGE("%{public}s: read dtmfInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendDtmf(slotId, serialId, dtmfInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubStartDtmf_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DtmfInfo dtmfInfo;
+    if (!DtmfInfoBlockUnmarshalling(rilData, dtmfInfo)) {
+        HDF_LOGE("%{public}s: read dtmfInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->StartDtmf(slotId, serialId, dtmfInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubStopDtmf_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DtmfInfo dtmfInfo;
+    if (!DtmfInfoBlockUnmarshalling(rilData, dtmfInfo)) {
+        HDF_LOGE("%{public}s: read dtmfInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->StopDtmf(slotId, serialId, dtmfInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetBarringPassword_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SetBarringInfo setBarringInfo;
+    if (!SetBarringInfoBlockUnmarshalling(rilData, setBarringInfo)) {
+        HDF_LOGE("%{public}s: read setBarringInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetBarringPassword(slotId, serialId, setBarringInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubActivatePdpContext_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataCallInfo dataCallInfo;
+    if (!DataCallInfoBlockUnmarshalling(rilData, dataCallInfo)) {
+        HDF_LOGE("%{public}s: read dataCallInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->ActivatePdpContext(slotId, serialId, dataCallInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDeactivatePdpContext_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::UniInfo uniInfo;
+    if (!UniInfoBlockUnmarshalling(rilData, uniInfo)) {
+        HDF_LOGE("%{public}s: read uniInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->DeactivatePdpContext(slotId, serialId, uniInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPdpContextList_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::UniInfo uniInfo;
+    if (!UniInfoBlockUnmarshalling(rilData, uniInfo)) {
+        HDF_LOGE("%{public}s: read uniInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetPdpContextList(slotId, serialId, uniInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetInitApnInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataProfileDataInfo dataProfileDataInfo;
+    if (!DataProfileDataInfoBlockUnmarshalling(rilData, dataProfileDataInfo)) {
+        HDF_LOGE("%{public}s: read dataProfileDataInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetInitApnInfo(slotId, serialId, dataProfileDataInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetLinkBandwidthInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cid = 0;
+    if (!rilData.ReadInt32(cid)) {
+        HDF_LOGE("%{public}s: read cid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetLinkBandwidthInfo(slotId, serialId, cid);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLinkBandwidthReportingRule_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataLinkBandwidthReportingRule dataLinkBandwidthReportingRule;
+    if (!DataLinkBandwidthReportingRuleBlockUnmarshalling(rilData, dataLinkBandwidthReportingRule)) {
+        HDF_LOGE("%{public}s: read dataLinkBandwidthReportingRule failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetLinkBandwidthReportingRule(slotId, serialId, dataLinkBandwidthReportingRule);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataPermitted_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dataPermitted = 0;
+    if (!rilData.ReadInt32(dataPermitted)) {
+        HDF_LOGE("%{public}s: read dataPermitted failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetDataPermitted(slotId, serialId, dataPermitted);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDataProfileInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataProfilesInfo dataProfilesInfo;
+    if (!DataProfilesInfoBlockUnmarshalling(rilData, dataProfilesInfo)) {
+        HDF_LOGE("%{public}s: read dataProfilesInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetDataProfileInfo(slotId, serialId, dataProfilesInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataPerformanceMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataPerformanceInfo dataPerformanceInfo;
+    if (!DataPerformanceInfoBlockUnmarshalling(rilData, dataPerformanceInfo)) {
+        HDF_LOGE("%{public}s: read dataPerformanceInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendDataPerformanceMode(slotId, serialId, dataPerformanceInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendDataSleepMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::DataSleepInfo dataSleepInfo;
+    if (!DataSleepInfoBlockUnmarshalling(rilData, dataSleepInfo)) {
+        HDF_LOGE("%{public}s: read dataSleepInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendDataSleepMode(slotId, serialId, dataSleepInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioState_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t fun = 0;
+    if (!rilData.ReadInt32(fun)) {
+        HDF_LOGE("%{public}s: read fun failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rst = 0;
+    if (!rilData.ReadInt32(rst)) {
+        HDF_LOGE("%{public}s: read rst failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetRadioState(slotId, serialId, fun, rst);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioState_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetRadioState(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImei_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetImei(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetMeid_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetMeid(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVoiceRadioTechnology_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetVoiceRadioTechnology(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetBasebandVersion_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetBasebandVersion(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubShutDown_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->ShutDown(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimIO_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SimIoRequestInfo simIO;
+    if (!SimIoRequestInfoBlockUnmarshalling(rilData, simIO)) {
+        HDF_LOGE("%{public}s: read simIO failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetSimIO(slotId, serialId, simIO);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimStatus_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetSimStatus(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetImsi_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetImsi(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSimLockStatus_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SimLockInfo simLockInfo;
+    if (!SimLockInfoBlockUnmarshalling(rilData, simLockInfo)) {
+        HDF_LOGE("%{public}s: read simLockInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetSimLockStatus(slotId, serialId, simLockInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSimLock_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SimLockInfo simLockInfo;
+    if (!SimLockInfoBlockUnmarshalling(rilData, simLockInfo)) {
+        HDF_LOGE("%{public}s: read simLockInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetSimLock(slotId, serialId, simLockInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubChangeSimPassword_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SimPasswordInfo simPassword;
+    if (!SimPasswordInfoBlockUnmarshalling(rilData, simPassword)) {
+        HDF_LOGE("%{public}s: read simPassword failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->ChangeSimPassword(slotId, serialId, simPassword);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* pinCp = rilData.ReadCString();
+    if (pinCp == nullptr) {
+        HDF_LOGE("%{public}s: read pin failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string pin = pinCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnlockPin(slotId, serialId, pin);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* pukCp = rilData.ReadCString();
+    if (pukCp == nullptr) {
+        HDF_LOGE("%{public}s: read puk failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string puk = pukCp;
+
+    const char* pinCp = rilData.ReadCString();
+    if (pinCp == nullptr) {
+        HDF_LOGE("%{public}s: read pin failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string pin = pinCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnlockPuk(slotId, serialId, puk, pin);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPin2_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* pin2Cp = rilData.ReadCString();
+    if (pin2Cp == nullptr) {
+        HDF_LOGE("%{public}s: read pin2 failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string pin2 = pin2Cp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnlockPin2(slotId, serialId, pin2);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockPuk2_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* puk2Cp = rilData.ReadCString();
+    if (puk2Cp == nullptr) {
+        HDF_LOGE("%{public}s: read puk2 failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string puk2 = puk2Cp;
+
+    const char* pin2Cp = rilData.ReadCString();
+    if (pin2Cp == nullptr) {
+        HDF_LOGE("%{public}s: read pin2 failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string pin2 = pin2Cp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnlockPuk2(slotId, serialId, puk2, pin2);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetActiveSim_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t index = 0;
+    if (!rilData.ReadInt32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t enable = 0;
+    if (!rilData.ReadInt32(enable)) {
+        HDF_LOGE("%{public}s: read enable failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetActiveSim(slotId, serialId, index, enable);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendTerminalResponse_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* strCmdCp = rilData.ReadCString();
+    if (strCmdCp == nullptr) {
+        HDF_LOGE("%{public}s: read strCmd failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string strCmd = strCmdCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimStkSendTerminalResponse(slotId, serialId, strCmd);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendEnvelope_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* strCmdCp = rilData.ReadCString();
+    if (strCmdCp == nullptr) {
+        HDF_LOGE("%{public}s: read strCmd failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string strCmd = strCmdCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimStkSendEnvelope(slotId, serialId, strCmd);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkSendCallSetupRequestResult_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t accept = 0;
+    if (!rilData.ReadInt32(accept)) {
+        HDF_LOGE("%{public}s: read accept failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimStkSendCallSetupRequestResult(slotId, serialId, accept);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimStkIsReady_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimStkIsReady(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetRadioProtocol_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetRadioProtocol(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetRadioProtocol_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::RadioProtocol radioProtocol;
+    if (!RadioProtocolBlockUnmarshalling(rilData, radioProtocol)) {
+        HDF_LOGE("%{public}s: read radioProtocol failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetRadioProtocol(slotId, serialId, radioProtocol);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimOpenLogicalChannel_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* appIDCp = rilData.ReadCString();
+    if (appIDCp == nullptr) {
+        HDF_LOGE("%{public}s: read appID failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string appID = appIDCp;
+
+    int32_t p2 = 0;
+    if (!rilData.ReadInt32(p2)) {
+        HDF_LOGE("%{public}s: read p2 failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimOpenLogicalChannel(slotId, serialId, appID, p2);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimCloseLogicalChannel_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t channelId = 0;
+    if (!rilData.ReadInt32(channelId)) {
+        HDF_LOGE("%{public}s: read channelId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimCloseLogicalChannel(slotId, serialId, channelId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduLogicalChannel_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo apduSimIO;
+    if (!ApduSimIORequestInfoBlockUnmarshalling(rilData, apduSimIO)) {
+        HDF_LOGE("%{public}s: read apduSimIO failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimTransmitApduLogicalChannel(slotId, serialId, apduSimIO);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimTransmitApduBasicChannel_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::ApduSimIORequestInfo apduSimIO;
+    if (!ApduSimIORequestInfoBlockUnmarshalling(rilData, apduSimIO)) {
+        HDF_LOGE("%{public}s: read apduSimIO failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimTransmitApduBasicChannel(slotId, serialId, apduSimIO);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSimAuthentication_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SimAuthenticationRequestInfo simAuthInfo;
+    if (!SimAuthenticationRequestInfoBlockUnmarshalling(rilData, simAuthInfo)) {
+        HDF_LOGE("%{public}s: read simAuthInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SimAuthentication(slotId, serialId, simAuthInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUnlockSimLock_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lockType = 0;
+    if (!rilData.ReadInt32(lockType)) {
+        HDF_LOGE("%{public}s: read lockType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* keyCp = rilData.ReadCString();
+    if (keyCp == nullptr) {
+        HDF_LOGE("%{public}s: read key failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string key = keyCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UnlockSimLock(slotId, serialId, lockType, key);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSignalStrength_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetSignalStrength(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCsRegStatus_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCsRegStatus(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPsRegStatus_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetPsRegStatus(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetOperatorInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetOperatorInfo(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSearchInformation_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetNetworkSearchInformation(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNetworkSelectionMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetNetworkSelectionMode(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNetworkSelectionMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SetNetworkModeInfo networkModeInfo;
+    if (!SetNetworkModeInfoBlockUnmarshalling(rilData, networkModeInfo)) {
+        HDF_LOGE("%{public}s: read networkModeInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetNetworkSelectionMode(slotId, serialId, networkModeInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetNeighboringCellInfoList_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetNeighboringCellInfoList(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCurrentCellInfo_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCurrentCellInfo(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetPreferredNetwork_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t preferredNetworkType = 0;
+    if (!rilData.ReadInt32(preferredNetworkType)) {
+        HDF_LOGE("%{public}s: read preferredNetworkType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetPreferredNetwork(slotId, serialId, preferredNetworkType);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPreferredNetwork_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetPreferredNetwork(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetPhysicalChannelConfig_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetPhysicalChannelConfig(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetLocateUpdates_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::RilRegNotifyMode mode = static_cast<enum RilRegNotifyMode>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!rilData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write mode failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        mode = static_cast<enum RilRegNotifyMode>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetLocateUpdates(slotId, serialId, mode);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetNotificationFilter_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t newFilter = 0;
+    if (!rilData.ReadInt32(newFilter)) {
+        HDF_LOGE("%{public}s: read newFilter failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetNotificationFilter(slotId, serialId, newFilter);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetDeviceState_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t deviceStateType = 0;
+    if (!rilData.ReadInt32(deviceStateType)) {
+        HDF_LOGE("%{public}s: read deviceStateType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t deviceStateOn = 0;
+    if (!rilData.ReadInt32(deviceStateOn)) {
+        HDF_LOGE("%{public}s: read deviceStateOn failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetDeviceState(slotId, serialId, deviceStateType, deviceStateOn);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendGsmSms_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo gsmSmsMessageInfo;
+    if (!GsmSmsMessageInfoBlockUnmarshalling(rilData, gsmSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read gsmSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendGsmSms(slotId, serialId, gsmSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendCdmaSms_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SendCdmaSmsMessageInfo cdmaSmsMessageInfo;
+    if (!SendCdmaSmsMessageInfoBlockUnmarshalling(rilData, cdmaSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read cdmaSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendCdmaSms(slotId, serialId, cdmaSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAddSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SmsMessageIOInfo gsmSmsMessageInfo;
+    if (!SmsMessageIOInfoBlockUnmarshalling(rilData, gsmSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read gsmSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->AddSimMessage(slotId, serialId, gsmSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDelSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t index = 0;
+    if (!rilData.ReadInt32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->DelSimMessage(slotId, serialId, index);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SmsMessageIOInfo gsmSmsMessageInfo;
+    if (!SmsMessageIOInfoBlockUnmarshalling(rilData, gsmSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read gsmSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UpdateSimMessage(slotId, serialId, gsmSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubAddCdmaSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SmsMessageIOInfo cdmaSmsMessageInfo;
+    if (!SmsMessageIOInfoBlockUnmarshalling(rilData, cdmaSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read cdmaSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->AddCdmaSimMessage(slotId, serialId, cdmaSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubDelCdmaSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t index = 0;
+    if (!rilData.ReadInt32(index)) {
+        HDF_LOGE("%{public}s: read index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->DelCdmaSimMessage(slotId, serialId, index);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubUpdateCdmaSimMessage_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::SmsMessageIOInfo cdmaSmsMessageInfo;
+    if (!SmsMessageIOInfoBlockUnmarshalling(rilData, cdmaSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read cdmaSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->UpdateCdmaSimMessage(slotId, serialId, cdmaSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetSmscAddr_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::ServiceCenterAddress serviceCenterAddress;
+    if (!ServiceCenterAddressBlockUnmarshalling(rilData, serviceCenterAddress)) {
+        HDF_LOGE("%{public}s: read serviceCenterAddress failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetSmscAddr(slotId, serialId, serviceCenterAddress);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetSmscAddr_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetSmscAddr(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCBConfig_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::CBConfigInfo cellBroadcastInfo;
+    if (!CBConfigInfoBlockUnmarshalling(rilData, cellBroadcastInfo)) {
+        HDF_LOGE("%{public}s: read cellBroadcastInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCBConfig(slotId, serialId, cellBroadcastInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCBConfig_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCBConfig(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSetCdmaCBConfig_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::CdmaCBConfigInfoList cdmaCBConfigInfoList;
+    if (!CdmaCBConfigInfoListBlockUnmarshalling(rilData, cdmaCBConfigInfoList)) {
+        HDF_LOGE("%{public}s: read cdmaCBConfigInfoList failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SetCdmaCBConfig(slotId, serialId, cdmaCBConfigInfoList);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetCdmaCBConfig_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetCdmaCBConfig(slotId, serialId);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsMoreMode_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::GsmSmsMessageInfo gsmSmsMessageInfo;
+    if (!GsmSmsMessageInfoBlockUnmarshalling(rilData, gsmSmsMessageInfo)) {
+        HDF_LOGE("%{public}s: read gsmSmsMessageInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendSmsMoreMode(slotId, serialId, gsmSmsMessageInfo);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendSmsAck_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t slotId = 0;
+    if (!rilData.ReadInt32(slotId)) {
+        HDF_LOGE("%{public}s: read slotId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t serialId = 0;
+    if (!rilData.ReadInt32(serialId)) {
+        HDF_LOGE("%{public}s: read serialId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Ril::V1_0::ModeData modeData;
+    if (!ModeDataBlockUnmarshalling(rilData, modeData)) {
+        HDF_LOGE("%{public}s: read modeData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendSmsAck(slotId, serialId, modeData);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubSendRilAck_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->SendRilAck();
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    return rilRet;
+}
+
+int32_t OHOS::HDI::Ril::V1_0::RilStub::RilStubGetVersion_(MessageParcel& rilData, MessageParcel& rilReply, MessageOption& rilOption, sptr<OHOS::HDI::Ril::V1_0::IRil> impl)
+{
+    if (rilData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_0::IRil::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t rilRet = impl->GetVersion(majorVer, minorVer);
+    if (rilRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilRet);
+        return rilRet;
+    }
+
+    if (!rilReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!rilReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return rilRet;
+}
+} // V1_0
+} // Ril
+} // HDI
+} // OHOS

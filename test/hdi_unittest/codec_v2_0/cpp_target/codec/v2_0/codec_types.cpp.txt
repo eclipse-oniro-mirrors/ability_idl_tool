@@ -1,0 +1,792 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/codec_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+static bool WriteFileDescriptor(MessageParcel &data, int fd);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool WriteFileDescriptor(MessageParcel &data, int fd)
+{
+    if (!data.WriteBool(fd >= 0 ? true : false)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (fd < 0) {
+        return true;
+    }
+    if (!data.WriteFileDescriptor(fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AlignmentBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::Alignment& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::Alignment))) {
+        return false;
+    }
+    return true;
+}
+
+bool AlignmentBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::Alignment& dataBlock)
+{
+    const OHOS::HDI::Codec::V2_0::Alignment *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::V2_0::Alignment*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::Alignment)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::Alignment), dataBlockPtr, sizeof(OHOS::HDI::Codec::V2_0::Alignment)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RectBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::Rect& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::Rect))) {
+        return false;
+    }
+    return true;
+}
+
+bool RectBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::Rect& dataBlock)
+{
+    const OHOS::HDI::Codec::V2_0::Rect *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::V2_0::Rect*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::Rect)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::Rect), dataBlockPtr, sizeof(OHOS::HDI::Codec::V2_0::Rect)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool RangeValueBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::RangeValue& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::RangeValue))) {
+        return false;
+    }
+    return true;
+}
+
+bool RangeValueBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::RangeValue& dataBlock)
+{
+    const OHOS::HDI::Codec::V2_0::RangeValue *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::V2_0::RangeValue*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::RangeValue)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::RangeValue), dataBlockPtr, sizeof(OHOS::HDI::Codec::V2_0::RangeValue)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecVideoPortCapBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CodecVideoPortCap& dataBlock)
+{
+    if (!RectBlockMarshalling(data, dataBlock.minSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.minSize failed!", __func__);
+        return false;
+    }
+
+    if (!RectBlockMarshalling(data, dataBlock.maxSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxSize failed!", __func__);
+        return false;
+    }
+
+    if (!AlignmentBlockMarshalling(data, dataBlock.whAlignment)) {
+        HDF_LOGE("%{public}s: write dataBlock.whAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!RangeValueBlockMarshalling(data, dataBlock.blockCount)) {
+        HDF_LOGE("%{public}s: write dataBlock.blockCount failed!", __func__);
+        return false;
+    }
+
+    if (!RangeValueBlockMarshalling(data, dataBlock.blocksPerSecond)) {
+        HDF_LOGE("%{public}s: write dataBlock.blocksPerSecond failed!", __func__);
+        return false;
+    }
+
+    if (!RectBlockMarshalling(data, dataBlock.blockSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.blockSize failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.supportPixFmts)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.supportPixFmts", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.bitRatemode)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.bitRatemode", __func__);
+        return false;
+    }
+
+    if (!RangeValueBlockMarshalling(data, dataBlock.frameRate)) {
+        HDF_LOGE("%{public}s: write dataBlock.frameRate failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.measuredFrameRate)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.measuredFrameRate", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecVideoPortCapBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CodecVideoPortCap& dataBlock)
+{
+    if (!OHOS::HDI::Codec::V2_0::RectBlockUnmarshalling(data, dataBlock.minSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.minSize failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RectBlockUnmarshalling(data, dataBlock.maxSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxSize failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::AlignmentBlockUnmarshalling(data, dataBlock.whAlignment)) {
+        HDF_LOGE("%{public}s: read dataBlock.whAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RangeValueBlockUnmarshalling(data, dataBlock.blockCount)) {
+        HDF_LOGE("%{public}s: read dataBlock.blockCount failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RangeValueBlockUnmarshalling(data, dataBlock.blocksPerSecond)) {
+        HDF_LOGE("%{public}s: read dataBlock.blocksPerSecond failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RectBlockUnmarshalling(data, dataBlock.blockSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.blockSize failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.supportPixFmts)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.supportPixFmts", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.bitRatemode)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.bitRatemode", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RangeValueBlockUnmarshalling(data, dataBlock.frameRate)) {
+        HDF_LOGE("%{public}s: read dataBlock.frameRate failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.measuredFrameRate)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.measuredFrameRate", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecAudioPortCapBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CodecAudioPortCap& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.sampleFormats)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.sampleFormats", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.sampleRate)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.sampleRate", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.channelLayouts)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.channelLayouts", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.channelCount)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.channelCount", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecAudioPortCapBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CodecAudioPortCap& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.sampleFormats)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.sampleFormats", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.sampleRate)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.sampleRate", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.channelLayouts)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.channelLayouts", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.channelCount)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.channelCount", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PortCapBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::PortCap& dataBlock)
+{
+    if (!CodecVideoPortCapBlockMarshalling(data, dataBlock.video)) {
+        HDF_LOGE("%{public}s: write dataBlock.video failed!", __func__);
+        return false;
+    }
+
+    if (!CodecAudioPortCapBlockMarshalling(data, dataBlock.audio)) {
+        HDF_LOGE("%{public}s: write dataBlock.audio failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool PortCapBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::PortCap& dataBlock)
+{
+    if (!OHOS::HDI::Codec::V2_0::CodecVideoPortCapBlockUnmarshalling(data, dataBlock.video)) {
+        HDF_LOGE("%{public}s: read dataBlock.video failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::CodecAudioPortCapBlockUnmarshalling(data, dataBlock.audio)) {
+        HDF_LOGE("%{public}s: read dataBlock.audio failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecVerTypeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CodecVerType& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::CodecVerType))) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecVerTypeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CodecVerType& dataBlock)
+{
+    const OHOS::HDI::Codec::V2_0::CodecVerType *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::V2_0::CodecVerType*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::CodecVerType)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::CodecVerType), dataBlockPtr, sizeof(OHOS::HDI::Codec::V2_0::CodecVerType)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecCompCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CodecCompCapability& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.role))) {
+        HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.compName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.compName failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.supportProfiles)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.supportProfiles", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.maxInst)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxInst failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.isSoftwareCodec)) {
+        HDF_LOGE("%{public}s: write dataBlock.isSoftwareCodec failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.processModeMask)) {
+        HDF_LOGE("%{public}s: write dataBlock.processModeMask failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.capsMask)) {
+        HDF_LOGE("%{public}s: write dataBlock.capsMask failed!", __func__);
+        return false;
+    }
+
+    if (!RangeValueBlockMarshalling(data, dataBlock.bitRate)) {
+        HDF_LOGE("%{public}s: write dataBlock.bitRate failed!", __func__);
+        return false;
+    }
+
+    if (!PortCapBlockMarshalling(data, dataBlock.port)) {
+        HDF_LOGE("%{public}s: write dataBlock.port failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.canSwapWidthHeight)) {
+        HDF_LOGE("%{public}s: write dataBlock.canSwapWidthHeight failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecCompCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CodecCompCapability& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+            return false;
+        }
+        dataBlock.role = static_cast<enum AvCodecRole>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum CodecType>(enumTmp);
+    }
+
+    const char* compNameCp = data.ReadCString();
+    if (compNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read compNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.compName = compNameCp;
+
+    if (!ReadPodArray(data, dataBlock.supportProfiles)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.supportProfiles", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.maxInst)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxInst failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.isSoftwareCodec)) {
+        HDF_LOGE("%{public}s: read dataBlock.isSoftwareCodec failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.processModeMask)) {
+        HDF_LOGE("%{public}s: read dataBlock.processModeMask failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.capsMask)) {
+        HDF_LOGE("%{public}s: read dataBlock.capsMask failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::RangeValueBlockUnmarshalling(data, dataBlock.bitRate)) {
+        HDF_LOGE("%{public}s: read dataBlock.bitRate failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Codec::V2_0::PortCapBlockUnmarshalling(data, dataBlock.port)) {
+        HDF_LOGE("%{public}s: read dataBlock.port failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.canSwapWidthHeight)) {
+        HDF_LOGE("%{public}s: read dataBlock.canSwapWidthHeight failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool OmxCodecBufferBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::OmxCodecBuffer& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.bufferId)) {
+        HDF_LOGE("%{public}s: write dataBlock.bufferId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: write dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock.version, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType))) {
+        HDF_LOGE("%{public}s: write dataBlock.version failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.bufferType)) {
+        HDF_LOGE("%{public}s: write dataBlock.bufferType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteStrongParcelable(dataBlock.bufferhandle)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.bufferhandle", __func__);
+        return false;
+    }
+
+    if (!WriteFileDescriptor(data, dataBlock.fd)) {
+        HDF_LOGE("%{public}s: write dataBlock.fd failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.allocLen)) {
+        HDF_LOGE("%{public}s: write dataBlock.allocLen failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.filledLen)) {
+        HDF_LOGE("%{public}s: write dataBlock.filledLen failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.offset)) {
+        HDF_LOGE("%{public}s: write dataBlock.offset failed!", __func__);
+        return false;
+    }
+
+    if (!WriteFileDescriptor(data, dataBlock.fenceFd)) {
+        HDF_LOGE("%{public}s: write dataBlock.fenceFd failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt64(dataBlock.pts)) {
+        HDF_LOGE("%{public}s: write dataBlock.pts failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: write dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.alongParam)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.alongParam", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool OmxCodecBufferBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::OmxCodecBuffer& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.bufferId)) {
+        HDF_LOGE("%{public}s: read dataBlock.bufferId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: read dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    const OHOS::HDI::Codec::V2_0::CodecVersionType *versionCp = reinterpret_cast<const OHOS::HDI::Codec::V2_0::CodecVersionType*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)));
+    if (versionCp == nullptr) {
+        HDF_LOGE("%{public}s: read versionCp failed!", __func__);
+        return false;
+    }
+    if (memcpy_s(&dataBlock.version, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType), versionCp, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy dataBlock.version", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.bufferType)) {
+        HDF_LOGE("%{public}s: read dataBlock.bufferType failed!", __func__);
+        return false;
+    }
+
+    dataBlock.bufferhandle = data.ReadStrongParcelable<NativeBuffer>();
+
+    dataBlock.fd = -1;
+    if (!ReadFileDescriptor(data, dataBlock.fd)) {
+        HDF_LOGE("%{public}s: read dataBlock.fd failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.allocLen)) {
+        HDF_LOGE("%{public}s: read dataBlock.allocLen failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.filledLen)) {
+        HDF_LOGE("%{public}s: read dataBlock.filledLen failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.offset)) {
+        HDF_LOGE("%{public}s: read dataBlock.offset failed!", __func__);
+        return false;
+    }
+
+    dataBlock.fenceFd = -1;
+    if (!ReadFileDescriptor(data, dataBlock.fenceFd)) {
+        HDF_LOGE("%{public}s: read dataBlock.fenceFd failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum ShareMemTypes>(enumTmp);
+    }
+
+    if (!data.ReadInt64(dataBlock.pts)) {
+        HDF_LOGE("%{public}s: read dataBlock.pts failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.flag)) {
+        HDF_LOGE("%{public}s: read dataBlock.flag failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.alongParam)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.alongParam", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecTunnelSetupTypeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CodecTunnelSetupType& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::CodecTunnelSetupType))) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecTunnelSetupTypeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CodecTunnelSetupType& dataBlock)
+{
+    const OHOS::HDI::Codec::V2_0::CodecTunnelSetupType *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::V2_0::CodecTunnelSetupType*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::CodecTunnelSetupType)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::V2_0::CodecTunnelSetupType), dataBlockPtr, sizeof(OHOS::HDI::Codec::V2_0::CodecTunnelSetupType)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CompVerInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::CompVerInfo& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.compName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.compName failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.compUUID)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.compUUID", __func__);
+        return false;
+    }
+
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock.compVersion, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType))) {
+        HDF_LOGE("%{public}s: write dataBlock.compVersion failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock.specVersion, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType))) {
+        HDF_LOGE("%{public}s: write dataBlock.specVersion failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CompVerInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::CompVerInfo& dataBlock)
+{
+    const char* compNameCp = data.ReadCString();
+    if (compNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read compNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.compName = compNameCp;
+
+    if (!ReadPodArray(data, dataBlock.compUUID)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.compUUID", __func__);
+        return false;
+    }
+
+    const OHOS::HDI::Codec::V2_0::CodecVersionType *compVersionCp = reinterpret_cast<const OHOS::HDI::Codec::V2_0::CodecVersionType*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)));
+    if (compVersionCp == nullptr) {
+        HDF_LOGE("%{public}s: read compVersionCp failed!", __func__);
+        return false;
+    }
+    if (memcpy_s(&dataBlock.compVersion, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType), compVersionCp, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy dataBlock.compVersion", __func__);
+        return false;
+    }
+
+    const OHOS::HDI::Codec::V2_0::CodecVersionType *specVersionCp = reinterpret_cast<const OHOS::HDI::Codec::V2_0::CodecVersionType*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)));
+    if (specVersionCp == nullptr) {
+        HDF_LOGE("%{public}s: read specVersionCp failed!", __func__);
+        return false;
+    }
+    if (memcpy_s(&dataBlock.specVersion, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType), specVersionCp, sizeof(OHOS::HDI::Codec::V2_0::CodecVersionType)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy dataBlock.specVersion", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EventInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::V2_0::EventInfo& dataBlock)
+{
+    if (!data.WriteInt64(dataBlock.appData)) {
+        HDF_LOGE("%{public}s: write dataBlock.appData failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.data1)) {
+        HDF_LOGE("%{public}s: write dataBlock.data1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.data2)) {
+        HDF_LOGE("%{public}s: write dataBlock.data2 failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.eventData)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.eventData", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool EventInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::V2_0::EventInfo& dataBlock)
+{
+    if (!data.ReadInt64(dataBlock.appData)) {
+        HDF_LOGE("%{public}s: read dataBlock.appData failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.data1)) {
+        HDF_LOGE("%{public}s: read dataBlock.data1 failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.data2)) {
+        HDF_LOGE("%{public}s: read dataBlock.data2 failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.eventData)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.eventData", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS

@@ -1,0 +1,274 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_USB_V1_0_USBINTERFACEPROXY_H
+#define OHOS_HDI_USB_V1_0_USBINTERFACEPROXY_H
+
+#include "v1_0/iusb_interface.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+
+class UsbInterfaceProxy : public IProxyBroker<OHOS::HDI::Usb::V1_0::IUsbInterface> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Usb::V1_0::UsbInterfaceProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> proxy_;
+    };
+
+    explicit UsbInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Usb::V1_0::IUsbInterface>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~UsbInterfaceProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t OpenDevice(const OHOS::HDI::Usb::V1_0::UsbDev& dev) override;
+
+    int32_t CloseDevice(const OHOS::HDI::Usb::V1_0::UsbDev& dev) override;
+
+    int32_t GetDeviceDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& descriptor) override;
+
+    int32_t GetStringDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t descId,
+         std::vector<uint8_t>& descriptor) override;
+
+    int32_t GetConfigDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t descId,
+         std::vector<uint8_t>& descriptor) override;
+
+    int32_t GetRawDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& descriptor) override;
+
+    int32_t GetFileDescriptor(const OHOS::HDI::Usb::V1_0::UsbDev& dev, int32_t& fd) override;
+
+    int32_t SetConfig(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t configIndex) override;
+
+    int32_t GetConfig(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t& configIndex) override;
+
+    int32_t ClaimInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, uint8_t force) override;
+
+    int32_t ManageInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, bool disable) override;
+
+    int32_t ReleaseInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid) override;
+
+    int32_t SetInterface(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, uint8_t altIndex) override;
+
+    int32_t BulkTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, std::vector<uint8_t>& data) override;
+
+    int32_t BulkTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, const std::vector<uint8_t>& data) override;
+
+    int32_t ControlTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, std::vector<uint8_t>& data) override;
+
+    int32_t ControlTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, const std::vector<uint8_t>& data) override;
+
+    int32_t InterruptTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, std::vector<uint8_t>& data) override;
+
+    int32_t InterruptTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, const std::vector<uint8_t>& data) override;
+
+    int32_t IsoTransferRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, std::vector<uint8_t>& data) override;
+
+    int32_t IsoTransferWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, const std::vector<uint8_t>& data) override;
+
+    int32_t RequestQueue(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const std::vector<uint8_t>& clientData, const std::vector<uint8_t>& buffer) override;
+
+    int32_t RequestWait(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& clientData,
+         std::vector<uint8_t>& buffer, int32_t timeout) override;
+
+    int32_t RequestCancel(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe) override;
+
+    int32_t GetCurrentFunctions(int32_t& funcs) override;
+
+    int32_t SetCurrentFunctions(int32_t funcs) override;
+
+    int32_t SetPortRole(int32_t portId, int32_t powerRole, int32_t dataRole) override;
+
+    int32_t QueryPort(int32_t& portId, int32_t& powerRole, int32_t& dataRole, int32_t& mode) override;
+
+    int32_t BindUsbdSubscriber(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber) override;
+
+    int32_t UnbindUsbdSubscriber(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber) override;
+
+    int32_t RegBulkCallback(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback>& cb) override;
+
+    int32_t UnRegBulkCallback(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbPipe& pipe) override;
+
+    int32_t BulkRead(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<Ashmem>& ashmem) override;
+
+    int32_t BulkWrite(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<Ashmem>& ashmem) override;
+
+    int32_t BulkCancel(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t OpenDevice_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const sptr<IRemoteObject> remote);
+
+    static int32_t CloseDevice_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const sptr<IRemoteObject> remote);
+
+    static int32_t GetDeviceDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& descriptor,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetStringDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t descId,
+         std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote);
+
+    static int32_t GetConfigDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t descId,
+         std::vector<uint8_t>& descriptor, const sptr<IRemoteObject> remote);
+
+    static int32_t GetRawDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& descriptor,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetFileDescriptor_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, int32_t& fd,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetConfig_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t configIndex,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetConfig_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t& configIndex,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ClaimInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, uint8_t force,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ManageInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, bool disable,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t ReleaseInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t SetInterface_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, uint8_t interfaceid, uint8_t altIndex,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t BulkTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t BulkTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t ControlTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t ControlTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbCtrlTransfer& ctrl, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t InterruptTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t InterruptTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t IsoTransferRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t IsoTransferWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         int32_t timeout, const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote);
+
+    static int32_t RequestQueue_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const std::vector<uint8_t>& clientData, const std::vector<uint8_t>& buffer, const sptr<IRemoteObject> remote);
+
+    static int32_t RequestWait_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, std::vector<uint8_t>& clientData,
+         std::vector<uint8_t>& buffer, int32_t timeout, const sptr<IRemoteObject> remote);
+
+    static int32_t RequestCancel_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetCurrentFunctions_(int32_t& funcs, const sptr<IRemoteObject> remote);
+
+    static int32_t SetCurrentFunctions_(int32_t funcs, const sptr<IRemoteObject> remote);
+
+    static int32_t SetPortRole_(int32_t portId, int32_t powerRole, int32_t dataRole, const sptr<IRemoteObject> remote);
+
+    static int32_t QueryPort_(int32_t& portId, int32_t& powerRole, int32_t& dataRole, int32_t& mode,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t BindUsbdSubscriber_(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t UnbindUsbdSubscriber_(const sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber>& subscriber,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t RegBulkCallback_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback>& cb, const sptr<IRemoteObject> remote);
+
+    static int32_t UnRegBulkCallback_(const OHOS::HDI::Usb::V1_0::UsbDev& dev,
+         const OHOS::HDI::Usb::V1_0::UsbPipe& pipe, const sptr<IRemoteObject> remote);
+
+    static int32_t BulkRead_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<Ashmem>& ashmem, const sptr<IRemoteObject> remote);
+
+    static int32_t BulkWrite_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<Ashmem>& ashmem, const sptr<IRemoteObject> remote);
+
+    static int32_t BulkCancel_(const OHOS::HDI::Usb::V1_0::UsbDev& dev, const OHOS::HDI::Usb::V1_0::UsbPipe& pipe,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Usb::V1_0::UsbInterfaceProxy> delegator_;
+};
+
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_USB_V1_0_USBINTERFACEPROXY_H
+

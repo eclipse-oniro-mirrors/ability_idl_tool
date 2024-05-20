@@ -1,0 +1,912 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/battery_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "battery/v2_0/battery_callback_proxy.h"
+
+#define HDF_LOG_TAG    battery_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Battery {
+namespace V2_0 {
+
+
+sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> OHOS::HDI::Battery::V2_0::IBatteryInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Battery::V2_0::IBatteryInterface::Get("battery_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> OHOS::HDI::Battery::V2_0::IBatteryInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "battery_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Battery::V2_0::IBatteryInterface *>(impl);
+}
+
+
+OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStub(const sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::~BatteryInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_BATTERY_INTERFACE_GET_VERSION:
+            return BatteryInterfaceStubGetVersion(data, reply, option);
+        case CMD_BATTERY_INTERFACE_REGISTER:
+            return BatteryInterfaceStubRegister(data, reply, option);
+        case CMD_BATTERY_INTERFACE_UN_REGISTER:
+            return BatteryInterfaceStubUnRegister(data, reply, option);
+        case CMD_BATTERY_INTERFACE_CHANGE_PATH:
+            return BatteryInterfaceStubChangePath(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_CAPACITY:
+            return BatteryInterfaceStubGetCapacity(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_VOLTAGE:
+            return BatteryInterfaceStubGetVoltage(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_TEMPERATURE:
+            return BatteryInterfaceStubGetTemperature(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_HEALTH_STATE:
+            return BatteryInterfaceStubGetHealthState(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_PLUGGED_TYPE:
+            return BatteryInterfaceStubGetPluggedType(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_CHARGE_STATE:
+            return BatteryInterfaceStubGetChargeState(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_PRESENT:
+            return BatteryInterfaceStubGetPresent(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_TECHNOLOGY:
+            return BatteryInterfaceStubGetTechnology(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_TOTAL_ENERGY:
+            return BatteryInterfaceStubGetTotalEnergy(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_CURRENT_AVERAGE:
+            return BatteryInterfaceStubGetCurrentAverage(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_CURRENT_NOW:
+            return BatteryInterfaceStubGetCurrentNow(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_REMAIN_ENERGY:
+            return BatteryInterfaceStubGetRemainEnergy(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_BATTERY_INFO:
+            return BatteryInterfaceStubGetBatteryInfo(data, reply, option);
+        case CMD_BATTERY_INTERFACE_SET_CHARGING_LIMIT:
+            return BatteryInterfaceStubSetChargingLimit(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_CHARGE_TYPE:
+            return BatteryInterfaceStubGetChargeType(data, reply, option);
+        case CMD_BATTERY_INTERFACE_SET_BATTERY_CONFIG:
+            return BatteryInterfaceStubSetBatteryConfig(data, reply, option);
+        case CMD_BATTERY_INTERFACE_GET_BATTERY_CONFIG:
+            return BatteryInterfaceStubGetBatteryConfig(data, reply, option);
+        case CMD_BATTERY_INTERFACE_IS_BATTERY_CONFIG_SUPPORTED:
+            return BatteryInterfaceStubIsBatteryConfigSupported(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubRegister(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubRegister_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubUnRegister(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubUnRegister_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubChangePath(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubChangePath_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCapacity(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCapacity_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVoltage(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVoltage_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTemperature(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTemperature_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetHealthState(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetHealthState_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPluggedType(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPluggedType_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeState(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeState_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPresent(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPresent_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTechnology(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTechnology_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTotalEnergy(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTotalEnergy_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentAverage(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentAverage_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentNow(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentNow_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetRemainEnergy(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetRemainEnergy_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryInfo(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryInfo_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetChargingLimit(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetChargingLimit_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeType(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeType_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetBatteryConfig(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetBatteryConfig_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryConfig(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryConfig_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubIsBatteryConfigSupported(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubIsBatteryConfigSupported_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVersion(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption)
+{
+    return OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVersion_(batteryInterfaceData, batteryInterfaceReply, batteryInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubRegister_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Battery::V2_0::IBatteryCallback> event;
+    sptr<IRemoteObject> eventRemote = batteryInterfaceData.ReadRemoteObject();
+    if (eventRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    event = new OHOS::HDI::Battery::V2_0::BatteryCallbackProxy(eventRemote);
+    if (event == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->Register(event);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubUnRegister_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->UnRegister();
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubChangePath_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* pathCp = batteryInterfaceData.ReadCString();
+    if (pathCp == nullptr) {
+        HDF_LOGE("%{public}s: read path failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string path = pathCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->ChangePath(path);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCapacity_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t capacity = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetCapacity(capacity);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(capacity)) {
+        HDF_LOGE("%{public}s: write capacity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVoltage_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t voltage = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetVoltage(voltage);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(voltage)) {
+        HDF_LOGE("%{public}s: write voltage failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTemperature_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t temperature = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetTemperature(temperature);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(temperature)) {
+        HDF_LOGE("%{public}s: write temperature failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetHealthState_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V2_0::BatteryHealthState healthState;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetHealthState(healthState);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteUint64(static_cast<uint64_t>(healthState))) {
+        HDF_LOGE("%{public}s: write healthState failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPluggedType_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V2_0::BatteryPluggedType pluggedType;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetPluggedType(pluggedType);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteUint64(static_cast<uint64_t>(pluggedType))) {
+        HDF_LOGE("%{public}s: write pluggedType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeState_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V2_0::BatteryChargeState chargeState;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetChargeState(chargeState);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteUint64(static_cast<uint64_t>(chargeState))) {
+        HDF_LOGE("%{public}s: write chargeState failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetPresent_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool present = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetPresent(present);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteBool(present)) {
+        HDF_LOGE("%{public}s: write present failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTechnology_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool batteryInterfaceMemSet = false;
+    if (!batteryInterfaceData.ReadBool(batteryInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read batteryInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string technology;
+    if (batteryInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!batteryInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        technology.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetTechnology(technology);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteCString(technology.c_str())) {
+        HDF_LOGE("%{public}s: write technology failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetTotalEnergy_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t totalEnergy = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetTotalEnergy(totalEnergy);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(totalEnergy)) {
+        HDF_LOGE("%{public}s: write totalEnergy failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentAverage_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t curAverage = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetCurrentAverage(curAverage);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(curAverage)) {
+        HDF_LOGE("%{public}s: write curAverage failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetCurrentNow_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t curNow = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetCurrentNow(curNow);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(curNow)) {
+        HDF_LOGE("%{public}s: write curNow failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetRemainEnergy_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t remainEnergy = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetRemainEnergy(remainEnergy);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteInt32(remainEnergy)) {
+        HDF_LOGE("%{public}s: write remainEnergy failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryInfo_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V2_0::BatteryInfo info;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetBatteryInfo(info);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!OHOS::HDI::Battery::V2_0::BatteryInfoBlockMarshalling(batteryInterfaceReply, info)) {
+        HDF_LOGE("%{public}s: write info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetChargingLimit_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Battery::V2_0::ChargingLimit> chargingLimit;
+    uint32_t chargingLimitSize = 0;
+    if (!batteryInterfaceData.ReadUint32(chargingLimitSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(chargingLimitSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Battery::V2_0::ChargingLimit), HDF_ERR_INVALID_PARAM);
+    chargingLimit.clear();
+    chargingLimit.reserve(chargingLimitSize);
+    for (uint32_t i0 = 0; i0 < chargingLimitSize; ++i0) {
+        OHOS::HDI::Battery::V2_0::ChargingLimit value0;
+        if (!ChargingLimitBlockUnmarshalling(batteryInterfaceData, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        chargingLimit.push_back(value0);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->SetChargingLimit(chargingLimit);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetChargeType_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Battery::V2_0::ChargeType type;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetChargeType(type);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubSetBatteryConfig_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* sceneNameCp = batteryInterfaceData.ReadCString();
+    if (sceneNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read sceneName failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string sceneName = sceneNameCp;
+
+    const char* valueCp = batteryInterfaceData.ReadCString();
+    if (valueCp == nullptr) {
+        HDF_LOGE("%{public}s: read value failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string value = valueCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->SetBatteryConfig(sceneName, value);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetBatteryConfig_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool batteryInterfaceMemSet = false;
+    if (!batteryInterfaceData.ReadBool(batteryInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read batteryInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    const char* sceneNameCp = batteryInterfaceData.ReadCString();
+    if (sceneNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read sceneName failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string sceneName = sceneNameCp;
+
+    std::string value;
+    if (batteryInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!batteryInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        value.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetBatteryConfig(sceneName, value);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteCString(value.c_str())) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubIsBatteryConfigSupported_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* sceneNameCp = batteryInterfaceData.ReadCString();
+    if (sceneNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read sceneName failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string sceneName = sceneNameCp;
+
+    bool value = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->IsBatteryConfigSupported(sceneName, value);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteBool(value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+
+int32_t OHOS::HDI::Battery::V2_0::BatteryInterfaceStub::BatteryInterfaceStubGetVersion_(MessageParcel& batteryInterfaceData, MessageParcel& batteryInterfaceReply, MessageOption& batteryInterfaceOption, sptr<OHOS::HDI::Battery::V2_0::IBatteryInterface> impl)
+{
+    if (batteryInterfaceData.ReadInterfaceToken() != OHOS::HDI::Battery::V2_0::IBatteryInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t batteryInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (batteryInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, batteryInterfaceRet);
+        return batteryInterfaceRet;
+    }
+
+    if (!batteryInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!batteryInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return batteryInterfaceRet;
+}
+} // V2_0
+} // Battery
+} // HDI
+} // OHOS

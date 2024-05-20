@@ -1,0 +1,634 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/codec_image_type.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace Image {
+namespace V1_0 {
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+static bool WriteFileDescriptor(MessageParcel &data, int fd);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool WriteFileDescriptor(MessageParcel &data, int fd)
+{
+    if (!data.WriteBool(fd >= 0 ? true : false)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (fd < 0) {
+        return true;
+    }
+    if (!data.WriteFileDescriptor(fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecImageRegionBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecImageRegion& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecImageRegion))) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecImageRegionBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecImageRegion& dataBlock)
+{
+    const OHOS::HDI::Codec::Image::V1_0::CodecImageRegion *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::Image::V1_0::CodecImageRegion*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::Image::V1_0::CodecImageRegion)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecImageRegion), dataBlockPtr, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecImageRegion)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecImageBufferBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecImageBuffer& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: write dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: write dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteStrongParcelable(dataBlock.buffer)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.buffer", __func__);
+        return false;
+    }
+
+    if (!WriteFileDescriptor(data, dataBlock.fenceFd)) {
+        HDF_LOGE("%{public}s: write dataBlock.fenceFd failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.bufferRole))) {
+        HDF_LOGE("%{public}s: write dataBlock.bufferRole failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecImageBufferBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecImageBuffer& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.id)) {
+        HDF_LOGE("%{public}s: read dataBlock.id failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.size)) {
+        HDF_LOGE("%{public}s: read dataBlock.size failed!", __func__);
+        return false;
+    }
+
+    dataBlock.buffer = data.ReadStrongParcelable<NativeBuffer>();
+
+    dataBlock.fenceFd = -1;
+    if (!ReadFileDescriptor(data, dataBlock.fenceFd)) {
+        HDF_LOGE("%{public}s: read dataBlock.fenceFd failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.bufferRole failed!", __func__);
+            return false;
+        }
+        dataBlock.bufferRole = static_cast<enum CodecImageRole>(enumTmp);
+    }
+    return true;
+}
+
+bool CodecImageCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecImageCapability& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.name.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.name failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.role))) {
+        HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.widthAlignment)) {
+        HDF_LOGE("%{public}s: write dataBlock.widthAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.heightAlignment)) {
+        HDF_LOGE("%{public}s: write dataBlock.heightAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.maxSample)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxSample failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.maxWidth)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.maxHeight)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.minWidth)) {
+        HDF_LOGE("%{public}s: write dataBlock.minWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.minHeight)) {
+        HDF_LOGE("%{public}s: write dataBlock.minHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.maxInst)) {
+        HDF_LOGE("%{public}s: write dataBlock.maxInst failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.supportPixFmts)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.supportPixFmts", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.isSoftwareCodec)) {
+        HDF_LOGE("%{public}s: write dataBlock.isSoftwareCodec failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecImageCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecImageCapability& dataBlock)
+{
+    const char* nameCp = data.ReadCString();
+    if (nameCp == nullptr) {
+        HDF_LOGE("%{public}s: read nameCp failed", __func__);
+        return false;
+    }
+    dataBlock.name = nameCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+            return false;
+        }
+        dataBlock.role = static_cast<enum CodecImageRole>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum CodecImageType>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.widthAlignment)) {
+        HDF_LOGE("%{public}s: read dataBlock.widthAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.heightAlignment)) {
+        HDF_LOGE("%{public}s: read dataBlock.heightAlignment failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.maxSample)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxSample failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.maxWidth)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.maxHeight)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.minWidth)) {
+        HDF_LOGE("%{public}s: read dataBlock.minWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.minHeight)) {
+        HDF_LOGE("%{public}s: read dataBlock.minHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.maxInst)) {
+        HDF_LOGE("%{public}s: read dataBlock.maxInst failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.supportPixFmts)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.supportPixFmts", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.isSoftwareCodec)) {
+        HDF_LOGE("%{public}s: read dataBlock.isSoftwareCodec failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegQuantTableBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecJpegQuantTable& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.quantVal)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.quantVal", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.tableFlag)) {
+        HDF_LOGE("%{public}s: write dataBlock.tableFlag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegQuantTableBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecJpegQuantTable& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.quantVal)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.quantVal", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.tableFlag)) {
+        HDF_LOGE("%{public}s: read dataBlock.tableFlag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegHuffTableBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.bits)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.bits", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.huffVal)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.huffVal", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.tableFlag)) {
+        HDF_LOGE("%{public}s: write dataBlock.tableFlag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegHuffTableBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.bits)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.bits", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.huffVal)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.huffVal", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.tableFlag)) {
+        HDF_LOGE("%{public}s: read dataBlock.tableFlag failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegCompInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegCompInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo& dataBlock)
+{
+    const OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo), dataBlockPtr, sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegCompInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegDecInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Codec::Image::V1_0::CodecJpegDecInfo& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.imageWidth)) {
+        HDF_LOGE("%{public}s: write dataBlock.imageWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.imageHeight)) {
+        HDF_LOGE("%{public}s: write dataBlock.imageHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.dataPrecision)) {
+        HDF_LOGE("%{public}s: write dataBlock.dataPrecision failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.numComponents)) {
+        HDF_LOGE("%{public}s: write dataBlock.numComponents failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.restartInterval)) {
+        HDF_LOGE("%{public}s: write dataBlock.restartInterval failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.arithCode)) {
+        HDF_LOGE("%{public}s: write dataBlock.arithCode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.progressiveMode)) {
+        HDF_LOGE("%{public}s: write dataBlock.progressiveMode failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.compInfo)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.compInfo", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.dcHuffTbl.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.dcHuffTbl.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.dcHuffTbl) {
+        if (!CodecJpegHuffTableBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.acHuffTbl.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.acHuffTbl.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.acHuffTbl) {
+        if (!CodecJpegHuffTableBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.quantTbl.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.quantTbl.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.quantTbl) {
+        if (!CodecJpegQuantTableBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!CodecImageRegionBlockMarshalling(data, dataBlock.region)) {
+        HDF_LOGE("%{public}s: write dataBlock.region failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.sampleSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.sampleSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.compressPos)) {
+        HDF_LOGE("%{public}s: write dataBlock.compressPos failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CodecJpegDecInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Codec::Image::V1_0::CodecJpegDecInfo& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.imageWidth)) {
+        HDF_LOGE("%{public}s: read dataBlock.imageWidth failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.imageHeight)) {
+        HDF_LOGE("%{public}s: read dataBlock.imageHeight failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.dataPrecision)) {
+        HDF_LOGE("%{public}s: read dataBlock.dataPrecision failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.numComponents)) {
+        HDF_LOGE("%{public}s: read dataBlock.numComponents failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.restartInterval)) {
+        HDF_LOGE("%{public}s: read dataBlock.restartInterval failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.arithCode)) {
+        HDF_LOGE("%{public}s: read dataBlock.arithCode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.progressiveMode)) {
+        HDF_LOGE("%{public}s: read dataBlock.progressiveMode failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.compInfo)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.compInfo", __func__);
+        return false;
+    }
+
+    uint32_t dcHuffTblSize = 0;
+    if (!data.ReadUint32(dcHuffTblSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(dcHuffTblSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable), false);
+    dataBlock.dcHuffTbl.clear();
+    dataBlock.dcHuffTbl.reserve(dcHuffTblSize);
+    for (uint32_t i0 = 0; i0 < dcHuffTblSize; ++i0) {
+        OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable value0;
+        if (!OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTableBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.dcHuffTbl.push_back(value0);
+    }
+
+    uint32_t acHuffTblSize = 0;
+    if (!data.ReadUint32(acHuffTblSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(acHuffTblSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable), false);
+    dataBlock.acHuffTbl.clear();
+    dataBlock.acHuffTbl.reserve(acHuffTblSize);
+    for (uint32_t i0 = 0; i0 < acHuffTblSize; ++i0) {
+        OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTable value0;
+        if (!OHOS::HDI::Codec::Image::V1_0::CodecJpegHuffTableBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.acHuffTbl.push_back(value0);
+    }
+
+    uint32_t quantTblSize = 0;
+    if (!data.ReadUint32(quantTblSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(quantTblSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Codec::Image::V1_0::CodecJpegQuantTable), false);
+    dataBlock.quantTbl.clear();
+    dataBlock.quantTbl.reserve(quantTblSize);
+    for (uint32_t i0 = 0; i0 < quantTblSize; ++i0) {
+        OHOS::HDI::Codec::Image::V1_0::CodecJpegQuantTable value0;
+        if (!OHOS::HDI::Codec::Image::V1_0::CodecJpegQuantTableBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.quantTbl.push_back(value0);
+    }
+
+    if (!OHOS::HDI::Codec::Image::V1_0::CodecImageRegionBlockUnmarshalling(data, dataBlock.region)) {
+        HDF_LOGE("%{public}s: read dataBlock.region failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.sampleSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.sampleSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.compressPos)) {
+        HDF_LOGE("%{public}s: read dataBlock.compressPos failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Image
+} // Codec
+} // HDI
+} // OHOS

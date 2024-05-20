@@ -1,0 +1,155 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_AGNSS_V1_0_AGNSSTYPES_H
+#define OHOS_HDI_LOCATION_AGNSS_V1_0_AGNSSTYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Agnss {
+namespace V1_0 {
+
+using namespace OHOS;
+
+enum AGnssRefInfoType : int32_t {
+    ANSS_REF_INFO_TYPE_CELLID = 1,
+    ANSS_REF_INFO_TYPE_MAC = 2,
+};
+
+enum AGnssUserPlaneProtocol : int32_t {
+    AGNSS_TYPE_SUPL = 1,
+    AGNSS_TYPE_C2K = 2,
+    AGNSS_TYPE_SUPL_IMS = 3,
+    AGNSS_TYPE_SUPL_EIMS = 4,
+};
+
+enum DataLinkSetUpType : int32_t {
+    ESTABLISH_DATA_CONNECTION = 1,
+    RELEASE_DATA_CONNECTION = 2,
+};
+
+enum CellIdType : int32_t {
+    CELLID_TYPE_GSM = 1,
+    CELLID_TYPE_UMTS = 2,
+    CELLID_TYPE_LTE = 3,
+    CELLID_TYPE_NR = 4,
+};
+
+enum SubscriberSetIdType : int32_t {
+    SETID_TYPE_NONE = 0,
+    SETID_TYPE_IMSI = 1,
+    SETID_TYPE_MSISDM = 2,
+};
+
+struct AGnssRefCellId {
+    OHOS::HDI::Location::Agnss::V1_0::CellIdType type;
+    uint16_t mcc;
+    uint16_t mnc;
+    uint16_t lac;
+    uint32_t cid;
+    uint16_t tac;
+    uint16_t pcid;
+    uint32_t nci;
+} __attribute__ ((aligned(8)));
+
+struct AGnssServerInfo {
+    OHOS::HDI::Location::Agnss::V1_0::AGnssUserPlaneProtocol type;
+    std::string server;
+    int32_t port;
+};
+
+struct SubscriberSetId {
+    OHOS::HDI::Location::Agnss::V1_0::SubscriberSetIdType type;
+    std::string id;
+};
+
+struct AGnssRefMac {
+    std::vector<uint8_t> mac;
+};
+
+struct AGnssRefInfo {
+    OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfoType type;
+    OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId cellId;
+    OHOS::HDI::Location::Agnss::V1_0::AGnssRefMac mac;
+};
+
+struct AGnssDataLinkRequest {
+    OHOS::HDI::Location::Agnss::V1_0::AGnssUserPlaneProtocol agnssType;
+    OHOS::HDI::Location::Agnss::V1_0::DataLinkSetUpType setUpType;
+} __attribute__ ((aligned(8)));
+
+bool AGnssRefCellIdBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId& dataBlock);
+
+bool AGnssRefCellIdBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId& dataBlock);
+
+bool AGnssServerInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::AGnssServerInfo& dataBlock);
+
+bool AGnssServerInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::AGnssServerInfo& dataBlock);
+
+bool SubscriberSetIdBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::SubscriberSetId& dataBlock);
+
+bool SubscriberSetIdBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::SubscriberSetId& dataBlock);
+
+bool AGnssRefMacBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefMac& dataBlock);
+
+bool AGnssRefMacBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefMac& dataBlock);
+
+bool AGnssRefInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfo& dataBlock);
+
+bool AGnssRefInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfo& dataBlock);
+
+bool AGnssDataLinkRequestBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest& dataBlock);
+
+bool AGnssDataLinkRequestBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest& dataBlock);
+
+} // V1_0
+} // Agnss
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_AGNSS_V1_0_AGNSSTYPES_H
+

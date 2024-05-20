@@ -1,0 +1,295 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/bluetooth_audio_session_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    bluetooth_audio_session_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Bluetooth {
+namespace A2dp {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get(bool isStub)
+{
+    return IBluetoothAudioSession::Get("bluetooth_audio_session_service", isStub);
+}
+
+sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession> OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "bluetooth_audio_session_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy> proxy = new OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t bluetoothAudioSessionRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::Reconnect(
+    sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StartSession(OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType, const sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioCallback>& callbackObj, std::shared_ptr<SharedMemQueue<uint8_t>>& queue)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StartSession_(sessionType, callbackObj, queue, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StopSession(OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StopSession_(sessionType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::RenderOperationResult(OHOS::HDI::Bluetooth::A2dp::V1_0::Operation operation, OHOS::HDI::Bluetooth::A2dp::V1_0::Status status)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::RenderOperationResult_(operation, status, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StartSession_(OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType, const sptr<OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioCallback>& callbackObj, std::shared_ptr<SharedMemQueue<uint8_t>>& queue, const sptr<IRemoteObject> remote)
+{
+    MessageParcel bluetoothAudioSessionData;
+    MessageParcel bluetoothAudioSessionReply;
+    MessageOption bluetoothAudioSessionOption(MessageOption::TF_SYNC);
+
+    if (!bluetoothAudioSessionData.WriteInterfaceToken(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionData.WriteUint64(static_cast<uint64_t>(sessionType))) {
+        HDF_LOGE("%{public}s: write sessionType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t bluetoothAudioSessionRet = remote->SendRequest(CMD_BLUETOOTH_AUDIO_SESSION_START_SESSION, bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    std::shared_ptr<SharedMemQueueMeta<uint8_t>> queueMeta_ = SharedMemQueueMeta<uint8_t>::UnMarshalling(bluetoothAudioSessionReply);
+    if (queueMeta_ == nullptr) {
+        HDF_LOGE("%{public}s: SharedMemQueueMeta is nullptr", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    queue = std::make_shared<SharedMemQueue<uint8_t>>(*queueMeta_);
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::StopSession_(OHOS::HDI::Bluetooth::A2dp::V1_0::SessionType sessionType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel bluetoothAudioSessionData;
+    MessageParcel bluetoothAudioSessionReply;
+    MessageOption bluetoothAudioSessionOption(MessageOption::TF_SYNC);
+
+    if (!bluetoothAudioSessionData.WriteInterfaceToken(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionData.WriteUint64(static_cast<uint64_t>(sessionType))) {
+        HDF_LOGE("%{public}s: write sessionType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t bluetoothAudioSessionRet = remote->SendRequest(CMD_BLUETOOTH_AUDIO_SESSION_STOP_SESSION, bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::RenderOperationResult_(OHOS::HDI::Bluetooth::A2dp::V1_0::Operation operation, OHOS::HDI::Bluetooth::A2dp::V1_0::Status status, const sptr<IRemoteObject> remote)
+{
+    MessageParcel bluetoothAudioSessionData;
+    MessageParcel bluetoothAudioSessionReply;
+    MessageOption bluetoothAudioSessionOption(MessageOption::TF_SYNC);
+
+    if (!bluetoothAudioSessionData.WriteInterfaceToken(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionData.WriteUint64(static_cast<uint64_t>(operation))) {
+        HDF_LOGE("%{public}s: write operation failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionData.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t bluetoothAudioSessionRet = remote->SendRequest(CMD_BLUETOOTH_AUDIO_SESSION_RENDER_OPERATION_RESULT, bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::A2dp::V1_0::BluetoothAudioSessionProxy::GetVersion_(uint32_t& majorVer,
+     uint32_t& minorVer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel bluetoothAudioSessionData;
+    MessageParcel bluetoothAudioSessionReply;
+    MessageOption bluetoothAudioSessionOption(MessageOption::TF_SYNC);
+
+    if (!bluetoothAudioSessionData.WriteInterfaceToken(OHOS::HDI::Bluetooth::A2dp::V1_0::IBluetoothAudioSession::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t bluetoothAudioSessionRet = remote->SendRequest(CMD_BLUETOOTH_AUDIO_SESSION_GET_VERSION, bluetoothAudioSessionData, bluetoothAudioSessionReply, bluetoothAudioSessionOption);
+    if (bluetoothAudioSessionRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, bluetoothAudioSessionRet);
+        return bluetoothAudioSessionRet;
+    }
+
+    if (!bluetoothAudioSessionReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!bluetoothAudioSessionReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return bluetoothAudioSessionRet;
+}
+
+} // V1_0
+} // A2dp
+} // Bluetooth
+} // HDI
+} // OHOS

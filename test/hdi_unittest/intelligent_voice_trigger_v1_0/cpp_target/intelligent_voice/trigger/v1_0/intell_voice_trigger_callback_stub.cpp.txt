@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/intell_voice_trigger_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    intell_voice_trigger_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace IntelligentVoice {
+namespace Trigger {
+namespace V1_0 {
+
+
+
+OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStub(const sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::~IntellVoiceTriggerCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_INTELL_VOICE_TRIGGER_CALLBACK_GET_VERSION:
+            return IntellVoiceTriggerCallbackStubGetVersion(data, reply, option);
+        case CMD_INTELL_VOICE_TRIGGER_CALLBACK_ON_RECOGNITION_HDI_EVENT:
+            return IntellVoiceTriggerCallbackStubOnRecognitionHdiEvent(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubOnRecognitionHdiEvent(MessageParcel& intellVoiceTriggerCallbackData, MessageParcel& intellVoiceTriggerCallbackReply, MessageOption& intellVoiceTriggerCallbackOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubOnRecognitionHdiEvent_(intellVoiceTriggerCallbackData, intellVoiceTriggerCallbackReply, intellVoiceTriggerCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubGetVersion(MessageParcel& intellVoiceTriggerCallbackData, MessageParcel& intellVoiceTriggerCallbackReply, MessageOption& intellVoiceTriggerCallbackOption)
+{
+    return OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubGetVersion_(intellVoiceTriggerCallbackData, intellVoiceTriggerCallbackReply, intellVoiceTriggerCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubOnRecognitionHdiEvent_(MessageParcel& intellVoiceTriggerCallbackData, MessageParcel& intellVoiceTriggerCallbackReply, MessageOption& intellVoiceTriggerCallbackOption, sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback> impl)
+{
+    if (intellVoiceTriggerCallbackData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceRecognitionEvent event;
+    if (!IntellVoiceRecognitionEventBlockUnmarshalling(intellVoiceTriggerCallbackData, event)) {
+        HDF_LOGE("%{public}s: read event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cookie = 0;
+    if (!intellVoiceTriggerCallbackData.ReadInt32(cookie)) {
+        HDF_LOGE("%{public}s: read cookie failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceTriggerCallbackRet = impl->OnRecognitionHdiEvent(event, cookie);
+    if (intellVoiceTriggerCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerCallbackRet);
+        return intellVoiceTriggerCallbackRet;
+    }
+
+    return intellVoiceTriggerCallbackRet;
+}
+
+int32_t OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerCallbackStub::IntellVoiceTriggerCallbackStubGetVersion_(MessageParcel& intellVoiceTriggerCallbackData, MessageParcel& intellVoiceTriggerCallbackReply, MessageOption& intellVoiceTriggerCallbackOption, sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback> impl)
+{
+    if (intellVoiceTriggerCallbackData.ReadInterfaceToken() != OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t intellVoiceTriggerCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (intellVoiceTriggerCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, intellVoiceTriggerCallbackRet);
+        return intellVoiceTriggerCallbackRet;
+    }
+
+    if (!intellVoiceTriggerCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!intellVoiceTriggerCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return intellVoiceTriggerCallbackRet;
+}
+} // V1_0
+} // Trigger
+} // IntelligentVoice
+} // HDI
+} // OHOS

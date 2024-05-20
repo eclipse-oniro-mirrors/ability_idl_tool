@@ -1,0 +1,169 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/cellfence_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Cellfence {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceRequestBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceRequest& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.cellfenceId)) {
+        HDF_LOGE("%{public}s: write dataBlock.cellfenceId failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.cellInfo)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.cellInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceRequestBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceRequest& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.cellfenceId)) {
+        HDF_LOGE("%{public}s: read dataBlock.cellfenceId failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.cellInfo)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.cellInfo", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceStatusBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceStatusBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceStatus)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceSizeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize))) {
+        return false;
+    }
+    return true;
+}
+
+bool CellfenceSizeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize& dataBlock)
+{
+    const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize), dataBlockPtr, sizeof(OHOS::HDI::Location::Lpfence::Cellfence::V1_0::CellfenceSize)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Cellfence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

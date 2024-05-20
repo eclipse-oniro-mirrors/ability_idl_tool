@@ -1,0 +1,118 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <hdf_base.h>
+#include <hdf_device_desc.h>
+#include <hdf_device_object.h>
+#include <hdf_log.h>
+#include <hdf_remote_service.h>
+#include <osal_mem.h>
+#include <stub_collector.h>
+#include "v1_0/ieffect_model.h"
+
+#define HDF_LOG_TAG    effect_model_driver
+
+struct HdfEffectModelHost {
+    struct IDeviceIoService ioService;
+    struct IEffectModel *service;
+    struct HdfRemoteService **stubObject;
+};
+
+static int32_t EffectModelDriverDispatch(struct HdfDeviceIoClient *client, int cmdId,
+    struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct HdfEffectModelHost *host = CONTAINER_OF(client->device->service, struct HdfEffectModelHost, ioService);
+    if (host->service == NULL || host->stubObject == NULL) {
+        HDF_LOGE("%{public}s: invalid service obj", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    struct HdfRemoteService *stubObj = *host->stubObject;
+    if (stubObj == NULL || stubObj->dispatcher == NULL || stubObj->dispatcher->Dispatch == NULL) {
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    return stubObj->dispatcher->Dispatch((struct HdfRemoteService *)stubObj->target, cmdId, data, reply);
+}
+
+static int HdfEffectModelDriverInit(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver init start", __func__);
+    return HDF_SUCCESS;
+}
+
+static int HdfEffectModelDriverBind(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver bind start", __func__);
+    int32_t ret = HdfDeviceObjectSetInterfaceDesc(deviceObject, IEFFECTMODEL_INTERFACE_DESC);
+    if (ret != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to set interface descriptor of device object", __func__);
+        return ret;
+    }
+
+    struct HdfEffectModelHost *host = (struct HdfEffectModelHost *)OsalMemCalloc(sizeof(struct HdfEffectModelHost));
+    if (host == NULL) {
+        HDF_LOGE("%{public}s: create HdfEffectModelHost object failed!", __func__);
+        return HDF_FAILURE;
+    }
+
+    struct IEffectModel *serviceImpl = IEffectModelGet(true);
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: create serviceImpl failed!", __func__);
+        OsalMemFree(host);
+        return HDF_FAILURE;
+    }
+
+    struct HdfRemoteService **stubObj = StubCollectorGetOrNewObject(IEFFECTMODEL_INTERFACE_DESC, serviceImpl);
+    if (stubObj == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub object", __func__);
+        OsalMemFree(host);
+        IEffectModelRelease(serviceImpl, true);
+        return HDF_FAILURE;
+    }
+
+    host->ioService.Dispatch = EffectModelDriverDispatch;
+    host->ioService.Open = NULL;
+    host->ioService.Release = NULL;
+    host->service = serviceImpl;
+    host->stubObject = stubObj;
+    deviceObject->service = &host->ioService;
+    return HDF_SUCCESS;
+}
+
+static void HdfEffectModelDriverRelease(struct HdfDeviceObject *deviceObject)
+{
+    HDF_LOGI("%{public}s: driver release start", __func__);
+    if (deviceObject->service == NULL) {
+        return;
+    }
+
+    struct HdfEffectModelHost *host = CONTAINER_OF(deviceObject->service, struct HdfEffectModelHost, ioService);
+    if (host != NULL) {
+        StubCollectorRemoveObject(IEFFECTMODEL_INTERFACE_DESC, host->service);
+        IEffectModelRelease(host->service, true);
+        OsalMemFree(host);
+    }
+}
+
+struct HdfDriverEntry g_effectmodelDriverEntry = {
+    .moduleVersion = 1,
+    .moduleName = "",
+    .Bind = HdfEffectModelDriverBind,
+    .Init = HdfEffectModelDriverInit,
+    .Release = HdfEffectModelDriverRelease,
+};
+
+HDF_INIT(g_effectmodelDriverEntry);

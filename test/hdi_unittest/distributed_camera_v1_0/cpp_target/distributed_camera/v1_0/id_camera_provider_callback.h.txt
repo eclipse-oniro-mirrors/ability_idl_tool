@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_IDCAMERAPROVIDERCALLBACK_H
+#define OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_IDCAMERAPROVIDERCALLBACK_H
+
+#include <stdint.h>
+#include <vector>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "distributed_camera/v1_0/dcamera_types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedCamera {
+namespace V1_0 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+
+enum {
+    CMD_DCAMERA_PROVIDER_CALLBACK_GET_VERSION = 0,
+    CMD_DCAMERA_PROVIDER_CALLBACK_OPEN_SESSION = 1,
+    CMD_DCAMERA_PROVIDER_CALLBACK_CLOSE_SESSION = 2,
+    CMD_DCAMERA_PROVIDER_CALLBACK_CONFIGURE_STREAMS = 3,
+    CMD_DCAMERA_PROVIDER_CALLBACK_RELEASE_STREAMS = 4,
+    CMD_DCAMERA_PROVIDER_CALLBACK_START_CAPTURE = 5,
+    CMD_DCAMERA_PROVIDER_CALLBACK_STOP_CAPTURE = 6,
+    CMD_DCAMERA_PROVIDER_CALLBACK_UPDATE_SETTINGS = 7,
+};
+
+class IDCameraProviderCallback : public HdiBase {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.distributed_camera.v1_0.IDCameraProviderCallback");
+
+    virtual ~IDCameraProviderCallback() = default;
+
+    virtual int32_t OpenSession(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase) = 0;
+
+    virtual int32_t CloseSession(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase) = 0;
+
+    virtual int32_t ConfigureStreams(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase,
+         const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCStreamInfo>& streamInfos) = 0;
+
+    virtual int32_t ReleaseStreams(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase,
+         const std::vector<int32_t>& streamIds) = 0;
+
+    virtual int32_t StartCapture(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase,
+         const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfo>& captureInfos) = 0;
+
+    virtual int32_t StopCapture(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase,
+         const std::vector<int32_t>& streamIds) = 0;
+
+    virtual int32_t UpdateSettings(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase,
+         const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCameraSettings>& settings) = 0;
+
+    virtual int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+    {
+        majorVer = 1;
+        minorVer = 0;
+        return HDF_SUCCESS;
+    }
+
+    virtual bool IsProxy()
+    {
+        return false;
+    }
+
+    virtual const std::u16string GetDesc()
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_0
+} // DistributedCamera
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_DISTRIBUTED_CAMERA_V1_0_IDCAMERAPROVIDERCALLBACK_H
+

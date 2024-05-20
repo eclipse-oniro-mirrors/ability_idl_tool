@@ -1,0 +1,401 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/executor_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    executor_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace PinAuth {
+namespace V1_1 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+template<typename ChildType, typename ParentType>
+static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
+{
+    if (parent == nullptr) {
+        HDF_LOGE("%{public}s:parent is nullptr!", __func__);
+        return nullptr;
+    }
+
+    if (!parent->IsProxy()) {
+        HDF_LOGE("%{public}s:not proxy, not support castfrom!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = OHOS::HDI::hdi_objcast<ParentType>(parent);
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:hdi_objcast failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<ChildType> proxy = OHOS::HDI::hdi_facecast<ChildType>(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:hdi_facecast failed!", __func__);
+        return nullptr;
+    }
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t executorRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+sptr<OHOS::HDI::PinAuth::V1_1::IExecutor> OHOS::HDI::PinAuth::V1_1::IExecutor::Get(bool isStub)
+{
+    return IExecutor::Get("executor_service", isStub);
+}
+
+sptr<OHOS::HDI::PinAuth::V1_1::IExecutor> OHOS::HDI::PinAuth::V1_1::IExecutor::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::PinAuth::V1_1::IExecutor::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "executor_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::PinAuth::V1_1::IExecutor *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::PinAuth::V1_1::ExecutorProxy> proxy = new OHOS::HDI::PinAuth::V1_1::ExecutorProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::PinAuth::V1_1::ExecutorProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t executorRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::Reconnect(
+    sptr<OHOS::HDI::PinAuth::V1_1::ExecutorProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::PinAuth::V1_1::ExecutorProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+sptr<OHOS::HDI::PinAuth::V1_1::IExecutor> OHOS::HDI::PinAuth::V1_1::IExecutor::CastFrom(const sptr<OHOS::HDI::PinAuth::V1_0::IExecutor> &parent)
+{
+    return CastFromTemplate<OHOS::HDI::PinAuth::V1_1::IExecutor, OHOS::HDI::PinAuth::V1_0::IExecutor>(parent);
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetProperty(const std::vector<uint64_t>& templateIdList,
+     const std::vector<OHOS::HDI::PinAuth::V1_1::GetPropertyType>& propertyTypes, OHOS::HDI::PinAuth::V1_1::Property& property)
+{
+    return OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetProperty_(templateIdList, propertyTypes, property, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::EnrollV1_1(uint64_t scheduleId, const std::vector<uint8_t>& extraInfo,
+     const sptr<OHOS::HDI::PinAuth::V1_1::IExecutorCallback>& callbackObj)
+{
+    return OHOS::HDI::PinAuth::V1_1::ExecutorProxy::EnrollV1_1_(scheduleId, extraInfo, callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::AuthenticateV1_1(uint64_t scheduleId, uint64_t templateId,
+     const std::vector<uint8_t>& extraInfo, const sptr<OHOS::HDI::PinAuth::V1_1::IExecutorCallback>& callbackObj)
+{
+    return OHOS::HDI::PinAuth::V1_1::ExecutorProxy::AuthenticateV1_1_(scheduleId, templateId, extraInfo, callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetExecutorInfo(OHOS::HDI::PinAuth::V1_0::ExecutorInfo& executorInfo)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::GetExecutorInfo_(executorInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetTemplateInfo(uint64_t templateId,
+     OHOS::HDI::PinAuth::V1_0::TemplateInfo& templateInfo)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::GetTemplateInfo_(templateId, templateInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::OnRegisterFinish(const std::vector<uint64_t>& templateIdList,
+     const std::vector<uint8_t>& frameworkPublicKey, const std::vector<uint8_t>& extraInfo)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::OnRegisterFinish_(templateIdList, frameworkPublicKey, extraInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::OnSetData(uint64_t scheduleId, uint64_t authSubType,
+     const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::OnSetData_(scheduleId, authSubType, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::Enroll(uint64_t scheduleId, const std::vector<uint8_t>& extraInfo,
+     const sptr<OHOS::HDI::PinAuth::V1_0::IExecutorCallback>& callbackObj)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::Enroll_(scheduleId, extraInfo, callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::Authenticate(uint64_t scheduleId, uint64_t templateId,
+     const std::vector<uint8_t>& extraInfo, const sptr<OHOS::HDI::PinAuth::V1_0::IExecutorCallback>& callbackObj)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::Authenticate_(scheduleId, templateId, extraInfo, callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::Delete(uint64_t templateId)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::Delete_(templateId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::Cancel(uint64_t scheduleId)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::Cancel_(scheduleId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::SendCommand(int32_t commandId, const std::vector<uint8_t>& extraInfo,
+     const sptr<OHOS::HDI::PinAuth::V1_0::IExecutorCallback>& callbackObj)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::SendCommand_(commandId, extraInfo, callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::GetProperty_(const std::vector<uint64_t>& templateIdList,
+     const std::vector<OHOS::HDI::PinAuth::V1_1::GetPropertyType>& propertyTypes, OHOS::HDI::PinAuth::V1_1::Property& property, const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorData;
+    MessageParcel executorReply;
+    MessageOption executorOption(MessageOption::TF_SYNC);
+
+    if (!executorData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_1::IExecutor::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorData, templateIdList)) {
+        HDF_LOGE("%{public}s: failed to write templateIdList", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorData, propertyTypes)) {
+        HDF_LOGE("%{public}s: failed to write propertyTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorRet = remote->SendRequest(CMD_EXECUTOR_GET_PROPERTY, executorData, executorReply, executorOption);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    if (!PropertyBlockUnmarshalling(executorReply, property)) {
+        HDF_LOGE("%{public}s: read property failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return executorRet;
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::EnrollV1_1_(uint64_t scheduleId, const std::vector<uint8_t>& extraInfo,
+     const sptr<OHOS::HDI::PinAuth::V1_1::IExecutorCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorData;
+    MessageParcel executorReply;
+    MessageOption executorOption(MessageOption::TF_SYNC);
+
+    if (!executorData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_1::IExecutor::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorData.WriteUint64(scheduleId)) {
+        HDF_LOGE("%{public}s: write scheduleId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorData, extraInfo)) {
+        HDF_LOGE("%{public}s: failed to write extraInfo", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::PinAuth::V1_1::IExecutorCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorRet = remote->SendRequest(CMD_EXECUTOR_ENROLL_V1_1, executorData, executorReply, executorOption);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    return executorRet;
+}
+
+int32_t OHOS::HDI::PinAuth::V1_1::ExecutorProxy::AuthenticateV1_1_(uint64_t scheduleId, uint64_t templateId,
+     const std::vector<uint8_t>& extraInfo, const sptr<OHOS::HDI::PinAuth::V1_1::IExecutorCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorData;
+    MessageParcel executorReply;
+    MessageOption executorOption(MessageOption::TF_SYNC);
+
+    if (!executorData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_1::IExecutor::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorData.WriteUint64(scheduleId)) {
+        HDF_LOGE("%{public}s: write scheduleId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorData.WriteUint64(templateId)) {
+        HDF_LOGE("%{public}s: write templateId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorData, extraInfo)) {
+        HDF_LOGE("%{public}s: failed to write extraInfo", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::PinAuth::V1_1::IExecutorCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorRet = remote->SendRequest(CMD_EXECUTOR_AUTHENTICATE_V1_1, executorData, executorReply, executorOption);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    return executorRet;
+}
+
+} // V1_1
+} // PinAuth
+} // HDI
+} // OHOS

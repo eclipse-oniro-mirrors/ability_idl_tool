@@ -1,0 +1,240 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/memory_tracker_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    memory_tracker_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Memorytracker {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::Get(bool isStub)
+{
+    return IMemoryTrackerInterface::Get("memory_tracker_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface> OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "memory_tracker_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy> proxy = new OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t memoryTrackerInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (memoryTrackerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetDevMem(int32_t pid,
+     OHOS::HDI::Memorytracker::V1_0::MemoryTrackerType type, std::vector<OHOS::HDI::Memorytracker::V1_0::MemoryRecord>& records)
+{
+    return OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetDevMem_(pid, type, records, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetDevMem_(int32_t pid,
+     OHOS::HDI::Memorytracker::V1_0::MemoryTrackerType type, std::vector<OHOS::HDI::Memorytracker::V1_0::MemoryRecord>& records, const sptr<IRemoteObject> remote)
+{
+    MessageParcel memoryTrackerInterfaceData;
+    MessageParcel memoryTrackerInterfaceReply;
+    MessageOption memoryTrackerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!memoryTrackerInterfaceData.WriteInterfaceToken(OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!memoryTrackerInterfaceData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!memoryTrackerInterfaceData.WriteInt32(pid)) {
+        HDF_LOGE("%{public}s: write pid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!memoryTrackerInterfaceData.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t memoryTrackerInterfaceRet = remote->SendRequest(CMD_MEMORY_TRACKER_INTERFACE_GET_DEV_MEM, memoryTrackerInterfaceData, memoryTrackerInterfaceReply, memoryTrackerInterfaceOption);
+    if (memoryTrackerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, memoryTrackerInterfaceRet);
+        return memoryTrackerInterfaceRet;
+    }
+
+    if (!ReadPodArray(memoryTrackerInterfaceReply, records)) {
+        HDF_LOGE("%{public}s: failed to read records", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return memoryTrackerInterfaceRet;
+}
+
+int32_t OHOS::HDI::Memorytracker::V1_0::MemoryTrackerInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel memoryTrackerInterfaceData;
+    MessageParcel memoryTrackerInterfaceReply;
+    MessageOption memoryTrackerInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!memoryTrackerInterfaceData.WriteInterfaceToken(OHOS::HDI::Memorytracker::V1_0::IMemoryTrackerInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t memoryTrackerInterfaceRet = remote->SendRequest(CMD_MEMORY_TRACKER_INTERFACE_GET_VERSION, memoryTrackerInterfaceData, memoryTrackerInterfaceReply, memoryTrackerInterfaceOption);
+    if (memoryTrackerInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, memoryTrackerInterfaceRet);
+        return memoryTrackerInterfaceRet;
+    }
+
+    if (!memoryTrackerInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!memoryTrackerInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return memoryTrackerInterfaceRet;
+}
+
+} // V1_0
+} // Memorytracker
+} // HDI
+} // OHOS

@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_2_IRILCALLBACK_H
+#define OHOS_HDI_RIL_V1_2_IRILCALLBACK_H
+
+#include <stdint.h>
+#include <string>
+#include <hdf_base.h>
+#include <hdi_base.h>
+#include "ril/v1_1/iril_callback.h"
+#include "ril/v1_2/types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_2 {
+using namespace OHOS;
+using namespace OHOS::HDI;
+using namespace OHOS::HDI::Ril::V1_1;
+
+enum {
+    CMD_RIL_CALLBACK_RESIDENT_NETWORK_UPDATED = 145,
+    CMD_RIL_CALLBACK_SEND_SIM_MATCHED_OPERATOR_INFO_RESPONSE = 146,
+    CMD_RIL_CALLBACK_CLEAN_ALL_CONNECTIONS_RESPONSE = 147,
+    CMD_RIL_CALLBACK_GET_NR_SSB_ID_RESPONSE = 148,
+    CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED_1_2 = 149,
+    CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE_1_2 = 150,
+    CMD_RIL_CALLBACK_GET_NEIGHBORING_CELL_INFO_LIST_RESPONSE_1_2 = 151,
+};
+
+class IRilCallback : public OHOS::HDI::Ril::V1_1::IRilCallback {
+public:
+    DECLARE_HDI_DESCRIPTOR(u"ohos.hdi.ril.v1_2.IRilCallback");
+
+    virtual ~IRilCallback() = default;
+
+    static sptr<OHOS::HDI::Ril::V1_2::IRilCallback> CastFrom(const sptr<OHOS::HDI::Ril::V1_1::IRilCallback> &parent);
+
+    virtual int32_t ResidentNetworkUpdated(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo,
+         const std::string& plmn) = 0;
+
+    virtual int32_t SendSimMatchedOperatorInfoResponse(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t CleanAllConnectionsResponse(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo) = 0;
+
+    virtual int32_t GetNrSsbIdResponse(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_2::NrCellSsbIds& nrCellSsbIds) = 0;
+
+    virtual int32_t NetworkCurrentCellUpdated_1_2(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2& cellListCurrentInfo) = 0;
+
+    virtual int32_t GetCurrentCellInfoResponse_1_2(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo,
+         const OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2& cellListCurrentInfo) = 0;
+
+    virtual int32_t GetNeighboringCellInfoListResponse_1_2(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo, const OHOS::HDI::Ril::V1_2::CellListNearbyInfo_1_2& cellListNearbyInfo) = 0;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override
+    {
+        majorVer = 1;
+        minorVer = 2;
+        return HDF_SUCCESS;
+    }
+
+    const std::u16string GetDesc() override
+    {
+        return metaDescriptor_;
+    }
+};
+} // V1_2
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_2_IRILCALLBACK_H
+

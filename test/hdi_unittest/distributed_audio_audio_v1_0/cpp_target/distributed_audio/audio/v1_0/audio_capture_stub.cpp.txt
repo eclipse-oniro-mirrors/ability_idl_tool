@@ -1,0 +1,1230 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_capture_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    audio_capture_stub
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStub(const sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> &impl)
+    : IPCObjectStub(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::~AudioCaptureStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_AUDIO_CAPTURE_GET_VERSION:
+            return AudioCaptureStubGetVersion(data, reply, option);
+        case CMD_AUDIO_CAPTURE_CAPTURE_FRAME:
+            return AudioCaptureStubCaptureFrame(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_CAPTURE_POSITION:
+            return AudioCaptureStubGetCapturePosition(data, reply, option);
+        case CMD_AUDIO_CAPTURE_CHECK_SCENE_CAPABILITY:
+            return AudioCaptureStubCheckSceneCapability(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SELECT_SCENE:
+            return AudioCaptureStubSelectScene(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SET_MUTE:
+            return AudioCaptureStubSetMute(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_MUTE:
+            return AudioCaptureStubGetMute(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SET_VOLUME:
+            return AudioCaptureStubSetVolume(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_VOLUME:
+            return AudioCaptureStubGetVolume(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_GAIN_THRESHOLD:
+            return AudioCaptureStubGetGainThreshold(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_GAIN:
+            return AudioCaptureStubGetGain(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SET_GAIN:
+            return AudioCaptureStubSetGain(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_FRAME_SIZE:
+            return AudioCaptureStubGetFrameSize(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_FRAME_COUNT:
+            return AudioCaptureStubGetFrameCount(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SET_SAMPLE_ATTRIBUTES:
+            return AudioCaptureStubSetSampleAttributes(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_SAMPLE_ATTRIBUTES:
+            return AudioCaptureStubGetSampleAttributes(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_CURRENT_CHANNEL_ID:
+            return AudioCaptureStubGetCurrentChannelId(data, reply, option);
+        case CMD_AUDIO_CAPTURE_SET_EXTRA_PARAMS:
+            return AudioCaptureStubSetExtraParams(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_EXTRA_PARAMS:
+            return AudioCaptureStubGetExtraParams(data, reply, option);
+        case CMD_AUDIO_CAPTURE_REQ_MMAP_BUFFER:
+            return AudioCaptureStubReqMmapBuffer(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_MMAP_POSITION:
+            return AudioCaptureStubGetMmapPosition(data, reply, option);
+        case CMD_AUDIO_CAPTURE_ADD_AUDIO_EFFECT:
+            return AudioCaptureStubAddAudioEffect(data, reply, option);
+        case CMD_AUDIO_CAPTURE_REMOVE_AUDIO_EFFECT:
+            return AudioCaptureStubRemoveAudioEffect(data, reply, option);
+        case CMD_AUDIO_CAPTURE_GET_FRAME_BUFFER_SIZE:
+            return AudioCaptureStubGetFrameBufferSize(data, reply, option);
+        case CMD_AUDIO_CAPTURE_START:
+            return AudioCaptureStubStart(data, reply, option);
+        case CMD_AUDIO_CAPTURE_STOP:
+            return AudioCaptureStubStop(data, reply, option);
+        case CMD_AUDIO_CAPTURE_PAUSE:
+            return AudioCaptureStubPause(data, reply, option);
+        case CMD_AUDIO_CAPTURE_RESUME:
+            return AudioCaptureStubResume(data, reply, option);
+        case CMD_AUDIO_CAPTURE_FLUSH:
+            return AudioCaptureStubFlush(data, reply, option);
+        case CMD_AUDIO_CAPTURE_TURN_STANDBY_MODE:
+            return AudioCaptureStubTurnStandbyMode(data, reply, option);
+        case CMD_AUDIO_CAPTURE_AUDIO_DEV_DUMP:
+            return AudioCaptureStubAudioDevDump(data, reply, option);
+        case CMD_AUDIO_CAPTURE_IS_SUPPORTS_PAUSE_AND_RESUME:
+            return AudioCaptureStubIsSupportsPauseAndResume(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCaptureFrame(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCaptureFrame_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCapturePosition(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCapturePosition_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCheckSceneCapability(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCheckSceneCapability_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSelectScene(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSelectScene_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetMute(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetMute_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMute(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMute_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetVolume(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetVolume_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVolume(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVolume_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGainThreshold(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGainThreshold_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGain(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGain_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetGain(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetGain_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameSize(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameSize_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameCount(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameCount_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetSampleAttributes(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetSampleAttributes_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetSampleAttributes(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetSampleAttributes_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCurrentChannelId(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCurrentChannelId_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetExtraParams(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetExtraParams_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetExtraParams(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetExtraParams_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubReqMmapBuffer(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubReqMmapBuffer_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMmapPosition(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMmapPosition_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAddAudioEffect(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAddAudioEffect_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubRemoveAudioEffect(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubRemoveAudioEffect_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameBufferSize(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameBufferSize_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStart(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStart_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStop(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStop_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubPause(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubPause_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubResume(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubResume_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubFlush(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubFlush_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubTurnStandbyMode(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubTurnStandbyMode_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAudioDevDump(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAudioDevDump_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubIsSupportsPauseAndResume(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubIsSupportsPauseAndResume_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVersion(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVersion_(audioCaptureData, audioCaptureReply, audioCaptureOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCaptureFrame_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool audioCaptureMemSet = false;
+    if (!audioCaptureData.ReadBool(audioCaptureMemSet)) {
+        HDF_LOGE("%{public}s: failed to read audioCaptureMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<int8_t> frame;
+    if (audioCaptureMemSet) {
+        uint32_t capacity = 0;
+        if (!audioCaptureData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(int8_t), HDF_ERR_INVALID_PARAM);
+        frame.reserve(capacity);
+    }
+
+    uint64_t replyBytes = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->CaptureFrame(frame, replyBytes);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!WritePodArray(audioCaptureReply, frame)) {
+        HDF_LOGE("%{public}s: failed to write frame", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.WriteUint64(replyBytes)) {
+        HDF_LOGE("%{public}s: write replyBytes failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCapturePosition_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t frames = 0;
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp time;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetCapturePosition(frames, time);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint64(frames)) {
+        HDF_LOGE("%{public}s: write frames failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStampBlockMarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: write time failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubCheckSceneCapability_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor scene;
+    if (!AudioSceneDescriptorBlockUnmarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: read scene failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool supported = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->CheckSceneCapability(scene, supported);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteBool(supported)) {
+        HDF_LOGE("%{public}s: write supported failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSelectScene_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor scene;
+    if (!AudioSceneDescriptorBlockUnmarshalling(audioCaptureData, scene)) {
+        HDF_LOGE("%{public}s: read scene failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SelectScene(scene);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetMute_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mute = false;
+    if (!audioCaptureData.ReadBool(mute)) {
+        HDF_LOGE("%{public}s: read mute failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SetMute(mute);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMute_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool mute = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetMute(mute);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteBool(mute)) {
+        HDF_LOGE("%{public}s: write mute failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetVolume_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float volume = 0;
+    if (!audioCaptureData.ReadFloat(volume)) {
+        HDF_LOGE("%{public}s: read volume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SetVolume(volume);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVolume_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float volume = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetVolume(volume);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteFloat(volume)) {
+        HDF_LOGE("%{public}s: write volume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGainThreshold_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float min = 0;
+
+    float max = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetGainThreshold(min, max);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteFloat(min)) {
+        HDF_LOGE("%{public}s: write min failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.WriteFloat(max)) {
+        HDF_LOGE("%{public}s: write max failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetGain_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float gain = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetGain(gain);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteFloat(gain)) {
+        HDF_LOGE("%{public}s: write gain failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetGain_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    float gain = 0;
+    if (!audioCaptureData.ReadFloat(gain)) {
+        HDF_LOGE("%{public}s: read gain failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SetGain(gain);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameSize_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t size = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetFrameSize(size);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint64(size)) {
+        HDF_LOGE("%{public}s: write size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameCount_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t count = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetFrameCount(count);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint64(count)) {
+        HDF_LOGE("%{public}s: write count failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetSampleAttributes_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes attrs;
+    if (!AudioSampleAttributesBlockUnmarshalling(audioCaptureData, attrs)) {
+        HDF_LOGE("%{public}s: read attrs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SetSampleAttributes(attrs);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetSampleAttributes_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes attrs;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetSampleAttributes(attrs);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributesBlockMarshalling(audioCaptureReply, attrs)) {
+        HDF_LOGE("%{public}s: write attrs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetCurrentChannelId_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t channelId = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetCurrentChannelId(channelId);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint32(channelId)) {
+        HDF_LOGE("%{public}s: write channelId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubSetExtraParams_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* keyValueListCp = audioCaptureData.ReadCString();
+    if (keyValueListCp == nullptr) {
+        HDF_LOGE("%{public}s: read keyValueList failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string keyValueList = keyValueListCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->SetExtraParams(keyValueList);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetExtraParams_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool audioCaptureMemSet = false;
+    if (!audioCaptureData.ReadBool(audioCaptureMemSet)) {
+        HDF_LOGE("%{public}s: failed to read audioCaptureMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string keyValueList;
+    if (audioCaptureMemSet) {
+        uint32_t capacity = 0;
+        if (!audioCaptureData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        keyValueList.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetExtraParams(keyValueList);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteCString(keyValueList.c_str())) {
+        HDF_LOGE("%{public}s: write keyValueList failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubReqMmapBuffer_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t reqSize = 0;
+    if (!audioCaptureData.ReadInt32(reqSize)) {
+        HDF_LOGE("%{public}s: read reqSize failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor desc;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->ReqMmapBuffer(reqSize, desc);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptorBlockMarshalling(audioCaptureReply, desc)) {
+        HDF_LOGE("%{public}s: write desc failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetMmapPosition_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t frames = 0;
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp time;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetMmapPosition(frames, time);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint64(frames)) {
+        HDF_LOGE("%{public}s: write frames failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStampBlockMarshalling(audioCaptureReply, time)) {
+        HDF_LOGE("%{public}s: write time failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAddAudioEffect_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t effectid = 0;
+    if (!audioCaptureData.ReadUint64(effectid)) {
+        HDF_LOGE("%{public}s: read effectid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->AddAudioEffect(effectid);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubRemoveAudioEffect_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t effectid = 0;
+    if (!audioCaptureData.ReadUint64(effectid)) {
+        HDF_LOGE("%{public}s: read effectid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->RemoveAudioEffect(effectid);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetFrameBufferSize_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint64_t bufferSize = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetFrameBufferSize(bufferSize);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint64(bufferSize)) {
+        HDF_LOGE("%{public}s: write bufferSize failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStart_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->Start();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubStop_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->Stop();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubPause_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->Pause();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubResume_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->Resume();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubFlush_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->Flush();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubTurnStandbyMode_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->TurnStandbyMode();
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubAudioDevDump_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t range = 0;
+    if (!audioCaptureData.ReadInt32(range)) {
+        HDF_LOGE("%{public}s: read range failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t fd = 0;
+    if (!audioCaptureData.ReadInt32(fd)) {
+        HDF_LOGE("%{public}s: read fd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->AudioDevDump(range, fd);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubIsSupportsPauseAndResume_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool supportPause = false;
+
+    bool supportResume = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->IsSupportsPauseAndResume(supportPause, supportResume);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteBool(supportPause)) {
+        HDF_LOGE("%{public}s: write supportPause failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.WriteBool(supportResume)) {
+        HDF_LOGE("%{public}s: write supportResume failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCaptureStub::AudioCaptureStubGetVersion_(MessageParcel& audioCaptureData, MessageParcel& audioCaptureReply, MessageOption& audioCaptureOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture> impl)
+{
+    if (audioCaptureData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCapture::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCaptureRet = impl->GetVersion(majorVer, minorVer);
+    if (audioCaptureRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCaptureRet);
+        return audioCaptureRet;
+    }
+
+    if (!audioCaptureReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCaptureReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCaptureRet;
+}
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS

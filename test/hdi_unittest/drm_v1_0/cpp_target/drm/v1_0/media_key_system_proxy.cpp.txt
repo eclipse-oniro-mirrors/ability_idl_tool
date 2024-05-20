@@ -1,0 +1,812 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/media_key_system_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+#include "drm/v1_0/media_key_session_proxy.h"
+#include "drm/v1_0/oem_certificate_proxy.h"
+
+#define HDF_LOG_TAG    media_key_system_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationString(const std::string& name, std::string& value)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationString_(name, value, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationString(const std::string& name,
+     const std::string& value)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationString_(name, value, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationByteArray(const std::string& name,
+     std::vector<uint8_t>& value)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationByteArray_(name, value, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationByteArray(const std::string& name,
+     const std::vector<uint8_t>& value)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationByteArray_(name, value, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetStatistics(std::map<std::string, std::string>& statistics)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetStatistics_(statistics, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetMaxContentProtectionLevel(OHOS::HDI::Drm::V1_0::ContentProtectionLevel& level)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetMaxContentProtectionLevel_(level, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GenerateKeySystemRequest(std::string& defaultUrl,
+     std::vector<uint8_t>& request)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GenerateKeySystemRequest_(defaultUrl, request, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ProcessKeySystemResponse(const std::vector<uint8_t>& response)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ProcessKeySystemResponse_(response, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificateStatus(OHOS::HDI::Drm::V1_0::CertificateStatus& status)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificateStatus_(status, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetCallback(const sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystemCallback>& systemCallback)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetCallback_(systemCallback, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::CreateMediaKeySession(OHOS::HDI::Drm::V1_0::ContentProtectionLevel level, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySession>& keySession)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::CreateMediaKeySession_(level, keySession, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyIds(std::vector<std::vector<uint8_t>>& mediaKeyIds)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyIds_(mediaKeyIds, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyStatus(const std::vector<uint8_t>& mediaKeyId,
+     OHOS::HDI::Drm::V1_0::OfflineMediaKeyStatus& mediaKeyStatus)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyStatus_(mediaKeyId, mediaKeyStatus, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ClearOfflineMediaKeys(const std::vector<uint8_t>& mediaKeyId)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ClearOfflineMediaKeys_(mediaKeyId, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificate(sptr<OHOS::HDI::Drm::V1_0::IOemCertificate>& oemCert)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificate_(oemCert, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::Destroy()
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::Destroy_(Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationString_(const std::string& name, std::string& value,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_CONFIGURATION_STRING, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    const char* valueCp = mediaKeySystemReply.ReadCString();
+    if (valueCp == nullptr) {
+        HDF_LOGE("%{public}s: read value failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    value = valueCp;
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationString_(const std::string& name,
+     const std::string& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteCString(value.c_str())) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_SET_CONFIGURATION_STRING, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetConfigurationByteArray_(const std::string& name,
+     std::vector<uint8_t>& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_CONFIGURATION_BYTE_ARRAY, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!ReadPodArray(mediaKeySystemReply, value)) {
+        HDF_LOGE("%{public}s: failed to read value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetConfigurationByteArray_(const std::string& name,
+     const std::vector<uint8_t>& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteCString(name.c_str())) {
+        HDF_LOGE("%{public}s: write name failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySystemData, value)) {
+        HDF_LOGE("%{public}s: failed to write value", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_SET_CONFIGURATION_BYTE_ARRAY, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetStatistics_(std::map<std::string, std::string>& statistics,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_STATISTICS, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    uint32_t statisticsSize = 0;
+    if (!mediaKeySystemReply.ReadUint32(statisticsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    for (uint32_t i = 0; i < statisticsSize; ++i) {
+        const char* key0Cp = mediaKeySystemReply.ReadCString();
+        if (key0Cp == nullptr) {
+            HDF_LOGE("%{public}s: read key0 failed", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        std::string key0 = key0Cp;
+        const char* value0Cp = mediaKeySystemReply.ReadCString();
+        if (value0Cp == nullptr) {
+            HDF_LOGE("%{public}s: read value0 failed", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        std::string value0 = value0Cp;
+        statistics[key0] = value0;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetMaxContentProtectionLevel_(OHOS::HDI::Drm::V1_0::ContentProtectionLevel& level, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_MAX_CONTENT_PROTECTION_LEVEL, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!mediaKeySystemReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write level failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        level = static_cast<enum ContentProtectionLevel>(enumTmp);
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GenerateKeySystemRequest_(std::string& defaultUrl,
+     std::vector<uint8_t>& request, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GENERATE_KEY_SYSTEM_REQUEST, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    const char* defaultUrlCp = mediaKeySystemReply.ReadCString();
+    if (defaultUrlCp == nullptr) {
+        HDF_LOGE("%{public}s: read defaultUrl failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    defaultUrl = defaultUrlCp;
+
+    if (!ReadPodArray(mediaKeySystemReply, request)) {
+        HDF_LOGE("%{public}s: failed to read request", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ProcessKeySystemResponse_(const std::vector<uint8_t>& response,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySystemData, response)) {
+        HDF_LOGE("%{public}s: failed to write response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_PROCESS_KEY_SYSTEM_RESPONSE, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificateStatus_(OHOS::HDI::Drm::V1_0::CertificateStatus& status, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_OEM_CERTIFICATE_STATUS, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!mediaKeySystemReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum CertificateStatus>(enumTmp);
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::SetCallback_(const sptr<OHOS::HDI::Drm::V1_0::IMediaKeySystemCallback>& systemCallback, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (systemCallback == nullptr) {
+        HDF_LOGE("%{public}s: parameter systemCallback is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(systemCallback, OHOS::HDI::Drm::V1_0::IMediaKeySystemCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write systemCallback failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_SET_CALLBACK, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::CreateMediaKeySession_(OHOS::HDI::Drm::V1_0::ContentProtectionLevel level, sptr<OHOS::HDI::Drm::V1_0::IMediaKeySession>& keySession, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteUint64(static_cast<uint64_t>(level))) {
+        HDF_LOGE("%{public}s: write level failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_CREATE_MEDIA_KEY_SESSION, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    sptr<IRemoteObject> keySessionRemote = mediaKeySystemReply.ReadRemoteObject();
+    if (keySessionRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    keySession = new OHOS::HDI::Drm::V1_0::MediaKeySessionProxy(keySessionRemote);
+    if (keySession == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyIds_(std::vector<std::vector<uint8_t>>& mediaKeyIds, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_OFFLINE_MEDIA_KEY_IDS, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    uint32_t mediaKeyIdsSize = 0;
+    if (!mediaKeySystemReply.ReadUint32(mediaKeyIdsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(mediaKeyIdsSize, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<uint8_t>), HDF_ERR_INVALID_PARAM);
+    mediaKeyIds.clear();
+    mediaKeyIds.reserve(mediaKeyIdsSize);
+    for (uint32_t i0 = 0; i0 < mediaKeyIdsSize; ++i0) {
+        std::vector<uint8_t> value0;
+        if (!ReadPodArray(mediaKeySystemReply, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        mediaKeyIds.push_back(value0);
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOfflineMediaKeyStatus_(const std::vector<uint8_t>& mediaKeyId,
+     OHOS::HDI::Drm::V1_0::OfflineMediaKeyStatus& mediaKeyStatus, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySystemData, mediaKeyId)) {
+        HDF_LOGE("%{public}s: failed to write mediaKeyId", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_OFFLINE_MEDIA_KEY_STATUS, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!mediaKeySystemReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write mediaKeyStatus failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        mediaKeyStatus = static_cast<enum OfflineMediaKeyStatus>(enumTmp);
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::ClearOfflineMediaKeys_(const std::vector<uint8_t>& mediaKeyId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(mediaKeySystemData, mediaKeyId)) {
+        HDF_LOGE("%{public}s: failed to write mediaKeyId", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_CLEAR_OFFLINE_MEDIA_KEYS, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetOemCertificate_(sptr<OHOS::HDI::Drm::V1_0::IOemCertificate>& oemCert, const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_OEM_CERTIFICATE, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    sptr<IRemoteObject> oemCertRemote = mediaKeySystemReply.ReadRemoteObject();
+    if (oemCertRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    oemCert = new OHOS::HDI::Drm::V1_0::OemCertificateProxy(oemCertRemote);
+    if (oemCert == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::Destroy_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_DESTROY, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    return mediaKeySystemRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaKeySystemProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel mediaKeySystemData;
+    MessageParcel mediaKeySystemReply;
+    MessageOption mediaKeySystemOption(MessageOption::TF_SYNC);
+
+    if (!mediaKeySystemData.WriteInterfaceToken(OHOS::HDI::Drm::V1_0::IMediaKeySystem::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t mediaKeySystemRet = remote->SendRequest(CMD_MEDIA_KEY_SYSTEM_GET_VERSION, mediaKeySystemData, mediaKeySystemReply, mediaKeySystemOption);
+    if (mediaKeySystemRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaKeySystemRet);
+        return mediaKeySystemRet;
+    }
+
+    if (!mediaKeySystemReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaKeySystemReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaKeySystemRet;
+}
+
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

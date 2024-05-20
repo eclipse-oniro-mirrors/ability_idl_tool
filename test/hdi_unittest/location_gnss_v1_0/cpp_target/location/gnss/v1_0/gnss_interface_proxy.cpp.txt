@@ -1,0 +1,514 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/gnss_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    gnss_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Gnss {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssInterface> OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::Get(bool isStub)
+{
+    return IGnssInterface::Get("gnss_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssInterface> OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "gnss_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Location::Gnss::V1_0::IGnssInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy> proxy = new OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t gnssInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssConfigPara(const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara& para)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssConfigPara_(para, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::EnableGnss(const sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback>& callbackObj)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::EnableGnss_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DisableGnss()
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DisableGnss_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StartGnss(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StartGnss_(type, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StopGnss(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StopGnss_(type, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssReferenceInfo(const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo& refInfo)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssReferenceInfo_(refInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DeleteAuxiliaryData(OHOS::HDI::Location::Gnss::V1_0::GnssAuxiliaryData data)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DeleteAuxiliaryData_(data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetPredictGnssData(const std::string& data)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetPredictGnssData_(data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocationsSize(int32_t& size)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocationsSize_(size, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocations()
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocations_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssConfigPara_(const OHOS::HDI::Location::Gnss::V1_0::GnssConfigPara& para, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Location::Gnss::V1_0::GnssConfigParaBlockMarshalling(gnssInterfaceData, para)) {
+        HDF_LOGE("%{public}s: write para failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_SET_GNSS_CONFIG_PARA, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::EnableGnss_(const sptr<OHOS::HDI::Location::Gnss::V1_0::IGnssCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Location::Gnss::V1_0::IGnssCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_ENABLE_GNSS, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DisableGnss_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_DISABLE_GNSS, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StartGnss_(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceData.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_START_GNSS, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::StopGnss_(OHOS::HDI::Location::Gnss::V1_0::GnssStartType type, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceData.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_STOP_GNSS, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetGnssReferenceInfo_(const OHOS::HDI::Location::Gnss::V1_0::GnssRefInfo& refInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Location::Gnss::V1_0::GnssRefInfoBlockMarshalling(gnssInterfaceData, refInfo)) {
+        HDF_LOGE("%{public}s: write refInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_SET_GNSS_REFERENCE_INFO, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::DeleteAuxiliaryData_(OHOS::HDI::Location::Gnss::V1_0::GnssAuxiliaryData data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceData.WriteUint64(static_cast<uint64_t>(data))) {
+        HDF_LOGE("%{public}s: write data failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_DELETE_AUXILIARY_DATA, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::SetPredictGnssData_(const std::string& data,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceData.WriteCString(data.c_str())) {
+        HDF_LOGE("%{public}s: write data failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_SET_PREDICT_GNSS_DATA, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocationsSize_(int32_t& size,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_GET_CACHED_GNSS_LOCATIONS_SIZE, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    if (!gnssInterfaceReply.ReadInt32(size)) {
+        HDF_LOGE("%{public}s: read size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetCachedGnssLocations_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_GET_CACHED_GNSS_LOCATIONS, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    return gnssInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Gnss::V1_0::GnssInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel gnssInterfaceData;
+    MessageParcel gnssInterfaceReply;
+    MessageOption gnssInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!gnssInterfaceData.WriteInterfaceToken(OHOS::HDI::Location::Gnss::V1_0::IGnssInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t gnssInterfaceRet = remote->SendRequest(CMD_GNSS_INTERFACE_GET_VERSION, gnssInterfaceData, gnssInterfaceReply, gnssInterfaceOption);
+    if (gnssInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, gnssInterfaceRet);
+        return gnssInterfaceRet;
+    }
+
+    if (!gnssInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!gnssInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return gnssInterfaceRet;
+}
+
+} // V1_0
+} // Gnss
+} // Location
+} // HDI
+} // OHOS

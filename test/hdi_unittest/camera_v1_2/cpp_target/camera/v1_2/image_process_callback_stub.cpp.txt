@@ -1,0 +1,217 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/image_process_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    image_process_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+
+
+
+OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStub(const sptr<OHOS::HDI::Camera::V1_2::IImageProcessCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::~ImageProcessCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_IMAGE_PROCESS_CALLBACK_GET_VERSION:
+            return ImageProcessCallbackStubGetVersion(data, reply, option);
+        case CMD_IMAGE_PROCESS_CALLBACK_ON_PROCESS_DONE:
+            return ImageProcessCallbackStubOnProcessDone(data, reply, option);
+        case CMD_IMAGE_PROCESS_CALLBACK_ON_STATUS_CHANGED:
+            return ImageProcessCallbackStubOnStatusChanged(data, reply, option);
+        case CMD_IMAGE_PROCESS_CALLBACK_ON_ERROR:
+            return ImageProcessCallbackStubOnError(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnProcessDone(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnProcessDone_(imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnStatusChanged(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnStatusChanged_(imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnError(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnError_(imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubGetVersion(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption)
+{
+    return OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubGetVersion_(imageProcessCallbackData, imageProcessCallbackReply, imageProcessCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnProcessDone_(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption, sptr<OHOS::HDI::Camera::V1_2::IImageProcessCallback> impl)
+{
+    if (imageProcessCallbackData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* imageIdCp = imageProcessCallbackData.ReadCString();
+    if (imageIdCp == nullptr) {
+        HDF_LOGE("%{public}s: read imageId failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string imageId = imageIdCp;
+
+    OHOS::HDI::Camera::V1_2::ImageBufferInfo buffer;
+    if (!ImageBufferInfoBlockUnmarshalling(imageProcessCallbackData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t imageProcessCallbackRet = impl->OnProcessDone(imageId, buffer);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnStatusChanged_(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption, sptr<OHOS::HDI::Camera::V1_2::IImageProcessCallback> impl)
+{
+    if (imageProcessCallbackData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Camera::V1_2::SessionStatus status = static_cast<enum SessionStatus>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!imageProcessCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum SessionStatus>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t imageProcessCallbackRet = impl->OnStatusChanged(status);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubOnError_(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption, sptr<OHOS::HDI::Camera::V1_2::IImageProcessCallback> impl)
+{
+    if (imageProcessCallbackData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* imageIdCp = imageProcessCallbackData.ReadCString();
+    if (imageIdCp == nullptr) {
+        HDF_LOGE("%{public}s: read imageId failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string imageId = imageIdCp;
+
+    OHOS::HDI::Camera::V1_2::ErrorCode errorCode = static_cast<enum ErrorCode>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!imageProcessCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write errorCode failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        errorCode = static_cast<enum ErrorCode>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t imageProcessCallbackRet = impl->OnError(imageId, errorCode);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    return imageProcessCallbackRet;
+}
+
+int32_t OHOS::HDI::Camera::V1_2::ImageProcessCallbackStub::ImageProcessCallbackStubGetVersion_(MessageParcel& imageProcessCallbackData, MessageParcel& imageProcessCallbackReply, MessageOption& imageProcessCallbackOption, sptr<OHOS::HDI::Camera::V1_2::IImageProcessCallback> impl)
+{
+    if (imageProcessCallbackData.ReadInterfaceToken() != OHOS::HDI::Camera::V1_2::IImageProcessCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t imageProcessCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (imageProcessCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, imageProcessCallbackRet);
+        return imageProcessCallbackRet;
+    }
+
+    if (!imageProcessCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!imageProcessCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return imageProcessCallbackRet;
+}
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS

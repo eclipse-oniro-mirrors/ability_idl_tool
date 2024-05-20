@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_DISTRIBUTED_AUDIO_AUDIOEXT_V1_0_TYPES_H
+#define OHOS_HDI_DISTRIBUTED_AUDIO_AUDIOEXT_V1_0_TYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audioext {
+namespace V1_0 {
+
+using namespace OHOS;
+
+enum PortOperationMode : int32_t {
+    NORMAL_MODE = 0,
+    MMAP_MODE = 1,
+};
+
+struct AudioParameter {
+    uint32_t format;
+    uint32_t channelCount;
+    uint32_t sampleRate;
+    uint32_t period;
+    uint32_t frameSize;
+    uint32_t streamUsage;
+    OHOS::HDI::DistributedAudio::Audioext::V1_0::PortOperationMode renderFlags;
+    OHOS::HDI::DistributedAudio::Audioext::V1_0::PortOperationMode capturerFlags;
+    std::string ext;
+};
+
+struct AudioData {
+    OHOS::HDI::DistributedAudio::Audioext::V1_0::AudioParameter param;
+    std::vector<int8_t> data;
+};
+
+struct DAudioEvent {
+    int32_t type;
+    std::string content;
+};
+
+struct CurrentTime {
+    int64_t tvSec;
+    int64_t tvNSec;
+} __attribute__ ((aligned(8)));
+
+bool AudioParameterBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedAudio::Audioext::V1_0::AudioParameter& dataBlock);
+
+bool AudioParameterBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedAudio::Audioext::V1_0::AudioParameter& dataBlock);
+
+bool AudioDataBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedAudio::Audioext::V1_0::AudioData& dataBlock);
+
+bool AudioDataBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedAudio::Audioext::V1_0::AudioData& dataBlock);
+
+bool DAudioEventBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedAudio::Audioext::V1_0::DAudioEvent& dataBlock);
+
+bool DAudioEventBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedAudio::Audioext::V1_0::DAudioEvent& dataBlock);
+
+bool CurrentTimeBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::DistributedAudio::Audioext::V1_0::CurrentTime& dataBlock);
+
+bool CurrentTimeBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::DistributedAudio::Audioext::V1_0::CurrentTime& dataBlock);
+
+} // V1_0
+} // Audioext
+} // DistributedAudio
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_DISTRIBUTED_AUDIO_AUDIOEXT_V1_0_TYPES_H
+

@@ -1,0 +1,136 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/power_hdi_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    power_hdi_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Power {
+namespace V1_0 {
+
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnSuspend()
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnSuspend_(Remote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnWakeup()
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnWakeup_(Remote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnSuspend_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerHdiCallbackData;
+    MessageParcel powerHdiCallbackReply;
+    MessageOption powerHdiCallbackOption(MessageOption::TF_SYNC);
+
+    if (!powerHdiCallbackData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerHdiCallbackRet = remote->SendRequest(CMD_POWER_HDI_CALLBACK_ON_SUSPEND, powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption);
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    return powerHdiCallbackRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::OnWakeup_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerHdiCallbackData;
+    MessageParcel powerHdiCallbackReply;
+    MessageOption powerHdiCallbackOption(MessageOption::TF_SYNC);
+
+    if (!powerHdiCallbackData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerHdiCallbackRet = remote->SendRequest(CMD_POWER_HDI_CALLBACK_ON_WAKEUP, powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption);
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    return powerHdiCallbackRet;
+}
+
+int32_t OHOS::HDI::Power::V1_0::PowerHdiCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel powerHdiCallbackData;
+    MessageParcel powerHdiCallbackReply;
+    MessageOption powerHdiCallbackOption(MessageOption::TF_SYNC);
+
+    if (!powerHdiCallbackData.WriteInterfaceToken(OHOS::HDI::Power::V1_0::IPowerHdiCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t powerHdiCallbackRet = remote->SendRequest(CMD_POWER_HDI_CALLBACK_GET_VERSION, powerHdiCallbackData, powerHdiCallbackReply, powerHdiCallbackOption);
+    if (powerHdiCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, powerHdiCallbackRet);
+        return powerHdiCallbackRet;
+    }
+
+    if (!powerHdiCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!powerHdiCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return powerHdiCallbackRet;
+}
+
+} // V1_0
+} // Power
+} // HDI
+} // OHOS

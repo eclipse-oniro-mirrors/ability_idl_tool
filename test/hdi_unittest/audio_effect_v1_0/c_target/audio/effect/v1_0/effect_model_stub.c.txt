@@ -1,0 +1,479 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/effect_model_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    effect_model_stub
+
+struct IEffectModel *IEffectModelGet(bool isStub)
+{
+    return IEffectModelGetInstance("effect_model_service", isStub);
+}
+
+struct IEffectModel *IEffectModelGetInstance(const char *serviceName, bool isStub)
+{
+    if (!isStub) {
+        return NULL;
+    }
+
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "effect_model_service") == 0) {
+        instName = "service";
+    }
+    return (struct IEffectModel *)LoadHdiImpl(IEFFECTMODEL_INTERFACE_DESC, instName);
+}
+
+void IEffectModelRelease(struct IEffectModel *instance, bool isStub)
+{
+    IEffectModelReleaseInstance("effect_model_service", instance, isStub);
+}
+
+void IEffectModelReleaseInstance(const char *serviceName, struct IEffectModel *instance, bool isStub)
+{
+    if (serviceName == NULL || !isStub || instance == NULL) {
+        return;
+    }
+    const char *instName = serviceName;
+    if (strcmp(serviceName, "effect_model_service") == 0) {
+        instName = "service";
+    }
+    UnloadHdiImpl(IEFFECTMODEL_INTERFACE_DESC, instName, instance);
+}
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface);
+
+
+static bool WriteInterface(struct HdfSBuf *parcel, const char *desc, void *interface)
+{
+    if (interface == NULL) {
+        HDF_LOGE("%{public}s: invalid interface object", __func__);
+        return false;
+    }
+
+    struct HdfRemoteService **stub = StubCollectorGetOrNewObject(desc, interface);
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to get stub of '%{public}s'", __func__, desc);
+        return false;
+    }
+
+    if (HdfSbufWriteRemoteService(parcel, *stub) != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s: failed to write remote service", __func__);
+        return false;
+    }
+
+    return true;
+}
+static int32_t SerStubIsSupplyEffectLibs(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_FAILURE;
+    bool supply = false;
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectModelRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->IsSupplyEffectLibs == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function IsSupplyEffectLibs ", __func__);
+        effectModelRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectModelRet = serviceImpl->IsSupplyEffectLibs(serviceImpl, &supply);
+    if (effectModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectModelRet);
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteInt8(effectModelReply, supply ? 1 : 0)) {
+        HDF_LOGE("%{public}s: write supply failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return effectModelRet;
+}
+
+static int32_t SerStubGetAllEffectDescriptors(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_FAILURE;
+    bool effectModelMemSet = false;
+    struct EffectControllerDescriptor* descs = NULL;
+    uint32_t descsLen = 0;
+
+    if (!HdfSbufReadUint8(effectModelData, (uint8_t *)&effectModelMemSet)) {
+        HDF_LOGE("%{public}s: read flag of memory setting failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (effectModelMemSet) {
+        if (!HdfSbufReadUint32(effectModelData, &descsLen)) {
+            HDF_LOGE("%{public}s: read descs size failed!", __func__);
+            effectModelRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+
+        HDI_CHECK_VALUE_RET_GOTO(descsLen, >, HDI_BUFF_MAX_SIZE / sizeof(struct EffectControllerDescriptor), effectModelRet, HDF_ERR_INVALID_PARAM, FINISHED);
+        if (descsLen > 0) {
+            descs = (struct EffectControllerDescriptor*)OsalMemCalloc(sizeof(struct EffectControllerDescriptor) * (descsLen));
+            if (descs == NULL) {
+                HDF_LOGE("%{public}s: malloc descs failed", __func__);
+                effectModelRet = HDF_ERR_MALLOC_FAIL;
+                goto FINISHED;
+            }
+        }
+    } else {
+        descs = (struct EffectControllerDescriptor*)OsalMemCalloc(HDI_BUFF_MAX_SIZE);
+        if (descs == NULL) {
+            HDF_LOGE("%{public}s: malloc descs failed", __func__);
+            effectModelRet = HDF_ERR_MALLOC_FAIL;
+            goto FINISHED;
+        }
+        descsLen = (HDI_BUFF_MAX_SIZE / sizeof(struct EffectControllerDescriptor));
+    }
+
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectModelRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetAllEffectDescriptors == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetAllEffectDescriptors ", __func__);
+        effectModelRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectModelRet = serviceImpl->GetAllEffectDescriptors(serviceImpl, descs, &descsLen);
+    if (effectModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectModelRet);
+        goto FINISHED;
+    }
+
+    if ((descs == NULL && descsLen != 0) || (descs != NULL && descsLen == 0)) {
+        HDF_LOGE("%{public}s: descs is invalid", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(effectModelReply, descsLen)) {
+        HDF_LOGE("%{public}s: write descs failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    for (uint32_t i = 0; i < descsLen; i++) {
+        if (!EffectControllerDescriptorBlockMarshalling(effectModelReply, &descs[i])) {
+            HDF_LOGE("%{public}s: write &descs[i] failed!", __func__);
+            effectModelRet = HDF_ERR_INVALID_PARAM;
+            goto FINISHED;
+        }
+    }
+
+FINISHED:
+    if (descs != NULL) {
+        for (uint32_t i = 0; i < descsLen; i++) {
+            EffectControllerDescriptorFree(&descs[i], false);
+        }
+        OsalMemFree(descs);
+    }
+    return effectModelRet;
+}
+
+static int32_t SerStubCreateEffectController(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_FAILURE;
+    struct EffectInfo* info = NULL;
+    struct IEffectControl* contoller = NULL;
+    struct ControllerId* id = NULL;
+
+    info = (struct EffectInfo*)OsalMemCalloc(sizeof(struct EffectInfo));
+    if (info == NULL) {
+        HDF_LOGE("%{public}s: malloc info failed", __func__);
+        effectModelRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!EffectInfoBlockUnmarshalling(effectModelData, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    id = (struct ControllerId*)OsalMemCalloc(sizeof(struct ControllerId));
+    if (id == NULL) {
+        HDF_LOGE("%{public}s: malloc id failed", __func__);
+        effectModelRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectModelRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->CreateEffectController == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function CreateEffectController ", __func__);
+        effectModelRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectModelRet = serviceImpl->CreateEffectController(serviceImpl, info, &contoller, id);
+    if (effectModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectModelRet);
+        goto FINISHED;
+    }
+
+    if (!WriteInterface(effectModelReply, IEFFECTCONTROL_INTERFACE_DESC, contoller)) {
+        HDF_LOGE("%{public}s: write contoller failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!ControllerIdBlockMarshalling(effectModelReply, id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (info != NULL) {
+        EffectInfoFree(info, true);
+        info = NULL;
+    }
+    if (id != NULL) {
+        ControllerIdFree(id, true);
+        id = NULL;
+    }
+    return effectModelRet;
+}
+
+static int32_t SerStubDestroyEffectController(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_FAILURE;
+    struct ControllerId* id = NULL;
+
+    id = (struct ControllerId*)OsalMemCalloc(sizeof(struct ControllerId));
+    if (id == NULL) {
+        HDF_LOGE("%{public}s: malloc id failed", __func__);
+        effectModelRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!ControllerIdBlockUnmarshalling(effectModelData, id)) {
+        HDF_LOGE("%{public}s: read id failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectModelRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->DestroyEffectController == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function DestroyEffectController ", __func__);
+        effectModelRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectModelRet = serviceImpl->DestroyEffectController(serviceImpl, id);
+    if (effectModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectModelRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (id != NULL) {
+        ControllerIdFree(id, true);
+        id = NULL;
+    }
+    return effectModelRet;
+}
+
+static int32_t SerStubGetEffectDescriptor(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_FAILURE;
+    char* effectId = NULL;
+    struct EffectControllerDescriptor* desc = NULL;
+
+    const char *effectIdCp = HdfSbufReadString(effectModelData);
+    if (effectIdCp == NULL) {
+        HDF_LOGE("%{public}s: read effectIdCp failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    effectId = strdup(effectIdCp);
+
+    desc = (struct EffectControllerDescriptor*)OsalMemCalloc(sizeof(struct EffectControllerDescriptor));
+    if (desc == NULL) {
+        HDF_LOGE("%{public}s: malloc desc failed", __func__);
+        effectModelRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        effectModelRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->GetEffectDescriptor == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function GetEffectDescriptor ", __func__);
+        effectModelRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    effectModelRet = serviceImpl->GetEffectDescriptor(serviceImpl, effectId, desc);
+    if (effectModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, effectModelRet);
+        goto FINISHED;
+    }
+
+    if (!EffectControllerDescriptorBlockMarshalling(effectModelReply, desc)) {
+        HDF_LOGE("%{public}s: write desc failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (effectId != NULL) {
+        OsalMemFree(effectId);
+        effectId = NULL;
+    }
+    if (desc != NULL) {
+        EffectControllerDescriptorFree(desc, true);
+        desc = NULL;
+    }
+    return effectModelRet;
+}
+
+static int32_t SerStubGetVersion(struct IEffectModel *serviceImpl, struct HdfSBuf *effectModelData, struct HdfSBuf *effectModelReply)
+{
+    int32_t effectModelRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(effectModelReply, IEFFECT_MODEL_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IEFFECT_MODEL_MAJOR_VERSION failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(effectModelReply, IEFFECT_MODEL_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IEFFECT_MODEL_MINOR_VERSION failed!", __func__);
+        effectModelRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return effectModelRet;
+}
+
+static struct HdfRemoteService *EffectModelStubAsObject(struct IEffectModel *self)
+{
+    return NULL;
+}
+
+static int32_t EffectModelOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct EffectModelStub *stub = (struct EffectModelStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_EFFECT_MODEL_IS_SUPPLY_EFFECT_LIBS:
+            return SerStubIsSupplyEffectLibs(stub->interface, data, reply);
+        case CMD_EFFECT_MODEL_GET_ALL_EFFECT_DESCRIPTORS:
+            return SerStubGetAllEffectDescriptors(stub->interface, data, reply);
+        case CMD_EFFECT_MODEL_CREATE_EFFECT_CONTROLLER:
+            return SerStubCreateEffectController(stub->interface, data, reply);
+        case CMD_EFFECT_MODEL_DESTROY_EFFECT_CONTROLLER:
+            return SerStubDestroyEffectController(stub->interface, data, reply);
+        case CMD_EFFECT_MODEL_GET_EFFECT_DESCRIPTOR:
+            return SerStubGetEffectDescriptor(stub->interface, data, reply);
+        case CMD_EFFECT_MODEL_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteDispatcher g_effectmodelDispatcher = {
+    .Dispatch = EffectModelOnRemoteRequest,
+    .DispatchAsync = NULL,
+};
+
+static struct HdfRemoteService **EffectModelStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IEffectModel *serviceImpl = (struct IEffectModel *)impl;
+    struct EffectModelStub *stub = OsalMemCalloc(sizeof(struct EffectModelStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &g_effectmodelDispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IEFFECTMODEL_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = EffectModelOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = EffectModelStubAsObject;
+    return &stub->remote;
+}
+
+static void EffectModelStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct EffectModelStub *stub = CONTAINER_OF(remote, struct EffectModelStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_effectmodelConstructor = {
+    .constructor = EffectModelStubNewInstance,
+    .destructor = EffectModelStubRelease,
+};
+
+__attribute__((constructor)) static void EffectModelStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IEFFECTMODEL_INTERFACE_DESC);
+    StubConstructorRegister(IEFFECTMODEL_INTERFACE_DESC, &g_effectmodelConstructor);
+}

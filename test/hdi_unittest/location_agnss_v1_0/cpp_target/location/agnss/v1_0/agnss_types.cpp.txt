@@ -1,0 +1,256 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/agnss_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Agnss {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssRefCellIdBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId))) {
+        return false;
+    }
+    return true;
+}
+
+bool AGnssRefCellIdBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId& dataBlock)
+{
+    const OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId), dataBlockPtr, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellId)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AGnssServerInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::AGnssServerInfo& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.server.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.server failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.port)) {
+        HDF_LOGE("%{public}s: write dataBlock.port failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssServerInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::AGnssServerInfo& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum AGnssUserPlaneProtocol>(enumTmp);
+    }
+
+    const char* serverCp = data.ReadCString();
+    if (serverCp == nullptr) {
+        HDF_LOGE("%{public}s: read serverCp failed", __func__);
+        return false;
+    }
+    dataBlock.server = serverCp;
+
+    if (!data.ReadInt32(dataBlock.port)) {
+        HDF_LOGE("%{public}s: read dataBlock.port failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SubscriberSetIdBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::SubscriberSetId& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.id.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.id failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool SubscriberSetIdBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::SubscriberSetId& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum SubscriberSetIdType>(enumTmp);
+    }
+
+    const char* idCp = data.ReadCString();
+    if (idCp == nullptr) {
+        HDF_LOGE("%{public}s: read idCp failed", __func__);
+        return false;
+    }
+    dataBlock.id = idCp;
+    return true;
+}
+
+bool AGnssRefMacBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefMac& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.mac)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.mac", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssRefMacBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefMac& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.mac)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.mac", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssRefInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfo& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!AGnssRefCellIdBlockMarshalling(data, dataBlock.cellId)) {
+        HDF_LOGE("%{public}s: write dataBlock.cellId failed!", __func__);
+        return false;
+    }
+
+    if (!AGnssRefMacBlockMarshalling(data, dataBlock.mac)) {
+        HDF_LOGE("%{public}s: write dataBlock.mac failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssRefInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::AGnssRefInfo& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum AGnssRefInfoType>(enumTmp);
+    }
+
+    if (!OHOS::HDI::Location::Agnss::V1_0::AGnssRefCellIdBlockUnmarshalling(data, dataBlock.cellId)) {
+        HDF_LOGE("%{public}s: read dataBlock.cellId failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::Location::Agnss::V1_0::AGnssRefMacBlockUnmarshalling(data, dataBlock.mac)) {
+        HDF_LOGE("%{public}s: read dataBlock.mac failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AGnssDataLinkRequestBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest))) {
+        return false;
+    }
+    return true;
+}
+
+bool AGnssDataLinkRequestBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest& dataBlock)
+{
+    const OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest *dataBlockPtr = reinterpret_cast<const OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest), dataBlockPtr, sizeof(OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Agnss
+} // Location
+} // HDI
+} // OHOS

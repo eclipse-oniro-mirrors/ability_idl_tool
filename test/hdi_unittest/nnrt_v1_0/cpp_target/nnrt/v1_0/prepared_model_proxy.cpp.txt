@@ -1,0 +1,248 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/prepared_model_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    prepared_model_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Nnrt {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::ExportModelCache(std::vector<OHOS::HDI::Nnrt::V1_0::SharedBuffer>& modelCache)
+{
+    return OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::ExportModelCache_(modelCache, Remote());
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::Run(const std::vector<OHOS::HDI::Nnrt::V1_0::IOTensor>& inputs,
+     const std::vector<OHOS::HDI::Nnrt::V1_0::IOTensor>& outputs, std::vector<std::vector<int32_t>>& outputsDims, std::vector<bool>& isOutputBufferEnough)
+{
+    return OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::Run_(inputs, outputs, outputsDims, isOutputBufferEnough, Remote());
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::ExportModelCache_(std::vector<OHOS::HDI::Nnrt::V1_0::SharedBuffer>& modelCache, const sptr<IRemoteObject> remote)
+{
+    MessageParcel preparedModelData;
+    MessageParcel preparedModelReply;
+    MessageOption preparedModelOption(MessageOption::TF_SYNC);
+
+    if (!preparedModelData.WriteInterfaceToken(OHOS::HDI::Nnrt::V1_0::IPreparedModel::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!preparedModelData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t preparedModelRet = remote->SendRequest(CMD_PREPARED_MODEL_EXPORT_MODEL_CACHE, preparedModelData, preparedModelReply, preparedModelOption);
+    if (preparedModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, preparedModelRet);
+        return preparedModelRet;
+    }
+
+    uint32_t modelCacheSize = 0;
+    if (!preparedModelReply.ReadUint32(modelCacheSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(modelCacheSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Nnrt::V1_0::SharedBuffer), HDF_ERR_INVALID_PARAM);
+    modelCache.clear();
+    modelCache.reserve(modelCacheSize);
+    for (uint32_t i0 = 0; i0 < modelCacheSize; ++i0) {
+        OHOS::HDI::Nnrt::V1_0::SharedBuffer value0;
+        if (!SharedBufferBlockUnmarshalling(preparedModelReply, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        modelCache.push_back(value0);
+    }
+
+    return preparedModelRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::Run_(const std::vector<OHOS::HDI::Nnrt::V1_0::IOTensor>& inputs,
+     const std::vector<OHOS::HDI::Nnrt::V1_0::IOTensor>& outputs, std::vector<std::vector<int32_t>>& outputsDims, std::vector<bool>& isOutputBufferEnough, const sptr<IRemoteObject> remote)
+{
+    MessageParcel preparedModelData;
+    MessageParcel preparedModelReply;
+    MessageOption preparedModelOption(MessageOption::TF_SYNC);
+
+    if (!preparedModelData.WriteInterfaceToken(OHOS::HDI::Nnrt::V1_0::IPreparedModel::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!preparedModelData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!preparedModelData.WriteUint32(inputs.size())) {
+        HDF_LOGE("%{public}s: write inputs size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : inputs) {
+        if (!OHOS::HDI::Nnrt::V1_0::IOTensorBlockMarshalling(preparedModelData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (!preparedModelData.WriteUint32(outputs.size())) {
+        HDF_LOGE("%{public}s: write outputs size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : outputs) {
+        if (!OHOS::HDI::Nnrt::V1_0::IOTensorBlockMarshalling(preparedModelData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t preparedModelRet = remote->SendRequest(CMD_PREPARED_MODEL_RUN, preparedModelData, preparedModelReply, preparedModelOption);
+    if (preparedModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, preparedModelRet);
+        return preparedModelRet;
+    }
+
+    uint32_t outputsDimsSize = 0;
+    if (!preparedModelReply.ReadUint32(outputsDimsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(outputsDimsSize, >, HDI_BUFF_MAX_SIZE / sizeof(std::vector<int32_t>), HDF_ERR_INVALID_PARAM);
+    outputsDims.clear();
+    outputsDims.reserve(outputsDimsSize);
+    for (uint32_t i0 = 0; i0 < outputsDimsSize; ++i0) {
+        std::vector<int32_t> value0;
+        if (!ReadPodArray(preparedModelReply, value0)) {
+            HDF_LOGE("%{public}s: failed to read value0", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        outputsDims.push_back(value0);
+    }
+
+    uint32_t isOutputBufferEnoughSize = 0;
+    if (!preparedModelReply.ReadUint32(isOutputBufferEnoughSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(isOutputBufferEnoughSize, >, HDI_BUFF_MAX_SIZE / sizeof(bool), HDF_ERR_INVALID_PARAM);
+    isOutputBufferEnough.clear();
+    isOutputBufferEnough.reserve(isOutputBufferEnoughSize);
+    for (uint32_t i0 = 0; i0 < isOutputBufferEnoughSize; ++i0) {
+        bool value0 = false;
+        if (!preparedModelReply.ReadBool(value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        isOutputBufferEnough.push_back(value0);
+    }
+
+    return preparedModelRet;
+}
+
+int32_t OHOS::HDI::Nnrt::V1_0::PreparedModelProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel preparedModelData;
+    MessageParcel preparedModelReply;
+    MessageOption preparedModelOption(MessageOption::TF_SYNC);
+
+    if (!preparedModelData.WriteInterfaceToken(OHOS::HDI::Nnrt::V1_0::IPreparedModel::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t preparedModelRet = remote->SendRequest(CMD_PREPARED_MODEL_GET_VERSION, preparedModelData, preparedModelReply, preparedModelOption);
+    if (preparedModelRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, preparedModelRet);
+        return preparedModelRet;
+    }
+
+    if (!preparedModelReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!preparedModelReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return preparedModelRet;
+}
+
+} // V1_0
+} // Nnrt
+} // HDI
+} // OHOS

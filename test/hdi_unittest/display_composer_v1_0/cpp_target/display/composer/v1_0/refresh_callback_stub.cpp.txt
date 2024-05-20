@@ -1,0 +1,129 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/refresh_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    refresh_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStub(const sptr<OHOS::HDI::Display::Composer::V1_0::IRefreshCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Composer::V1_0::IRefreshCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::~RefreshCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_REFRESH_CALLBACK_GET_VERSION:
+            return RefreshCallbackStubGetVersion(data, reply, option);
+        case CMD_REFRESH_CALLBACK_ON_REFRESH:
+            return RefreshCallbackStubOnRefresh(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubOnRefresh(MessageParcel& refreshCallbackData, MessageParcel& refreshCallbackReply, MessageOption& refreshCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubOnRefresh_(refreshCallbackData, refreshCallbackReply, refreshCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubGetVersion(MessageParcel& refreshCallbackData, MessageParcel& refreshCallbackReply, MessageOption& refreshCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubGetVersion_(refreshCallbackData, refreshCallbackReply, refreshCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubOnRefresh_(MessageParcel& refreshCallbackData, MessageParcel& refreshCallbackReply, MessageOption& refreshCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_0::IRefreshCallback> impl)
+{
+    if (refreshCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_0::IRefreshCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!refreshCallbackData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t refreshCallbackRet = impl->OnRefresh(devId);
+    if (refreshCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, refreshCallbackRet);
+        return refreshCallbackRet;
+    }
+
+    return refreshCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::RefreshCallbackStub::RefreshCallbackStubGetVersion_(MessageParcel& refreshCallbackData, MessageParcel& refreshCallbackReply, MessageOption& refreshCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_0::IRefreshCallback> impl)
+{
+    if (refreshCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_0::IRefreshCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t refreshCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (refreshCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, refreshCallbackRet);
+        return refreshCallbackRet;
+    }
+
+    if (!refreshCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!refreshCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return refreshCallbackRet;
+}
+} // V1_0
+} // Composer
+} // Display
+} // HDI
+} // OHOS

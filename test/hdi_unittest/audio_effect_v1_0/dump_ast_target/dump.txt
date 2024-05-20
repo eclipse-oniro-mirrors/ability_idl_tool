@@ -1,0 +1,98 @@
+AST[name: IEffectModel file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/audio_effect_v1_0/foo/audio/effect/v1_0/IEffectModel.idl]
+package ohos.hdi.audio.effect.v1_0;
+
+import ohos.hdi.audio.effect.v1_0.IEffectControl;
+import ohos.hdi.audio.effect.v1_0.EffectTypes;
+
+[mini, lite, full] interface IEffectModel {
+    [mini, lite, full] IsSupplyEffectLibs(
+      [out] boolean supply);
+
+    [mini, lite, full] GetAllEffectDescriptors(
+      [out] ohos.hdi.audio.effect.v1_0.EffectControllerDescriptor[] descs);
+
+    [mini, lite, full] CreateEffectController(
+      [in] ohos.hdi.audio.effect.v1_0.EffectInfo info,
+      [out] ohos.hdi.audio.effect.v1_0.IEffectControl contoller,
+      [out] ohos.hdi.audio.effect.v1_0.ControllerId id);
+
+    [mini, lite, full] DestroyEffectController(
+      [in] ohos.hdi.audio.effect.v1_0.ControllerId id);
+
+    [mini, lite, full] GetEffectDescriptor(
+      [in] std::string effectId,
+      [out] ohos.hdi.audio.effect.v1_0.EffectControllerDescriptor desc);
+}
+
+
+AST[name: IEffectControl file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/audio_effect_v1_0/foo/audio/effect/v1_0/IEffectControl.idl]
+package ohos.hdi.audio.effect.v1_0;
+
+import ohos.hdi.audio.effect.v1_0.EffectTypes;
+
+[mini, lite, full] interface IEffectControl {
+    [mini, lite, full] EffectProcess(
+      [in] ohos.hdi.audio.effect.v1_0.AudioEffectBuffer input,
+      [out] ohos.hdi.audio.effect.v1_0.AudioEffectBuffer output);
+
+    [mini, lite, full] SendCommand(
+      [in] unsigned int cmdId,
+      [in] byte[] cmdData,
+      [out] byte[] replyData);
+
+    [mini, lite, full] GetEffectDescriptor(
+      [out] ohos.hdi.audio.effect.v1_0.EffectControllerDescriptor desc);
+
+    [mini, lite, full] EffectReverse(
+      [in] ohos.hdi.audio.effect.v1_0.AudioEffectBuffer input,
+      [out] ohos.hdi.audio.effect.v1_0.AudioEffectBuffer output);
+}
+
+
+AST[name: EffectTypes file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/audio_effect_v1_0/foo/audio/effect/v1_0/EffectTypes.idl]
+package ohos.hdi.audio.effect.v1_0;
+
+[mini, lite, full] struct EffectInfo {
+  std::string libName;
+  std::string effectId;
+  int ioDirection;
+};
+
+[mini, lite, full] struct ControllerId {
+  std::string libName;
+  std::string effectId;
+};
+
+[mini, lite, full] struct EffectControllerDescriptor {
+  std::string effectId;
+  std::string effectName;
+  std::string libName;
+  std::string supplier;
+};
+
+[mini, lite, full] enum AudioEffectBufferTag : int {
+  EFFECT_BUFFER_VOID_TYPE = 0,
+  EFFECT_BUFFER_FLOAT_SIGNED_32 = 1 << 0,
+  EFFECT_BUFFER_SINGED_32 = 1 << 1,
+  EFFECT_BUFFER_SIGNED_16 = 1 << 2,
+  EFFECT_BUFFER_UNSIGNED_8 = 1 << 3,
+};
+
+[mini, lite, full] struct AudioEffectBuffer {
+  unsigned int frameCount;
+  int datatag;
+  byte[] rawData;
+};
+
+[mini, lite, full] enum EffectCommandTableIndex : int {
+  AUDIO_EFFECT_COMMAND_INIT_CONTOLLER,
+  AUDIO_EFFECT_COMMAND_SET_CONFIG,
+  AUDIO_EFFECT_COMMAND_GET_CONFIG,
+  AUDIO_EFFECT_COMMAND_RESET,
+  AUDIO_EFFECT_COMMAND_ENABLE,
+  AUDIO_EFFECT_COMMAND_DISABLE,
+  AUDIO_EFFECT_COMMAND_SET_PARAM,
+  AUDIO_EFFECT_COMMAND_GET_PARAM,
+};
+
+

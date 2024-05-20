@@ -1,0 +1,193 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_WLAN_V1_1_IWLANINTERFACE_H
+#define OHOS_HDI_WLAN_V1_1_IWLANINTERFACE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <hdf_base.h>
+#include "wlan/v1_1/iwlan_callback.h"
+#include "wlan/v1_1/wlan_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfRemoteService;
+
+#define IWLANINTERFACE_INTERFACE_DESC "ohos.hdi.wlan.v1_1.IWlanInterface"
+
+#define IWLAN_INTERFACE_MAJOR_VERSION 1
+#define IWLAN_INTERFACE_MINOR_VERSION 1
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+enum {
+    CMD_WLAN_INTERFACE_GET_VERSION = 0,
+    CMD_WLAN_INTERFACE_START = 1,
+    CMD_WLAN_INTERFACE_STOP = 2,
+    CMD_WLAN_INTERFACE_CREATE_FEATURE = 3,
+    CMD_WLAN_INTERFACE_DESTROY_FEATURE = 4,
+    CMD_WLAN_INTERFACE_GET_ASSOCIATED_STAS = 5,
+    CMD_WLAN_INTERFACE_GET_CHIP_ID = 6,
+    CMD_WLAN_INTERFACE_GET_DEVICE_MAC_ADDRESS = 7,
+    CMD_WLAN_INTERFACE_GET_FEATURE_BY_IF_NAME = 8,
+    CMD_WLAN_INTERFACE_GET_FEATURE_TYPE = 9,
+    CMD_WLAN_INTERFACE_GET_FREQS_WITH_BAND = 10,
+    CMD_WLAN_INTERFACE_GET_IF_NAMES_BY_CHIP_ID = 11,
+    CMD_WLAN_INTERFACE_GET_NETWORK_IFACE_NAME = 12,
+    CMD_WLAN_INTERFACE_GET_SUPPORT_COMBO = 13,
+    CMD_WLAN_INTERFACE_GET_SUPPORT_FEATURE = 14,
+    CMD_WLAN_INTERFACE_REGISTER_EVENT_CALLBACK = 15,
+    CMD_WLAN_INTERFACE_UNREGISTER_EVENT_CALLBACK = 16,
+    CMD_WLAN_INTERFACE_RESET_DRIVER = 17,
+    CMD_WLAN_INTERFACE_SET_COUNTRY_CODE = 18,
+    CMD_WLAN_INTERFACE_SET_MAC_ADDRESS = 19,
+    CMD_WLAN_INTERFACE_SET_SCANNING_MAC_ADDRESS = 20,
+    CMD_WLAN_INTERFACE_SET_TX_POWER = 21,
+    CMD_WLAN_INTERFACE_GET_NET_DEV_INFO = 22,
+    CMD_WLAN_INTERFACE_START_SCAN = 23,
+    CMD_WLAN_INTERFACE_GET_POWER_MODE = 24,
+    CMD_WLAN_INTERFACE_SET_POWER_MODE = 25,
+    CMD_WLAN_INTERFACE_START_CHANNEL_MEAS = 26,
+    CMD_WLAN_INTERFACE_GET_CHANNEL_MEAS_RESULT = 27,
+    CMD_WLAN_INTERFACE_SET_PROJECTION_SCREEN_PARAM = 28,
+    CMD_WLAN_INTERFACE_WIFI_SEND_CMD_IOCTL = 29,
+    CMD_WLAN_INTERFACE_GET_STA_INFO = 30,
+    CMD_WLAN_INTERFACE_START_PNO_SCAN = 31,
+    CMD_WLAN_INTERFACE_STOP_PNO_SCAN = 32,
+    CMD_WLAN_INTERFACE_GET_SIGNAL_POLL_INFO = 33,
+};
+
+struct IWlanInterface {
+    int32_t (*Start)(struct IWlanInterface *self);
+
+    int32_t (*Stop)(struct IWlanInterface *self);
+
+    int32_t (*CreateFeature)(struct IWlanInterface *self, int32_t type, struct HdfFeatureInfo* ifeature);
+
+    int32_t (*DestroyFeature)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature);
+
+    int32_t (*GetAssociatedStas)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature,
+         struct HdfStaInfo* staInfo, uint32_t* staInfoLen, uint32_t* num);
+
+    int32_t (*GetChipId)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, uint8_t* chipId);
+
+    int32_t (*GetDeviceMacAddress)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, uint8_t* mac,
+         uint32_t* macLen, uint8_t len);
+
+    int32_t (*GetFeatureByIfName)(struct IWlanInterface *self, const char* ifName, struct HdfFeatureInfo* ifeature);
+
+    int32_t (*GetFeatureType)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, int32_t* featureType);
+
+    int32_t (*GetFreqsWithBand)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature,
+         const struct HdfWifiInfo* wifiInfo, int32_t* freq, uint32_t* freqLen);
+
+    int32_t (*GetIfNamesByChipId)(struct IWlanInterface *self, uint8_t chipId, char* ifName, uint32_t ifNameLen,
+         uint32_t* num);
+
+    int32_t (*GetNetworkIfaceName)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, char* ifName,
+         uint32_t ifNameLen);
+
+    int32_t (*GetSupportCombo)(struct IWlanInterface *self, uint64_t* combo);
+
+    int32_t (*GetSupportFeature)(struct IWlanInterface *self, uint8_t* supType, uint32_t* supTypeLen);
+
+    int32_t (*RegisterEventCallback)(struct IWlanInterface *self, struct IWlanCallback* cbFunc, const char* ifName);
+
+    int32_t (*UnregisterEventCallback)(struct IWlanInterface *self, struct IWlanCallback* cbFunc, const char* ifName);
+
+    int32_t (*ResetDriver)(struct IWlanInterface *self, uint8_t chipId, const char* ifName);
+
+    int32_t (*SetCountryCode)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, const char* code,
+         uint32_t len);
+
+    int32_t (*SetMacAddress)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, const uint8_t* mac,
+         uint32_t macLen);
+
+    int32_t (*SetScanningMacAddress)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature,
+         const uint8_t* scanMac, uint32_t scanMacLen);
+
+    int32_t (*SetTxPower)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, int32_t power);
+
+    int32_t (*GetNetDevInfo)(struct IWlanInterface *self, struct HdfNetDeviceInfoResult* netDeviceInfoResult);
+
+    int32_t (*StartScan)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature,
+         const struct HdfWifiScan* scan);
+
+    int32_t (*GetPowerMode)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, uint8_t* mode);
+
+    int32_t (*SetPowerMode)(struct IWlanInterface *self, const struct HdfFeatureInfo* ifeature, uint8_t mode);
+
+    int32_t (*StartChannelMeas)(struct IWlanInterface *self, const char* ifName,
+         const struct MeasChannelParam* measChannelParam);
+
+    int32_t (*GetChannelMeasResult)(struct IWlanInterface *self, const char* ifName,
+         struct MeasChannelResult* measChannelResult);
+
+    int32_t (*SetProjectionScreenParam)(struct IWlanInterface *self, const char* ifName,
+         const struct ProjectionScreenCmdParam* param);
+
+    int32_t (*WifiSendCmdIoctl)(struct IWlanInterface *self, const char* ifName, int32_t cmdId, const int8_t* paramBuf,
+         uint32_t paramBufLen);
+
+    int32_t (*GetStaInfo)(struct IWlanInterface *self, const char* ifName, struct WifiStationInfo* info,
+         const uint8_t* mac, uint32_t macLen);
+
+    int32_t (*StartPnoScan)(struct IWlanInterface *self, const char* interfaceName,
+         const struct PnoSettings* pnoSettings);
+
+    int32_t (*StopPnoScan)(struct IWlanInterface *self, const char* interfaceName);
+
+    int32_t (*GetSignalPollInfo)(struct IWlanInterface *self, const char* ifName,
+         struct SignalPollResult* signalResult);
+
+    int32_t (*GetVersion)(struct IWlanInterface *self, uint32_t* majorVer, uint32_t* minorVer);
+
+    struct HdfRemoteService* (*AsObject)(struct IWlanInterface *self);
+};
+
+// external method used to create client object, it support ipc and passthrought mode
+struct IWlanInterface *IWlanInterfaceGet(bool isStub);
+struct IWlanInterface *IWlanInterfaceGetInstance(const char *serviceName, bool isStub);
+
+// external method used to create release object, it support ipc and passthrought mode
+void IWlanInterfaceRelease(struct IWlanInterface *instance, bool isStub);
+void IWlanInterfaceReleaseInstance(const char *serviceName, struct IWlanInterface *instance, bool isStub);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // OHOS_HDI_WLAN_V1_1_IWLANINTERFACE_H

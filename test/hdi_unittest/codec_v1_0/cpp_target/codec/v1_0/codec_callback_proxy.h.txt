@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CODEC_V1_0_CODECCALLBACKPROXY_H
+#define OHOS_HDI_CODEC_V1_0_CODECCALLBACKPROXY_H
+
+#include "v1_0/icodec_callback.h"
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V1_0 {
+
+class CodecCallbackProxy : public IProxyBroker<OHOS::HDI::Codec::V1_0::ICodecCallback> {
+public:
+    explicit CodecCallbackProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Codec::V1_0::ICodecCallback>(remote) {
+    }
+    virtual ~CodecCallbackProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t EventHandler(OHOS::HDI::Codec::V1_0::CodecEventType event,
+         const OHOS::HDI::Codec::V1_0::EventInfo& info) override;
+
+    int32_t EmptyBufferDone(int64_t appData, const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer) override;
+
+    int32_t FillBufferDone(int64_t appData, const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t EventHandler_(OHOS::HDI::Codec::V1_0::CodecEventType event,
+         const OHOS::HDI::Codec::V1_0::EventInfo& info, const sptr<IRemoteObject> remote);
+
+    static int32_t EmptyBufferDone_(int64_t appData, const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t FillBufferDone_(int64_t appData, const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer,
+         const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+private:
+    static inline BrokerDelegator<OHOS::HDI::Codec::V1_0::CodecCallbackProxy> delegator_;
+};
+
+} // V1_0
+} // Codec
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CODEC_V1_0_CODECCALLBACKPROXY_H
+

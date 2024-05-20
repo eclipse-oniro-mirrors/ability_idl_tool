@@ -1,0 +1,573 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/secure_element_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "secure_element/v1_0/secure_element_callback_proxy.h"
+
+#define HDF_LOG_TAG    secure_element_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace SecureElement {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::Get(bool isStub)
+{
+    return OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::Get("secure_element_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "secure_element_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface *>(impl);
+}
+
+
+OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStub(const sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::~SecureElementInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_SECURE_ELEMENT_INTERFACE_GET_VERSION:
+            return SecureElementInterfaceStubGetVersion(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_INIT:
+            return SecureElementInterfaceStubinit(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_GET_ATR:
+            return SecureElementInterfaceStubgetAtr(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_IS_SECURE_ELEMENT_PRESENT:
+            return SecureElementInterfaceStubisSecureElementPresent(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_OPEN_LOGICAL_CHANNEL:
+            return SecureElementInterfaceStubopenLogicalChannel(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_OPEN_BASIC_CHANNEL:
+            return SecureElementInterfaceStubopenBasicChannel(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_CLOSE_CHANNEL:
+            return SecureElementInterfaceStubcloseChannel(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_TRANSMIT:
+            return SecureElementInterfaceStubtransmit(data, reply, option);
+        case CMD_SECURE_ELEMENT_INTERFACE_RESET:
+            return SecureElementInterfaceStubreset(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubinit(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubinit_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubgetAtr(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubgetAtr_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubisSecureElementPresent(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubisSecureElementPresent_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenLogicalChannel(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenLogicalChannel_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenBasicChannel(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenBasicChannel_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubcloseChannel(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubcloseChannel_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubtransmit(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubtransmit_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubreset(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubreset_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubGetVersion(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption)
+{
+    return OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubGetVersion_(secureElementInterfaceData, secureElementInterfaceReply, secureElementInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubinit_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementCallback> clientCallback;
+    sptr<IRemoteObject> clientCallbackRemote = secureElementInterfaceData.ReadRemoteObject();
+    if (clientCallbackRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    clientCallback = new OHOS::HDI::SecureElement::V1_0::SecureElementCallbackProxy(clientCallbackRemote);
+    if (clientCallback == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->init(clientCallback, status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubgetAtr_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool secureElementInterfaceMemSet = false;
+    if (!secureElementInterfaceData.ReadBool(secureElementInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read secureElementInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> response;
+    if (secureElementInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!secureElementInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        response.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->getAtr(response);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!WritePodArray(secureElementInterfaceReply, response)) {
+        HDF_LOGE("%{public}s: failed to write response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubisSecureElementPresent_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool present = false;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->isSecureElementPresent(present);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!secureElementInterfaceReply.WriteBool(present)) {
+        HDF_LOGE("%{public}s: write present failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenLogicalChannel_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool secureElementInterfaceMemSet = false;
+    if (!secureElementInterfaceData.ReadBool(secureElementInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read secureElementInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> aid;
+    if (!ReadPodArray(secureElementInterfaceData, aid)) {
+        HDF_LOGE("%{public}s: failed to read aid", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t p2 = 0;
+    if (!secureElementInterfaceData.ReadUint8(p2)) {
+        HDF_LOGE("%{public}s: read p2 failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> response;
+    if (secureElementInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!secureElementInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        response.reserve(capacity);
+    }
+
+    uint8_t channelNumber = 0;
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->openLogicalChannel(aid, p2, response, channelNumber, status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!WritePodArray(secureElementInterfaceReply, response)) {
+        HDF_LOGE("%{public}s: failed to write response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint8(channelNumber)) {
+        HDF_LOGE("%{public}s: write channelNumber failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubopenBasicChannel_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool secureElementInterfaceMemSet = false;
+    if (!secureElementInterfaceData.ReadBool(secureElementInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read secureElementInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> aid;
+    if (!ReadPodArray(secureElementInterfaceData, aid)) {
+        HDF_LOGE("%{public}s: failed to read aid", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t p2 = 0;
+    if (!secureElementInterfaceData.ReadUint8(p2)) {
+        HDF_LOGE("%{public}s: read p2 failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> response;
+    if (secureElementInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!secureElementInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        response.reserve(capacity);
+    }
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->openBasicChannel(aid, p2, response, status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!WritePodArray(secureElementInterfaceReply, response)) {
+        HDF_LOGE("%{public}s: failed to write response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubcloseChannel_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t channelNumber = 0;
+    if (!secureElementInterfaceData.ReadUint8(channelNumber)) {
+        HDF_LOGE("%{public}s: read channelNumber failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->closeChannel(channelNumber, status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubtransmit_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool secureElementInterfaceMemSet = false;
+    if (!secureElementInterfaceData.ReadBool(secureElementInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read secureElementInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<uint8_t> command;
+    if (!ReadPodArray(secureElementInterfaceData, command)) {
+        HDF_LOGE("%{public}s: failed to read command", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> response;
+    if (secureElementInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!secureElementInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        response.reserve(capacity);
+    }
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->transmit(command, response, status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!WritePodArray(secureElementInterfaceReply, response)) {
+        HDF_LOGE("%{public}s: failed to write response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubreset_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::SecureElement::V1_0::SecureElementStatus status;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->reset(status);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+
+int32_t OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceStub::SecureElementInterfaceStubGetVersion_(MessageParcel& secureElementInterfaceData, MessageParcel& secureElementInterfaceReply, MessageOption& secureElementInterfaceOption, sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl)
+{
+    if (secureElementInterfaceData.ReadInterfaceToken() != OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t secureElementInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (secureElementInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, secureElementInterfaceRet);
+        return secureElementInterfaceRet;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!secureElementInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return secureElementInterfaceRet;
+}
+} // V1_0
+} // SecureElement
+} // HDI
+} // OHOS

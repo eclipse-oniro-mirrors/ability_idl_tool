@@ -1,0 +1,364 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v2_0/codec_component_manager_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+#include "codec/v2_0/codec_component_proxy.h"
+
+#define HDF_LOG_TAG    codec_component_manager_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V2_0 {
+
+
+sptr<OHOS::HDI::Codec::V2_0::ICodecComponentManager> OHOS::HDI::Codec::V2_0::ICodecComponentManager::Get(bool isStub)
+{
+    return ICodecComponentManager::Get("codec_component_manager_service", isStub);
+}
+
+sptr<OHOS::HDI::Codec::V2_0::ICodecComponentManager> OHOS::HDI::Codec::V2_0::ICodecComponentManager::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "codec_component_manager_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Codec::V2_0::ICodecComponentManager *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy> proxy = new OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t codecComponentManagerRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 2) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:2.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::Reconnect(
+    sptr<OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentNum(int32_t& count)
+{
+    return OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentNum_(count, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentCapabilityList(std::vector<OHOS::HDI::Codec::V2_0::CodecCompCapability>& capList, int32_t count)
+{
+    return OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentCapabilityList_(capList, count, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::CreateComponent(sptr<OHOS::HDI::Codec::V2_0::ICodecComponent>& component, uint32_t& componentId, const std::string& compName, int64_t appData, const sptr<OHOS::HDI::Codec::V2_0::ICodecCallback>& callbacks)
+{
+    return OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::CreateComponent_(component, componentId, compName, appData, callbacks, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::DestroyComponent(uint32_t componentId)
+{
+    return OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::DestroyComponent_(componentId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentNum_(int32_t& count,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentManagerData;
+    MessageParcel codecComponentManagerReply;
+    MessageOption codecComponentManagerOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentManagerData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentManagerRet = remote->SendRequest(CMD_CODEC_COMPONENT_MANAGER_GET_COMPONENT_NUM, codecComponentManagerData, codecComponentManagerReply, codecComponentManagerOption);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentManagerRet);
+        return codecComponentManagerRet;
+    }
+
+    if (!codecComponentManagerReply.ReadInt32(count)) {
+        HDF_LOGE("%{public}s: read count failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentManagerRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetComponentCapabilityList_(std::vector<OHOS::HDI::Codec::V2_0::CodecCompCapability>& capList, int32_t count, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentManagerData;
+    MessageParcel codecComponentManagerReply;
+    MessageOption codecComponentManagerOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentManagerData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteInt32(count)) {
+        HDF_LOGE("%{public}s: write count failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentManagerRet = remote->SendRequest(CMD_CODEC_COMPONENT_MANAGER_GET_COMPONENT_CAPABILITY_LIST, codecComponentManagerData, codecComponentManagerReply, codecComponentManagerOption);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentManagerRet);
+        return codecComponentManagerRet;
+    }
+
+    uint32_t capListSize = 0;
+    if (!codecComponentManagerReply.ReadUint32(capListSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(capListSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Codec::V2_0::CodecCompCapability), HDF_ERR_INVALID_PARAM);
+    capList.clear();
+    capList.reserve(capListSize);
+    for (uint32_t i0 = 0; i0 < capListSize; ++i0) {
+        OHOS::HDI::Codec::V2_0::CodecCompCapability value0;
+        if (!CodecCompCapabilityBlockUnmarshalling(codecComponentManagerReply, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        capList.push_back(value0);
+    }
+
+    return codecComponentManagerRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::CreateComponent_(sptr<OHOS::HDI::Codec::V2_0::ICodecComponent>& component, uint32_t& componentId, const std::string& compName, int64_t appData, const sptr<OHOS::HDI::Codec::V2_0::ICodecCallback>& callbacks, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentManagerData;
+    MessageParcel codecComponentManagerReply;
+    MessageOption codecComponentManagerOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentManagerData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteCString(compName.c_str())) {
+        HDF_LOGE("%{public}s: write compName failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteInt64(appData)) {
+        HDF_LOGE("%{public}s: write appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbacks == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbacks is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbacks, OHOS::HDI::Codec::V2_0::ICodecCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbacks failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentManagerRet = remote->SendRequest(CMD_CODEC_COMPONENT_MANAGER_CREATE_COMPONENT, codecComponentManagerData, codecComponentManagerReply, codecComponentManagerOption);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentManagerRet);
+        return codecComponentManagerRet;
+    }
+
+    sptr<IRemoteObject> componentRemote = codecComponentManagerReply.ReadRemoteObject();
+    if (componentRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    component = new OHOS::HDI::Codec::V2_0::CodecComponentProxy(componentRemote);
+    if (component == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerReply.ReadUint32(componentId)) {
+        HDF_LOGE("%{public}s: read componentId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentManagerRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::DestroyComponent_(uint32_t componentId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentManagerData;
+    MessageParcel codecComponentManagerReply;
+    MessageOption codecComponentManagerOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentManagerData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerData.WriteUint32(componentId)) {
+        HDF_LOGE("%{public}s: write componentId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentManagerRet = remote->SendRequest(CMD_CODEC_COMPONENT_MANAGER_DESTROY_COMPONENT, codecComponentManagerData, codecComponentManagerReply, codecComponentManagerOption);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentManagerRet);
+        return codecComponentManagerRet;
+    }
+
+    return codecComponentManagerRet;
+}
+
+int32_t OHOS::HDI::Codec::V2_0::CodecComponentManagerProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentManagerData;
+    MessageParcel codecComponentManagerReply;
+    MessageOption codecComponentManagerOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentManagerData.WriteInterfaceToken(OHOS::HDI::Codec::V2_0::ICodecComponentManager::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentManagerRet = remote->SendRequest(CMD_CODEC_COMPONENT_MANAGER_GET_VERSION, codecComponentManagerData, codecComponentManagerReply, codecComponentManagerOption);
+    if (codecComponentManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentManagerRet);
+        return codecComponentManagerRet;
+    }
+
+    if (!codecComponentManagerReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentManagerReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentManagerRet;
+}
+
+} // V2_0
+} // Codec
+} // HDI
+} // OHOS

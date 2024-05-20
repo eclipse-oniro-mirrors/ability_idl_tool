@@ -1,0 +1,329 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/wlan_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_dlist.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+#include <stub_collector.h>
+
+#define HDF_LOG_TAG    wlan_callback_stub
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);
+
+
+static bool ReadPodArray(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)
+{
+    const void * dataPtr = NULL;
+    void *memPtr = NULL;
+    uint32_t elementCount = 0;
+    if (count == NULL || data == NULL || elementSize == 0) {
+        HDF_LOGE("%{public}s: invalid param", __func__);
+        return false;
+    }
+
+    if (!HdfSbufReadUint32(parcel, &elementCount)) {
+        HDF_LOGE("%{public}s: failed to read element count", __func__);
+        return false;
+    }
+
+    if (elementCount > HDI_BUFF_MAX_SIZE / elementSize) {
+        HDF_LOGE("%{public}s: invalid elementCount", __func__);
+        return false;
+    }
+
+    if (elementCount == 0) {
+        *count = elementCount;
+        return true;
+    }
+
+    dataPtr = HdfSbufReadUnpadBuffer(parcel, elementSize * elementCount);
+    if (dataPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to read buffer data", __func__);
+        return false;
+    }
+
+    memPtr = OsalMemCalloc(elementSize * elementCount);
+    if (memPtr == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc buffer", __func__);
+        return false;
+    }
+
+    if (memcpy_s(memPtr, elementSize * elementCount, dataPtr, elementSize * elementCount) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy buffer", __func__);
+        OsalMemFree(memPtr);
+        return false;
+    }
+
+    *data = memPtr;
+    *count = elementCount;
+    return true;
+}
+static int32_t SerStubResetDriverResult(struct IWlanCallback *serviceImpl, struct HdfSBuf *wlanCallbackData, struct HdfSBuf *wlanCallbackReply)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+    uint32_t event = 0;
+    int32_t code = 0;
+    char* ifName = NULL;
+
+    if (!HdfSbufReadUint32(wlanCallbackData, &event)) {
+        HDF_LOGE("%{public}s: read &event failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufReadInt32(wlanCallbackData, &code)) {
+        HDF_LOGE("%{public}s: read &code failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wlanCallbackData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->ResetDriverResult == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function ResetDriverResult ", __func__);
+        wlanCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = serviceImpl->ResetDriverResult(serviceImpl, event, code, ifName);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t SerStubScanResult(struct IWlanCallback *serviceImpl, struct HdfSBuf *wlanCallbackData, struct HdfSBuf *wlanCallbackReply)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+    uint32_t event = 0;
+    struct HdfWifiScanResult* scanResult = NULL;
+    char* ifName = NULL;
+
+    if (!HdfSbufReadUint32(wlanCallbackData, &event)) {
+        HDF_LOGE("%{public}s: read &event failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    scanResult = (struct HdfWifiScanResult*)OsalMemCalloc(sizeof(struct HdfWifiScanResult));
+    if (scanResult == NULL) {
+        HDF_LOGE("%{public}s: malloc scanResult failed", __func__);
+        wlanCallbackRet = HDF_ERR_MALLOC_FAIL;
+        goto FINISHED;
+    }
+    if (!HdfWifiScanResultBlockUnmarshalling(wlanCallbackData, scanResult)) {
+        HDF_LOGE("%{public}s: read scanResult failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    const char *ifNameCp = HdfSbufReadString(wlanCallbackData);
+    if (ifNameCp == NULL) {
+        HDF_LOGE("%{public}s: read ifNameCp failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+    ifName = strdup(ifNameCp);
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->ScanResult == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function ScanResult ", __func__);
+        wlanCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = serviceImpl->ScanResult(serviceImpl, event, scanResult, ifName);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (scanResult != NULL) {
+        HdfWifiScanResultFree(scanResult, true);
+        scanResult = NULL;
+    }
+    if (ifName != NULL) {
+        OsalMemFree(ifName);
+        ifName = NULL;
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t SerStubWifiNetlinkMessage(struct IWlanCallback *serviceImpl, struct HdfSBuf *wlanCallbackData, struct HdfSBuf *wlanCallbackReply)
+{
+    int32_t wlanCallbackRet = HDF_FAILURE;
+    uint8_t* recvMsg = NULL;
+    uint32_t recvMsgLen = 0;
+
+    if (!ReadPodArray(wlanCallbackData, (void **)&recvMsg, sizeof(uint8_t), &recvMsgLen)) {
+        HDF_LOGE("%{public}s: failed to read recvMsg", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (serviceImpl == NULL) {
+        HDF_LOGE("%{public}s: invalid serviceImpl object", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_OBJECT;
+        goto FINISHED;
+    }
+
+    if (serviceImpl->WifiNetlinkMessage == NULL) {
+        HDF_LOGE("%{public}s: invalid interface function WifiNetlinkMessage ", __func__);
+        wlanCallbackRet = HDF_ERR_NOT_SUPPORT;
+        goto FINISHED;
+    }
+
+    wlanCallbackRet = serviceImpl->WifiNetlinkMessage(serviceImpl, recvMsg, recvMsgLen);
+    if (wlanCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, wlanCallbackRet);
+        goto FINISHED;
+    }
+
+FINISHED:
+    if (recvMsg != NULL) {
+        OsalMemFree(recvMsg);
+    }
+    return wlanCallbackRet;
+}
+
+static int32_t SerStubGetVersion(struct IWlanCallback *serviceImpl, struct HdfSBuf *wlanCallbackData, struct HdfSBuf *wlanCallbackReply)
+{
+    int32_t wlanCallbackRet = HDF_SUCCESS;
+    if (!HdfSbufWriteUint32(wlanCallbackReply, IWLAN_CALLBACK_MAJOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IWLAN_CALLBACK_MAJOR_VERSION failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+    if (!HdfSbufWriteUint32(wlanCallbackReply, IWLAN_CALLBACK_MINOR_VERSION)) {
+        HDF_LOGE("%{public}s: write IWLAN_CALLBACK_MINOR_VERSION failed!", __func__);
+        wlanCallbackRet = HDF_ERR_INVALID_PARAM;
+        goto FINISHED;
+    }
+
+FINISHED:
+    return wlanCallbackRet;
+}
+
+static struct HdfRemoteService *WlanCallbackStubAsObject(struct IWlanCallback *self)
+{
+    if (self == NULL) {
+        return NULL;
+    }
+    struct WlanCallbackStub *stub = CONTAINER_OF(self, struct WlanCallbackStub, interface);
+    return stub->remote;
+}
+
+static int32_t WlanCallbackOnRemoteRequest(struct HdfRemoteService *remote, int code, struct HdfSBuf *data, struct HdfSBuf *reply)
+{
+    struct WlanCallbackStub *stub = (struct WlanCallbackStub*)remote;
+    if (stub == NULL || stub->remote == NULL || stub->interface == NULL) {
+        HDF_LOGE("%{public}s: invalid stub object", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+    if (!HdfRemoteServiceCheckInterfaceToken(stub->remote, data)) {
+        HDF_LOGE("%{public}s: interface token check failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    switch (code) {
+        case CMD_WLAN_CALLBACK_RESET_DRIVER_RESULT:
+            return SerStubResetDriverResult(stub->interface, data, reply);
+        case CMD_WLAN_CALLBACK_SCAN_RESULT:
+            return SerStubScanResult(stub->interface, data, reply);
+        case CMD_WLAN_CALLBACK_WIFI_NETLINK_MESSAGE:
+            return SerStubWifiNetlinkMessage(stub->interface, data, reply);
+        case CMD_WLAN_CALLBACK_GET_VERSION:
+            return SerStubGetVersion(stub->interface, data, reply);
+        default: {
+            HDF_LOGE("%{public}s: not support cmd %{public}d", __func__, code);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+}
+
+static struct HdfRemoteService **WlanCallbackStubNewInstance(void *impl)
+{
+    if (impl == NULL) {
+        HDF_LOGE("%{public}s: impl is null", __func__);
+        return NULL;
+    }
+
+    struct IWlanCallback *serviceImpl = (struct IWlanCallback *)impl;
+    struct WlanCallbackStub *stub = OsalMemCalloc(sizeof(struct WlanCallbackStub));
+    if (stub == NULL) {
+        HDF_LOGE("%{public}s: failed to malloc stub object", __func__);
+        return NULL;
+    }
+    stub->remote = HdfRemoteServiceObtain((struct HdfObject *)stub, &stub->dispatcher);
+    if (stub->remote == NULL) {
+        OsalMemFree(stub);
+        return NULL;
+    }
+    (void)HdfRemoteServiceSetInterfaceDesc(stub->remote, IWLANCALLBACK_INTERFACE_DESC);
+    stub->dispatcher.Dispatch = WlanCallbackOnRemoteRequest;
+    stub->interface = serviceImpl;
+    stub->interface->AsObject = WlanCallbackStubAsObject;
+    return &stub->remote;
+}
+
+static void WlanCallbackStubRelease(struct HdfRemoteService **remote)
+{
+    if (remote == NULL) {
+        return;
+    }
+    struct WlanCallbackStub *stub = CONTAINER_OF(remote, struct WlanCallbackStub, remote);
+    HdfRemoteServiceRecycle(stub->remote);
+    OsalMemFree(stub);
+}
+
+__attribute__((unused)) static struct StubConstructor g_wlancallbackConstructor = {
+    .constructor = WlanCallbackStubNewInstance,
+    .destructor = WlanCallbackStubRelease,
+};
+
+__attribute__((constructor)) static void WlanCallbackStubRegister(void)
+{
+    HDF_LOGI("%{public}s: register stub constructor of '%{public}s'", __func__, IWLANCALLBACK_INTERFACE_DESC);
+    StubConstructorRegister(IWLANCALLBACK_INTERFACE_DESC, &g_wlancallbackConstructor);
+}

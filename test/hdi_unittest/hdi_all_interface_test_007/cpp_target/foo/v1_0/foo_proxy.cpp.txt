@@ -1,0 +1,675 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/foo_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    foo_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Foo {
+namespace V1_0 {
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+static bool WriteFileDescriptor(MessageParcel &data, int fd);
+
+sptr<OHOS::HDI::Foo::V1_0::IFoo> OHOS::HDI::Foo::V1_0::IFoo::Get(bool isStub)
+{
+    return IFoo::Get("foo_service", isStub);
+}
+
+sptr<OHOS::HDI::Foo::V1_0::IFoo> OHOS::HDI::Foo::V1_0::IFoo::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "foo_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Foo::V1_0::IFoo *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Foo::V1_0::FooProxy> proxy = new OHOS::HDI::Foo::V1_0::FooProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Foo::V1_0::FooProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t fooRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::Reconnect(
+    sptr<OHOS::HDI::Foo::V1_0::FooProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Foo::V1_0::FooProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool WriteFileDescriptor(MessageParcel &data, int fd)
+{
+    if (!data.WriteBool(fd >= 0 ? true : false)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (fd < 0) {
+        return true;
+    }
+    if (!data.WriteFileDescriptor(fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::Ping(const std::string& sendMsg, std::string& recvMsg)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::Ping_(sendMsg, recvMsg, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::GetData(OHOS::HDI::Foo::V1_0::FooInfo& info)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::GetData_(info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::SetCallback(const sptr<OHOS::HDI::Foo::V1_0::IFooCallback>& cbObj)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::SetCallback_(cbObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc1(bool inData, bool& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc1_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc2(int8_t inData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc2_(inData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc3(int16_t inData, int16_t& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc3_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc4(int32_t inData, int32_t& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc4_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc5(int64_t inData, int64_t& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc5_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc6(const std::string& inData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc6_(inData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc7(float inData, float& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc7_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc8(double inData, double& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc8_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc9(int inData, int& outData)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::TestFunc9_(inData, outData, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Foo::V1_0::FooProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::Ping_(const std::string& sendMsg, std::string& recvMsg,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteCString(sendMsg.c_str())) {
+        HDF_LOGE("%{public}s: write sendMsg failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_PING, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    const char* recvMsgCp = fooReply.ReadCString();
+    if (recvMsgCp == nullptr) {
+        HDF_LOGE("%{public}s: read recvMsg failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    recvMsg = recvMsgCp;
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::GetData_(OHOS::HDI::Foo::V1_0::FooInfo& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_GET_DATA, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!FooInfoBlockUnmarshalling(fooReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::SetCallback_(const sptr<OHOS::HDI::Foo::V1_0::IFooCallback>& cbObj,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (cbObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter cbObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(cbObj, OHOS::HDI::Foo::V1_0::IFooCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write cbObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_SET_CALLBACK, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc1_(bool inData, bool& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteBool(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC1, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadBool(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc2_(int8_t inData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_ASYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteInt8(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC2, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc3_(int16_t inData, int16_t& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteInt16(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC3, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadInt16(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc4_(int32_t inData, int32_t& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteInt32(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC4, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadInt32(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc5_(int64_t inData, int64_t& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteInt64(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC5, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadInt64(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc6_(const std::string& inData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_ASYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteCString(inData.c_str())) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC6, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc7_(float inData, float& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteFloat(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC7, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadFloat(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc8_(double inData, double& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooData.WriteDouble(inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC8, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadDouble(outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::TestFunc9_(int inData, int& outData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WriteFileDescriptor(fooData, inData)) {
+        HDF_LOGE("%{public}s: write inData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_TEST_FUNC9, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    outData = -1;
+    if (!ReadFileDescriptor(fooReply, outData)) {
+        HDF_LOGE("%{public}s: read outData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+int32_t OHOS::HDI::Foo::V1_0::FooProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel fooData;
+    MessageParcel fooReply;
+    MessageOption fooOption(MessageOption::TF_SYNC);
+
+    if (!fooData.WriteInterfaceToken(OHOS::HDI::Foo::V1_0::IFoo::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t fooRet = remote->SendRequest(CMD_FOO_GET_VERSION, fooData, fooReply, fooOption);
+    if (fooRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, fooRet);
+        return fooRet;
+    }
+
+    if (!fooReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!fooReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return fooRet;
+}
+
+} // V1_0
+} // Foo
+} // HDI
+} // OHOS

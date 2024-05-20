@@ -1,0 +1,1872 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/usb_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "usb/v1_0/usbd_bulk_callback_proxy.h"
+#include "usb/v1_0/usbd_subscriber_proxy.h"
+
+#define HDF_LOG_TAG    usb_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Usb {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> OHOS::HDI::Usb::V1_0::IUsbInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Usb::V1_0::IUsbInterface::Get("usb_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> OHOS::HDI::Usb::V1_0::IUsbInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "usb_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Usb::V1_0::IUsbInterface *>(impl);
+}
+
+
+OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStub(const sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Usb::V1_0::UsbInterfaceStub::~UsbInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_USB_INTERFACE_GET_VERSION:
+            return UsbInterfaceStubGetVersion(data, reply, option);
+        case CMD_USB_INTERFACE_OPEN_DEVICE:
+            return UsbInterfaceStubOpenDevice(data, reply, option);
+        case CMD_USB_INTERFACE_CLOSE_DEVICE:
+            return UsbInterfaceStubCloseDevice(data, reply, option);
+        case CMD_USB_INTERFACE_GET_DEVICE_DESCRIPTOR:
+            return UsbInterfaceStubGetDeviceDescriptor(data, reply, option);
+        case CMD_USB_INTERFACE_GET_STRING_DESCRIPTOR:
+            return UsbInterfaceStubGetStringDescriptor(data, reply, option);
+        case CMD_USB_INTERFACE_GET_CONFIG_DESCRIPTOR:
+            return UsbInterfaceStubGetConfigDescriptor(data, reply, option);
+        case CMD_USB_INTERFACE_GET_RAW_DESCRIPTOR:
+            return UsbInterfaceStubGetRawDescriptor(data, reply, option);
+        case CMD_USB_INTERFACE_GET_FILE_DESCRIPTOR:
+            return UsbInterfaceStubGetFileDescriptor(data, reply, option);
+        case CMD_USB_INTERFACE_SET_CONFIG:
+            return UsbInterfaceStubSetConfig(data, reply, option);
+        case CMD_USB_INTERFACE_GET_CONFIG:
+            return UsbInterfaceStubGetConfig(data, reply, option);
+        case CMD_USB_INTERFACE_CLAIM_INTERFACE:
+            return UsbInterfaceStubClaimInterface(data, reply, option);
+        case CMD_USB_INTERFACE_MANAGE_INTERFACE:
+            return UsbInterfaceStubManageInterface(data, reply, option);
+        case CMD_USB_INTERFACE_RELEASE_INTERFACE:
+            return UsbInterfaceStubReleaseInterface(data, reply, option);
+        case CMD_USB_INTERFACE_SET_INTERFACE:
+            return UsbInterfaceStubSetInterface(data, reply, option);
+        case CMD_USB_INTERFACE_BULK_TRANSFER_READ:
+            return UsbInterfaceStubBulkTransferRead(data, reply, option);
+        case CMD_USB_INTERFACE_BULK_TRANSFER_WRITE:
+            return UsbInterfaceStubBulkTransferWrite(data, reply, option);
+        case CMD_USB_INTERFACE_CONTROL_TRANSFER_READ:
+            return UsbInterfaceStubControlTransferRead(data, reply, option);
+        case CMD_USB_INTERFACE_CONTROL_TRANSFER_WRITE:
+            return UsbInterfaceStubControlTransferWrite(data, reply, option);
+        case CMD_USB_INTERFACE_INTERRUPT_TRANSFER_READ:
+            return UsbInterfaceStubInterruptTransferRead(data, reply, option);
+        case CMD_USB_INTERFACE_INTERRUPT_TRANSFER_WRITE:
+            return UsbInterfaceStubInterruptTransferWrite(data, reply, option);
+        case CMD_USB_INTERFACE_ISO_TRANSFER_READ:
+            return UsbInterfaceStubIsoTransferRead(data, reply, option);
+        case CMD_USB_INTERFACE_ISO_TRANSFER_WRITE:
+            return UsbInterfaceStubIsoTransferWrite(data, reply, option);
+        case CMD_USB_INTERFACE_REQUEST_QUEUE:
+            return UsbInterfaceStubRequestQueue(data, reply, option);
+        case CMD_USB_INTERFACE_REQUEST_WAIT:
+            return UsbInterfaceStubRequestWait(data, reply, option);
+        case CMD_USB_INTERFACE_REQUEST_CANCEL:
+            return UsbInterfaceStubRequestCancel(data, reply, option);
+        case CMD_USB_INTERFACE_GET_CURRENT_FUNCTIONS:
+            return UsbInterfaceStubGetCurrentFunctions(data, reply, option);
+        case CMD_USB_INTERFACE_SET_CURRENT_FUNCTIONS:
+            return UsbInterfaceStubSetCurrentFunctions(data, reply, option);
+        case CMD_USB_INTERFACE_SET_PORT_ROLE:
+            return UsbInterfaceStubSetPortRole(data, reply, option);
+        case CMD_USB_INTERFACE_QUERY_PORT:
+            return UsbInterfaceStubQueryPort(data, reply, option);
+        case CMD_USB_INTERFACE_BIND_USBD_SUBSCRIBER:
+            return UsbInterfaceStubBindUsbdSubscriber(data, reply, option);
+        case CMD_USB_INTERFACE_UNBIND_USBD_SUBSCRIBER:
+            return UsbInterfaceStubUnbindUsbdSubscriber(data, reply, option);
+        case CMD_USB_INTERFACE_REG_BULK_CALLBACK:
+            return UsbInterfaceStubRegBulkCallback(data, reply, option);
+        case CMD_USB_INTERFACE_UN_REG_BULK_CALLBACK:
+            return UsbInterfaceStubUnRegBulkCallback(data, reply, option);
+        case CMD_USB_INTERFACE_BULK_READ:
+            return UsbInterfaceStubBulkRead(data, reply, option);
+        case CMD_USB_INTERFACE_BULK_WRITE:
+            return UsbInterfaceStubBulkWrite(data, reply, option);
+        case CMD_USB_INTERFACE_BULK_CANCEL:
+            return UsbInterfaceStubBulkCancel(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubOpenDevice(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubOpenDevice_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubCloseDevice(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubCloseDevice_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetDeviceDescriptor(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetDeviceDescriptor_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetStringDescriptor(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetStringDescriptor_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfigDescriptor(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfigDescriptor_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetRawDescriptor(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetRawDescriptor_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetFileDescriptor(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetFileDescriptor_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetConfig(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetConfig_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfig(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfig_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubClaimInterface(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubClaimInterface_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubManageInterface(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubManageInterface_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubReleaseInterface(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubReleaseInterface_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetInterface(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetInterface_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferRead(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferRead_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferWrite(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferWrite_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferRead(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferRead_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferWrite(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferWrite_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferRead(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferRead_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferWrite(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferWrite_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferRead(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferRead_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferWrite(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferWrite_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestQueue(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestQueue_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestWait(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestWait_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestCancel(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestCancel_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetCurrentFunctions(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetCurrentFunctions_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetCurrentFunctions(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetCurrentFunctions_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetPortRole(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetPortRole_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubQueryPort(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubQueryPort_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBindUsbdSubscriber(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBindUsbdSubscriber_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnbindUsbdSubscriber(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnbindUsbdSubscriber_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRegBulkCallback(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRegBulkCallback_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnRegBulkCallback(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnRegBulkCallback_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkRead(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkRead_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkWrite(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkWrite_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkCancel(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkCancel_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetVersion(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption)
+{
+    return OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetVersion_(usbInterfaceData, usbInterfaceReply, usbInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubOpenDevice_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->OpenDevice(dev);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubCloseDevice_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->CloseDevice(dev);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetDeviceDescriptor_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> descriptor;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        descriptor.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetDeviceDescriptor(dev, descriptor);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to write descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetStringDescriptor_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t descId = 0;
+    if (!usbInterfaceData.ReadUint8(descId)) {
+        HDF_LOGE("%{public}s: read descId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> descriptor;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        descriptor.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetStringDescriptor(dev, descId, descriptor);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to write descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfigDescriptor_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t descId = 0;
+    if (!usbInterfaceData.ReadUint8(descId)) {
+        HDF_LOGE("%{public}s: read descId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> descriptor;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        descriptor.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetConfigDescriptor(dev, descId, descriptor);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to write descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetRawDescriptor_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> descriptor;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        descriptor.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetRawDescriptor(dev, descriptor);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, descriptor)) {
+        HDF_LOGE("%{public}s: failed to write descriptor", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetFileDescriptor_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t fd = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetFileDescriptor(dev, fd);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(fd)) {
+        HDF_LOGE("%{public}s: write fd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetConfig_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t configIndex = 0;
+    if (!usbInterfaceData.ReadUint8(configIndex)) {
+        HDF_LOGE("%{public}s: read configIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->SetConfig(dev, configIndex);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetConfig_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t configIndex = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetConfig(dev, configIndex);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.WriteUint8(configIndex)) {
+        HDF_LOGE("%{public}s: write configIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubClaimInterface_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t interfaceid = 0;
+    if (!usbInterfaceData.ReadUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: read interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t force = 0;
+    if (!usbInterfaceData.ReadUint8(force)) {
+        HDF_LOGE("%{public}s: read force failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->ClaimInterface(dev, interfaceid, force);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubManageInterface_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t interfaceid = 0;
+    if (!usbInterfaceData.ReadUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: read interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool disable = false;
+    if (!usbInterfaceData.ReadBool(disable)) {
+        HDF_LOGE("%{public}s: read disable failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->ManageInterface(dev, interfaceid, disable);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubReleaseInterface_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t interfaceid = 0;
+    if (!usbInterfaceData.ReadUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: read interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->ReleaseInterface(dev, interfaceid);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetInterface_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t interfaceid = 0;
+    if (!usbInterfaceData.ReadUint8(interfaceid)) {
+        HDF_LOGE("%{public}s: read interfaceid failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint8_t altIndex = 0;
+    if (!usbInterfaceData.ReadUint8(altIndex)) {
+        HDF_LOGE("%{public}s: read altIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->SetInterface(dev, interfaceid, altIndex);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferRead_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        data.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BulkTransferRead(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkTransferWrite_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (!ReadPodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BulkTransferWrite(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferRead_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbCtrlTransfer ctrl;
+    if (!UsbCtrlTransferBlockUnmarshalling(usbInterfaceData, ctrl)) {
+        HDF_LOGE("%{public}s: read ctrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        data.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->ControlTransferRead(dev, ctrl, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubControlTransferWrite_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbCtrlTransfer ctrl;
+    if (!UsbCtrlTransferBlockUnmarshalling(usbInterfaceData, ctrl)) {
+        HDF_LOGE("%{public}s: read ctrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (!ReadPodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->ControlTransferWrite(dev, ctrl, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferRead_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        data.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->InterruptTransferRead(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubInterruptTransferWrite_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (!ReadPodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->InterruptTransferWrite(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferRead_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        data.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->IsoTransferRead(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubIsoTransferWrite_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> data;
+    if (!ReadPodArray(usbInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->IsoTransferWrite(dev, pipe, timeout, data);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestQueue_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> clientData;
+    if (!ReadPodArray(usbInterfaceData, clientData)) {
+        HDF_LOGE("%{public}s: failed to read clientData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> buffer;
+    if (!ReadPodArray(usbInterfaceData, buffer)) {
+        HDF_LOGE("%{public}s: failed to read buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->RequestQueue(dev, pipe, clientData, buffer);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestWait_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool usbInterfaceMemSet = false;
+    if (!usbInterfaceData.ReadBool(usbInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read usbInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> clientData;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        clientData.reserve(capacity);
+    }
+
+    std::vector<uint8_t> buffer;
+    if (usbInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!usbInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        buffer.reserve(capacity);
+    }
+
+    int32_t timeout = 0;
+    if (!usbInterfaceData.ReadInt32(timeout)) {
+        HDF_LOGE("%{public}s: read timeout failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->RequestWait(dev, clientData, buffer, timeout);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, clientData)) {
+        HDF_LOGE("%{public}s: failed to write clientData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(usbInterfaceReply, buffer)) {
+        HDF_LOGE("%{public}s: failed to write buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRequestCancel_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->RequestCancel(dev, pipe);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetCurrentFunctions_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t funcs = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetCurrentFunctions(funcs);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(funcs)) {
+        HDF_LOGE("%{public}s: write funcs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetCurrentFunctions_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t funcs = 0;
+    if (!usbInterfaceData.ReadInt32(funcs)) {
+        HDF_LOGE("%{public}s: read funcs failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->SetCurrentFunctions(funcs);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubSetPortRole_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t portId = 0;
+    if (!usbInterfaceData.ReadInt32(portId)) {
+        HDF_LOGE("%{public}s: read portId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t powerRole = 0;
+    if (!usbInterfaceData.ReadInt32(powerRole)) {
+        HDF_LOGE("%{public}s: read powerRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dataRole = 0;
+    if (!usbInterfaceData.ReadInt32(dataRole)) {
+        HDF_LOGE("%{public}s: read dataRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->SetPortRole(portId, powerRole, dataRole);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubQueryPort_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t portId = 0;
+
+    int32_t powerRole = 0;
+
+    int32_t dataRole = 0;
+
+    int32_t mode = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->QueryPort(portId, powerRole, dataRole, mode);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(portId)) {
+        HDF_LOGE("%{public}s: write portId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(powerRole)) {
+        HDF_LOGE("%{public}s: write powerRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(dataRole)) {
+        HDF_LOGE("%{public}s: write dataRole failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.WriteInt32(mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBindUsbdSubscriber_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> subscriber;
+    sptr<IRemoteObject> subscriberRemote = usbInterfaceData.ReadRemoteObject();
+    if (subscriberRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    subscriber = new OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy(subscriberRemote);
+    if (subscriber == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BindUsbdSubscriber(subscriber);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnbindUsbdSubscriber_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Usb::V1_0::IUsbdSubscriber> subscriber;
+    sptr<IRemoteObject> subscriberRemote = usbInterfaceData.ReadRemoteObject();
+    if (subscriberRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    subscriber = new OHOS::HDI::Usb::V1_0::UsbdSubscriberProxy(subscriberRemote);
+    if (subscriber == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->UnbindUsbdSubscriber(subscriber);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubRegBulkCallback_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Usb::V1_0::IUsbdBulkCallback> cb;
+    sptr<IRemoteObject> cbRemote = usbInterfaceData.ReadRemoteObject();
+    if (cbRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    cb = new OHOS::HDI::Usb::V1_0::UsbdBulkCallbackProxy(cbRemote);
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->RegBulkCallback(dev, pipe, cb);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubUnRegBulkCallback_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->UnRegBulkCallback(dev, pipe);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkRead_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<Ashmem> ashmem = usbInterfaceData.ReadAshmem();
+    if (ashmem == nullptr) {
+        HDF_LOGE("%{public}s: failed to read ashmem object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BulkRead(dev, pipe, ashmem);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkWrite_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<Ashmem> ashmem = usbInterfaceData.ReadAshmem();
+    if (ashmem == nullptr) {
+        HDF_LOGE("%{public}s: failed to read ashmem object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BulkWrite(dev, pipe, ashmem);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubBulkCancel_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev;
+    if (!UsbDevBlockUnmarshalling(usbInterfaceData, dev)) {
+        HDF_LOGE("%{public}s: read dev failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Usb::V1_0::UsbPipe pipe;
+    if (!UsbPipeBlockUnmarshalling(usbInterfaceData, pipe)) {
+        HDF_LOGE("%{public}s: read pipe failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->BulkCancel(dev, pipe);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    return usbInterfaceRet;
+}
+
+int32_t OHOS::HDI::Usb::V1_0::UsbInterfaceStub::UsbInterfaceStubGetVersion_(MessageParcel& usbInterfaceData, MessageParcel& usbInterfaceReply, MessageOption& usbInterfaceOption, sptr<OHOS::HDI::Usb::V1_0::IUsbInterface> impl)
+{
+    if (usbInterfaceData.ReadInterfaceToken() != OHOS::HDI::Usb::V1_0::IUsbInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t usbInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (usbInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, usbInterfaceRet);
+        return usbInterfaceRet;
+    }
+
+    if (!usbInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!usbInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return usbInterfaceRet;
+}
+} // V1_0
+} // Usb
+} // HDI
+} // OHOS

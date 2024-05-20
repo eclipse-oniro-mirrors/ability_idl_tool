@@ -1,0 +1,129 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/seamless_change_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    seamless_change_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_1 {
+
+
+
+OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStub(const sptr<OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::~SeamlessChangeCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_SEAMLESS_CHANGE_CALLBACK_GET_VERSION:
+            return SeamlessChangeCallbackStubGetVersion(data, reply, option);
+        case CMD_SEAMLESS_CHANGE_CALLBACK_ON_SEAMLESS_CHANGE:
+            return SeamlessChangeCallbackStubOnSeamlessChange(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubOnSeamlessChange(MessageParcel& seamlessChangeCallbackData, MessageParcel& seamlessChangeCallbackReply, MessageOption& seamlessChangeCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubOnSeamlessChange_(seamlessChangeCallbackData, seamlessChangeCallbackReply, seamlessChangeCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubGetVersion(MessageParcel& seamlessChangeCallbackData, MessageParcel& seamlessChangeCallbackReply, MessageOption& seamlessChangeCallbackOption)
+{
+    return OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubGetVersion_(seamlessChangeCallbackData, seamlessChangeCallbackReply, seamlessChangeCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubOnSeamlessChange_(MessageParcel& seamlessChangeCallbackData, MessageParcel& seamlessChangeCallbackReply, MessageOption& seamlessChangeCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback> impl)
+{
+    if (seamlessChangeCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t devId = 0;
+    if (!seamlessChangeCallbackData.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t seamlessChangeCallbackRet = impl->OnSeamlessChange(devId);
+    if (seamlessChangeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, seamlessChangeCallbackRet);
+        return seamlessChangeCallbackRet;
+    }
+
+    return seamlessChangeCallbackRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_1::SeamlessChangeCallbackStub::SeamlessChangeCallbackStubGetVersion_(MessageParcel& seamlessChangeCallbackData, MessageParcel& seamlessChangeCallbackReply, MessageOption& seamlessChangeCallbackOption, sptr<OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback> impl)
+{
+    if (seamlessChangeCallbackData.ReadInterfaceToken() != OHOS::HDI::Display::Composer::V1_1::ISeamlessChangeCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t seamlessChangeCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (seamlessChangeCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, seamlessChangeCallbackRet);
+        return seamlessChangeCallbackRet;
+    }
+
+    if (!seamlessChangeCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!seamlessChangeCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return seamlessChangeCallbackRet;
+}
+} // V1_1
+} // Composer
+} // Display
+} // HDI
+} // OHOS

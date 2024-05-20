@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_GEOFENCEINTFPROXY_H
+#define OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_GEOFENCEINTFPROXY_H
+
+#include "v1_0/igeofence_intf.h"
+#include <unistd.h>
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Geofence {
+namespace V1_0 {
+
+class GeofenceIntfProxy : public IProxyBroker<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf> {
+public:
+    class IServiceManagerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        IServiceManagerDeathRecipient(wptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> proxy) : proxy_(proxy) {} 
+        ~IServiceManagerDeathRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            int32_t result = HDF_FAILURE;
+            const int sleepInterval = 500000;
+            const int waitTimes = 10;
+            int currentTime = waitTimes;
+            do {
+                usleep(sleepInterval);
+                auto proxy = proxy_.promote();
+                if (proxy != nullptr) {
+                    result = OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::Reconnect(proxy);
+                }
+                --currentTime;
+            } while (result != HDF_SUCCESS && currentTime >0);
+        }
+    private:
+        wptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> proxy_;
+    };
+
+    explicit GeofenceIntfProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf>(remote) {
+        reconnectRemote_ = nullptr;
+        isReconnected_ = false;
+    }
+    virtual ~GeofenceIntfProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t RegisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj) override;
+
+    int32_t UnregisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj) override;
+
+    int32_t AddCircleGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest>& circleGeofences) override;
+
+    int32_t AddPolygonGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest>& polygonGeofences) override;
+
+    int32_t RemoveGeofences(const std::vector<int32_t>& geofenceId) override;
+
+    int32_t GetGeofenceStatus(int32_t geofenceId) override;
+
+    int32_t GetGeofenceLocation() override;
+
+    int32_t GetGeofenceSize() override;
+
+    int32_t SendCellOfflineDb(const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dbData,
+         int32_t cellType) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t RegisterGeofenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj, const sptr<IRemoteObject> remote);
+
+    static int32_t UnregisterGeofenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj, const sptr<IRemoteObject> remote);
+
+    static int32_t AddCircleGeofences_(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest>& circleGeofences, const sptr<IRemoteObject> remote);
+
+    static int32_t AddPolygonGeofences_(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest>& polygonGeofences, const sptr<IRemoteObject> remote);
+
+    static int32_t RemoveGeofences_(const std::vector<int32_t>& geofenceId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetGeofenceStatus_(int32_t geofenceId, const sptr<IRemoteObject> remote);
+
+    static int32_t GetGeofenceLocation_(const sptr<IRemoteObject> remote);
+
+    static int32_t GetGeofenceSize_(const sptr<IRemoteObject> remote);
+
+    static int32_t SendCellOfflineDb_(const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dbData,
+         int32_t cellType, const sptr<IRemoteObject> remote);
+
+    static int32_t GetVersion_(uint32_t& majorVer, uint32_t& minorVer, const sptr<IRemoteObject> remote);
+
+    static int32_t Reconnect(sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> proxy);
+
+    sptr<IRemoteObject> GetCurrentRemote() {
+        return isReconnected_ ? reconnectRemote_ : Remote();
+    }
+
+    bool isReconnected_;
+    std::string serviceName_;
+    sptr<IRemoteObject> servMgr_;
+    sptr<IRemoteObject> reconnectRemote_;
+private:
+    static inline BrokerDelegator<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> delegator_;
+};
+
+} // V1_0
+} // Geofence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_LOCATION_LPFENCE_GEOFENCE_V1_0_GEOFENCEINTFPROXY_H
+

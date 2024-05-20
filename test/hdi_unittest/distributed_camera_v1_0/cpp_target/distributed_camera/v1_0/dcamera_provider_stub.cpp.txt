@@ -1,0 +1,378 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/dcamera_provider_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "distributed_camera/v1_0/dcamera_provider_callback_proxy.h"
+
+#define HDF_LOG_TAG    dcamera_provider_stub
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedCamera {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::Get(bool isStub)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::Get("dcamera_provider_service", isStub);
+}
+
+sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "dcamera_provider_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider *>(impl);
+}
+
+
+OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStub(const sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> &impl)
+    : IPCObjectStub(OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::~DCameraProviderStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_DCAMERA_PROVIDER_GET_VERSION:
+            return DCameraProviderStubGetVersion(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_ENABLE_D_CAMERA_DEVICE:
+            return DCameraProviderStubEnableDCameraDevice(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_DISABLE_D_CAMERA_DEVICE:
+            return DCameraProviderStubDisableDCameraDevice(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_ACQUIRE_BUFFER:
+            return DCameraProviderStubAcquireBuffer(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_SHUTTER_BUFFER:
+            return DCameraProviderStubShutterBuffer(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_ON_SETTINGS_RESULT:
+            return DCameraProviderStubOnSettingsResult(data, reply, option);
+        case CMD_DCAMERA_PROVIDER_NOTIFY:
+            return DCameraProviderStubNotify(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubEnableDCameraDevice(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubEnableDCameraDevice_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubDisableDCameraDevice(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubDisableDCameraDevice_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubAcquireBuffer(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubAcquireBuffer_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubShutterBuffer(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubShutterBuffer_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubOnSettingsResult(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubOnSettingsResult_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubNotify(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubNotify_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubGetVersion(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubGetVersion_(dCameraProviderData, dCameraProviderReply, dCameraProviderOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubEnableDCameraDevice_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* abilityInfoCp = dCameraProviderData.ReadCString();
+    if (abilityInfoCp == nullptr) {
+        HDF_LOGE("%{public}s: read abilityInfo failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string abilityInfo = abilityInfoCp;
+
+    sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = dCameraProviderData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->EnableDCameraDevice(dhBase, abilityInfo, callbackObj);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubDisableDCameraDevice_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->DisableDCameraDevice(dhBase);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubAcquireBuffer_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t streamId = 0;
+    if (!dCameraProviderData.ReadInt32(streamId)) {
+        HDF_LOGE("%{public}s: read streamId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DCameraBuffer buffer;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->AcquireBuffer(dhBase, streamId, buffer);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DCameraBufferBlockMarshalling(dCameraProviderReply, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubShutterBuffer_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t streamId = 0;
+    if (!dCameraProviderData.ReadInt32(streamId)) {
+        HDF_LOGE("%{public}s: read streamId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DCameraBuffer buffer;
+    if (!DCameraBufferBlockUnmarshalling(dCameraProviderData, buffer)) {
+        HDF_LOGE("%{public}s: read buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->ShutterBuffer(dhBase, streamId, buffer);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubOnSettingsResult_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DCameraSettings result;
+    if (!DCameraSettingsBlockUnmarshalling(dCameraProviderData, result)) {
+        HDF_LOGE("%{public}s: read result failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->OnSettingsResult(dhBase, result);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubNotify_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DHBase dhBase;
+    if (!DHBaseBlockUnmarshalling(dCameraProviderData, dhBase)) {
+        HDF_LOGE("%{public}s: read dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedCamera::V1_0::DCameraHDFEvent event;
+    if (!DCameraHDFEventBlockUnmarshalling(dCameraProviderData, event)) {
+        HDF_LOGE("%{public}s: read event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->Notify(dhBase, event);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    return dCameraProviderRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderStub::DCameraProviderStubGetVersion_(MessageParcel& dCameraProviderData, MessageParcel& dCameraProviderReply, MessageOption& dCameraProviderOption, sptr<OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider> impl)
+{
+    if (dCameraProviderData.ReadInterfaceToken() != OHOS::HDI::DistributedCamera::V1_0::IDCameraProvider::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t dCameraProviderRet = impl->GetVersion(majorVer, minorVer);
+    if (dCameraProviderRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderRet);
+        return dCameraProviderRet;
+    }
+
+    if (!dCameraProviderReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!dCameraProviderReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return dCameraProviderRet;
+}
+} // V1_0
+} // DistributedCamera
+} // HDI
+} // OHOS

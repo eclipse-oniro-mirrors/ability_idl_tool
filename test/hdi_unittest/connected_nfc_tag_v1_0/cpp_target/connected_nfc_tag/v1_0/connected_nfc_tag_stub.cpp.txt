@@ -1,0 +1,255 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/connected_nfc_tag_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    connected_nfc_tag_stub
+
+namespace OHOS {
+namespace HDI {
+namespace ConnectedNfcTag {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::Get(bool isStub)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::Get("connected_nfc_tag_service", isStub);
+}
+
+sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "connected_nfc_tag_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag *>(impl);
+}
+
+
+OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStub(const sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> &impl)
+    : IPCObjectStub(OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::~ConnectedNfcTagStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CONNECTED_NFC_TAG_GET_VERSION:
+            return ConnectedNfcTagStubGetVersion(data, reply, option);
+        case CMD_CONNECTED_NFC_TAG_INIT:
+            return ConnectedNfcTagStubInit(data, reply, option);
+        case CMD_CONNECTED_NFC_TAG_UNINIT:
+            return ConnectedNfcTagStubUninit(data, reply, option);
+        case CMD_CONNECTED_NFC_TAG_READ_NDEF_TAG:
+            return ConnectedNfcTagStubReadNdefTag(data, reply, option);
+        case CMD_CONNECTED_NFC_TAG_WRITE_NDEF_TAG:
+            return ConnectedNfcTagStubWriteNdefTag(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubInit(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubInit_(connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption, impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubUninit(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubUninit_(connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption, impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubReadNdefTag(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubReadNdefTag_(connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption, impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubWriteNdefTag(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubWriteNdefTag_(connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption, impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubGetVersion(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption)
+{
+    return OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubGetVersion_(connectedNfcTagData, connectedNfcTagReply, connectedNfcTagOption, impl_);
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubInit_(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption, sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> impl)
+{
+    if (connectedNfcTagData.ReadInterfaceToken() != OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t connectedNfcTagRet = impl->Init();
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubUninit_(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption, sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> impl)
+{
+    if (connectedNfcTagData.ReadInterfaceToken() != OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t connectedNfcTagRet = impl->Uninit();
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubReadNdefTag_(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption, sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> impl)
+{
+    if (connectedNfcTagData.ReadInterfaceToken() != OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool connectedNfcTagMemSet = false;
+    if (!connectedNfcTagData.ReadBool(connectedNfcTagMemSet)) {
+        HDF_LOGE("%{public}s: failed to read connectedNfcTagMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string ndefData;
+    if (connectedNfcTagMemSet) {
+        uint32_t capacity = 0;
+        if (!connectedNfcTagData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        ndefData.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t connectedNfcTagRet = impl->ReadNdefTag(ndefData);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    if (!connectedNfcTagReply.WriteCString(ndefData.c_str())) {
+        HDF_LOGE("%{public}s: write ndefData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubWriteNdefTag_(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption, sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> impl)
+{
+    if (connectedNfcTagData.ReadInterfaceToken() != OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* ndefDataCp = connectedNfcTagData.ReadCString();
+    if (ndefDataCp == nullptr) {
+        HDF_LOGE("%{public}s: read ndefData failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string ndefData = ndefDataCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t connectedNfcTagRet = impl->WriteNdefTag(ndefData);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    return connectedNfcTagRet;
+}
+
+int32_t OHOS::HDI::ConnectedNfcTag::V1_0::ConnectedNfcTagStub::ConnectedNfcTagStubGetVersion_(MessageParcel& connectedNfcTagData, MessageParcel& connectedNfcTagReply, MessageOption& connectedNfcTagOption, sptr<OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag> impl)
+{
+    if (connectedNfcTagData.ReadInterfaceToken() != OHOS::HDI::ConnectedNfcTag::V1_0::IConnectedNfcTag::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t connectedNfcTagRet = impl->GetVersion(majorVer, minorVer);
+    if (connectedNfcTagRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, connectedNfcTagRet);
+        return connectedNfcTagRet;
+    }
+
+    if (!connectedNfcTagReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!connectedNfcTagReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return connectedNfcTagRet;
+}
+} // V1_0
+} // ConnectedNfcTag
+} // HDI
+} // OHOS

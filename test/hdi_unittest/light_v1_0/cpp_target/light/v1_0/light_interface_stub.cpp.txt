@@ -1,0 +1,308 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/light_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    light_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Light {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+sptr<OHOS::HDI::Light::V1_0::ILightInterface> OHOS::HDI::Light::V1_0::ILightInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Light::V1_0::ILightInterface::Get("light_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Light::V1_0::ILightInterface> OHOS::HDI::Light::V1_0::ILightInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "light_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Light::V1_0::ILightInterface *>(impl);
+}
+
+
+OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStub(const sptr<OHOS::HDI::Light::V1_0::ILightInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Light::V1_0::LightInterfaceStub::~LightInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_LIGHT_INTERFACE_GET_VERSION:
+            return LightInterfaceStubGetVersion(data, reply, option);
+        case CMD_LIGHT_INTERFACE_GET_LIGHT_INFO:
+            return LightInterfaceStubGetLightInfo(data, reply, option);
+        case CMD_LIGHT_INTERFACE_TURN_ON_LIGHT:
+            return LightInterfaceStubTurnOnLight(data, reply, option);
+        case CMD_LIGHT_INTERFACE_TURN_ON_MULTI_LIGHTS:
+            return LightInterfaceStubTurnOnMultiLights(data, reply, option);
+        case CMD_LIGHT_INTERFACE_TURN_OFF_LIGHT:
+            return LightInterfaceStubTurnOffLight(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetLightInfo(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetLightInfo_(lightInterfaceData, lightInterfaceReply, lightInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnLight(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnLight_(lightInterfaceData, lightInterfaceReply, lightInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnMultiLights(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnMultiLights_(lightInterfaceData, lightInterfaceReply, lightInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOffLight(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOffLight_(lightInterfaceData, lightInterfaceReply, lightInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetVersion(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption)
+{
+    return OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetVersion_(lightInterfaceData, lightInterfaceReply, lightInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetLightInfo_(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption, sptr<OHOS::HDI::Light::V1_0::ILightInterface> impl)
+{
+    if (lightInterfaceData.ReadInterfaceToken() != OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool lightInterfaceMemSet = false;
+    if (!lightInterfaceData.ReadBool(lightInterfaceMemSet)) {
+        HDF_LOGE("%{public}s: failed to read lightInterfaceMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<OHOS::HDI::Light::V1_0::HdfLightInfo> info;
+    if (lightInterfaceMemSet) {
+        uint32_t capacity = 0;
+        if (!lightInterfaceData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Light::V1_0::HdfLightInfo), HDF_ERR_INVALID_PARAM);
+        info.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightInterfaceRet = impl->GetLightInfo(info);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    if (!lightInterfaceReply.WriteUint32(info.size())) {
+        HDF_LOGE("%{public}s: write info size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : info) {
+        if (!OHOS::HDI::Light::V1_0::HdfLightInfoBlockMarshalling(lightInterfaceReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnLight_(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption, sptr<OHOS::HDI::Light::V1_0::ILightInterface> impl)
+{
+    if (lightInterfaceData.ReadInterfaceToken() != OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightId = 0;
+    if (!lightInterfaceData.ReadInt32(lightId)) {
+        HDF_LOGE("%{public}s: read lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Light::V1_0::HdfLightEffect effect;
+    if (!HdfLightEffectBlockUnmarshalling(lightInterfaceData, effect)) {
+        HDF_LOGE("%{public}s: read effect failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightInterfaceRet = impl->TurnOnLight(lightId, effect);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOnMultiLights_(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption, sptr<OHOS::HDI::Light::V1_0::ILightInterface> impl)
+{
+    if (lightInterfaceData.ReadInterfaceToken() != OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightId = 0;
+    if (!lightInterfaceData.ReadInt32(lightId)) {
+        HDF_LOGE("%{public}s: read lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Light::V1_0::HdfLightColor> colors;
+    if (!ReadPodArray(lightInterfaceData, colors)) {
+        HDF_LOGE("%{public}s: failed to read colors", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightInterfaceRet = impl->TurnOnMultiLights(lightId, colors);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubTurnOffLight_(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption, sptr<OHOS::HDI::Light::V1_0::ILightInterface> impl)
+{
+    if (lightInterfaceData.ReadInterfaceToken() != OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightId = 0;
+    if (!lightInterfaceData.ReadInt32(lightId)) {
+        HDF_LOGE("%{public}s: read lightId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightInterfaceRet = impl->TurnOffLight(lightId);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    return lightInterfaceRet;
+}
+
+int32_t OHOS::HDI::Light::V1_0::LightInterfaceStub::LightInterfaceStubGetVersion_(MessageParcel& lightInterfaceData, MessageParcel& lightInterfaceReply, MessageOption& lightInterfaceOption, sptr<OHOS::HDI::Light::V1_0::ILightInterface> impl)
+{
+    if (lightInterfaceData.ReadInterfaceToken() != OHOS::HDI::Light::V1_0::ILightInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t lightInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (lightInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, lightInterfaceRet);
+        return lightInterfaceRet;
+    }
+
+    if (!lightInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!lightInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return lightInterfaceRet;
+}
+} // V1_0
+} // Light
+} // HDI
+} // OHOS

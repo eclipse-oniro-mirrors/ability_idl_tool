@@ -1,0 +1,869 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_types.h"
+#include <hdf_log.h>
+#include <message_parcel.h>
+#include <securec.h>
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+static bool ReadFileDescriptor(MessageParcel &data, int &fd);
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+static bool WriteFileDescriptor(MessageParcel &data, int fd);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+static bool ReadFileDescriptor(MessageParcel &data, int &fd)
+{
+    fd = -1;
+    bool fdValid = false;
+    if (!data.ReadBool(fdValid)) {
+        HDF_LOGE("%{public}s: failed to read fdValid", __func__);
+        return false;
+    }
+
+    if (fdValid) {
+        fd = data.ReadFileDescriptor();
+        if (fd < 0) {
+            HDF_LOGE("%{public}s: failed to read fd", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+static bool WriteFileDescriptor(MessageParcel &data, int fd)
+{
+    if (!data.WriteBool(fd >= 0 ? true : false)) {
+        HDF_LOGE("%{public}s: failed to write fd vailed", __func__);
+        return false;
+    }
+    if (fd < 0) {
+        return true;
+    }
+    if (!data.WriteFileDescriptor(fd)) {
+        HDF_LOGE("%{public}s: failed to write fd", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioDeviceStatusBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioDeviceStatusBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceStatus)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioPortBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort& dataBlock)
+{
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.dir))) {
+        HDF_LOGE("%{public}s: write dataBlock.dir failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: write dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.portName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.portName failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioPortBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort& dataBlock)
+{
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.dir failed!", __func__);
+            return false;
+        }
+        dataBlock.dir = static_cast<enum AudioPortDirection>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: read dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    const char* portNameCp = data.ReadCString();
+    if (portNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read portNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.portName = portNameCp;
+    return true;
+}
+
+bool AudioAdapterDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptor& dataBlock)
+{
+    if (!data.WriteCString(dataBlock.adapterName.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.adapterName failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.ports.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.ports.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.ports) {
+        if (!AudioPortBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AudioAdapterDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptor& dataBlock)
+{
+    const char* adapterNameCp = data.ReadCString();
+    if (adapterNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read adapterNameCp failed", __func__);
+        return false;
+    }
+    dataBlock.adapterName = adapterNameCp;
+
+    uint32_t portsSize = 0;
+    if (!data.ReadUint32(portsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(portsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort), false);
+    dataBlock.ports.clear();
+    dataBlock.ports.reserve(portsSize);
+    for (uint32_t i0 = 0; i0 < portsSize; ++i0) {
+        OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPort value0;
+        if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.ports.push_back(value0);
+    }
+    return true;
+}
+
+bool AudioDeviceDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceDescriptor& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: write dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.pins))) {
+        HDF_LOGE("%{public}s: write dataBlock.pins failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.desc.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioDeviceDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceDescriptor& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: read dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.pins failed!", __func__);
+            return false;
+        }
+        dataBlock.pins = static_cast<enum AudioPortPin>(enumTmp);
+    }
+
+    const char* descCp = data.ReadCString();
+    if (descCp == nullptr) {
+        HDF_LOGE("%{public}s: read descCp failed", __func__);
+        return false;
+    }
+    dataBlock.desc = descCp;
+    return true;
+}
+
+bool AudioSceneDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock.scene, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc))) {
+        HDF_LOGE("%{public}s: write dataBlock.scene failed!", __func__);
+        return false;
+    }
+
+    if (!AudioDeviceDescriptorBlockMarshalling(data, dataBlock.desc)) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioSceneDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSceneDescriptor& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc *sceneCp = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc)));
+    if (sceneCp == nullptr) {
+        HDF_LOGE("%{public}s: read sceneCp failed!", __func__);
+        return false;
+    }
+    if (memcpy_s(&dataBlock.scene, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc), sceneCp, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::SceneDesc)) != EOK) {
+        HDF_LOGE("%{public}s: failed to memcpy dataBlock.scene", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDeviceDescriptorBlockUnmarshalling(data, dataBlock.desc)) {
+        HDF_LOGE("%{public}s: read dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioSampleAttributesBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioSampleAttributesBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSampleAttributes)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioTimeStampBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioTimeStampBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioTimeStamp)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioSubPortCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSubPortCapability& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: write dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.desc.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.mask))) {
+        HDF_LOGE("%{public}s: write dataBlock.mask failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioSubPortCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSubPortCapability& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: read dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    const char* descCp = data.ReadCString();
+    if (descCp == nullptr) {
+        HDF_LOGE("%{public}s: read descCp failed", __func__);
+        return false;
+    }
+    dataBlock.desc = descCp;
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.mask failed!", __func__);
+            return false;
+        }
+        dataBlock.mask = static_cast<enum AudioPortPassthroughMode>(enumTmp);
+    }
+    return true;
+}
+
+bool AudioPortCapabilityBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortCapability& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.deviceType)) {
+        HDF_LOGE("%{public}s: write dataBlock.deviceType failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.deviceId)) {
+        HDF_LOGE("%{public}s: write dataBlock.deviceId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteBool(dataBlock.hardwareMode)) {
+        HDF_LOGE("%{public}s: write dataBlock.hardwareMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.formatNum)) {
+        HDF_LOGE("%{public}s: write dataBlock.formatNum failed!", __func__);
+        return false;
+    }
+
+    if (!WritePodArray(data, dataBlock.formats)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.formats", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.sampleRateMasks)) {
+        HDF_LOGE("%{public}s: write dataBlock.sampleRateMasks failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.channelMasks))) {
+        HDF_LOGE("%{public}s: write dataBlock.channelMasks failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.channelCount)) {
+        HDF_LOGE("%{public}s: write dataBlock.channelCount failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.subPorts.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.subPorts.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.subPorts) {
+        if (!AudioSubPortCapabilityBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!WritePodArray(data, dataBlock.supportSampleFormats)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.supportSampleFormats", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioPortCapabilityBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioPortCapability& dataBlock)
+{
+    if (!data.ReadUint32(dataBlock.deviceType)) {
+        HDF_LOGE("%{public}s: read dataBlock.deviceType failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.deviceId)) {
+        HDF_LOGE("%{public}s: read dataBlock.deviceId failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadBool(dataBlock.hardwareMode)) {
+        HDF_LOGE("%{public}s: read dataBlock.hardwareMode failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.formatNum)) {
+        HDF_LOGE("%{public}s: read dataBlock.formatNum failed!", __func__);
+        return false;
+    }
+
+    if (!ReadPodArray(data, dataBlock.formats)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.formats", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.sampleRateMasks)) {
+        HDF_LOGE("%{public}s: read dataBlock.sampleRateMasks failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.channelMasks failed!", __func__);
+            return false;
+        }
+        dataBlock.channelMasks = static_cast<enum AudioChannelMask>(enumTmp);
+    }
+
+    if (!data.ReadUint32(dataBlock.channelCount)) {
+        HDF_LOGE("%{public}s: read dataBlock.channelCount failed!", __func__);
+        return false;
+    }
+
+    uint32_t subPortsSize = 0;
+    if (!data.ReadUint32(subPortsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(subPortsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSubPortCapability), false);
+    dataBlock.subPorts.clear();
+    dataBlock.subPorts.reserve(subPortsSize);
+    for (uint32_t i0 = 0; i0 < subPortsSize; ++i0) {
+        OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSubPortCapability value0;
+        if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSubPortCapabilityBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.subPorts.push_back(value0);
+    }
+
+    if (!ReadPodArray(data, dataBlock.supportSampleFormats)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.supportSampleFormats", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioMmapBufferDescriptorBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor& dataBlock)
+{
+    if (!WritePodArray(data, dataBlock.memoryAddress)) {
+        HDF_LOGE("%{public}s: failed to write dataBlock.memoryAddress", __func__);
+        return false;
+    }
+
+    if (!WriteFileDescriptor(data, dataBlock.memoryFd)) {
+        HDF_LOGE("%{public}s: write dataBlock.memoryFd failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.totalBufferFrames)) {
+        HDF_LOGE("%{public}s: write dataBlock.totalBufferFrames failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.transferFrameSize)) {
+        HDF_LOGE("%{public}s: write dataBlock.transferFrameSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteInt32(dataBlock.isShareable)) {
+        HDF_LOGE("%{public}s: write dataBlock.isShareable failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint32(dataBlock.offset)) {
+        HDF_LOGE("%{public}s: write dataBlock.offset failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.filePath.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.filePath failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioMmapBufferDescriptorBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMmapBufferDescriptor& dataBlock)
+{
+    if (!ReadPodArray(data, dataBlock.memoryAddress)) {
+        HDF_LOGE("%{public}s: failed to read dataBlock.memoryAddress", __func__);
+        return false;
+    }
+
+    dataBlock.memoryFd = -1;
+    if (!ReadFileDescriptor(data, dataBlock.memoryFd)) {
+        HDF_LOGE("%{public}s: read dataBlock.memoryFd failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.totalBufferFrames)) {
+        HDF_LOGE("%{public}s: read dataBlock.totalBufferFrames failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.transferFrameSize)) {
+        HDF_LOGE("%{public}s: read dataBlock.transferFrameSize failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadInt32(dataBlock.isShareable)) {
+        HDF_LOGE("%{public}s: read dataBlock.isShareable failed!", __func__);
+        return false;
+    }
+
+    if (!data.ReadUint32(dataBlock.offset)) {
+        HDF_LOGE("%{public}s: read dataBlock.offset failed!", __func__);
+        return false;
+    }
+
+    const char* filePathCp = data.ReadCString();
+    if (filePathCp == nullptr) {
+        HDF_LOGE("%{public}s: read filePathCp failed", __func__);
+        return false;
+    }
+    dataBlock.filePath = filePathCp;
+    return true;
+}
+
+bool AudioDevExtInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDevExtInfo& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.moduleId)) {
+        HDF_LOGE("%{public}s: write dataBlock.moduleId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteCString(dataBlock.desc.c_str())) {
+        HDF_LOGE("%{public}s: write dataBlock.desc failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioDevExtInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDevExtInfo& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.moduleId)) {
+        HDF_LOGE("%{public}s: read dataBlock.moduleId failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum AudioPortPin>(enumTmp);
+    }
+
+    const char* descCp = data.ReadCString();
+    if (descCp == nullptr) {
+        HDF_LOGE("%{public}s: read descCp failed", __func__);
+        return false;
+    }
+    dataBlock.desc = descCp;
+    return true;
+}
+
+bool AudioMixExtInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioMixExtInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioSessionExtInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioSessionExtInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfo)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioInfoBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioInfo& dataBlock)
+{
+    if (!AudioDevExtInfoBlockMarshalling(data, dataBlock.device)) {
+        HDF_LOGE("%{public}s: write dataBlock.device failed!", __func__);
+        return false;
+    }
+
+    if (!AudioMixExtInfoBlockMarshalling(data, dataBlock.mix)) {
+        HDF_LOGE("%{public}s: write dataBlock.mix failed!", __func__);
+        return false;
+    }
+
+    if (!AudioSessionExtInfoBlockMarshalling(data, dataBlock.session)) {
+        HDF_LOGE("%{public}s: write dataBlock.session failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioInfoBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioInfo& dataBlock)
+{
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioDevExtInfoBlockUnmarshalling(data, dataBlock.device)) {
+        HDF_LOGE("%{public}s: read dataBlock.device failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioMixExtInfoBlockUnmarshalling(data, dataBlock.mix)) {
+        HDF_LOGE("%{public}s: read dataBlock.mix failed!", __func__);
+        return false;
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioSessionExtInfoBlockUnmarshalling(data, dataBlock.session)) {
+        HDF_LOGE("%{public}s: read dataBlock.session failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioRouteNodeBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode& dataBlock)
+{
+    if (!data.WriteInt32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: write dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.role))) {
+        HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+        return false;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
+        HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+        return false;
+    }
+
+    if (!AudioInfoBlockMarshalling(data, dataBlock.ext)) {
+        HDF_LOGE("%{public}s: write dataBlock.ext failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioRouteNodeBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode& dataBlock)
+{
+    if (!data.ReadInt32(dataBlock.portId)) {
+        HDF_LOGE("%{public}s: read dataBlock.portId failed!", __func__);
+        return false;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.role failed!", __func__);
+            return false;
+        }
+        dataBlock.role = static_cast<enum AudioPortRole>(enumTmp);
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!data.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write dataBlock.type failed!", __func__);
+            return false;
+        }
+        dataBlock.type = static_cast<enum AudioPortType>(enumTmp);
+    }
+
+    if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioInfoBlockUnmarshalling(data, dataBlock.ext)) {
+        HDF_LOGE("%{public}s: read dataBlock.ext failed!", __func__);
+        return false;
+    }
+    return true;
+}
+
+bool AudioRouteBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRoute& dataBlock)
+{
+    if (!data.WriteUint32(dataBlock.sources.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.sources.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.sources) {
+        if (!AudioRouteNodeBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+
+    if (!data.WriteUint32(dataBlock.sinks.size())) {
+        HDF_LOGE("%{public}s: failed write dataBlock.sinks.size", __func__);
+        return false;
+    }
+    for (const auto& it0 : dataBlock.sinks) {
+        if (!AudioRouteNodeBlockMarshalling(data, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AudioRouteBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRoute& dataBlock)
+{
+    uint32_t sourcesSize = 0;
+    if (!data.ReadUint32(sourcesSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(sourcesSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode), false);
+    dataBlock.sources.clear();
+    dataBlock.sources.reserve(sourcesSize);
+    for (uint32_t i0 = 0; i0 < sourcesSize; ++i0) {
+        OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode value0;
+        if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNodeBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.sources.push_back(value0);
+    }
+
+    uint32_t sinksSize = 0;
+    if (!data.ReadUint32(sinksSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    HDI_CHECK_VALUE_RETURN(sinksSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode), false);
+    dataBlock.sinks.clear();
+    dataBlock.sinks.reserve(sinksSize);
+    for (uint32_t i0 = 0; i0 < sinksSize; ++i0) {
+        OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNode value0;
+        if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioRouteNodeBlockUnmarshalling(data, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return false;
+        }
+        dataBlock.sinks.push_back(value0);
+    }
+    return true;
+}
+
+bool AudioEventBlockMarshalling(OHOS::MessageParcel& data, const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent& dataBlock)
+{
+    if (!data.WriteUnpadBuffer((const void*)&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent))) {
+        return false;
+    }
+    return true;
+}
+
+bool AudioEventBlockUnmarshalling(OHOS::MessageParcel& data, OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent& dataBlock)
+{
+    const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent *dataBlockPtr = reinterpret_cast<const OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent*>(data.ReadUnpadBuffer(sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent)));
+    if (dataBlockPtr == NULL) {
+        return false;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent), dataBlockPtr, sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioEvent)) != EOK) {
+        return false;
+    }
+    return true;
+}
+
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS

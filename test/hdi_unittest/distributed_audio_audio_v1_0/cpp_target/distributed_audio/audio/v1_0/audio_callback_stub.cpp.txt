@@ -1,0 +1,212 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    audio_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+
+
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStub(const sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::~AudioCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_AUDIO_CALLBACK_GET_VERSION:
+            return AudioCallbackStubGetVersion(data, reply, option);
+        case CMD_AUDIO_CALLBACK_RENDER_CALLBACK:
+            return AudioCallbackStubRenderCallback(data, reply, option);
+        case CMD_AUDIO_CALLBACK_PARAM_CALLBACK:
+            return AudioCallbackStubParamCallback(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubRenderCallback(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubRenderCallback_(audioCallbackData, audioCallbackReply, audioCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubParamCallback(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubParamCallback_(audioCallbackData, audioCallbackReply, audioCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubGetVersion(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubGetVersion_(audioCallbackData, audioCallbackReply, audioCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubRenderCallback_(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback> impl)
+{
+    if (audioCallbackData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackType type = static_cast<enum AudioCallbackType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!audioCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum AudioCallbackType>(enumTmp);
+    }
+
+    int8_t reserved = 0;
+
+    int8_t cookie = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCallbackRet = impl->RenderCallback(type, reserved, cookie);
+    if (audioCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCallbackRet);
+        return audioCallbackRet;
+    }
+
+    if (!audioCallbackReply.WriteInt8(reserved)) {
+        HDF_LOGE("%{public}s: write reserved failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCallbackReply.WriteInt8(cookie)) {
+        HDF_LOGE("%{public}s: write cookie failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubParamCallback_(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback> impl)
+{
+    if (audioCallbackData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioExtParamKey key = static_cast<enum AudioExtParamKey>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!audioCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write key failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        key = static_cast<enum AudioExtParamKey>(enumTmp);
+    }
+
+    const char* conditionCp = audioCallbackData.ReadCString();
+    if (conditionCp == nullptr) {
+        HDF_LOGE("%{public}s: read condition failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string condition = conditionCp;
+
+    const char* valueCp = audioCallbackData.ReadCString();
+    if (valueCp == nullptr) {
+        HDF_LOGE("%{public}s: read value failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string value = valueCp;
+
+    int8_t reserved = 0;
+
+    int8_t cookie = 0;
+    if (!audioCallbackData.ReadInt8(cookie)) {
+        HDF_LOGE("%{public}s: read cookie failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCallbackRet = impl->ParamCallback(key, condition, value, reserved, cookie);
+    if (audioCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCallbackRet);
+        return audioCallbackRet;
+    }
+
+    if (!audioCallbackReply.WriteInt8(reserved)) {
+        HDF_LOGE("%{public}s: write reserved failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioCallbackStub::AudioCallbackStubGetVersion_(MessageParcel& audioCallbackData, MessageParcel& audioCallbackReply, MessageOption& audioCallbackOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback> impl)
+{
+    if (audioCallbackData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (audioCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioCallbackRet);
+        return audioCallbackRet;
+    }
+
+    if (!audioCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioCallbackRet;
+}
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS

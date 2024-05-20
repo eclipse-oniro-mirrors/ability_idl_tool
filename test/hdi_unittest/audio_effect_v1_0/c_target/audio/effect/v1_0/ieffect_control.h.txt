@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_AUDIO_EFFECT_V1_0_IEFFECTCONTROL_H
+#define OHOS_HDI_AUDIO_EFFECT_V1_0_IEFFECTCONTROL_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <hdf_base.h>
+#include "audio/effect/v1_0/effect_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+struct HdfRemoteService;
+
+#define IEFFECTCONTROL_INTERFACE_DESC "ohos.hdi.audio.effect.v1_0.IEffectControl"
+
+#define IEFFECT_CONTROL_MAJOR_VERSION 1
+#define IEFFECT_CONTROL_MINOR_VERSION 0
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+enum {
+    CMD_EFFECT_CONTROL_GET_VERSION = 0,
+    CMD_EFFECT_CONTROL_EFFECT_PROCESS = 1,
+    CMD_EFFECT_CONTROL_SEND_COMMAND = 2,
+    CMD_EFFECT_CONTROL_GET_EFFECT_DESCRIPTOR = 3,
+    CMD_EFFECT_CONTROL_EFFECT_REVERSE = 4,
+};
+
+struct IEffectControl {
+    int32_t (*EffectProcess)(struct IEffectControl *self, const struct AudioEffectBuffer* input,
+         struct AudioEffectBuffer* output);
+
+    int32_t (*SendCommand)(struct IEffectControl *self, uint32_t cmdId, const int8_t* cmdData, uint32_t cmdDataLen,
+         int8_t* replyData, uint32_t* replyDataLen);
+
+    int32_t (*GetEffectDescriptor)(struct IEffectControl *self, struct EffectControllerDescriptor* desc);
+
+    int32_t (*EffectReverse)(struct IEffectControl *self, const struct AudioEffectBuffer* input,
+         struct AudioEffectBuffer* output);
+
+    int32_t (*GetVersion)(struct IEffectControl *self, uint32_t* majorVer, uint32_t* minorVer);
+
+    struct HdfRemoteService* (*AsObject)(struct IEffectControl *self);
+};
+
+// no external method used to create client object, it only support ipc mode
+struct IEffectControl *IEffectControlGet(struct HdfRemoteService *remote);
+
+// external method used to release client object, it support ipc and passthrought mode
+void IEffectControlRelease(struct IEffectControl *instance, bool isStub);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // OHOS_HDI_AUDIO_EFFECT_V1_0_IEFFECTCONTROL_H

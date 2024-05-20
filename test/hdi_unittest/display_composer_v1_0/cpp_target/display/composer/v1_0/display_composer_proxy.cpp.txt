@@ -1,0 +1,1276 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/display_composer_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    display_composer_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Display {
+namespace Composer {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Display::Composer::V1_0::IDisplayComposer> OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::Get(bool isStub)
+{
+    return IDisplayComposer::Get("display_composer_service", isStub);
+}
+
+sptr<OHOS::HDI::Display::Composer::V1_0::IDisplayComposer> OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "display_composer_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Display::Composer::V1_0::IDisplayComposer *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy> proxy = new OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t displayComposerRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::Reconnect(
+    sptr<OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegHotPlugCallback(const sptr<OHOS::HDI::Display::Composer::V1_0::IHotPlugCallback>& cb)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegHotPlugCallback_(cb, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetClientBufferCacheCount(uint32_t devId,
+     uint32_t count)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetClientBufferCacheCount_(devId, count, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegDisplayVBlankCallback(uint32_t devId,
+     const sptr<OHOS::HDI::Display::Composer::V1_0::IVBlankCallback>& cb)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegDisplayVBlankCallback_(devId, cb, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayCapability(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DisplayCapability& info)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayCapability_(devId, info, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplaySupportedModes(uint32_t devId,
+     std::vector<OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo>& modes)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplaySupportedModes_(devId, modes, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayMode(uint32_t devId, uint32_t& modeId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayMode_(devId, modeId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayMode(uint32_t devId, uint32_t modeId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayMode_(devId, modeId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayPowerStatus(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DispPowerStatus& status)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayPowerStatus_(devId, status, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayPowerStatus(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DispPowerStatus status)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayPowerStatus_(devId, status, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayBacklight(uint32_t devId, uint32_t& level)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayBacklight_(devId, level, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayBacklight(uint32_t devId, uint32_t level)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayBacklight_(devId, level, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayVsyncEnabled(uint32_t devId, bool enabled)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayVsyncEnabled_(devId, enabled, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateLayer(uint32_t devId,
+     const OHOS::HDI::Display::Composer::V1_0::LayerInfo& layerInfo, uint32_t cacheCount, uint32_t& layerId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateLayer_(devId, layerInfo, cacheCount, layerId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyLayer(uint32_t devId, uint32_t layerId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyLayer_(devId, layerId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayClientCrop(uint32_t devId,
+     const OHOS::HDI::Display::Composer::V1_0::IRect& rect)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayClientCrop_(devId, rect, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayReleaseFence(uint32_t devId,
+     std::vector<uint32_t>& layers, std::vector<sptr<OHOS::HDI::Display::HdifdParcelable>>& fences)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayReleaseFence_(devId, layers, fences, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateVirtualDisplay(uint32_t width, uint32_t height,
+     int32_t& format, uint32_t& devId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateVirtualDisplay_(width, height, format, devId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyVirtualDisplay(uint32_t devId)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyVirtualDisplay_(devId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetVirtualDisplayBuffer(uint32_t devId,
+     const sptr<NativeBuffer>& buffer, const sptr<OHOS::HDI::Display::HdifdParcelable>& fence)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetVirtualDisplayBuffer_(devId, buffer, fence, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayProperty(uint32_t devId, uint32_t id,
+     uint64_t value)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayProperty_(devId, id, value, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayProperty(uint32_t devId, uint32_t id,
+     uint64_t& value)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayProperty_(devId, id, value, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::InitCmdRequest(const std::shared_ptr<SharedMemQueue<int32_t>>& request)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::InitCmdRequest_(request, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CmdRequest(uint32_t inEleCnt,
+     const std::vector<OHOS::HDI::Display::Composer::V1_0::HdifdInfo>& inFds, uint32_t& outEleCnt, std::vector<OHOS::HDI::Display::Composer::V1_0::HdifdInfo>& outFds)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CmdRequest_(inEleCnt, inFds, outEleCnt, outFds, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetCmdReply(std::shared_ptr<SharedMemQueue<int32_t>>& reply)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetCmdReply_(reply, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegHotPlugCallback_(const sptr<OHOS::HDI::Display::Composer::V1_0::IHotPlugCallback>& cb, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: parameter cb is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(cb, OHOS::HDI::Display::Composer::V1_0::IHotPlugCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write cb failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_REG_HOT_PLUG_CALLBACK, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetClientBufferCacheCount_(uint32_t devId,
+     uint32_t count, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(count)) {
+        HDF_LOGE("%{public}s: write count failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_CLIENT_BUFFER_CACHE_COUNT, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::RegDisplayVBlankCallback_(uint32_t devId,
+     const sptr<OHOS::HDI::Display::Composer::V1_0::IVBlankCallback>& cb, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (cb == nullptr) {
+        HDF_LOGE("%{public}s: parameter cb is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(cb, OHOS::HDI::Display::Composer::V1_0::IVBlankCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write cb failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_REG_DISPLAY_V_BLANK_CALLBACK, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayCapability_(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DisplayCapability& info, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_CAPABILITY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!DisplayCapabilityBlockUnmarshalling(displayComposerReply, info)) {
+        HDF_LOGE("%{public}s: read info failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplaySupportedModes_(uint32_t devId,
+     std::vector<OHOS::HDI::Display::Composer::V1_0::DisplayModeInfo>& modes, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_SUPPORTED_MODES, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!ReadPodArray(displayComposerReply, modes)) {
+        HDF_LOGE("%{public}s: failed to read modes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayMode_(uint32_t devId, uint32_t& modeId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_MODE, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint32(modeId)) {
+        HDF_LOGE("%{public}s: read modeId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayMode_(uint32_t devId, uint32_t modeId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(modeId)) {
+        HDF_LOGE("%{public}s: write modeId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_MODE, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayPowerStatus_(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DispPowerStatus& status, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_POWER_STATUS, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!displayComposerReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write status failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        status = static_cast<enum DispPowerStatus>(enumTmp);
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayPowerStatus_(uint32_t devId,
+     OHOS::HDI::Display::Composer::V1_0::DispPowerStatus status, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint64(static_cast<uint64_t>(status))) {
+        HDF_LOGE("%{public}s: write status failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_POWER_STATUS, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayBacklight_(uint32_t devId, uint32_t& level,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_BACKLIGHT, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint32(level)) {
+        HDF_LOGE("%{public}s: read level failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayBacklight_(uint32_t devId, uint32_t level,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(level)) {
+        HDF_LOGE("%{public}s: write level failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_BACKLIGHT, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayVsyncEnabled_(uint32_t devId, bool enabled,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteBool(enabled)) {
+        HDF_LOGE("%{public}s: write enabled failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_VSYNC_ENABLED, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateLayer_(uint32_t devId,
+     const OHOS::HDI::Display::Composer::V1_0::LayerInfo& layerInfo, uint32_t cacheCount, uint32_t& layerId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Display::Composer::V1_0::LayerInfoBlockMarshalling(displayComposerData, layerInfo)) {
+        HDF_LOGE("%{public}s: write layerInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(cacheCount)) {
+        HDF_LOGE("%{public}s: write cacheCount failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_CREATE_LAYER, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint32(layerId)) {
+        HDF_LOGE("%{public}s: read layerId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyLayer_(uint32_t devId, uint32_t layerId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(layerId)) {
+        HDF_LOGE("%{public}s: write layerId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_DESTROY_LAYER, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayClientCrop_(uint32_t devId,
+     const OHOS::HDI::Display::Composer::V1_0::IRect& rect, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Display::Composer::V1_0::IRectBlockMarshalling(displayComposerData, rect)) {
+        HDF_LOGE("%{public}s: write rect failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_CLIENT_CROP, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayReleaseFence_(uint32_t devId,
+     std::vector<uint32_t>& layers, std::vector<sptr<OHOS::HDI::Display::HdifdParcelable>>& fences, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_RELEASE_FENCE, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!ReadPodArray(displayComposerReply, layers)) {
+        HDF_LOGE("%{public}s: failed to read layers", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t fencesSize = 0;
+    if (!displayComposerReply.ReadUint32(fencesSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(fencesSize, >, HDI_BUFF_MAX_SIZE / sizeof(sptr<OHOS::HDI::Display::HdifdParcelable>), HDF_ERR_INVALID_PARAM);
+    fences.clear();
+    fences.reserve(fencesSize);
+    for (uint32_t i0 = 0; i0 < fencesSize; ++i0) {
+        sptr<HdifdParcelable> value0 = displayComposerReply.ReadStrongParcelable<HdifdParcelable>();
+        fences.push_back(value0);
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CreateVirtualDisplay_(uint32_t width, uint32_t height,
+     int32_t& format, uint32_t& devId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(width)) {
+        HDF_LOGE("%{public}s: write width failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(height)) {
+        HDF_LOGE("%{public}s: write height failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_CREATE_VIRTUAL_DISPLAY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadInt32(format)) {
+        HDF_LOGE("%{public}s: read format failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerReply.ReadUint32(devId)) {
+        HDF_LOGE("%{public}s: read devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::DestroyVirtualDisplay_(uint32_t devId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_DESTROY_VIRTUAL_DISPLAY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetVirtualDisplayBuffer_(uint32_t devId,
+     const sptr<NativeBuffer>& buffer, const sptr<OHOS::HDI::Display::HdifdParcelable>& fence, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteStrongParcelable(buffer)) {
+        HDF_LOGE("%{public}s: failed to write buffer", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteStrongParcelable(fence)) {
+        HDF_LOGE("%{public}s: write fence failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_VIRTUAL_DISPLAY_BUFFER, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::SetDisplayProperty_(uint32_t devId, uint32_t id,
+     uint64_t value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint64(value)) {
+        HDF_LOGE("%{public}s: write value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_SET_DISPLAY_PROPERTY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetDisplayProperty_(uint32_t devId, uint32_t id,
+     uint64_t& value, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(devId)) {
+        HDF_LOGE("%{public}s: write devId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(id)) {
+        HDF_LOGE("%{public}s: write id failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_DISPLAY_PROPERTY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint64(value)) {
+        HDF_LOGE("%{public}s: read value failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::InitCmdRequest_(const std::shared_ptr<SharedMemQueue<int32_t>>& request, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (request == nullptr || !request->IsGood() || request->GetMeta() == nullptr || !request->GetMeta()->Marshalling(displayComposerData)) {
+        HDF_LOGE("%{public}s: write request failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_INIT_CMD_REQUEST, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::CmdRequest_(uint32_t inEleCnt,
+     const std::vector<OHOS::HDI::Display::Composer::V1_0::HdifdInfo>& inFds, uint32_t& outEleCnt, std::vector<OHOS::HDI::Display::Composer::V1_0::HdifdInfo>& outFds, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(inEleCnt)) {
+        HDF_LOGE("%{public}s: write inEleCnt failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerData.WriteUint32(inFds.size())) {
+        HDF_LOGE("%{public}s: write inFds size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : inFds) {
+        if (!OHOS::HDI::Display::Composer::V1_0::HdifdInfoBlockMarshalling(displayComposerData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_CMD_REQUEST, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint32(outEleCnt)) {
+        HDF_LOGE("%{public}s: read outEleCnt failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t outFdsSize = 0;
+    if (!displayComposerReply.ReadUint32(outFdsSize)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    HDI_CHECK_VALUE_RETURN(outFdsSize, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::Display::Composer::V1_0::HdifdInfo), HDF_ERR_INVALID_PARAM);
+    outFds.clear();
+    outFds.reserve(outFdsSize);
+    for (uint32_t i0 = 0; i0 < outFdsSize; ++i0) {
+        OHOS::HDI::Display::Composer::V1_0::HdifdInfo value0;
+        if (!HdifdInfoBlockUnmarshalling(displayComposerReply, value0)) {
+            HDF_LOGE("%{public}s: read value0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        outFds.push_back(value0);
+    }
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetCmdReply_(std::shared_ptr<SharedMemQueue<int32_t>>& reply, const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_CMD_REPLY, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    std::shared_ptr<SharedMemQueueMeta<int32_t>> replyMeta_ = SharedMemQueueMeta<int32_t>::UnMarshalling(displayComposerReply);
+    if (replyMeta_ == nullptr) {
+        HDF_LOGE("%{public}s: SharedMemQueueMeta is nullptr", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    reply = std::make_shared<SharedMemQueue<int32_t>>(*replyMeta_);
+
+    return displayComposerRet;
+}
+
+int32_t OHOS::HDI::Display::Composer::V1_0::DisplayComposerProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel displayComposerData;
+    MessageParcel displayComposerReply;
+    MessageOption displayComposerOption(MessageOption::TF_SYNC);
+
+    if (!displayComposerData.WriteInterfaceToken(OHOS::HDI::Display::Composer::V1_0::IDisplayComposer::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t displayComposerRet = remote->SendRequest(CMD_DISPLAY_COMPOSER_GET_VERSION, displayComposerData, displayComposerReply, displayComposerOption);
+    if (displayComposerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, displayComposerRet);
+        return displayComposerRet;
+    }
+
+    if (!displayComposerReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!displayComposerReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return displayComposerRet;
+}
+
+} // V1_0
+} // Composer
+} // Display
+} // HDI
+} // OHOS

@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_CAMERA_V1_2_TYPES_H
+#define OHOS_HDI_CAMERA_V1_2_TYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include "buffer_handle_sequenceable.h"
+#include "camera/v1_1/types.h"
+#include "map_data_sequenceable.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Camera {
+namespace V1_2 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::Camera::V1_1;
+using namespace OHOS::HDI::Camera::V1_0;
+
+enum CamRetCode : int32_t {
+    NO_ERROR = 0,
+    CAMERA_BUSY = -1,
+    INSUFFICIENT_RESOURCES = -2,
+    INVALID_ARGUMENT = -3,
+    METHOD_NOT_SUPPORTED = -4,
+    CAMERA_CLOSED = -5,
+    DEVICE_ERROR = -6,
+    NO_PERMISSION = -7,
+    DEVICE_CONFLICT = -8,
+};
+
+enum ExtendedStreamInfoType_V1_2 : int32_t {
+    EXTENDED_STREAM_INFO_QUICK_THUMBNAIL = 0,
+    EXTENDED_STREAM_INFO_SKETCH = 1,
+};
+
+enum OperationMode_V1_2 : int32_t {
+    NORMAL = 0,
+    CAPTURE = 1,
+    VIDEO = 2,
+    PORTRAIT = 3,
+    NIGHT = 4,
+    PROFESSIONAL = 5,
+    SLOW_MOTION = 6,
+    SCAN_CODE = 7,
+    CAPTURE_MACRO = 8,
+    VIDEO_MACRO = 9,
+    SUPER_STAB = 10,
+    OPERATION_MODE_MAX,
+};
+
+enum DeferredDeliveryImageType : int32_t {
+    NONE = 0,
+    STILL_IMAGE = 1,
+    MOVING_IMAGE = 2,
+};
+
+enum SessionStatus : int32_t {
+    SESSION_STATUS_READY = 0,
+    SESSION_STATUS_READY_SPACE_LIMIT_REACHED = 1,
+    SESSSON_STATUS_NOT_READY_TEMPORARILY = 2,
+    SESSION_STATUS_NOT_READY_OVERHEAT = 3,
+    SESSION_STATUS_NOT_READY_PREEMPTED = 4,
+};
+
+enum ErrorCode : int32_t {
+    ERROR_INVALID_ID = 0,
+    ERROR_PROCESS = 1,
+    ERROR_TIMEOUT = 2,
+    ERROR_HIGH_TEMPERATURE = 3,
+    ERROR_ABNORMAL = 4,
+    ERROR_ABORT = 5,
+};
+
+enum ExecutionMode : int32_t {
+    HIGH_PREFORMANCE = 0,
+    BALANCED = 1,
+    LOW_POWER = 2,
+};
+
+struct ImageBufferInfo {
+    sptr<OHOS::HDI::Camera::V1_0::MapDataSequenceable> metadata;
+    sptr<OHOS::HDI::Camera::V1_0::BufferHandleSequenceable> imageHandle;
+    bool isGainMapValid;
+    sptr<OHOS::HDI::Camera::V1_0::BufferHandleSequenceable> gainMapHandle;
+    bool isDepthMapValid;
+    sptr<OHOS::HDI::Camera::V1_0::BufferHandleSequenceable> depthMapHandle;
+};
+
+struct CaptureStartedInfo {
+    int32_t streamId_;
+    int32_t exposureTime_;
+} __attribute__ ((aligned(8)));
+
+bool ImageBufferInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Camera::V1_2::ImageBufferInfo& dataBlock);
+
+bool ImageBufferInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Camera::V1_2::ImageBufferInfo& dataBlock);
+
+bool CaptureStartedInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Camera::V1_2::CaptureStartedInfo& dataBlock);
+
+bool CaptureStartedInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Camera::V1_2::CaptureStartedInfo& dataBlock);
+
+} // V1_2
+} // Camera
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_CAMERA_V1_2_TYPES_H
+

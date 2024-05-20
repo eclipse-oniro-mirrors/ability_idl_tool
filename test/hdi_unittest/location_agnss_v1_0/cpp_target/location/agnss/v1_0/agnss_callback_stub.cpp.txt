@@ -1,0 +1,195 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/agnss_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    agnss_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Agnss {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStub(const sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::~AGnssCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_AGNSS_CALLBACK_GET_VERSION:
+            return AGnssCallbackStubGetVersion(data, reply, option);
+        case CMD_AGNSS_CALLBACK_REQUEST_SET_UP_AGNSS_DATA_LINK:
+            return AGnssCallbackStubRequestSetUpAgnssDataLink(data, reply, option);
+        case CMD_AGNSS_CALLBACK_REQUEST_SUBSCRIBER_SET_ID:
+            return AGnssCallbackStubRequestSubscriberSetId(data, reply, option);
+        case CMD_AGNSS_CALLBACK_REQUEST_AGNSS_REF_INFO:
+            return AGnssCallbackStubRequestAgnssRefInfo(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSetUpAgnssDataLink(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSetUpAgnssDataLink_(aGnssCallbackData, aGnssCallbackReply, aGnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSubscriberSetId(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSubscriberSetId_(aGnssCallbackData, aGnssCallbackReply, aGnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestAgnssRefInfo(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestAgnssRefInfo_(aGnssCallbackData, aGnssCallbackReply, aGnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubGetVersion(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption)
+{
+    return OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubGetVersion_(aGnssCallbackData, aGnssCallbackReply, aGnssCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSetUpAgnssDataLink_(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> impl)
+{
+    if (aGnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Agnss::V1_0::AGnssDataLinkRequest request;
+    if (!AGnssDataLinkRequestBlockUnmarshalling(aGnssCallbackData, request)) {
+        HDF_LOGE("%{public}s: read request failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssCallbackRet = impl->RequestSetUpAgnssDataLink(request);
+    if (aGnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssCallbackRet);
+        return aGnssCallbackRet;
+    }
+
+    return aGnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestSubscriberSetId_(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> impl)
+{
+    if (aGnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Agnss::V1_0::SubscriberSetIdType type = static_cast<enum SubscriberSetIdType>(0);
+    {
+        uint64_t enumTmp = 0;
+        if (!aGnssCallbackData.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write type failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        type = static_cast<enum SubscriberSetIdType>(enumTmp);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssCallbackRet = impl->RequestSubscriberSetId(type);
+    if (aGnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssCallbackRet);
+        return aGnssCallbackRet;
+    }
+
+    return aGnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubRequestAgnssRefInfo_(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> impl)
+{
+    if (aGnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssCallbackRet = impl->RequestAgnssRefInfo();
+    if (aGnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssCallbackRet);
+        return aGnssCallbackRet;
+    }
+
+    return aGnssCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Agnss::V1_0::AGnssCallbackStub::AGnssCallbackStubGetVersion_(MessageParcel& aGnssCallbackData, MessageParcel& aGnssCallbackReply, MessageOption& aGnssCallbackOption, sptr<OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback> impl)
+{
+    if (aGnssCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Agnss::V1_0::IAGnssCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t aGnssCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (aGnssCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, aGnssCallbackRet);
+        return aGnssCallbackRet;
+    }
+
+    if (!aGnssCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!aGnssCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return aGnssCallbackRet;
+}
+} // V1_0
+} // Agnss
+} // Location
+} // HDI
+} // OHOS

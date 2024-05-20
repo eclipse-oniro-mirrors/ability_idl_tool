@@ -1,0 +1,109 @@
+AST[name: IDAudioManager file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_audio_audioext_v1_0/foo/distributed_audio/audioext/v1_0/IDAudioManager.idl]
+package ohos.hdi.distributed_audio.audioext.v1_0;
+
+import ohos.hdi.distributed_audio.audioext.v1_0.Types;
+import ohos.hdi.distributed_audio.audioext.v1_0.IDAudioCallback;
+
+[mini, lite, full] interface IDAudioManager {
+    [mini, lite, full] RegisterAudioDevice(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] std::string capability,
+      [in] ohos.hdi.distributed_audio.audioext.v1_0.IDAudioCallback callbackObj);
+
+    [mini, lite, full] UnRegisterAudioDevice(
+      [in] std::string adpName,
+      [in] int devId);
+
+    [mini, lite, full] NotifyEvent(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] ohos.hdi.distributed_audio.audioext.v1_0.DAudioEvent event);
+}
+
+
+AST[name: IDAudioCallback file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_audio_audioext_v1_0/foo/distributed_audio/audioext/v1_0/IDAudioCallback.idl]
+package ohos.hdi.distributed_audio.audioext.v1_0;
+
+import ohos.hdi.distributed_audio.audioext.v1_0.Types;
+
+[mini, lite, full, callback] interface IDAudioCallback {
+    [mini, lite, full, callback] OpenDevice(
+      [in] std::string adpName,
+      [in] int devId);
+
+    [mini, lite, full, callback] CloseDevice(
+      [in] std::string adpName,
+      [in] int devId);
+
+    [mini, lite, full, callback] SetParameters(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] ohos.hdi.distributed_audio.audioext.v1_0.AudioParameter param);
+
+    [mini, lite, full, callback] NotifyEvent(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] ohos.hdi.distributed_audio.audioext.v1_0.DAudioEvent event);
+
+    [mini, lite, full, callback] WriteStreamData(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] ohos.hdi.distributed_audio.audioext.v1_0.AudioData data);
+
+    [mini, lite, full, callback] ReadStreamData(
+      [in] std::string adpName,
+      [in] int devId,
+      [out] ohos.hdi.distributed_audio.audioext.v1_0.AudioData data);
+
+    [mini, lite, full, callback] ReadMmapPosition(
+      [in] std::string adpName,
+      [in] int devId,
+      [out] unsigned long frames,
+      [out] ohos.hdi.distributed_audio.audioext.v1_0.CurrentTime time);
+
+    [mini, lite, full, callback] RefreshAshmemInfo(
+      [in] std::string adpName,
+      [in] int devId,
+      [in] FileDescriptor fd,
+      [in] int ashmemLength,
+      [in] int lengthPerTrans);
+}
+
+
+AST[name: Types file: /home/bmi/CODE/OpenHarmony/foundation/ability/idl_tool/test/hdi_unittest/distributed_audio_audioext_v1_0/foo/distributed_audio/audioext/v1_0/Types.idl]
+package ohos.hdi.distributed_audio.audioext.v1_0;
+
+[mini, lite, full] enum PortOperationMode : int {
+  NORMAL_MODE = 0,
+  MMAP_MODE = 1,
+};
+
+[mini, lite, full] struct AudioParameter {
+  unsigned int format;
+  unsigned int channelCount;
+  unsigned int sampleRate;
+  unsigned int period;
+  unsigned int frameSize;
+  unsigned int streamUsage;
+  ohos.hdi.distributed_audio.audioext.v1_0.PortOperationMode renderFlags;
+  ohos.hdi.distributed_audio.audioext.v1_0.PortOperationMode capturerFlags;
+  std::string ext;
+};
+
+[mini, lite, full] struct AudioData {
+  ohos.hdi.distributed_audio.audioext.v1_0.AudioParameter param;
+  byte[] data;
+};
+
+[mini, lite, full] struct DAudioEvent {
+  int type;
+  std::string content;
+};
+
+[mini, lite, full] struct CurrentTime {
+  long tvSec;
+  long tvNSec;
+};
+
+

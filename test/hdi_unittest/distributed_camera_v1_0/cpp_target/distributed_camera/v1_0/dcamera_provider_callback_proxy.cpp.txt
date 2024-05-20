@@ -1,0 +1,378 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/dcamera_provider_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    dcamera_provider_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedCamera {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::OpenSession(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::OpenSession_(dhBase, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::CloseSession(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::CloseSession_(dhBase, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ConfigureStreams(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCStreamInfo>& streamInfos)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ConfigureStreams_(dhBase, streamInfos, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ReleaseStreams(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<int32_t>& streamIds)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ReleaseStreams_(dhBase, streamIds, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StartCapture(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfo>& captureInfos)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StartCapture_(dhBase, captureInfos, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StopCapture(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<int32_t>& streamIds)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StopCapture_(dhBase, streamIds, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::UpdateSettings(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCameraSettings>& settings)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::UpdateSettings_(dhBase, settings, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::GetVersion(uint32_t& majorVer,
+     uint32_t& minorVer)
+{
+    return OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::OpenSession_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_OPEN_SESSION, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::CloseSession_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_CLOSE_SESSION, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ConfigureStreams_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCStreamInfo>& streamInfos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(dCameraProviderCallbackData, streamInfos)) {
+        HDF_LOGE("%{public}s: failed to write streamInfos", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_CONFIGURE_STREAMS, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::ReleaseStreams_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<int32_t>& streamIds, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(dCameraProviderCallbackData, streamIds)) {
+        HDF_LOGE("%{public}s: failed to write streamIds", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_RELEASE_STREAMS, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StartCapture_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfo>& captureInfos, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!dCameraProviderCallbackData.WriteUint32(captureInfos.size())) {
+        HDF_LOGE("%{public}s: write captureInfos size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : captureInfos) {
+        if (!OHOS::HDI::DistributedCamera::V1_0::DCCaptureInfoBlockMarshalling(dCameraProviderCallbackData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_START_CAPTURE, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::StopCapture_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<int32_t>& streamIds, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(dCameraProviderCallbackData, streamIds)) {
+        HDF_LOGE("%{public}s: failed to write streamIds", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_STOP_CAPTURE, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::UpdateSettings_(const OHOS::HDI::DistributedCamera::V1_0::DHBase& dhBase, const std::vector<OHOS::HDI::DistributedCamera::V1_0::DCameraSettings>& settings, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::DistributedCamera::V1_0::DHBaseBlockMarshalling(dCameraProviderCallbackData, dhBase)) {
+        HDF_LOGE("%{public}s: write dhBase failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!dCameraProviderCallbackData.WriteUint32(settings.size())) {
+        HDF_LOGE("%{public}s: write settings size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : settings) {
+        if (!OHOS::HDI::DistributedCamera::V1_0::DCameraSettingsBlockMarshalling(dCameraProviderCallbackData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_UPDATE_SETTINGS, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+int32_t OHOS::HDI::DistributedCamera::V1_0::DCameraProviderCallbackProxy::GetVersion_(uint32_t& majorVer,
+     uint32_t& minorVer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel dCameraProviderCallbackData;
+    MessageParcel dCameraProviderCallbackReply;
+    MessageOption dCameraProviderCallbackOption(MessageOption::TF_SYNC);
+
+    if (!dCameraProviderCallbackData.WriteInterfaceToken(OHOS::HDI::DistributedCamera::V1_0::IDCameraProviderCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t dCameraProviderCallbackRet = remote->SendRequest(CMD_DCAMERA_PROVIDER_CALLBACK_GET_VERSION, dCameraProviderCallbackData, dCameraProviderCallbackReply, dCameraProviderCallbackOption);
+    if (dCameraProviderCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, dCameraProviderCallbackRet);
+        return dCameraProviderCallbackRet;
+    }
+
+    if (!dCameraProviderCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!dCameraProviderCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return dCameraProviderCallbackRet;
+}
+
+} // V1_0
+} // DistributedCamera
+} // HDI
+} // OHOS

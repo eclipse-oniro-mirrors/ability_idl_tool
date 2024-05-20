@@ -1,0 +1,183 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/executor_callback_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    executor_callback_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace PinAuth {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnResult(int32_t result, const std::vector<uint8_t>& extraInfo)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnResult_(result, extraInfo, Remote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnGetData(uint64_t scheduleId,
+     const std::vector<uint8_t>& salt, uint64_t authSubType)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnGetData_(scheduleId, salt, authSubType, Remote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnResult_(int32_t result,
+     const std::vector<uint8_t>& extraInfo, const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorCallbackData;
+    MessageParcel executorCallbackReply;
+    MessageOption executorCallbackOption(MessageOption::TF_SYNC);
+
+    if (!executorCallbackData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_0::IExecutorCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorCallbackData.WriteInt32(result)) {
+        HDF_LOGE("%{public}s: write result failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorCallbackData, extraInfo)) {
+        HDF_LOGE("%{public}s: failed to write extraInfo", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorCallbackRet = remote->SendRequest(CMD_EXECUTOR_CALLBACK_ON_RESULT, executorCallbackData, executorCallbackReply, executorCallbackOption);
+    if (executorCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorCallbackRet);
+        return executorCallbackRet;
+    }
+
+    return executorCallbackRet;
+}
+
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::OnGetData_(uint64_t scheduleId,
+     const std::vector<uint8_t>& salt, uint64_t authSubType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorCallbackData;
+    MessageParcel executorCallbackReply;
+    MessageOption executorCallbackOption(MessageOption::TF_SYNC);
+
+    if (!executorCallbackData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_0::IExecutorCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorCallbackData.WriteUint64(scheduleId)) {
+        HDF_LOGE("%{public}s: write scheduleId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(executorCallbackData, salt)) {
+        HDF_LOGE("%{public}s: failed to write salt", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorCallbackData.WriteUint64(authSubType)) {
+        HDF_LOGE("%{public}s: write authSubType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorCallbackRet = remote->SendRequest(CMD_EXECUTOR_CALLBACK_ON_GET_DATA, executorCallbackData, executorCallbackReply, executorCallbackOption);
+    if (executorCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorCallbackRet);
+        return executorCallbackRet;
+    }
+
+    return executorCallbackRet;
+}
+
+int32_t OHOS::HDI::PinAuth::V1_0::ExecutorCallbackProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel executorCallbackData;
+    MessageParcel executorCallbackReply;
+    MessageOption executorCallbackOption(MessageOption::TF_SYNC);
+
+    if (!executorCallbackData.WriteInterfaceToken(OHOS::HDI::PinAuth::V1_0::IExecutorCallback::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t executorCallbackRet = remote->SendRequest(CMD_EXECUTOR_CALLBACK_GET_VERSION, executorCallbackData, executorCallbackReply, executorCallbackOption);
+    if (executorCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorCallbackRet);
+        return executorCallbackRet;
+    }
+
+    if (!executorCallbackReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!executorCallbackReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return executorCallbackRet;
+}
+
+} // V1_0
+} // PinAuth
+} // HDI
+} // OHOS

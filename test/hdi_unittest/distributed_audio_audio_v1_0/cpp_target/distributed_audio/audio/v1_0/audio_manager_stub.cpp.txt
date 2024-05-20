@@ -1,0 +1,282 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/audio_manager_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <object_collector.h>
+#include <securec.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    audio_manager_stub
+
+namespace OHOS {
+namespace HDI {
+namespace DistributedAudio {
+namespace Audio {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::Get(bool isStub)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::Get("audio_manager_service", isStub);
+}
+
+sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "audio_manager_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager *>(impl);
+}
+
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStub(const sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> &impl)
+    : IPCObjectStub(OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::~AudioManagerStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_AUDIO_MANAGER_GET_VERSION:
+            return AudioManagerStubGetVersion(data, reply, option);
+        case CMD_AUDIO_MANAGER_GET_ALL_ADAPTERS:
+            return AudioManagerStubGetAllAdapters(data, reply, option);
+        case CMD_AUDIO_MANAGER_LOAD_ADAPTER:
+            return AudioManagerStubLoadAdapter(data, reply, option);
+        case CMD_AUDIO_MANAGER_UNLOAD_ADAPTER:
+            return AudioManagerStubUnloadAdapter(data, reply, option);
+        case CMD_AUDIO_MANAGER_RELEASE_AUDIO_MANAGER_OBJECT:
+            return AudioManagerStubReleaseAudioManagerObject(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetAllAdapters(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetAllAdapters_(audioManagerData, audioManagerReply, audioManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubLoadAdapter(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubLoadAdapter_(audioManagerData, audioManagerReply, audioManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubUnloadAdapter(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubUnloadAdapter_(audioManagerData, audioManagerReply, audioManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubReleaseAudioManagerObject(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubReleaseAudioManagerObject_(audioManagerData, audioManagerReply, audioManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetVersion(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption)
+{
+    return OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetVersion_(audioManagerData, audioManagerReply, audioManagerOption, impl_);
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetAllAdapters_(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> impl)
+{
+    if (audioManagerData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool audioManagerMemSet = false;
+    if (!audioManagerData.ReadBool(audioManagerMemSet)) {
+        HDF_LOGE("%{public}s: failed to read audioManagerMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::vector<OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptor> descs;
+    if (audioManagerMemSet) {
+        uint32_t capacity = 0;
+        if (!audioManagerData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptor), HDF_ERR_INVALID_PARAM);
+        descs.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioManagerRet = impl->GetAllAdapters(descs);
+    if (audioManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioManagerRet);
+        return audioManagerRet;
+    }
+
+    if (!audioManagerReply.WriteUint32(descs.size())) {
+        HDF_LOGE("%{public}s: write descs size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : descs) {
+        if (!OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptorBlockMarshalling(audioManagerReply, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    return audioManagerRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubLoadAdapter_(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> impl)
+{
+    if (audioManagerData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::DistributedAudio::Audio::V1_0::AudioAdapterDescriptor desc;
+    if (!AudioAdapterDescriptorBlockUnmarshalling(audioManagerData, desc)) {
+        HDF_LOGE("%{public}s: read desc failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioAdapter> adapter;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioManagerRet = impl->LoadAdapter(desc, adapter);
+    if (audioManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioManagerRet);
+        return audioManagerRet;
+    }
+
+    if (adapter == nullptr) {
+        HDF_LOGE("%{public}s: parameter adapter is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioManagerReply.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(adapter, OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioAdapter::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write adapter failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioManagerRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubUnloadAdapter_(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> impl)
+{
+    if (audioManagerData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    const char* adapterNameCp = audioManagerData.ReadCString();
+    if (adapterNameCp == nullptr) {
+        HDF_LOGE("%{public}s: read adapterName failed", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string adapterName = adapterNameCp;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioManagerRet = impl->UnloadAdapter(adapterName);
+    if (audioManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioManagerRet);
+        return audioManagerRet;
+    }
+
+    return audioManagerRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubReleaseAudioManagerObject_(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> impl)
+{
+    if (audioManagerData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioManagerRet = impl->ReleaseAudioManagerObject();
+    if (audioManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioManagerRet);
+        return audioManagerRet;
+    }
+
+    return audioManagerRet;
+}
+
+int32_t OHOS::HDI::DistributedAudio::Audio::V1_0::AudioManagerStub::AudioManagerStubGetVersion_(MessageParcel& audioManagerData, MessageParcel& audioManagerReply, MessageOption& audioManagerOption, sptr<OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager> impl)
+{
+    if (audioManagerData.ReadInterfaceToken() != OHOS::HDI::DistributedAudio::Audio::V1_0::IAudioManager::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t audioManagerRet = impl->GetVersion(majorVer, minorVer);
+    if (audioManagerRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, audioManagerRet);
+        return audioManagerRet;
+    }
+
+    if (!audioManagerReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!audioManagerReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return audioManagerRet;
+}
+} // V1_0
+} // Audio
+} // DistributedAudio
+} // HDI
+} // OHOS

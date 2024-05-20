@@ -1,0 +1,265 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/cellbatching_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "location/lpfence/cellbatching/v1_0/cellbatching_callback_proxy.h"
+
+#define HDF_LOG_TAG    cellbatching_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Cellbatching {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::Get("cellbatching_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "cellbatching_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface *>(impl);
+}
+
+
+OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStub(const sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::~CellbatchingInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CELLBATCHING_INTERFACE_GET_VERSION:
+            return CellbatchingInterfaceStubGetVersion(data, reply, option);
+        case CMD_CELLBATCHING_INTERFACE_REGISTER_CELL_BATCHING_CALLBACK:
+            return CellbatchingInterfaceStubRegisterCellBatchingCallback(data, reply, option);
+        case CMD_CELLBATCHING_INTERFACE_UNREGISTER_CELL_BATCHING_CALLBACK:
+            return CellbatchingInterfaceStubUnregisterCellBatchingCallback(data, reply, option);
+        case CMD_CELLBATCHING_INTERFACE_CELLBATCHING_SWITCH:
+            return CellbatchingInterfaceStubCellbatchingSwitch(data, reply, option);
+        case CMD_CELLBATCHING_INTERFACE_FLUSH_CELLBATCHING:
+            return CellbatchingInterfaceStubFlushCellbatching(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubRegisterCellBatchingCallback(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubRegisterCellBatchingCallback_(cellbatchingInterfaceData, cellbatchingInterfaceReply, cellbatchingInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubUnregisterCellBatchingCallback(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubUnregisterCellBatchingCallback_(cellbatchingInterfaceData, cellbatchingInterfaceReply, cellbatchingInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubCellbatchingSwitch(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubCellbatchingSwitch_(cellbatchingInterfaceData, cellbatchingInterfaceReply, cellbatchingInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubFlushCellbatching(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubFlushCellbatching_(cellbatchingInterfaceData, cellbatchingInterfaceReply, cellbatchingInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubGetVersion(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubGetVersion_(cellbatchingInterfaceData, cellbatchingInterfaceReply, cellbatchingInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubRegisterCellBatchingCallback_(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> impl)
+{
+    if (cellbatchingInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = cellbatchingInterfaceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingInterfaceRet = impl->RegisterCellBatchingCallback(callbackObj);
+    if (cellbatchingInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingInterfaceRet);
+        return cellbatchingInterfaceRet;
+    }
+
+    return cellbatchingInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubUnregisterCellBatchingCallback_(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> impl)
+{
+    if (cellbatchingInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = cellbatchingInterfaceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingInterfaceRet = impl->UnregisterCellBatchingCallback(callbackObj);
+    if (cellbatchingInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingInterfaceRet);
+        return cellbatchingInterfaceRet;
+    }
+
+    return cellbatchingInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubCellbatchingSwitch_(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> impl)
+{
+    if (cellbatchingInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingRequest req;
+    if (!CellbatchingRequestBlockUnmarshalling(cellbatchingInterfaceData, req)) {
+        HDF_LOGE("%{public}s: read req failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingInterfaceRet = impl->CellbatchingSwitch(req);
+    if (cellbatchingInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingInterfaceRet);
+        return cellbatchingInterfaceRet;
+    }
+
+    return cellbatchingInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubFlushCellbatching_(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> impl)
+{
+    if (cellbatchingInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingInterfaceRet = impl->FlushCellbatching();
+    if (cellbatchingInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingInterfaceRet);
+        return cellbatchingInterfaceRet;
+    }
+
+    return cellbatchingInterfaceRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceStub::CellbatchingInterfaceStubGetVersion_(MessageParcel& cellbatchingInterfaceData, MessageParcel& cellbatchingInterfaceReply, MessageOption& cellbatchingInterfaceOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface> impl)
+{
+    if (cellbatchingInterfaceData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (cellbatchingInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingInterfaceRet);
+        return cellbatchingInterfaceRet;
+    }
+
+    if (!cellbatchingInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cellbatchingInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cellbatchingInterfaceRet;
+}
+} // V1_0
+} // Cellbatching
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

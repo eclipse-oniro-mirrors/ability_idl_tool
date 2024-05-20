@@ -1,0 +1,298 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_1/executor_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "face_auth/v1_1/sa_command_callback_proxy.h"
+
+#define HDF_LOG_TAG    executor_stub
+
+namespace OHOS {
+namespace HDI {
+namespace FaceAuth {
+namespace V1_1 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> OHOS::HDI::FaceAuth::V1_1::IExecutor::Get(bool isStub)
+{
+    return OHOS::HDI::FaceAuth::V1_1::IExecutor::Get("executor_service", isStub);
+}
+
+sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> OHOS::HDI::FaceAuth::V1_1::IExecutor::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "executor_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::FaceAuth::V1_1::IExecutor *>(impl);
+}
+
+
+OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStub(const sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> &impl)
+    : IPCObjectStub(OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::FaceAuth::V1_1::ExecutorStub::~ExecutorStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_EXECUTOR_GET_VERSION:
+            return ExecutorStubGetVersion(data, reply, option);
+        case CMD_EXECUTOR_GET_PROPERTY:
+            return ExecutorStubGetProperty(data, reply, option);
+        case CMD_EXECUTOR_SET_CACHED_TEMPLATES:
+            return ExecutorStubSetCachedTemplates(data, reply, option);
+        case CMD_EXECUTOR_REGISTER_SA_COMMAND_CALLBACK:
+            return ExecutorStubRegisterSaCommandCallback(data, reply, option);
+        case CMD_EXECUTOR_GET_EXECUTOR_INFO:
+            return ExecutorStubGetExecutorInfo(data, reply, option);
+        case CMD_EXECUTOR_GET_TEMPLATE_INFO:
+            return ExecutorStubGetTemplateInfo(data, reply, option);
+        case CMD_EXECUTOR_ON_REGISTER_FINISH:
+            return ExecutorStubOnRegisterFinish(data, reply, option);
+        case CMD_EXECUTOR_ENROLL:
+            return ExecutorStubEnroll(data, reply, option);
+        case CMD_EXECUTOR_AUTHENTICATE:
+            return ExecutorStubAuthenticate(data, reply, option);
+        case CMD_EXECUTOR_IDENTIFY:
+            return ExecutorStubIdentify(data, reply, option);
+        case CMD_EXECUTOR_DELETE:
+            return ExecutorStubDelete(data, reply, option);
+        case CMD_EXECUTOR_CANCEL:
+            return ExecutorStubCancel(data, reply, option);
+        case CMD_EXECUTOR_SEND_COMMAND:
+            return ExecutorStubSendCommand(data, reply, option);
+        case CMD_EXECUTOR_SET_BUFFER_PRODUCER:
+            return ExecutorStubSetBufferProducer(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetProperty(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetProperty_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubSetCachedTemplates(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubSetCachedTemplates_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubRegisterSaCommandCallback(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubRegisterSaCommandCallback_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetExecutorInfo(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubGetExecutorInfo_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetTemplateInfo(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubGetTemplateInfo_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubOnRegisterFinish(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubOnRegisterFinish_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubEnroll(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubEnroll_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubAuthenticate(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubAuthenticate_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubIdentify(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubIdentify_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubDelete(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubDelete_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubCancel(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubCancel_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubSendCommand(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubSendCommand_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubSetBufferProducer(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubSetBufferProducer_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetVersion(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption)
+{
+    return OHOS::HDI::FaceAuth::V1_0::ExecutorStub::ExecutorStubGetVersion_(executorData, executorReply, executorOption, impl_);
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubGetProperty_(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption, sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> impl)
+{
+    if (executorData.ReadInterfaceToken() != OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint64_t> templateIdList;
+    if (!ReadPodArray(executorData, templateIdList)) {
+        HDF_LOGE("%{public}s: failed to read templateIdList", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::FaceAuth::V1_1::GetPropertyType> propertyTypes;
+    if (!ReadPodArray(executorData, propertyTypes)) {
+        HDF_LOGE("%{public}s: failed to read propertyTypes", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::FaceAuth::V1_1::Property property;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t executorRet = impl->GetProperty(templateIdList, propertyTypes, property);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    if (!OHOS::HDI::FaceAuth::V1_1::PropertyBlockMarshalling(executorReply, property)) {
+        HDF_LOGE("%{public}s: write property failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return executorRet;
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubSetCachedTemplates_(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption, sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> impl)
+{
+    if (executorData.ReadInterfaceToken() != OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint64_t> templateIdList;
+    if (!ReadPodArray(executorData, templateIdList)) {
+        HDF_LOGE("%{public}s: failed to read templateIdList", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t executorRet = impl->SetCachedTemplates(templateIdList);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    return executorRet;
+}
+
+int32_t OHOS::HDI::FaceAuth::V1_1::ExecutorStub::ExecutorStubRegisterSaCommandCallback_(MessageParcel& executorData, MessageParcel& executorReply, MessageOption& executorOption, sptr<OHOS::HDI::FaceAuth::V1_1::IExecutor> impl)
+{
+    if (executorData.ReadInterfaceToken() != OHOS::HDI::FaceAuth::V1_1::IExecutor::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::FaceAuth::V1_1::ISaCommandCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = executorData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::FaceAuth::V1_1::SaCommandCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t executorRet = impl->RegisterSaCommandCallback(callbackObj);
+    if (executorRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, executorRet);
+        return executorRet;
+    }
+
+    return executorRet;
+}
+} // V1_1
+} // FaceAuth
+} // HDI
+} // OHOS

@@ -1,0 +1,194 @@
+/*
+ * Copyright (c) 2023-2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_RIL_V1_2_TYPES_H
+#define OHOS_HDI_RIL_V1_2_TYPES_H
+
+#include <cstdbool>
+#include <cstdint>
+#include <string>
+#include <vector>
+#include "ril/v1_1/types.h"
+
+#ifndef HDI_BUFF_MAX_SIZE
+#define HDI_BUFF_MAX_SIZE (1024 * 200)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RETURN
+#define HDI_CHECK_VALUE_RETURN(lv, compare, rv, ret) do { \
+    if ((lv) compare (rv)) { \
+        return ret; \
+    } \
+} while (false)
+#endif
+
+#ifndef HDI_CHECK_VALUE_RET_GOTO
+#define HDI_CHECK_VALUE_RET_GOTO(lv, compare, rv, ret, value, table) do { \
+    if ((lv) compare (rv)) { \
+        ret = value; \
+        goto table; \
+    } \
+} while (false)
+#endif
+
+namespace OHOS {
+class MessageParcel;
+}
+
+namespace OHOS {
+namespace HDI {
+namespace Ril {
+namespace V1_2 {
+
+using namespace OHOS;
+using namespace OHOS::HDI::Ril::V1_1;
+
+struct NcfgOperatorInfo {
+    std::string operName;
+    std::string operKey;
+    int32_t state;
+    std::string reserve;
+};
+
+struct SsbIdInfo {
+    int32_t ssbId;
+    int32_t rsrp;
+} __attribute__ ((aligned(8)));
+
+struct NeighboringCellSsbInfo {
+    int32_t pci;
+    int32_t arfcn;
+    int32_t rsrp;
+    int32_t sinr;
+    std::vector<OHOS::HDI::Ril::V1_2::SsbIdInfo> ssbIdList;
+};
+
+struct NrCellSsbIds {
+    int32_t arfcn;
+    int64_t cid;
+    int32_t pic;
+    int32_t rsrp;
+    int32_t sinr;
+    int32_t timeAdvance;
+    std::vector<OHOS::HDI::Ril::V1_2::SsbIdInfo> sCellSsbList;
+    int32_t nbCellCount;
+    std::vector<OHOS::HDI::Ril::V1_2::NeighboringCellSsbInfo> nbCellSsbList;
+};
+
+struct CellListRatNr_1_2 {
+    int32_t nrArfcn;
+    int32_t pci;
+    int32_t tac;
+    int64_t nci;
+    int32_t rsrp;
+    int32_t rsrq;
+} __attribute__ ((aligned(8)));
+
+union ServiceCellParas_1_2 {
+    OHOS::HDI::Ril::V1_1::CellListRatGsm gsm;
+    OHOS::HDI::Ril::V1_1::CellListRatLte lte;
+    OHOS::HDI::Ril::V1_1::CellListRatWcdma wcdma;
+    OHOS::HDI::Ril::V1_1::CellListRatCdma cdma;
+    OHOS::HDI::Ril::V1_1::CellListRatTdscdma tdscdma;
+    OHOS::HDI::Ril::V1_2::CellListRatNr_1_2 nr;
+}  __attribute__ ((aligned(8)));
+
+struct CellNearbyInfo_1_2 {
+    int32_t ratType;
+    OHOS::HDI::Ril::V1_2::ServiceCellParas_1_2 serviceCells;
+} __attribute__ ((aligned(8)));
+
+struct CellListNearbyInfo_1_2 {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_2::CellNearbyInfo_1_2> cellNearbyInfo;
+};
+
+struct CellRatNr_1_2 {
+    int32_t nrArfcn;
+    int32_t pci;
+    int32_t tac;
+    int64_t nci;
+    int32_t rsrp;
+    int32_t rsrq;
+} __attribute__ ((aligned(8)));
+
+union CurrentServiceCellParas_1_2 {
+    OHOS::HDI::Ril::V1_1::CellRatGsm gsm;
+    OHOS::HDI::Ril::V1_1::CellRatLte lte;
+    OHOS::HDI::Ril::V1_1::CellRatWcdma wcdma;
+    OHOS::HDI::Ril::V1_1::CellRatCdma cdma;
+    OHOS::HDI::Ril::V1_1::CellRatTdscdma tdscdma;
+    OHOS::HDI::Ril::V1_2::CellRatNr_1_2 nr;
+}  __attribute__ ((aligned(8)));
+
+struct CurrentCellInfo_1_2 {
+    int32_t ratType;
+    int32_t mcc;
+    int32_t mnc;
+    OHOS::HDI::Ril::V1_2::CurrentServiceCellParas_1_2 serviceCells;
+} __attribute__ ((aligned(8)));
+
+struct CellListCurrentInfo_1_2 {
+    int32_t itemNum;
+    std::vector<OHOS::HDI::Ril::V1_2::CurrentCellInfo_1_2> cellCurrentInfo;
+};
+
+bool NcfgOperatorInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::NcfgOperatorInfo& dataBlock);
+
+bool NcfgOperatorInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::NcfgOperatorInfo& dataBlock);
+
+bool SsbIdInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::SsbIdInfo& dataBlock);
+
+bool SsbIdInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::SsbIdInfo& dataBlock);
+
+bool NeighboringCellSsbInfoBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::NeighboringCellSsbInfo& dataBlock);
+
+bool NeighboringCellSsbInfoBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::NeighboringCellSsbInfo& dataBlock);
+
+bool NrCellSsbIdsBlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::NrCellSsbIds& dataBlock);
+
+bool NrCellSsbIdsBlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::NrCellSsbIds& dataBlock);
+
+bool CellListRatNr_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CellListRatNr_1_2& dataBlock);
+
+bool CellListRatNr_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CellListRatNr_1_2& dataBlock);
+
+bool CellNearbyInfo_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CellNearbyInfo_1_2& dataBlock);
+
+bool CellNearbyInfo_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CellNearbyInfo_1_2& dataBlock);
+
+bool CellListNearbyInfo_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CellListNearbyInfo_1_2& dataBlock);
+
+bool CellListNearbyInfo_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CellListNearbyInfo_1_2& dataBlock);
+
+bool CellRatNr_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CellRatNr_1_2& dataBlock);
+
+bool CellRatNr_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CellRatNr_1_2& dataBlock);
+
+bool CurrentCellInfo_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CurrentCellInfo_1_2& dataBlock);
+
+bool CurrentCellInfo_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CurrentCellInfo_1_2& dataBlock);
+
+bool CellListCurrentInfo_1_2BlockMarshalling(OHOS::MessageParcel &data, const OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2& dataBlock);
+
+bool CellListCurrentInfo_1_2BlockUnmarshalling(OHOS::MessageParcel &data, OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2& dataBlock);
+
+} // V1_2
+} // Ril
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_RIL_V1_2_TYPES_H
+

@@ -1,0 +1,362 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/vibrator_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    vibrator_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Vibrator {
+namespace V1_2 {
+
+
+template<typename ChildType, typename ParentType>
+static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
+{
+    if (parent == nullptr) {
+        HDF_LOGE("%{public}s:parent is nullptr!", __func__);
+        return nullptr;
+    }
+
+    if (!parent->IsProxy()) {
+        HDF_LOGE("%{public}s:not proxy, not support castfrom!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = OHOS::HDI::hdi_objcast<ParentType>(parent);
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:hdi_objcast failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<ChildType> proxy = OHOS::HDI::hdi_facecast<ChildType>(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:hdi_facecast failed!", __func__);
+        return nullptr;
+    }
+
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t vibratorInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> OHOS::HDI::Vibrator::V1_2::IVibratorInterface::Get(bool isStub)
+{
+    return IVibratorInterface::Get("vibrator_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> OHOS::HDI::Vibrator::V1_2::IVibratorInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "vibrator_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Vibrator::V1_2::IVibratorInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy> proxy = new OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t vibratorInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> OHOS::HDI::Vibrator::V1_2::IVibratorInterface::CastFrom(const sptr<OHOS::HDI::Vibrator::V1_1::IVibratorInterface> &parent)
+{
+    return CastFromTemplate<OHOS::HDI::Vibrator::V1_2::IVibratorInterface, OHOS::HDI::Vibrator::V1_1::IVibratorInterface>(parent);
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::PlayHapticPattern(const OHOS::HDI::Vibrator::V1_2::HapticPaket& pkg)
+{
+    return OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::PlayHapticPattern_(pkg, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticCapacity(OHOS::HDI::Vibrator::V1_2::HapticCapacity& HapticCapacity)
+{
+    return OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticCapacity_(HapticCapacity, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticStartUpTime(int32_t mode, int32_t& startUpTime)
+{
+    return OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticStartUpTime_(mode, startUpTime, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::StopV1_2(int32_t mode)
+{
+    return OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::StopV1_2_(mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::StartOnce(uint32_t duration)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::StartOnce_(duration, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::Start(const std::string& effectType)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Start_(effectType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::Stop(OHOS::HDI::Vibrator::V1_1::HdfVibratorMode mode)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::Stop_(mode, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetVibratorInfo(std::vector<OHOS::HDI::Vibrator::V1_1::HdfVibratorInfo>& vibratorInfo)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVibratorInfo_(vibratorInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::EnableVibratorModulation(uint32_t duration,
+     uint16_t intensity, int16_t frequency)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableVibratorModulation_(duration, intensity, frequency, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::EnableCompositeEffect(const OHOS::HDI::Vibrator::V1_1::HdfCompositeEffect& effect)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::EnableCompositeEffect_(effect, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetEffectInfo(const std::string& effectType,
+     OHOS::HDI::Vibrator::V1_1::HdfEffectInfo& effectInfo)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetEffectInfo_(effectType, effectInfo, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::IsVibratorRunning(bool& state)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::IsVibratorRunning_(state, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Vibrator::V1_1::VibratorInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::PlayHapticPattern_(const OHOS::HDI::Vibrator::V1_2::HapticPaket& pkg, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Vibrator::V1_2::HapticPaketBlockMarshalling(vibratorInterfaceData, pkg)) {
+        HDF_LOGE("%{public}s: write pkg failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_PLAY_HAPTIC_PATTERN, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticCapacity_(OHOS::HDI::Vibrator::V1_2::HapticCapacity& HapticCapacity, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_GET_HAPTIC_CAPACITY, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!HapticCapacityBlockUnmarshalling(vibratorInterfaceReply, HapticCapacity)) {
+        HDF_LOGE("%{public}s: read HapticCapacity failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::GetHapticStartUpTime_(int32_t mode, int32_t& startUpTime,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteInt32(mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_GET_HAPTIC_START_UP_TIME, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    if (!vibratorInterfaceReply.ReadInt32(startUpTime)) {
+        HDF_LOGE("%{public}s: read startUpTime failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+int32_t OHOS::HDI::Vibrator::V1_2::VibratorInterfaceProxy::StopV1_2_(int32_t mode, const sptr<IRemoteObject> remote)
+{
+    MessageParcel vibratorInterfaceData;
+    MessageParcel vibratorInterfaceReply;
+    MessageOption vibratorInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!vibratorInterfaceData.WriteInterfaceToken(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!vibratorInterfaceData.WriteInt32(mode)) {
+        HDF_LOGE("%{public}s: write mode failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t vibratorInterfaceRet = remote->SendRequest(CMD_VIBRATOR_INTERFACE_STOP_V1_2, vibratorInterfaceData, vibratorInterfaceReply, vibratorInterfaceOption);
+    if (vibratorInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, vibratorInterfaceRet);
+        return vibratorInterfaceRet;
+    }
+
+    return vibratorInterfaceRet;
+}
+
+} // V1_2
+} // Vibrator
+} // HDI
+} // OHOS

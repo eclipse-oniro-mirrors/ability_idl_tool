@@ -1,0 +1,323 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/thermal_interface_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iproxy_broker.h>
+#include <securec.h>
+#include <string_ex.h>
+#include "thermal/v1_0/thermal_callback_proxy.h"
+
+#define HDF_LOG_TAG    thermal_interface_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Thermal {
+namespace V1_0 {
+
+
+sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> OHOS::HDI::Thermal::V1_0::IThermalInterface::Get(bool isStub)
+{
+    return OHOS::HDI::Thermal::V1_0::IThermalInterface::Get("thermal_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> OHOS::HDI::Thermal::V1_0::IThermalInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (!isStub) {
+        return nullptr;
+    }
+    std::string desc = Str16ToStr8(OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor());
+    void *impl = LoadHdiImpl(desc.c_str(), serviceName == "thermal_interface_service" ? "service" : serviceName.c_str());
+    if (impl == nullptr) {
+        HDF_LOGE("failed to load hdi impl %{public}s", desc.c_str());
+        return nullptr;
+    }
+    return reinterpret_cast<OHOS::HDI::Thermal::V1_0::IThermalInterface *>(impl);
+}
+
+
+OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStub(const sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> &impl)
+    : IPCObjectStub(OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::~ThermalInterfaceStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_THERMAL_INTERFACE_GET_VERSION:
+            return ThermalInterfaceStubGetVersion(data, reply, option);
+        case CMD_THERMAL_INTERFACE_SET_CPU_FREQ:
+            return ThermalInterfaceStubSetCpuFreq(data, reply, option);
+        case CMD_THERMAL_INTERFACE_SET_GPU_FREQ:
+            return ThermalInterfaceStubSetGpuFreq(data, reply, option);
+        case CMD_THERMAL_INTERFACE_SET_BATTERY_CURRENT:
+            return ThermalInterfaceStubSetBatteryCurrent(data, reply, option);
+        case CMD_THERMAL_INTERFACE_GET_THERMAL_ZONE_INFO:
+            return ThermalInterfaceStubGetThermalZoneInfo(data, reply, option);
+        case CMD_THERMAL_INTERFACE_REGISTER:
+            return ThermalInterfaceStubRegister(data, reply, option);
+        case CMD_THERMAL_INTERFACE_UNREGISTER:
+            return ThermalInterfaceStubUnregister(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetCpuFreq(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetCpuFreq_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetGpuFreq(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetGpuFreq_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetBatteryCurrent(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetBatteryCurrent_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetThermalZoneInfo(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetThermalZoneInfo_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubRegister(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubRegister_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubUnregister(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubUnregister_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetVersion(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption)
+{
+    return OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetVersion_(thermalInterfaceData, thermalInterfaceReply, thermalInterfaceOption, impl_);
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetCpuFreq_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t freq = 0;
+    if (!thermalInterfaceData.ReadInt32(freq)) {
+        HDF_LOGE("%{public}s: read freq failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->SetCpuFreq(freq);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetGpuFreq_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t freq = 0;
+    if (!thermalInterfaceData.ReadInt32(freq)) {
+        HDF_LOGE("%{public}s: read freq failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->SetGpuFreq(freq);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubSetBatteryCurrent_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t current = 0;
+    if (!thermalInterfaceData.ReadInt32(current)) {
+        HDF_LOGE("%{public}s: read current failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->SetBatteryCurrent(current);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetThermalZoneInfo_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Thermal::V1_0::HdfThermalCallbackInfo event;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->GetThermalZoneInfo(event);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    if (!OHOS::HDI::Thermal::V1_0::HdfThermalCallbackInfoBlockMarshalling(thermalInterfaceReply, event)) {
+        HDF_LOGE("%{public}s: write event failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubRegister_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    sptr<OHOS::HDI::Thermal::V1_0::IThermalCallback> callbackObj;
+    sptr<IRemoteObject> callbackObjRemote = thermalInterfaceData.ReadRemoteObject();
+    if (callbackObjRemote == nullptr) {
+        HDF_LOGE("%{public}s: read an invalid remote object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    callbackObj = new OHOS::HDI::Thermal::V1_0::ThermalCallbackProxy(callbackObjRemote);
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: failed to create interface object", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->Register(callbackObj);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubUnregister_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->Unregister();
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    return thermalInterfaceRet;
+}
+
+int32_t OHOS::HDI::Thermal::V1_0::ThermalInterfaceStub::ThermalInterfaceStubGetVersion_(MessageParcel& thermalInterfaceData, MessageParcel& thermalInterfaceReply, MessageOption& thermalInterfaceOption, sptr<OHOS::HDI::Thermal::V1_0::IThermalInterface> impl)
+{
+    if (thermalInterfaceData.ReadInterfaceToken() != OHOS::HDI::Thermal::V1_0::IThermalInterface::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t thermalInterfaceRet = impl->GetVersion(majorVer, minorVer);
+    if (thermalInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, thermalInterfaceRet);
+        return thermalInterfaceRet;
+    }
+
+    if (!thermalInterfaceReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!thermalInterfaceReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return thermalInterfaceRet;
+}
+} // V1_0
+} // Thermal
+} // HDI
+} // OHOS

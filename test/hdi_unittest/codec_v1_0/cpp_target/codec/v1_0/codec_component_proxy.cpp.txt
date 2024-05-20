@@ -1,0 +1,908 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/codec_component_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    codec_component_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Codec {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetComponentVersion(OHOS::HDI::Codec::V1_0::CompVerInfo& verInfo)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetComponentVersion_(verInfo, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SendCommand(OHOS::HDI::Codec::V1_0::CodecCommandType cmd,
+     uint32_t param, const std::vector<int8_t>& cmdData)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::SendCommand_(cmd, param, cmdData, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetParameter(uint32_t index,
+     const std::vector<int8_t>& inParamStruct, std::vector<int8_t>& outParamStruct)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetParameter_(index, inParamStruct, outParamStruct, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetParameter(uint32_t index,
+     const std::vector<int8_t>& paramStruct)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetParameter_(index, paramStruct, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetConfig(uint32_t index, const std::vector<int8_t>& inCfgStruct,
+     std::vector<int8_t>& outCfgStruct)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetConfig_(index, inCfgStruct, outCfgStruct, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetConfig(uint32_t index, const std::vector<int8_t>& cfgStruct)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetConfig_(index, cfgStruct, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetExtensionIndex(const std::string& paramName,
+     uint32_t& indexType)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetExtensionIndex_(paramName, indexType, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetState(OHOS::HDI::Codec::V1_0::CodecStateType& state)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetState_(state, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentTunnelRequest(uint32_t port, int32_t tunneledComp,
+     uint32_t tunneledPort, const OHOS::HDI::Codec::V1_0::CodecTunnelSetupType& inTunnelSetup, OHOS::HDI::Codec::V1_0::CodecTunnelSetupType& outTunnelSetup)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentTunnelRequest_(port, tunneledComp, tunneledPort, inTunnelSetup, outTunnelSetup, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseBuffer(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseBuffer_(portIndex, inBuffer, outBuffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::AllocateBuffer(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::AllocateBuffer_(portIndex, inBuffer, outBuffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::FreeBuffer(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::FreeBuffer_(portIndex, buffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::EmptyThisBuffer(const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::EmptyThisBuffer_(buffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::FillThisBuffer(const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::FillThisBuffer_(buffer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetCallbacks(const sptr<OHOS::HDI::Codec::V1_0::ICodecCallback>& callbacks, int64_t appData)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetCallbacks_(callbacks, appData, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentDeInit()
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentDeInit_(Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseEglImage(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer, const std::vector<int8_t>& eglImage)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseEglImage_(portIndex, inBuffer, outBuffer, eglImage, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentRoleEnum(std::vector<uint8_t>& role, uint32_t index)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentRoleEnum_(role, index, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetVersion_(majorVer, minorVer, Remote());
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetComponentVersion_(OHOS::HDI::Codec::V1_0::CompVerInfo& verInfo,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_COMPONENT_VERSION, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!CompVerInfoBlockUnmarshalling(codecComponentReply, verInfo)) {
+        HDF_LOGE("%{public}s: read verInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SendCommand_(OHOS::HDI::Codec::V1_0::CodecCommandType cmd,
+     uint32_t param, const std::vector<int8_t>& cmdData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint64(static_cast<uint64_t>(cmd))) {
+        HDF_LOGE("%{public}s: write cmd failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(param)) {
+        HDF_LOGE("%{public}s: write param failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, cmdData)) {
+        HDF_LOGE("%{public}s: failed to write cmdData", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_SEND_COMMAND, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetParameter_(uint32_t index,
+     const std::vector<int8_t>& inParamStruct, std::vector<int8_t>& outParamStruct, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, inParamStruct)) {
+        HDF_LOGE("%{public}s: failed to write inParamStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_PARAMETER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!ReadPodArray(codecComponentReply, outParamStruct)) {
+        HDF_LOGE("%{public}s: failed to read outParamStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetParameter_(uint32_t index,
+     const std::vector<int8_t>& paramStruct, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, paramStruct)) {
+        HDF_LOGE("%{public}s: failed to write paramStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_SET_PARAMETER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetConfig_(uint32_t index, const std::vector<int8_t>& inCfgStruct,
+     std::vector<int8_t>& outCfgStruct, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, inCfgStruct)) {
+        HDF_LOGE("%{public}s: failed to write inCfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_CONFIG, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!ReadPodArray(codecComponentReply, outCfgStruct)) {
+        HDF_LOGE("%{public}s: failed to read outCfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetConfig_(uint32_t index, const std::vector<int8_t>& cfgStruct,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, cfgStruct)) {
+        HDF_LOGE("%{public}s: failed to write cfgStruct", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_SET_CONFIG, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetExtensionIndex_(const std::string& paramName,
+     uint32_t& indexType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteCString(paramName.c_str())) {
+        HDF_LOGE("%{public}s: write paramName failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_EXTENSION_INDEX, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!codecComponentReply.ReadUint32(indexType)) {
+        HDF_LOGE("%{public}s: read indexType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetState_(OHOS::HDI::Codec::V1_0::CodecStateType& state,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_STATE, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!codecComponentReply.ReadUint64(enumTmp)) {
+            HDF_LOGE("%{public}s: write state failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        state = static_cast<enum CodecStateType>(enumTmp);
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentTunnelRequest_(uint32_t port, int32_t tunneledComp,
+     uint32_t tunneledPort, const OHOS::HDI::Codec::V1_0::CodecTunnelSetupType& inTunnelSetup, OHOS::HDI::Codec::V1_0::CodecTunnelSetupType& outTunnelSetup, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(port)) {
+        HDF_LOGE("%{public}s: write port failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteInt32(tunneledComp)) {
+        HDF_LOGE("%{public}s: write tunneledComp failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(tunneledPort)) {
+        HDF_LOGE("%{public}s: write tunneledPort failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::CodecTunnelSetupTypeBlockMarshalling(codecComponentData, inTunnelSetup)) {
+        HDF_LOGE("%{public}s: write inTunnelSetup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_COMPONENT_TUNNEL_REQUEST, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!CodecTunnelSetupTypeBlockUnmarshalling(codecComponentReply, outTunnelSetup)) {
+        HDF_LOGE("%{public}s: read outTunnelSetup failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseBuffer_(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(portIndex)) {
+        HDF_LOGE("%{public}s: write portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: write inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_USE_BUFFER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: read outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::AllocateBuffer_(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(portIndex)) {
+        HDF_LOGE("%{public}s: write portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: write inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_ALLOCATE_BUFFER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: read outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::FreeBuffer_(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(portIndex)) {
+        HDF_LOGE("%{public}s: write portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_FREE_BUFFER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::EmptyThisBuffer_(const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_EMPTY_THIS_BUFFER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::FillThisBuffer_(const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& buffer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, buffer)) {
+        HDF_LOGE("%{public}s: write buffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_FILL_THIS_BUFFER, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::SetCallbacks_(const sptr<OHOS::HDI::Codec::V1_0::ICodecCallback>& callbacks, int64_t appData, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbacks == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbacks is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbacks, OHOS::HDI::Codec::V1_0::ICodecCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbacks failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteInt64(appData)) {
+        HDF_LOGE("%{public}s: write appData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_SET_CALLBACKS, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentDeInit_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_COMPONENT_DE_INIT, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::UseEglImage_(uint32_t portIndex,
+     const OHOS::HDI::Codec::V1_0::OmxCodecBuffer& inBuffer, OHOS::HDI::Codec::V1_0::OmxCodecBuffer& outBuffer, const std::vector<int8_t>& eglImage, const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(portIndex)) {
+        HDF_LOGE("%{public}s: write portIndex failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Codec::V1_0::OmxCodecBufferBlockMarshalling(codecComponentData, inBuffer)) {
+        HDF_LOGE("%{public}s: write inBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(codecComponentData, eglImage)) {
+        HDF_LOGE("%{public}s: failed to write eglImage", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_USE_EGL_IMAGE, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!OmxCodecBufferBlockUnmarshalling(codecComponentReply, outBuffer)) {
+        HDF_LOGE("%{public}s: read outBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::ComponentRoleEnum_(std::vector<uint8_t>& role, uint32_t index,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteBool(false)) {
+        HDF_LOGE("%{public}s:failed to write flag of memory setting!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentData.WriteUint32(index)) {
+        HDF_LOGE("%{public}s: write index failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_COMPONENT_ROLE_ENUM, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!ReadPodArray(codecComponentReply, role)) {
+        HDF_LOGE("%{public}s: failed to read role", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+int32_t OHOS::HDI::Codec::V1_0::CodecComponentProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel codecComponentData;
+    MessageParcel codecComponentReply;
+    MessageOption codecComponentOption(MessageOption::TF_SYNC);
+
+    if (!codecComponentData.WriteInterfaceToken(OHOS::HDI::Codec::V1_0::ICodecComponent::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t codecComponentRet = remote->SendRequest(CMD_CODEC_COMPONENT_GET_VERSION, codecComponentData, codecComponentReply, codecComponentOption);
+    if (codecComponentRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, codecComponentRet);
+        return codecComponentRet;
+    }
+
+    if (!codecComponentReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!codecComponentReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return codecComponentRet;
+}
+
+} // V1_0
+} // Codec
+} // HDI
+} // OHOS

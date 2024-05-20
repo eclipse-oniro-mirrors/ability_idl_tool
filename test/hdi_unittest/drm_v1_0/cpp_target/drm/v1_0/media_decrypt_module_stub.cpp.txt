@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/media_decrypt_module_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    media_decrypt_module_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+
+
+
+OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStub(const sptr<OHOS::HDI::Drm::V1_0::IMediaDecryptModule> &impl)
+    : IPCObjectStub(OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::~MediaDecryptModuleStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_MEDIA_DECRYPT_MODULE_GET_VERSION:
+            return MediaDecryptModuleStubGetVersion(data, reply, option);
+        case CMD_MEDIA_DECRYPT_MODULE_DECRYPT_MEDIA_DATA:
+            return MediaDecryptModuleStubDecryptMediaData(data, reply, option);
+        case CMD_MEDIA_DECRYPT_MODULE_RELEASE:
+            return MediaDecryptModuleStubRelease(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubDecryptMediaData(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubDecryptMediaData_(mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubRelease(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubRelease_(mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubGetVersion(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption)
+{
+    return OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubGetVersion_(mediaDecryptModuleData, mediaDecryptModuleReply, mediaDecryptModuleOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubDecryptMediaData_(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption, sptr<OHOS::HDI::Drm::V1_0::IMediaDecryptModule> impl)
+{
+    if (mediaDecryptModuleData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool secure = false;
+    if (!mediaDecryptModuleData.ReadBool(secure)) {
+        HDF_LOGE("%{public}s: read secure failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::CryptoInfo cryptoInfo;
+    if (!CryptoInfoBlockUnmarshalling(mediaDecryptModuleData, cryptoInfo)) {
+        HDF_LOGE("%{public}s: read cryptoInfo failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::DrmBuffer srcBuffer;
+    if (!DrmBufferBlockUnmarshalling(mediaDecryptModuleData, srcBuffer)) {
+        HDF_LOGE("%{public}s: read srcBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    OHOS::HDI::Drm::V1_0::DrmBuffer destBuffer;
+    if (!DrmBufferBlockUnmarshalling(mediaDecryptModuleData, destBuffer)) {
+        HDF_LOGE("%{public}s: read destBuffer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaDecryptModuleRet = impl->DecryptMediaData(secure, cryptoInfo, srcBuffer, destBuffer);
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    return mediaDecryptModuleRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubRelease_(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption, sptr<OHOS::HDI::Drm::V1_0::IMediaDecryptModule> impl)
+{
+    if (mediaDecryptModuleData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaDecryptModuleRet = impl->Release();
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    return mediaDecryptModuleRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::MediaDecryptModuleStub::MediaDecryptModuleStubGetVersion_(MessageParcel& mediaDecryptModuleData, MessageParcel& mediaDecryptModuleReply, MessageOption& mediaDecryptModuleOption, sptr<OHOS::HDI::Drm::V1_0::IMediaDecryptModule> impl)
+{
+    if (mediaDecryptModuleData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IMediaDecryptModule::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t mediaDecryptModuleRet = impl->GetVersion(majorVer, minorVer);
+    if (mediaDecryptModuleRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, mediaDecryptModuleRet);
+        return mediaDecryptModuleRet;
+    }
+
+    if (!mediaDecryptModuleReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!mediaDecryptModuleReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return mediaDecryptModuleRet;
+}
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

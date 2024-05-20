@@ -1,0 +1,235 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/oem_certificate_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    oem_certificate_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Drm {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+
+
+OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStub(const sptr<OHOS::HDI::Drm::V1_0::IOemCertificate> &impl)
+    : IPCObjectStub(OHOS::HDI::Drm::V1_0::IOemCertificate::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Drm::V1_0::OemCertificateStub::~OemCertificateStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_OEM_CERTIFICATE_GET_VERSION:
+            return OemCertificateStubGetVersion(data, reply, option);
+        case CMD_OEM_CERTIFICATE_GENERATE_OEM_KEY_SYSTEM_REQUEST:
+            return OemCertificateStubGenerateOemKeySystemRequest(data, reply, option);
+        case CMD_OEM_CERTIFICATE_PROCESS_OEM_KEY_SYSTEM_RESPONSE:
+            return OemCertificateStubProcessOemKeySystemResponse(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGenerateOemKeySystemRequest(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption)
+{
+    return OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGenerateOemKeySystemRequest_(oemCertificateData, oemCertificateReply, oemCertificateOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubProcessOemKeySystemResponse(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption)
+{
+    return OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubProcessOemKeySystemResponse_(oemCertificateData, oemCertificateReply, oemCertificateOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGetVersion(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption)
+{
+    return OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGetVersion_(oemCertificateData, oemCertificateReply, oemCertificateOption, impl_);
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGenerateOemKeySystemRequest_(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption, sptr<OHOS::HDI::Drm::V1_0::IOemCertificate> impl)
+{
+    if (oemCertificateData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IOemCertificate::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    bool oemCertificateMemSet = false;
+    if (!oemCertificateData.ReadBool(oemCertificateMemSet)) {
+        HDF_LOGE("%{public}s: failed to read oemCertificateMemSet", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    std::string defaultUrl;
+    if (oemCertificateMemSet) {
+        uint32_t capacity = 0;
+        if (!oemCertificateData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(char), HDF_ERR_INVALID_PARAM);
+        defaultUrl.reserve(capacity);
+    }
+
+    std::vector<uint8_t> request;
+    if (oemCertificateMemSet) {
+        uint32_t capacity = 0;
+        if (!oemCertificateData.ReadUint32(capacity)) {
+            HDF_LOGE("%{public}s: failed to read capacity", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+        HDI_CHECK_VALUE_RETURN(capacity, >, HDI_BUFF_MAX_SIZE / sizeof(uint8_t), HDF_ERR_INVALID_PARAM);
+        request.reserve(capacity);
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t oemCertificateRet = impl->GenerateOemKeySystemRequest(defaultUrl, request);
+    if (oemCertificateRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, oemCertificateRet);
+        return oemCertificateRet;
+    }
+
+    if (!oemCertificateReply.WriteCString(defaultUrl.c_str())) {
+        HDF_LOGE("%{public}s: write defaultUrl failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(oemCertificateReply, request)) {
+        HDF_LOGE("%{public}s: failed to write request", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return oemCertificateRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubProcessOemKeySystemResponse_(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption, sptr<OHOS::HDI::Drm::V1_0::IOemCertificate> impl)
+{
+    if (oemCertificateData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IOemCertificate::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<uint8_t> response;
+    if (!ReadPodArray(oemCertificateData, response)) {
+        HDF_LOGE("%{public}s: failed to read response", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t oemCertificateRet = impl->ProcessOemKeySystemResponse(response);
+    if (oemCertificateRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, oemCertificateRet);
+        return oemCertificateRet;
+    }
+
+    return oemCertificateRet;
+}
+
+int32_t OHOS::HDI::Drm::V1_0::OemCertificateStub::OemCertificateStubGetVersion_(MessageParcel& oemCertificateData, MessageParcel& oemCertificateReply, MessageOption& oemCertificateOption, sptr<OHOS::HDI::Drm::V1_0::IOemCertificate> impl)
+{
+    if (oemCertificateData.ReadInterfaceToken() != OHOS::HDI::Drm::V1_0::IOemCertificate::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t oemCertificateRet = impl->GetVersion(majorVer, minorVer);
+    if (oemCertificateRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, oemCertificateRet);
+        return oemCertificateRet;
+    }
+
+    if (!oemCertificateReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!oemCertificateReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return oemCertificateRet;
+}
+} // V1_0
+} // Drm
+} // HDI
+} // OHOS

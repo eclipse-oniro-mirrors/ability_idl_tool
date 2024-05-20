@@ -1,0 +1,516 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/geofence_intf_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    geofence_intf_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Geofence {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf> OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::Get(bool isStub)
+{
+    return IGeofenceIntf::Get("geofence_intf_service", isStub);
+}
+
+sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf> OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "geofence_intf_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> proxy = new OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t geofenceIntfRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::Reconnect(
+    sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RegisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RegisterGeofenceCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::UnregisterGeofenceCallback(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::UnregisterGeofenceCallback_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddCircleGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest>& circleGeofences)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddCircleGeofences_(circleGeofences, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddPolygonGeofences(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest>& polygonGeofences)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddPolygonGeofences_(polygonGeofences, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RemoveGeofences(const std::vector<int32_t>& geofenceId)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RemoveGeofences_(geofenceId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceStatus(int32_t geofenceId)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceStatus_(geofenceId, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceLocation()
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceLocation_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceSize()
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceSize_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::SendCellOfflineDb(const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dbData, int32_t cellType)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::SendCellOfflineDb_(dbData, cellType, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetVersion(uint32_t& majorVer,
+     uint32_t& minorVer)
+{
+    return OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RegisterGeofenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_REGISTER_GEOFENCE_CALLBACK, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::UnregisterGeofenceCallback_(const sptr<OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_UNREGISTER_GEOFENCE_CALLBACK, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddCircleGeofences_(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceCircleRequest>& circleGeofences, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(geofenceIntfData, circleGeofences)) {
+        HDF_LOGE("%{public}s: failed to write circleGeofences", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_ADD_CIRCLE_GEOFENCES, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::AddPolygonGeofences_(const std::vector<OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequest>& polygonGeofences, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfData.WriteUint32(polygonGeofences.size())) {
+        HDF_LOGE("%{public}s: write polygonGeofences size failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+    for (const auto& it0 : polygonGeofences) {
+        if (!OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofencePolygonRequestBlockMarshalling(geofenceIntfData, it0)) {
+            HDF_LOGE("%{public}s: write it0 failed!", __func__);
+            return HDF_ERR_INVALID_PARAM;
+        }
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_ADD_POLYGON_GEOFENCES, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::RemoveGeofences_(const std::vector<int32_t>& geofenceId, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(geofenceIntfData, geofenceId)) {
+        HDF_LOGE("%{public}s: failed to write geofenceId", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_REMOVE_GEOFENCES, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceStatus_(int32_t geofenceId,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfData.WriteInt32(geofenceId)) {
+        HDF_LOGE("%{public}s: write geofenceId failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_GET_GEOFENCE_STATUS, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceLocation_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_GET_GEOFENCE_LOCATION, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetGeofenceSize_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_GET_GEOFENCE_SIZE, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::SendCellOfflineDb_(const OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDb& dbData, int32_t cellType, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!OHOS::HDI::Location::Lpfence::Geofence::V1_0::OfflineDbBlockMarshalling(geofenceIntfData, dbData)) {
+        HDF_LOGE("%{public}s: write dbData failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfData.WriteInt32(cellType)) {
+        HDF_LOGE("%{public}s: write cellType failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_SEND_CELL_OFFLINE_DB, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    return geofenceIntfRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Geofence::V1_0::GeofenceIntfProxy::GetVersion_(uint32_t& majorVer,
+     uint32_t& minorVer, const sptr<IRemoteObject> remote)
+{
+    MessageParcel geofenceIntfData;
+    MessageParcel geofenceIntfReply;
+    MessageOption geofenceIntfOption(MessageOption::TF_SYNC);
+
+    if (!geofenceIntfData.WriteInterfaceToken(OHOS::HDI::Location::Lpfence::Geofence::V1_0::IGeofenceIntf::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t geofenceIntfRet = remote->SendRequest(CMD_GEOFENCE_INTF_GET_VERSION, geofenceIntfData, geofenceIntfReply, geofenceIntfOption);
+    if (geofenceIntfRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, geofenceIntfRet);
+        return geofenceIntfRet;
+    }
+
+    if (!geofenceIntfReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!geofenceIntfReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return geofenceIntfRet;
+}
+
+} // V1_0
+} // Geofence
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

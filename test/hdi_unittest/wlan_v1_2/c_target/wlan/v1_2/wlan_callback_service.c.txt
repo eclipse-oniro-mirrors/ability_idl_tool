@@ -1,0 +1,76 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_2/wlan_callback_service.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <osal_mem.h>
+#include <securec.h>
+
+#define HDF_LOG_TAG    wlan_callback_service
+
+static int32_t WlanCallbackResetDriverResult(struct IWlanCallback *self, uint32_t event, int32_t code,
+     const char* ifName)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t WlanCallbackScanResult(struct IWlanCallback *self, uint32_t event,
+     const struct HdfWifiScanResult* scanResult, const char* ifName)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t WlanCallbackWifiNetlinkMessage(struct IWlanCallback *self, const uint8_t* recvMsg, uint32_t recvMsgLen)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t WlanCallbackScanResults(struct IWlanCallback *self, uint32_t event,
+     const struct HdfWifiScanResults* scanResults, const char* ifName)
+{
+    return HDF_SUCCESS;
+}
+
+static int32_t WlanCallbackGetVersion(struct IWlanCallback *self, uint32_t* majorVer, uint32_t* minorVer)
+{
+    *majorVer = IWLAN_CALLBACK_MAJOR_VERSION;
+    *minorVer = IWLAN_CALLBACK_MINOR_VERSION;
+    return HDF_SUCCESS;
+}
+
+struct IWlanCallback *WlanCallbackServiceGet(void)
+{
+    struct WlanCallbackService *service = (struct WlanCallbackService *)OsalMemCalloc(sizeof(struct WlanCallbackService));
+    if (service == NULL) {
+        HDF_LOGE("%{public}s: malloc WlanCallbackService obj failed!", __func__);
+        return NULL;
+    }
+
+    service->interface.ResetDriverResult = WlanCallbackResetDriverResult;
+    service->interface.ScanResult = WlanCallbackScanResult;
+    service->interface.WifiNetlinkMessage = WlanCallbackWifiNetlinkMessage;
+    service->interface.ScanResults = WlanCallbackScanResults;
+    service->interface.GetVersion = WlanCallbackGetVersion;
+    return &service->interface;
+}
+
+void WlanCallbackServiceRelease(struct IWlanCallback *instance)
+{
+    if (instance == NULL) {
+        return;
+    }
+    OsalMemFree(instance);
+}

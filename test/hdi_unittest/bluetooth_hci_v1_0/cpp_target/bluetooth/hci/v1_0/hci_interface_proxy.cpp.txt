@@ -1,0 +1,298 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/hci_interface_proxy.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+#include <hdi_support.h>
+#include <iservmgr_hdi.h>
+#include <message_option.h>
+#include <message_parcel.h>
+#include <object_collector.h>
+#include <string_ex.h>
+
+#define HDF_LOG_TAG    hci_interface_proxy
+
+namespace OHOS {
+namespace HDI {
+namespace Bluetooth {
+namespace Hci {
+namespace V1_0 {
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data);
+
+sptr<OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface> OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::Get(bool isStub)
+{
+    return IHciInterface::Get("hci_interface_service", isStub);
+}
+
+sptr<OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface> OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::Get(const std::string& serviceName, bool isStub)
+{
+    if (isStub) {
+        std::string desc = Str16ToStr8(OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::GetDescriptor());
+        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "hci_interface_service" ? "service" : serviceName.c_str());
+        if (impl == nullptr) {
+            HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
+            return nullptr;
+        }
+        return reinterpret_cast<OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface *>(impl);
+    }
+
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    auto servMgr = IServiceManager::Get();
+    if (servMgr == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<IRemoteObject> remote = servMgr->GetService(serviceName.c_str());
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s:get remote object failed!", __func__);
+        return nullptr;
+    }
+
+    sptr<OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy> proxy = new OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy(remote);
+    if (proxy == nullptr) {
+        HDF_LOGE("%{public}s:iface_cast failed!", __func__);
+        return nullptr;
+    }
+
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(servMgr);
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = false;
+    proxy->serviceName_ = serviceName;
+    uint32_t serMajorVer = 0;
+    uint32_t serMinorVer = 0;
+    int32_t hciInterfaceRet = proxy->GetVersion(serMajorVer, serMinorVer);
+    if (hciInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s:get version failed!", __func__);
+        return nullptr;
+    }
+
+    if (serMajorVer != 1) {
+        HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    return proxy;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Reconnect(
+    sptr<OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy> proxy) 
+{
+    if (proxy == nullptr) {
+        HDF_LOGW("Reconnect failed : input proxy is null");
+        return HDF_FAILURE;
+    }
+    using namespace OHOS::HDI::ServiceManager::V1_0;
+    proxy->isReconnected_ = false;
+    auto iServMgr = IServiceManager::Get();
+    if (iServMgr == nullptr) {
+        HDF_LOGW("Reconnect failed : iServMgr is null");
+        return HDF_FAILURE;
+    };
+    proxy->reconnectRemote_ = iServMgr->GetService(proxy->serviceName_.c_str());
+    if (proxy->reconnectRemote_ == nullptr) {
+        HDF_LOGW("Reconnect failed : reconnectRemote_ is null");
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_ = OHOS::HDI::hdi_objcast<IServiceManager>(iServMgr);
+    if (proxy->servMgr_ == nullptr) {
+        HDF_LOGE("%{public}s:get IServiceManager failed!", __func__);
+        return HDF_FAILURE;
+    }
+    proxy->servMgr_->AddDeathRecipient(
+        new OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::IServiceManagerDeathRecipient(proxy));
+    proxy->isReconnected_ = true;
+    return HDF_SUCCESS;
+}
+
+
+template<typename ElementType>
+static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> &data)
+{
+    if (!parcel.WriteUint32(data.size())) {
+        HDF_LOGE("%{public}s: failed to write data size", __func__);
+        return false;
+    }
+    if (data.empty()) {
+        return true;
+    }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+        HDF_LOGE("%{public}s: failed to write array", __func__);
+        return false;
+    }
+    return true;
+}
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Init(const sptr<OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback>& callbackObj)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Init_(callbackObj, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::SendHciPacket(OHOS::HDI::Bluetooth::Hci::V1_0::BtType type,
+     const std::vector<uint8_t>& data)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::SendHciPacket_(type, data, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Close()
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Close_(GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::GetVersion(uint32_t& majorVer, uint32_t& minorVer)
+{
+    return OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::GetVersion_(majorVer, minorVer, GetCurrentRemote());
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Init_(const sptr<OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback>& callbackObj, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciInterfaceData;
+    MessageParcel hciInterfaceReply;
+    MessageOption hciInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!hciInterfaceData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (callbackObj == nullptr) {
+        HDF_LOGE("%{public}s: parameter callbackObj is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciInterfaceData.WriteRemoteObject(OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(callbackObj, OHOS::HDI::Bluetooth::Hci::V1_0::IHciCallback::GetDescriptor()))) {
+        HDF_LOGE("%{public}s: write callbackObj failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciInterfaceRet = remote->SendRequest(CMD_HCI_INTERFACE_INIT, hciInterfaceData, hciInterfaceReply, hciInterfaceOption);
+    if (hciInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciInterfaceRet);
+        return hciInterfaceRet;
+    }
+
+    return hciInterfaceRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::SendHciPacket_(OHOS::HDI::Bluetooth::Hci::V1_0::BtType type,
+     const std::vector<uint8_t>& data, const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciInterfaceData;
+    MessageParcel hciInterfaceReply;
+    MessageOption hciInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!hciInterfaceData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciInterfaceData.WriteUint64(static_cast<uint64_t>(type))) {
+        HDF_LOGE("%{public}s: write type failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!WritePodArray(hciInterfaceData, data)) {
+        HDF_LOGE("%{public}s: failed to write data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciInterfaceRet = remote->SendRequest(CMD_HCI_INTERFACE_SEND_HCI_PACKET, hciInterfaceData, hciInterfaceReply, hciInterfaceOption);
+    if (hciInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciInterfaceRet);
+        return hciInterfaceRet;
+    }
+
+    return hciInterfaceRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::Close_(const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciInterfaceData;
+    MessageParcel hciInterfaceReply;
+    MessageOption hciInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!hciInterfaceData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciInterfaceRet = remote->SendRequest(CMD_HCI_INTERFACE_CLOSE, hciInterfaceData, hciInterfaceReply, hciInterfaceOption);
+    if (hciInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciInterfaceRet);
+        return hciInterfaceRet;
+    }
+
+    return hciInterfaceRet;
+}
+
+int32_t OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::GetVersion_(uint32_t& majorVer, uint32_t& minorVer,
+     const sptr<IRemoteObject> remote)
+{
+    MessageParcel hciInterfaceData;
+    MessageParcel hciInterfaceReply;
+    MessageOption hciInterfaceOption(MessageOption::TF_SYNC);
+
+    if (!hciInterfaceData.WriteInterfaceToken(OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface::GetDescriptor())) {
+        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (remote == nullptr) {
+        HDF_LOGE("%{public}s: invalid remote object!", __func__);
+        return HDF_ERR_INVALID_OBJECT;
+    }
+
+    int32_t hciInterfaceRet = remote->SendRequest(CMD_HCI_INTERFACE_GET_VERSION, hciInterfaceData, hciInterfaceReply, hciInterfaceOption);
+    if (hciInterfaceRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, hciInterfaceRet);
+        return hciInterfaceRet;
+    }
+
+    if (!hciInterfaceReply.ReadUint32(majorVer)) {
+        HDF_LOGE("%{public}s: read majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!hciInterfaceReply.ReadUint32(minorVer)) {
+        HDF_LOGE("%{public}s: read minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return hciInterfaceRet;
+}
+
+} // V1_0
+} // Hci
+} // Bluetooth
+} // HDI
+} // OHOS

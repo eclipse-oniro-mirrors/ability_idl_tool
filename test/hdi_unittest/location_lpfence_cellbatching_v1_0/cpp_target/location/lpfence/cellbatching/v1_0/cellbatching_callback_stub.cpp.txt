@@ -1,0 +1,183 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "v1_0/cellbatching_callback_stub.h"
+#include <hdf_base.h>
+#include <hdf_log.h>
+
+#define HDF_LOG_TAG    cellbatching_callback_stub
+
+namespace OHOS {
+namespace HDI {
+namespace Location {
+namespace Lpfence {
+namespace Cellbatching {
+namespace V1_0 {
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data);
+
+
+template<typename ElementType>
+static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
+{
+    data.clear();
+    uint32_t size = 0;
+    if (!parcel.ReadUint32(size)) {
+        HDF_LOGE("%{public}s: failed to read size", __func__);
+        return false;
+    }
+
+    if (size == 0) {
+        return true;
+    }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    if (dataPtr == nullptr) {
+        HDF_LOGI("%{public}s: failed to read data", __func__);
+        return false;
+    }
+    data.assign(dataPtr, dataPtr + size);
+    return true;
+}
+
+
+OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStub(const sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> &impl)
+    : IPCObjectStub(OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback::GetDescriptor()), impl_(impl)
+{
+}
+
+OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::~CellbatchingCallbackStub()
+{
+    ObjectCollector::GetInstance().RemoveObject(impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::OnRemoteRequest(uint32_t code, MessageParcel& data, MessageParcel& reply, MessageOption& option)
+{
+    switch (code) {
+        case CMD_CELLBATCHING_CALLBACK_GET_VERSION:
+            return CellbatchingCallbackStubGetVersion(data, reply, option);
+        case CMD_CELLBATCHING_CALLBACK_ON_CELLBATCHING_CHANGED:
+            return CellbatchingCallbackStubOnCellbatchingChanged(data, reply, option);
+        case CMD_CELLBATCHING_CALLBACK_ON_CELLBATCHING_RESET:
+            return CellbatchingCallbackStubOnCellbatchingReset(data, reply, option);
+        default: {
+            HDF_LOGE("%{public}s: cmd %{public}d is not supported", __func__, code);
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+        }
+    }
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingChanged(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingChanged_(cellbatchingCallbackData, cellbatchingCallbackReply, cellbatchingCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingReset(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingReset_(cellbatchingCallbackData, cellbatchingCallbackReply, cellbatchingCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubGetVersion(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption)
+{
+    return OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubGetVersion_(cellbatchingCallbackData, cellbatchingCallbackReply, cellbatchingCallbackOption, impl_);
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingChanged_(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> impl)
+{
+    if (cellbatchingCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    std::vector<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellTrajectoryData> data;
+    if (!ReadPodArray(cellbatchingCallbackData, data)) {
+        HDF_LOGE("%{public}s: failed to read data", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingCallbackRet = impl->OnCellbatchingChanged(data);
+    if (cellbatchingCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingCallbackRet);
+        return cellbatchingCallbackRet;
+    }
+
+    return cellbatchingCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubOnCellbatchingReset_(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> impl)
+{
+    if (cellbatchingCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingCallbackRet = impl->OnCellbatchingReset();
+    if (cellbatchingCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingCallbackRet);
+        return cellbatchingCallbackRet;
+    }
+
+    return cellbatchingCallbackRet;
+}
+
+int32_t OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingCallbackStub::CellbatchingCallbackStubGetVersion_(MessageParcel& cellbatchingCallbackData, MessageParcel& cellbatchingCallbackReply, MessageOption& cellbatchingCallbackOption, sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback> impl)
+{
+    if (cellbatchingCallbackData.ReadInterfaceToken() != OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingCallback::GetDescriptor()) {
+        HDF_LOGE("%{public}s: interface token check failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    uint32_t majorVer = 0;
+
+    uint32_t minorVer = 0;
+
+    if (impl == nullptr) {
+        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    int32_t cellbatchingCallbackRet = impl->GetVersion(majorVer, minorVer);
+    if (cellbatchingCallbackRet != HDF_SUCCESS) {
+        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, cellbatchingCallbackRet);
+        return cellbatchingCallbackRet;
+    }
+
+    if (!cellbatchingCallbackReply.WriteUint32(majorVer)) {
+        HDF_LOGE("%{public}s: write majorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    if (!cellbatchingCallbackReply.WriteUint32(minorVer)) {
+        HDF_LOGE("%{public}s: write minorVer failed!", __func__);
+        return HDF_ERR_INVALID_PARAM;
+    }
+
+    return cellbatchingCallbackRet;
+}
+} // V1_0
+} // Cellbatching
+} // Lpfence
+} // Location
+} // HDI
+} // OHOS

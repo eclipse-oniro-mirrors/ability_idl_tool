@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_HDI_PIN_AUTH_V1_1_EXECUTORCALLBACKPROXY_H
+#define OHOS_HDI_PIN_AUTH_V1_1_EXECUTORCALLBACKPROXY_H
+
+#include "v1_0/executor_callback_proxy.h"
+#include "v1_1/iexecutor_callback.h"
+#include <iproxy_broker.h>
+
+namespace OHOS {
+namespace HDI {
+namespace PinAuth {
+namespace V1_1 {
+
+class ExecutorCallbackProxy : public IProxyBroker<OHOS::HDI::PinAuth::V1_1::IExecutorCallback> {
+public:
+    explicit ExecutorCallbackProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::PinAuth::V1_1::IExecutorCallback>(remote) {
+    }
+    virtual ~ExecutorCallbackProxy() = default;
+
+    inline bool IsProxy() override
+    {
+        return true;
+    }
+
+    int32_t OnGetDataV1_1(uint64_t scheduleId, const std::vector<uint8_t>& algoParameter, uint64_t authSubType,
+         uint32_t algoVersion) override;
+
+    int32_t OnResult(int32_t result, const std::vector<uint8_t>& extraInfo) override;
+
+    int32_t OnGetData(uint64_t scheduleId, const std::vector<uint8_t>& salt, uint64_t authSubType) override;
+
+    int32_t GetVersion(uint32_t& majorVer, uint32_t& minorVer) override;
+
+    static int32_t OnGetDataV1_1_(uint64_t scheduleId, const std::vector<uint8_t>& algoParameter, uint64_t authSubType,
+         uint32_t algoVersion, const sptr<IRemoteObject> remote);
+
+private:
+    static inline BrokerDelegator<OHOS::HDI::PinAuth::V1_1::ExecutorCallbackProxy> delegator_;
+};
+
+} // V1_1
+} // PinAuth
+} // HDI
+} // OHOS
+
+#endif // OHOS_HDI_PIN_AUTH_V1_1_EXECUTORCALLBACKPROXY_H
+
