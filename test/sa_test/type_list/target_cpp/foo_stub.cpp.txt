@@ -1,0 +1,678 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (code) {
+        case COMMAND_BOOL_TEST_FUNC: {
+            std::vector<bool> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                bool value = data.ReadInt32() == 1 ? true : false;
+                inParam.push_back(value);
+            }
+            std::vector<bool> outParam;
+            std::vector<bool> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                bool value = data.ReadInt32() == 1 ? true : false;
+                inoutParam.push_back(value);
+            }
+            std::vector<bool> result;
+            ErrCode errCode = bool_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_BYTE_TEST_FUNC: {
+            std::vector<bool> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                bool value = data.ReadInt32() == 1 ? true : false;
+                inParam.push_back(value);
+            }
+            std::vector<bool> outParam;
+            std::vector<bool> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                bool value = data.ReadInt32() == 1 ? true : false;
+                inoutParam.push_back(value);
+            }
+            std::vector<bool> result;
+            ErrCode errCode = byte_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_SHORT_TEST_FUNC: {
+            std::vector<short> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                short value = (short)data.ReadInt32();
+                inParam.push_back(value);
+            }
+            std::vector<short> outParam;
+            std::vector<short> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                short value = (short)data.ReadInt32();
+                inoutParam.push_back(value);
+            }
+            std::vector<short> result;
+            ErrCode errCode = short_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_INT_TEST_FUNC: {
+            std::vector<int32_t> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                int32_t value = data.ReadInt32();
+                inParam.push_back(value);
+            }
+            std::vector<int32_t> outParam;
+            std::vector<int32_t> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                int32_t value = data.ReadInt32();
+                inoutParam.push_back(value);
+            }
+            std::vector<int32_t> result;
+            ErrCode errCode = int_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_LONG_TEST_FUNC: {
+            std::vector<long> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                long value = data.ReadInt64();
+                inParam.push_back(value);
+            }
+            std::vector<long> outParam;
+            std::vector<long> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                long value = data.ReadInt64();
+                inoutParam.push_back(value);
+            }
+            std::vector<long> result;
+            ErrCode errCode = long_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt64((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt64((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt64((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_STRING_TEST_FUNC: {
+            std::vector<std::string> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                std::string value = Str16ToStr8(data.ReadString16());
+                inParam.push_back(value);
+            }
+            std::vector<std::string> outParam;
+            std::vector<std::string> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                std::string value = Str16ToStr8(data.ReadString16());
+                inoutParam.push_back(value);
+            }
+            std::vector<std::string> result;
+            ErrCode errCode = string_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteString16(Str8ToStr16((*it)))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteString16(Str8ToStr16((*it)))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteString16(Str8ToStr16((*it)))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_FLOAT_TEST_FUNC: {
+            std::vector<float> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                float value = data.ReadFloat();
+                inParam.push_back(value);
+            }
+            std::vector<float> outParam;
+            std::vector<float> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                float value = data.ReadFloat();
+                inoutParam.push_back(value);
+            }
+            std::vector<float> result;
+            ErrCode errCode = float_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteFloat((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteFloat((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteFloat((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_DOUBLE_TEST_FUNC: {
+            std::vector<double> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                double value = data.ReadDouble();
+                inParam.push_back(value);
+            }
+            std::vector<double> outParam;
+            std::vector<double> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                double value = data.ReadDouble();
+                inoutParam.push_back(value);
+            }
+            std::vector<double> result;
+            ErrCode errCode = double_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteDouble((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteDouble((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteDouble((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_CHAR_TEST_FUNC: {
+            std::vector<zchar> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                zchar value = (zchar)data.ReadInt32();
+                inParam.push_back(value);
+            }
+            std::vector<zchar> outParam;
+            std::vector<zchar> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                zchar value = (zchar)data.ReadInt32();
+                inoutParam.push_back(value);
+            }
+            std::vector<zchar> result;
+            ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteInt32((*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_SEQ_TEST_FUNC: {
+            std::vector<myseq> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                std::unique_ptr<myseq> value(data.ReadParcelable<myseq>());
+
+                if (!value) {
+                    return ERR_INVALID_DATA;
+                }
+                inParam.push_back(*value);
+            }
+            std::vector<myseq> outParam;
+            std::vector<myseq> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                std::unique_ptr<myseq> value(data.ReadParcelable<myseq>());
+
+                if (!value) {
+                    return ERR_INVALID_DATA;
+                }
+                inoutParam.push_back(*value);
+            }
+            std::vector<myseq> result;
+            ErrCode errCode = seq_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if (!reply.WriteParcelable(&(*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if (!reply.WriteParcelable(&(*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if (!reply.WriteParcelable(&(*it))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_INTERFACE_TEST_FUNC: {
+            std::vector<sptr<myinterface>> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inParamSize; ++i) {
+                sptr<myinterface> value = iface_cast<myinterface>(data.ReadRemoteObject());
+                if (value == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+
+                inParam.push_back(value);
+            }
+            std::vector<sptr<myinterface>> outParam;
+            std::vector<sptr<myinterface>> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > VECTOR_MAX_SIZE) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i = 0; i < inoutParamSize; ++i) {
+                sptr<myinterface> value = iface_cast<myinterface>(data.ReadRemoteObject());
+                if (value == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+
+                inoutParam.push_back(value);
+            }
+            std::vector<sptr<myinterface>> result;
+            ErrCode errCode = interface_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it = outParam.begin(); it != outParam.end(); ++it) {
+                    if ((*it) == nullptr) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((*it)->AsObject())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+                    if ((*it) == nullptr) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((*it)->AsObject())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > VECTOR_MAX_SIZE) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it = result.begin(); it != result.end(); ++it) {
+                    if ((*it) == nullptr) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((*it)->AsObject())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

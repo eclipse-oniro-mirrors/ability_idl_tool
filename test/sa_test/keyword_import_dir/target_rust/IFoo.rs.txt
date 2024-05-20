@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#![allow(missing_docs)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+
+extern crate ipc_rust;
+
+use ipc_rust::{
+    IRemoteBroker, IRemoteObj, RemoteStub, Result,
+    RemoteObj, define_remote_object, FIRST_CALL_TRANSACTION
+};
+use ipc_rust::{MsgParcel, BorrowedMsgParcel};
+
+use includedir::{test, myseq};
+use includedir::{myseq2};
+use includedir::{test, myinterface};
+use includedir::{myinterface2};
+
+
+pub enum IFooCode {
+    CodeSeqTestFunc  = FIRST_CALL_TRANSACTION,
+    CodeSeqTestFunc2,
+    CodeInterfaceTestFunc,
+    CodeInterfaceTestFunc2,
+}
+
+define_remote_object!(
+    IFoo["test.IFoo"] {
+        stub: FooStub(on_remote_request),
+        proxy: FooProxy,
+    }
+);
+
+pub trait IFoo: IRemoteBroker {
+    fn seq_test_func(&self, in_param: &myseq, out_param: &myseq, inout_param: &myseq) -> Result<()>;
+    fn seq_test_func2(&self, in_param: &myseq2, out_param: &myseq2, inout_param: &myseq2) -> Result<()>;
+    fn interface_test_func(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()>;
+    fn interface_test_func2(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()>;
+}
+
+fn on_remote_request(stub: &dyn IFoo, code: u32, data: &BorrowedMsgParcel,
+    reply: &mut BorrowedMsgParcel) -> Result<()> {
+    match code {
+        1 => {
+            let in_param : myseq = data.read()?;
+            let out_param : myseq = data.read()?;
+            let inout_param : myseq = data.read()?;
+            stub.seq_test_func(&in_param, &out_param, &inout_param)?;
+            Ok(())
+        }
+        2 => {
+            let in_param : myseq2 = data.read()?;
+            let out_param : myseq2 = data.read()?;
+            let inout_param : myseq2 = data.read()?;
+            stub.seq_test_func2(&in_param, &out_param, &inout_param)?;
+            Ok(())
+        }
+        3 => {
+            let in_param : myinterface2 = data.read()?;
+            let out_param : myinterface2 = data.read()?;
+            let inout_param : myinterface2 = data.read()?;
+            stub.interface_test_func(&in_param, &out_param, &inout_param)?;
+            Ok(())
+        }
+        4 => {
+            let in_param : myinterface2 = data.read()?;
+            let out_param : myinterface2 = data.read()?;
+            let inout_param : myinterface2 = data.read()?;
+            stub.interface_test_func2(&in_param, &out_param, &inout_param)?;
+            Ok(())
+        }
+        _ => Err(-1)
+    }
+}
+
+impl IFoo for RemoteStub<FooStub> {
+    fn seq_test_func(&self, in_param: &myseq, out_param: &myseq, inout_param: &myseq) -> Result<()> {
+        self.0.seq_test_func(in_param, out_param, inout_param)
+    }
+
+    fn seq_test_func2(&self, in_param: &myseq2, out_param: &myseq2, inout_param: &myseq2) -> Result<()> {
+        self.0.seq_test_func2(in_param, out_param, inout_param)
+    }
+
+    fn interface_test_func(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()> {
+        self.0.interface_test_func(in_param, out_param, inout_param)
+    }
+
+    fn interface_test_func2(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()> {
+        self.0.interface_test_func2(in_param, out_param, inout_param)
+    }
+}
+
+impl IFoo for FooProxy {
+    fn seq_test_func(&self, in_param: &myseq, out_param: &myseq, inout_param: &myseq) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeSeqTestFunc as u32, &data, false)?;
+        Ok(())
+    }
+
+    fn seq_test_func2(&self, in_param: &myseq2, out_param: &myseq2, inout_param: &myseq2) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeSeqTestFunc2 as u32, &data, false)?;
+        Ok(())
+    }
+
+    fn interface_test_func(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeInterfaceTestFunc as u32, &data, false)?;
+        Ok(())
+    }
+
+    fn interface_test_func2(&self, in_param: &myinterface2, out_param: &myinterface2, inout_param: &myinterface2) -> Result<()> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&in_param)?;
+        data.write(&out_param)?;
+        data.write(&inout_param)?;
+        let _reply = self.remote.send_request(IFooCode::CodeInterfaceTestFunc2 as u32, &data, false)?;
+        Ok(())
+    }
+}

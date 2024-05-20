@@ -1,0 +1,202 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace test {
+ErrCode FooProxy::seq_test_func(
+    const myseq& inParam,
+    myseq& outParam,
+    myseq* inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteParcelable(&inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SEQ_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<myseq> info(reply.ReadParcelable<myseq>());
+    if (info != nullptr) {
+        outParam = *info;
+    }
+
+    std::unique_ptr<myseq> info(reply.ReadParcelable<myseq>());
+    if (info != nullptr) {
+        inoutParam = *info;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::seq_test_func2(
+    const myseq2& inParam,
+    myseq2& outParam,
+    myseq2* inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteParcelable(&inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SEQ_TEST_FUNC2, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<myseq2> info(reply.ReadParcelable<myseq2>());
+    if (info != nullptr) {
+        outParam = *info;
+    }
+
+    std::unique_ptr<myseq2> info(reply.ReadParcelable<myseq2>());
+    if (info != nullptr) {
+        inoutParam = *info;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::interface_test_func(
+    const sptr<myinterface2>& inParam,
+    sptr<myinterface2>& outParam,
+    const sptr<myinterface2>& inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inParam->AsObject())) {
+        return ERR_INVALID_DATA;
+    }
+    if (inoutParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inoutParam->AsObject())) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_INTERFACE_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = iface_cast<myinterface2>(reply.ReadRemoteObject());
+    inoutParam = iface_cast<myinterface2>(reply.ReadRemoteObject());
+    return ERR_OK;
+}
+
+ErrCode FooProxy::interface_test_func2(
+    const sptr<myinterface2>& inParam,
+    sptr<myinterface2>& outParam,
+    const sptr<myinterface2>& inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inParam->AsObject())) {
+        return ERR_INVALID_DATA;
+    }
+    if (inoutParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inoutParam->AsObject())) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_INTERFACE_TEST_FUNC2, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = iface_cast<myinterface2>(reply.ReadRemoteObject());
+    inoutParam = iface_cast<myinterface2>(reply.ReadRemoteObject());
+    return ERR_OK;
+}
+} // namespace test

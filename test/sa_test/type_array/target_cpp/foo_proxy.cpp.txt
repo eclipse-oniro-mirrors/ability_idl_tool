@@ -1,0 +1,890 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace test {
+ErrCode FooProxy::void_test_func()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_VOID_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::bool_test_func(
+    const std::vector<bool>& inParam,
+    std::vector<bool>& outParam,
+    std::vector<bool>& inoutParam,
+    std::vector<bool>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt32((*it) ? 1 : 0)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt32((*it) ? 1 : 0)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_BOOL_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        bool value = reply.ReadInt32() == 1 ? true : false;
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        bool value = reply.ReadInt32() == 1 ? true : false;
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        bool value = reply.ReadInt32() == 1 ? true : false;
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::byte_test_func(
+    const std::vector<int8_t>& inParam,
+    std::vector<int8_t>& outParam,
+    std::vector<int8_t>& inoutParam,
+    std::vector<int8_t>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_BYTE_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        int8_t value = (int8_t)reply.ReadInt32();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        int8_t value = (int8_t)reply.ReadInt32();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        int8_t value = (int8_t)reply.ReadInt32();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::short_test_func(
+    const std::vector<short>& inParam,
+    std::vector<short>& outParam,
+    std::vector<short>& inoutParam,
+    std::vector<short>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SHORT_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        short value = (short)reply.ReadInt32();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        short value = (short)reply.ReadInt32();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        short value = (short)reply.ReadInt32();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::int_test_func(
+    const std::vector<int32_t>& inParam,
+    std::vector<int32_t>& outParam,
+    std::vector<int32_t>& inoutParam,
+    std::vector<int32_t>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_INT_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        int32_t value = reply.ReadInt32();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        int32_t value = reply.ReadInt32();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        int32_t value = reply.ReadInt32();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::long_test_func(
+    const std::vector<long>& inParam,
+    std::vector<long>& outParam,
+    std::vector<long>& inoutParam,
+    std::vector<long>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt64((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt64((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_LONG_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        long value = reply.ReadInt64();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        long value = reply.ReadInt64();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        long value = reply.ReadInt64();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::string_test_func(
+    const std::vector<std::string>& inParam,
+    std::vector<std::string>& outParam,
+    std::vector<std::string>& inoutParam,
+    std::vector<std::string>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteString16(Str8ToStr16((*it)))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteString16(Str8ToStr16((*it)))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_STRING_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        std::string value = Str16ToStr8(reply.ReadString16());
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        std::string value = Str16ToStr8(reply.ReadString16());
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        std::string value = Str16ToStr8(reply.ReadString16());
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::float_test_func(
+    const std::vector<float>& inParam,
+    std::vector<float>& outParam,
+    std::vector<float>& inoutParam,
+    std::vector<float>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteFloat((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteFloat((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_FLOAT_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        float value = reply.ReadFloat();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        float value = reply.ReadFloat();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        float value = reply.ReadFloat();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::double_test_func(
+    const std::vector<double>& inParam,
+    std::vector<double>& outParam,
+    std::vector<double>& inoutParam,
+    std::vector<double>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteDouble((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteDouble((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_DOUBLE_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        double value = reply.ReadDouble();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        double value = reply.ReadDouble();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        double value = reply.ReadDouble();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::char_test_func(
+    const std::vector<zchar>& inParam,
+    std::vector<zchar>& outParam,
+    std::vector<zchar>& inoutParam,
+    std::vector<zchar>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteInt32((*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_CHAR_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        zchar value = (zchar)reply.ReadInt32();
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        zchar value = (zchar)reply.ReadInt32();
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        zchar value = (zchar)reply.ReadInt32();
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::seq_test_func(
+    const std::vector<myseq>& inParam,
+    std::vector<myseq>& outParam,
+    std::vector<myseq>& inoutParam,
+    std::vector<myseq>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteParcelable(&(*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if (!data.WriteParcelable(&(*it))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SEQ_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
+
+        if (!value) {
+            return ERR_INVALID_DATA;
+        }
+        outParam.push_back(*value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
+
+        if (!value) {
+            return ERR_INVALID_DATA;
+        }
+        inoutParam.push_back(*value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
+
+        if (!value) {
+            return ERR_INVALID_DATA;
+        }
+        result.push_back(*value);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::interface_test_func(
+    const std::vector<sptr<myinterface>>& inParam,
+    std::vector<sptr<myinterface>>& outParam,
+    std::vector<sptr<myinterface>>& inoutParam,
+    std::vector<sptr<myinterface>>& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if ((*it) == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRemoteObject((*it)->AsObject())) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
+        if ((*it) == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRemoteObject((*it)->AsObject())) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_INTERFACE_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        sptr<myinterface> value = iface_cast<myinterface>(reply.ReadRemoteObject());
+        if (value == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+
+        outParam.push_back(value);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < inoutParamSize; ++i) {
+        sptr<myinterface> value = iface_cast<myinterface>(reply.ReadRemoteObject());
+        if (value == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+
+        inoutParam.push_back(value);
+    }
+    int32_t resultSize = reply.ReadInt32();
+    if (resultSize > VECTOR_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i = 0; i < resultSize; ++i) {
+        sptr<myinterface> value = iface_cast<myinterface>(reply.ReadRemoteObject());
+        if (value == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+
+        result.push_back(value);
+    }
+    return ERR_OK;
+}
+} // namespace test
