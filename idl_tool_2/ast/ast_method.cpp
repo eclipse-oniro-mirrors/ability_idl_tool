@@ -86,7 +86,7 @@ std::string ASTMethod::Dump(const std::string &prefix)
         sb.Append(prefix).Append(attr_->Dump(prefix));
     }
     sb.Append(name_).Append('(');
-    if (parameters_.size() != 0) {
+    if (parameters_.size() > 0) {
         sb.Append('\n');
         for (auto parameter : parameters_) {
             std::string info = parameter->Dump(prefix + TAB);

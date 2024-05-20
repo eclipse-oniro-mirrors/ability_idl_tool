@@ -84,16 +84,16 @@ public:
 
     size_t GetHashKey();
 
-    static constexpr unsigned int read_ = 0x1;
-    static constexpr unsigned int write_ = 0x2;
-    static constexpr unsigned int append_ = 0x4;
+    static constexpr unsigned int READ = 0x1;
+    static constexpr unsigned int WRITE = 0x2;
+    static constexpr unsigned int APPEND = 0x4;
 
 private:
     size_t Read();
 
-    static constexpr int bufferSize_ = 1024;
+    static constexpr int BUFFER_SIZE = 1024;
 
-    char buffer_[bufferSize_] = {0};
+    char buffer_[BUFFER_SIZE] = {0};
     size_t size_ = 0;
     size_t position_ = 0;
     size_t columnNo_ = 1;

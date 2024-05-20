@@ -54,7 +54,7 @@ void CppCustomTypesCodeEmitter::EmitPassthroughCustomTypesHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     std::string marcoName = StringHelper::Format("%s.%s", ast_->GetPackageName().c_str(), baseName_.c_str());
     StringBuilder sb;
 
@@ -95,7 +95,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     std::string marcoName = StringHelper::Format("%s.%s", ast_->GetPackageName().c_str(), baseName_.c_str());
     StringBuilder sb;
 
@@ -190,7 +190,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.cpp", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);

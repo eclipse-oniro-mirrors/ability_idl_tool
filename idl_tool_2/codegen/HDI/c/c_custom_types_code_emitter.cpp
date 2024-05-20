@@ -58,7 +58,7 @@ void CCustomTypesCodeEmitter::EmitPassthroughCustomTypesHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -95,7 +95,7 @@ void CCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -180,7 +180,7 @@ void CCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(baseName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -288,7 +288,7 @@ void CCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(StringBuilder &sb,
         }
     }
     sb.Append(TAB).Append("return true;\n");
-    sb.AppendFormat("%s:\n", errorsLabel_  );
+    sb.AppendFormat("%s:\n", ERRORS_LABEL  );
     EmitCustomTypeMemoryRecycle(type, objName, sb, TAB);
     sb.Append(TAB).Append("return false;\n");
     sb.Append("}\n");
@@ -354,26 +354,26 @@ void CCustomTypesCodeEmitter::EmitPodTypeUnmarshalling(
         sb.Append(prefix).AppendFormat(
             "if (!HdfSbufReadBuffer(data, (const void**)&%s, &%s)) {\n", objPtrName.c_str(), lenName.c_str());
         sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: failed to read buffer data\", __func__);\n");
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
         sb.Append(prefix).Append("}\n\n");
         sb.Append(prefix).AppendFormat(
             "if (%s == NULL || %s != sizeof(%s)) {\n", objPtrName.c_str(), lenName.c_str(), typeName.c_str());
         sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: invalid data from reading buffer\", __func__);\n");
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
         sb.Append(prefix).Append("}\n");
     } else {
         sb.Append(prefix).AppendFormat("const %s *%s = (const %s *)HdfSbufReadUnpadBuffer(data, sizeof(%s));\n",
             typeName.c_str(), objPtrName.c_str(), typeName.c_str(), typeName.c_str());
         sb.Append(prefix).AppendFormat("if (%s == NULL) {\n", objPtrName.c_str());
         sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: failed to read buffer data\", __func__);\n");
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
         sb.Append(prefix).Append("}\n\n");
     }
 
     sb.Append(prefix).AppendFormat("if (memcpy_s(%s, sizeof(%s), %s, sizeof(%s)) != EOK) {\n", name.c_str(),
         typeName.c_str(), objPtrName.c_str(), typeName.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: failed to memcpy data\", __func__);\n");
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
     sb.Append(prefix).Append("}\n\n");
 }
 
@@ -389,17 +389,17 @@ void CCustomTypesCodeEmitter::EmitMemberUnmarshalling(const AutoPtr<ASTType> &ty
         }
         case TypeKind::TYPE_STRUCT: {
             std::string paramName = StringHelper::Format("&%s", varName.c_str());
-            typeEmitter->EmitCUnMarshalling(paramName, errorsLabel_, sb, prefix, freeObjStatements_);
+            typeEmitter->EmitCUnMarshalling(paramName, ERRORS_LABEL, sb, prefix, freeObjStatements_);
             sb.Append("\n");
             break;
         }
         case TypeKind::TYPE_UNION: {
             std::string tmpName = StringHelper::Format("%sCp", memberName.c_str());
-            typeEmitter->EmitCUnMarshalling(tmpName, errorsLabel_, sb, prefix, freeObjStatements_);
+            typeEmitter->EmitCUnMarshalling(tmpName, ERRORS_LABEL, sb, prefix, freeObjStatements_);
             sb.Append(prefix).AppendFormat("if (memcpy_s(&%s, sizeof(%s), %s, sizeof(%s)) != EOK) {\n", varName.c_str(),
                 typeEmitter->EmitCType().c_str(), tmpName.c_str(), typeEmitter->EmitCType().c_str());
             sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: failed to memcpy data\", __func__);\n");
-            sb.Append(prefix + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+            sb.Append(prefix + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
             sb.Append(prefix).Append("}\n");
             break;
         }
@@ -410,7 +410,7 @@ void CCustomTypesCodeEmitter::EmitMemberUnmarshalling(const AutoPtr<ASTType> &ty
             break;
         }
         default: {
-            typeEmitter->EmitCUnMarshalling(varName, errorsLabel_, sb, prefix, freeObjStatements_);
+            typeEmitter->EmitCUnMarshalling(varName, ERRORS_LABEL, sb, prefix, freeObjStatements_);
             sb.Append("\n");
         }
     }
@@ -421,23 +421,23 @@ void CCustomTypesCodeEmitter::EmitStringMemberUnmarshalling(const AutoPtr<HdiTyp
 {
     std::string tmpName = StringHelper::Format("%sCp", memberName.c_str());
     sb.Append(prefix).Append("{\n");
-    typeEmitter->EmitCUnMarshalling(tmpName, errorsLabel_, sb, prefix + TAB, freeObjStatements_);
+    typeEmitter->EmitCUnMarshalling(tmpName, ERRORS_LABEL, sb, prefix + TAB, freeObjStatements_);
     if (Options::GetInstance().DoGenerateKernelCode()) {
         sb.Append(prefix + TAB)
             .AppendFormat("%s = (char*)OsalMemCalloc(strlen(%s) + 1);\n", varName.c_str(), tmpName.c_str());
         sb.Append(prefix + TAB).AppendFormat("if (%s == NULL) {\n", varName.c_str());
-        sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+        sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
         sb.Append(prefix + TAB).Append("}\n");
         sb.Append(prefix + TAB).AppendFormat("if (strcpy_s(%s, (strlen(%s) + 1), %s) != EOK) {\n",
             varName.c_str(), tmpName.c_str(), tmpName.c_str());
-        sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+        sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
         sb.Append(prefix + TAB).Append("}\n");
     } else {
         sb.Append(prefix + TAB).AppendFormat("%s = strdup(%s);\n", varName.c_str(), tmpName.c_str());
     }
 
     sb.Append(prefix + TAB).AppendFormat("if (%s == NULL) {\n", varName.c_str());
-    sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", errorsLabel_  );
+    sb.Append(prefix + TAB + TAB).AppendFormat("goto %s;\n", ERRORS_LABEL  );
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix).Append("}\n");
     sb.Append("\n");
@@ -458,7 +458,7 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
     }
 
     if (elementType->IsStringType()) {
-        typeEmitter->EmitCUnMarshalling(varName, errorsLabel_, sb, prefix, freeObjStatements_);
+        typeEmitter->EmitCUnMarshalling(varName, ERRORS_LABEL, sb, prefix, freeObjStatements_);
         return;
     }
 
@@ -466,7 +466,7 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
     sb.Append(prefix + TAB).AppendFormat("%s* %s = NULL;\n",
         GetTypeEmitter(elementType)->EmitCType().c_str(), tmpName.c_str());
     sb.Append(prefix + TAB).AppendFormat("uint32_t %sLen = 0;\n", tmpName.c_str());
-    typeEmitter->EmitCUnMarshalling(tmpName, errorsLabel_, sb, prefix + TAB, freeObjStatements_);
+    typeEmitter->EmitCUnMarshalling(tmpName, ERRORS_LABEL, sb, prefix + TAB, freeObjStatements_);
     sb.Append(prefix + TAB).AppendFormat("%s = %s;\n", varName.c_str(), tmpName.c_str());
     sb.Append(prefix + TAB).AppendFormat("%sLen = %sLen;\n", varName.c_str(), tmpName.c_str());
     sb.Append(prefix).Append("}\n");

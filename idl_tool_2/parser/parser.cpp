@@ -30,26 +30,30 @@
 
 namespace OHOS {
 namespace Idl {
-std::string RE_BIN_DIGIT = "0[b][0|1]+";      // binary digit
-std::string RE_OCT_DIGIT = "0[0-7]+";         // octal digit
-std::string RE_DEC_DIGIT = "[0-9]+";          // decimal digit
-std::string RE_HEX_DIFIT = "0[xX][0-9a-fA-F]+";  // hexadecimal digit
-std::string RE_DIGIT_SUFFIX = "(u|l|ll|ul|ull|)$";
-std::string RE_IDENTIFIER = "[a-zA-Z_][a-zA-Z0-9_]*";
+static constexpr const char *RE_BIN_DIGIT = "0[b][0|1]+";      // binary digit
+static constexpr const char *RE_OCT_DIGIT = "0[0-7]+";         // octal digit
+static constexpr const char *RE_DEC_DIGIT = "[0-9]+";          // decimal digit
+static constexpr const char *RE_HEX_DIFIT = "0[xX][0-9a-fA-F]+";  // hexadecimal digit
+static constexpr const char *RE_DIGIT_SUFFIX = "(u|l|ll|ul|ull|)$";
+static constexpr const char *RE_IDENTIFIER = "[a-zA-Z_][a-zA-Z0-9_]*";
 
 static constexpr unsigned int RE_PACKAGE_NUM = 3;
 static constexpr unsigned int RE_PACKAGE_INDEX = 0;
 static constexpr unsigned int RE_PACKAGE_MAJOR_VER_INDEX = 1;
 static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
 
-static const std::regex RE_PACKAGE(RE_IDENTIFIER + "(?:\\." + RE_IDENTIFIER + ")*\\.[V|v]" +
-                                                "(" + RE_DEC_DIGIT + ")_(" + RE_DEC_DIGIT + ")");
-static const std::regex RE_IMPORT(
-    RE_IDENTIFIER + "(?:\\." + RE_IDENTIFIER + ")*\\.[V|v]" + RE_DEC_DIGIT + "_"  + RE_DEC_DIGIT + "." + RE_IDENTIFIER);
-static std::regex g_binaryNumRe(RE_BIN_DIGIT + RE_DIGIT_SUFFIX, std::regex_constants::icase);
-static std::regex g_octNumRe(RE_OCT_DIGIT + RE_DIGIT_SUFFIX, std::regex_constants::icase);
-static std::regex g_decNumRe(RE_DEC_DIGIT + RE_DIGIT_SUFFIX, std::regex_constants::icase);
-static std::regex g_hexNumRe(RE_HEX_DIFIT + RE_DIGIT_SUFFIX, std::regex_constants::icase);
+static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
+    "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
+static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
+    std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
+static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_DEC_NUM(std::string(RE_DEC_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_HEX_NUM(std::string(RE_HEX_DIFIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
 AutoPtr<ASTEnumType> g_currentEnum = nullptr;
 
 bool Parser::Parse(const std::vector<FileDetail> &fileDetails)
@@ -1641,8 +1645,8 @@ AutoPtr<ASTExpr> Parser::ParseEnumExpr()
 
 bool Parser::CheckNumber(const std::string& integerVal) const
 {
-    if (std::regex_match(integerVal, g_binaryNumRe) || std::regex_match(integerVal, g_octNumRe)||
-        std::regex_match(integerVal, g_decNumRe) || std::regex_match(integerVal, g_hexNumRe)) {
+    if (std::regex_match(integerVal, RE_BIN_NUM) || std::regex_match(integerVal, RE_OCT_NUM)||
+        std::regex_match(integerVal, RE_DEC_NUM) || std::regex_match(integerVal, RE_HEX_NUM)) {
         return true;
     }
     return false;

@@ -65,7 +65,7 @@ void CServiceImplCodeEmitter::EmitLowServiceImplHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(implName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     sb.Append("\n");
@@ -110,7 +110,7 @@ void CServiceImplCodeEmitter::EmitLowServiceImplSourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(implName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -158,7 +158,7 @@ void CServiceImplCodeEmitter::EmitServiceImplHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(baseName_ + "Service").c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -218,7 +218,7 @@ void CServiceImplCodeEmitter::EmitServiceImplSourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(implName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);

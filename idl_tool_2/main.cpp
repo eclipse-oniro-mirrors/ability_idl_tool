@@ -27,7 +27,7 @@
 
 using namespace OHOS::Idl;
 
-int FileParse(Parser &parser)
+static int FileParse(Parser &parser)
 {
     std::vector<FileDetail> fileDetails;
     if (!Preprocessor::Preprocess(fileDetails)) {
@@ -43,7 +43,7 @@ int FileParse(Parser &parser)
     return 0;
 }
 
-void DumpAst(const StrAstMap &allAst)
+static void DumpAst(const StrAstMap &allAst)
 {
     Options &options = Options::GetInstance();
     if (!options.DoDumpAST()) {
@@ -59,7 +59,7 @@ void DumpAst(const StrAstMap &allAst)
     }
 }
 
-int DumpMetaData(const StrAstMap &allAst)
+static int DumpMetaData(const StrAstMap &allAst)
 {
     Options &options = Options::GetInstance();
     if ((options.GetInterfaceType() != InterfaceType::SA)) {
@@ -86,7 +86,7 @@ int DumpMetaData(const StrAstMap &allAst)
     }
 
     if (options.DoSaveMetadata()) {
-        File metadataFile(options.GetMetadataFile(), File::write_);
+        File metadataFile(options.GetMetadataFile(), File::WRITE);
         if (!metadataFile.IsValid()) {
             Logger::E(TAG, "Create metadata file failed.");
             return -1;
@@ -104,7 +104,7 @@ int DumpMetaData(const StrAstMap &allAst)
     return 0;
 }
 
-int ReadMetaData(StrAstMap &astList)
+static int ReadMetaData(StrAstMap &astList)
 {
     Options &options = Options::GetInstance();
     if ((options.GetInterfaceType() != InterfaceType::SA) || options.DoCompile()) {

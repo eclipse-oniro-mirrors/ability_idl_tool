@@ -277,8 +277,8 @@ private:
 
     static const char *optSupportArgs;
 
-    static constexpr int versionMajor_  = 1;
-    static constexpr int versionMinor_ = 0;
+    static constexpr int VERSION_MAJOR  = 1;
+    static constexpr int VERSION_MINOR = 0;
 
     std::string program;
     SystemLevel systemLevel;

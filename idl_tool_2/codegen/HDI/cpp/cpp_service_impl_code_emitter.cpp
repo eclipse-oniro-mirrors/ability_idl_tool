@@ -53,7 +53,7 @@ void CppServiceImplCodeEmitter::EmitImplHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(implName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -145,7 +145,7 @@ void CppServiceImplCodeEmitter::EmitImplSourceFile()
 {
     std::string filePath = File::AdapterPath(
         StringHelper::Format("%s/%s.cpp", directory_.c_str(), FileName(implName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
