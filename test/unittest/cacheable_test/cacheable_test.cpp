@@ -263,5 +263,29 @@ HWTEST_F(CacheableTest, CacheTimeTest009, Function | MediumTest | Level1)
     auto ret = p.Parse(options.GetSourceFile());
     EXPECT_EQ(ret, false);
 }
+
+/*
+ * @tc.name: CacheTimeTest010
+ * @tc.desc: test CacheTime
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(CacheableTest, CacheTimeTest010, Function | MediumTest | Level1)
+{
+    GTEST_LOG_(INFO) << "CacheableTest, CacheTimeTest010, TestSize.Level1";
+
+    PrepareIdlFile(CACHE_TIME_010_IDL_NAME.c_str(),
+       CACHEABLE_TIME_TEST010_IDL_CONTENT.c_str());
+
+    const char* argvArray[] = {"./idl", "-gen-cpp", "-c", CACHE_TIME_010_IDL_NAME.c_str()};
+    int argc = 4;
+    ParameterArgv parameters(argvArray, argc);
+
+    Options options(parameters.argc_, parameters.argv_);
+
+    Parser p(options);
+    auto ret = p.Parse(options.GetSourceFile());
+    EXPECT_EQ(ret, false);
+}
 } // namespace idl
 } // namespace OHOS
