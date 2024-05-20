@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class keyword_oneway(Test):
+class KeywordOneway(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cpp(self):
         self.set_gen_cpp_env()
@@ -40,5 +40,4 @@ class keyword_oneway(Test):
 
 
 if __name__ == "__main__":
-    keyword_oneway().test()
-
+    KeywordOneway().test()

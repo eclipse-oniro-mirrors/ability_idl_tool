@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class keyword_import_dir(Test):
+class KeywordImportDir(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cpp(self):
         self.set_gen_cpp_env()
@@ -38,6 +38,6 @@ class keyword_import_dir(Test):
     def run(self):
         return self.run_cpp() and self.run_rust() and self.run_ts()
 
-if __name__ == "__main__":
-    keyword_import_dir().test()
 
+if __name__ == "__main__":
+    KeywordImportDir().test()

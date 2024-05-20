@@ -18,9 +18,9 @@
 from test_base import Test
 
 
-class type_array_test(Test):
+class TypeArrayTest(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cpp(self):
         self.set_gen_cpp_env()
@@ -39,5 +39,4 @@ class type_array_test(Test):
 
 
 if __name__ == "__main__":
-    type_array_test().test()
-
+    TypeArrayTest().test()

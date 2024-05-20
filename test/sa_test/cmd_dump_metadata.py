@@ -16,12 +16,14 @@
 # limitations under the License.
 #
 
-from test_base import Test
 import re
 
-class cmd_dump_metada(Test):
+from test_base import Test
+
+
+class CmdDumpMetadata(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cmd(self):
         self.set_command_attr("--dump-metadata")
@@ -37,6 +39,6 @@ class cmd_dump_metada(Test):
         output_string = re.sub(r'"stringPoolSize_" : "\d+"', '"stringPoolSize_" : "0"', output_string)
         return output_string
 
-if __name__ == "__main__":
-    cmd_dump_metada().test()
 
+if __name__ == "__main__":
+    CmdDumpMetadata().test()
