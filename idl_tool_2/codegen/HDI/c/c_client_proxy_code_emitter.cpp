@@ -58,7 +58,7 @@ void CClientProxyCodeEmitter::EmitPassthroughProxySourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(proxyName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -116,7 +116,7 @@ void CClientProxyCodeEmitter::EmitProxySourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(proxyName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -318,10 +318,10 @@ void CClientProxyCodeEmitter::EmitProxyMethodBody(
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
         if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
-            typeEmitter->EmitCWriteVar(TypeMode::PARAM_IN, param->GetName(), finishedLabel_, sb, prefix + TAB);
+            typeEmitter->EmitCWriteVar(TypeMode::PARAM_IN, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
             sb.Append("\n");
         } else {
-            typeEmitter->EmitCProxyWriteOutVar(param->GetName(), finishedLabel_, sb, prefix + TAB);
+            typeEmitter->EmitCProxyWriteOutVar(param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
         }
     }
 
@@ -332,13 +332,13 @@ void CClientProxyCodeEmitter::EmitProxyMethodBody(
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
-                EmitReadProxyMethodParameter(param, finishedLabel_, sb, prefix + TAB);
+                EmitReadProxyMethodParameter(param, FINISHED_LABEL, sb, prefix + TAB);
                 sb.Append("\n");
             }
         }
     }
 
-    sb.Append(prefix).AppendFormat("%s:\n", finishedLabel_);
+    sb.Append(prefix).AppendFormat("%s:\n", FINISHED_LABEL);
     EmitReleaseBuf(HdiTypeEmitter::dataParcelName_, HdiTypeEmitter::replyParcelName_, sb, prefix + TAB);
 
     sb.Append(prefix + TAB).AppendFormat("return %s;\n", HdiTypeEmitter::errorCodeName_.c_str());
@@ -360,7 +360,7 @@ void CClientProxyCodeEmitter::EmitCreateBuf(const std::string &dataBufName,
     sb.Append(prefix).AppendFormat("if (%s == NULL || %s == NULL) {\n", dataBufName.c_str(), replyBufName.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: HdfSubf malloc failed!\", __func__);\n");
     sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_MALLOC_FAIL;\n", HdiTypeEmitter::errorCodeName_.c_str());
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
     sb.Append(prefix).Append("}\n");
 }
 
@@ -369,7 +369,7 @@ void CClientProxyCodeEmitter::EmitCheckThisPointer(StringBuilder &sb, const std:
     sb.Append(prefix).Append("if (self == NULL) {\n");
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: invalid interface object\", __func__);\n");
     sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_INVALID_OBJECT;\n", HdiTypeEmitter::errorCodeName_.c_str());
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
     sb.Append(prefix).Append("}\n");
 }
 
@@ -380,7 +380,7 @@ void CClientProxyCodeEmitter::EmitWriteInterfaceToken(
         "if (!HdfRemoteServiceWriteInterfaceToken(self->AsObject(self), %s)) {\n", dataBufName.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: write interface token failed!\", __func__);\n");
     sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_INVALID_PARAM;\n", HdiTypeEmitter::errorCodeName_.c_str());
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
     sb.Append(prefix).Append("}\n");
 }
 
@@ -391,7 +391,7 @@ void CClientProxyCodeEmitter::EmitWriteFlagOfNeedSetMem(const AutoPtr<ASTMethod>
         sb.Append(prefix).AppendFormat("if (!HdfSbufWriteUint8(%s, 1)) {\n", dataBufName.c_str());
         sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: write flag of memory setting failed!\", __func__);\n");
         sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_INVALID_PARAM;\n", HdiTypeEmitter::errorCodeName_.c_str());
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
         sb.Append(prefix).Append("}\n\n");
     }
 }
@@ -454,7 +454,7 @@ void CClientProxyCodeEmitter::EmitStubCallMethod(
     sb.Append(prefix + TAB).AppendFormat(
         "HDF_LOGE(\"%%{public}s: call failed! error code is %%{public}d\", __func__, %s);\n",
         HdiTypeEmitter::errorCodeName_.c_str());
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
     sb.Append(prefix).Append("}\n");
 }
 

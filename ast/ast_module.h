@@ -143,7 +143,7 @@ private:
     AutoPtr<ASTVoidType> voidType_;
 
     String idlFilePath_;
-    bool hasCacheableProxyMethods_;
+    bool hasCacheableProxyMethods_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

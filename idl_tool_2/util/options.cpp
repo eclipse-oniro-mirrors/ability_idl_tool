@@ -562,7 +562,7 @@ void Options::ShowVersion() const
 {
     printf("idl %d.%d\n"
           "Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.\n\n",
-           versionMajor_, versionMinor_);
+           VERSION_MAJOR, VERSION_MINOR);
 }
 
 void Options::ShowUsage() const

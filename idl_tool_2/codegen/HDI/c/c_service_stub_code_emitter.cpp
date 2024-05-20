@@ -54,7 +54,7 @@ void CServiceStubCodeEmitter::EmitServiceStubHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.h", directory_.c_str(), FileName(stubName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -120,7 +120,7 @@ void CServiceStubCodeEmitter::EmitServiceStubSourceFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.c", directory_.c_str(), FileName(stubName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -309,22 +309,22 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
-                EmitReadStubMethodParameter(param, finishedLabel_, sb, prefix + TAB);
+                EmitReadStubMethodParameter(param, FINISHED_LABEL, sb, prefix + TAB);
                 sb.Append("\n");
             } else {
-                EmitOutVarMemInitialize(param, finishedLabel_, sb, prefix + TAB);
+                EmitOutVarMemInitialize(param, FINISHED_LABEL, sb, prefix + TAB);
             }
         }
     }
 
-    EmitStubCallMethod(method, finishedLabel_, sb, prefix + TAB);
+    EmitStubCallMethod(method, FINISHED_LABEL, sb, prefix + TAB);
     sb.Append("\n");
 
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-            typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, param->GetName(), finishedLabel_, sb, prefix + TAB);
+            typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
             sb.Append("\n");
         }
     }
@@ -337,7 +337,7 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
 void CServiceStubCodeEmitter::EmitErrorHandle(const AutoPtr<ASTMethod> &method,
     StringBuilder &sb, const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("%s:\n", finishedLabel_);
+    sb.Append(prefix).AppendFormat("%s:\n", FINISHED_LABEL);
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
@@ -355,7 +355,7 @@ void CServiceStubCodeEmitter::EmitReadFlagVariable(bool readFlag, StringBuilder 
         HdiTypeEmitter::dataParcelName_.c_str(), flagOfSetMemName_.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: read flag of memory setting failed!\", __func__);\n");
     sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_INVALID_PARAM;\n", HdiTypeEmitter::errorCodeName_.c_str());
-    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+    sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
     sb.Append(prefix).Append("}\n\n");
 }
 
@@ -426,7 +426,7 @@ void CServiceStubCodeEmitter::EmitReadStubMethodParameter(const AutoPtr<ASTParam
         sb.Append(prefix + TAB)
             .AppendFormat("HDF_LOGE(\"%%{public}s: malloc %s failed\", __func__);\n", param->GetName().c_str());
         sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_MALLOC_FAIL;\n", HdiTypeEmitter::errorCodeName_.c_str());
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
         sb.Append(prefix).Append("}\n");
         typeEmitter->EmitCStubReadVar(param->GetName(), gotoLabel, sb, prefix);
     } else if (type->GetTypeKind() == TypeKind::TYPE_UNION) {
@@ -438,7 +438,7 @@ void CServiceStubCodeEmitter::EmitReadStubMethodParameter(const AutoPtr<ASTParam
         sb.Append(prefix + TAB)
             .AppendFormat("HDF_LOGE(\"%%{public}s: malloc %s failed\", __func__);\n", param->GetName().c_str());
         sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_MALLOC_FAIL;\n", HdiTypeEmitter::errorCodeName_.c_str());
-        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", finishedLabel_);
+        sb.Append(prefix + TAB).AppendFormat("goto %s;\n", FINISHED_LABEL);
         sb.Append(prefix).Append("}\n");
         sb.Append(prefix).AppendFormat("if (memcpy_s(%s, sizeof(%s), %s, sizeof(%s)) != EOK) {\n",
             param->GetName().c_str(), typeEmitter->EmitCType().c_str(), cpName.c_str(),
@@ -583,12 +583,12 @@ void CServiceStubCodeEmitter::EmitStubGetVerMethodImpl(
     sb.Append(prefix + TAB).AppendFormat("int32_t %s = HDF_SUCCESS;\n", HdiTypeEmitter::errorCodeName_.c_str());
 
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(new ASTUintType());
-    typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, majorVerName_, finishedLabel_, sb, prefix + TAB);
+    typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, majorVerName_, FINISHED_LABEL, sb, prefix + TAB);
     sb.Append("\n");
-    typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, minorVerName_, finishedLabel_, sb, prefix + TAB);
+    typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, minorVerName_, FINISHED_LABEL, sb, prefix + TAB);
     sb.Append("\n");
 
-    sb.Append(finishedLabel_).Append(":\n");
+    sb.Append(FINISHED_LABEL).Append(":\n");
     sb.Append(prefix + TAB).AppendFormat("return %s;\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix).Append("}\n");
 }

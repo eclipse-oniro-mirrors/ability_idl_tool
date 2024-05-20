@@ -25,7 +25,7 @@ std::string MetadataReader::tag_ = "MetadataReader";
 
 std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const std::string& filePath)
 {
-    File file(filePath, File::read_);
+    File file(filePath, File::READ);
     if (!file.IsValid()) {
         Logger::E(tag_.c_str(), "Open \"%s\" file failed.", filePath.c_str());
         return nullptr;

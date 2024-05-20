@@ -51,8 +51,8 @@ protected:
 
     std::string EmitDescMacroName() const;
 
-    static constexpr const char *errorsLabel_   = "ERRORS";
-    static constexpr const char *finishedLabel_ = "FINISHED";
+    static constexpr const char *ERRORS_LABEL   = "ERRORS";
+    static constexpr const char *FINISHED_LABEL = "FINISHED";
 };
 } // namespace Idl
 } // namespace OHOS

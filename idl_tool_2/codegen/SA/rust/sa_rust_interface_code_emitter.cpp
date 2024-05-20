@@ -44,7 +44,7 @@ void SaRustInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.rs", directory_.c_str(), interfaceName_.c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
@@ -93,19 +93,21 @@ void SaRustInterfaceCodeEmitter::EmitIPCHeaders(StringBuilder &sb) const
 
 bool SaRustInterfaceCodeEmitter::EmitCustomHeaders(StringBuilder &sb) const
 {
-    bool custom = false;
+    uint32_t custom = false;
     int sequenceableNumber = ast_->GetSequenceableDefNumber();
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
-        custom |= AppendRealPath(sb, seqType->GetFullName());
+        bool addPathMsRes = AppendRealPath(sb, seqType->GetFullName());
+        custom |= static_cast<uint32_t>(addPathMsRes);
     }
 
     for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == true) {
-            custom |= AppendRealPath(sb, interface->GetFullName());
+            bool addPathMiRes = AppendRealPath(sb, interface->GetFullName());
+            custom |= static_cast<uint32_t>(addPathMiRes);
         }
     }
-    return custom;
+    return static_cast<bool>(custom);
 }
 
 bool SaRustInterfaceCodeEmitter::AppendRealPath(StringBuilder& sb, const std::string &fpnpp) const

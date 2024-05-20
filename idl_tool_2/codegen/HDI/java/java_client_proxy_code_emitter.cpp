@@ -45,7 +45,7 @@ void JavaClientProxyCodeEmitter::EmitProxyFile()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.java", directory_.c_str(), FileName(proxyName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);

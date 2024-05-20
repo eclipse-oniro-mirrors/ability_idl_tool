@@ -40,14 +40,14 @@ File::File(const std::string &path, unsigned int mode) : mode_(mode)
         return;
     }
 
-    if ((mode_ & read_) != 0) {
+    if ((mode_ & READ) != 0) {
         OpenByRead(path);
         return;
     }
 
-    if ((mode_ & write_) != 0) {
+    if ((mode_ & WRITE) != 0) {
         fd_ = fopen(path.c_str(), "w+");
-    } else if ((mode_ & append_) != 0) {
+    } else if ((mode_ & APPEND) != 0) {
         fd_ = fopen(path.c_str(), "a+");
     }
 
@@ -127,14 +127,17 @@ size_t File::Read()
         return -1;
     }
 
-    std::fill(buffer_, buffer_ + bufferSize_, 0);
-    size_t count = fread(buffer_, 1, bufferSize_ - 1, fd_);
-    if (count < bufferSize_ - 1) {
+    std::fill(buffer_, buffer_ + BUFFER_SIZE, 0);
+    size_t count = fread(buffer_, 1, BUFFER_SIZE - 1, fd_);
+    if (count < BUFFER_SIZE - 1) {
         isError_ = ferror(fd_) != 0;
         buffer_[count] = -1;
     }
     size_ = count;
     position_ = 0;
+    if (count <= 0 || count >= BUFFER_SIZE) {
+        return -1;
+    }
     return count;
 }
 
@@ -157,7 +160,7 @@ bool File::WriteData(const void *data, size_t size) const
         return true;
     }
 
-    if (fd_ == nullptr || !(mode_ & (write_ | append_))) {
+    if (fd_ == nullptr || !(mode_ & (WRITE | APPEND))) {
         return false;
     }
 
@@ -167,7 +170,7 @@ bool File::WriteData(const void *data, size_t size) const
 
 void File::Flush() const
 {
-    if ((mode_ & (write_ | append_)) && fd_ != nullptr) {
+    if ((mode_ & (WRITE | APPEND)) && fd_ != nullptr) {
         fflush(fd_);
     }
 }

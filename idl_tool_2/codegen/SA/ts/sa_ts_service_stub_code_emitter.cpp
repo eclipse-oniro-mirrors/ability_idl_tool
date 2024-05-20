@@ -42,7 +42,7 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStub()
 {
     std::string filePath =
         File::AdapterPath(StringHelper::Format("%s/%s.ts", directory_.c_str(), FileName(stubName_).c_str()));
-    File file(filePath, File::write_);
+    File file(filePath, File::WRITE);
     StringBuilder sb;
 
     EmitLicense(sb);
