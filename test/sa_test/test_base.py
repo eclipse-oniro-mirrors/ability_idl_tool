@@ -17,10 +17,12 @@
 #
 
 import os
+import shutil
+
 from util import exec_command, compare_target_files, file_exists
 from util import get_time_stamp, print_success, print_failure
 from util import get_idl
-import shutil
+
 
 class Test:
     def __init__(self):
@@ -53,7 +55,7 @@ class Test:
         self.output_dir = os.path.join(self.working_dir, output_dir)
 
     def set_target_dir(self, target_dir):
-       self.target_dir = os.path.join(self.working_dir, target_dir)
+        self.target_dir = os.path.join(self.working_dir, target_dir)
 
     def set_idl_file(self, idl_file):
         self.idl_file = os.path.join(self.working_dir, "foo", idl_file)

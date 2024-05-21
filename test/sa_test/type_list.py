@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class type_list_test(Test):
+class TypeListTest(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cpp(self):
         self.set_gen_cpp_env()
@@ -36,7 +36,5 @@ class type_list_test(Test):
         return self.run_cpp() and self.run_rust()
 
 
-
 if __name__ == "__main__":
-    type_list_test().test()
-
+    TypeListTest().test()

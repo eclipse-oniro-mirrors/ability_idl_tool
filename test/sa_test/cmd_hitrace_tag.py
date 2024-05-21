@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class cmd_hitrace_tag(Test):
+class CmdHitraceTag(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cmd(self):
         self.set_command_attr(f"--dump-metadata -d {self.output_dir} --gen-cpp")
@@ -33,5 +33,4 @@ class cmd_hitrace_tag(Test):
 
 
 if __name__ == "__main__":
-    cmd_hitrace_tag().test()
-
+    CmdHitraceTag().test()

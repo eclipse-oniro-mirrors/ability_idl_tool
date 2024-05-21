@@ -16,12 +16,14 @@
 # limitations under the License.
 #
 
-from test_base import Test
 import os
 
-class cmd_save_metadata(Test):
+from test_base import Test
+
+
+class CmdSaveMetadata(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cmd_save(self):
         metadata_path = os.path.join(self.working_dir, "metadata.file")
@@ -32,13 +34,13 @@ class cmd_save_metadata(Test):
     def run_cmd_gen(self):
         metadata_path = os.path.join(self.working_dir, "metadata.file")
         self.command = f"{self._idl} --intf-type sa -s {metadata_path} -d {self.output_dir} --gen-cpp"
-        falg =  self.run_choose(True)
+        flag = self.run_choose(True)
         os.remove(metadata_path)
-        return falg
+        return flag
 
     def run(self):
         return self.run_cmd_save() and self.run_cmd_gen()
 
 if __name__ == "__main__":
-    cmd_save_metadata().test()
+    CmdSaveMetadata().test()
 

@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class cmd_dump_ast(Test):
+class CmdDumpAst(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cmd(self):
         self.set_command_attr("--dump-ast")
@@ -35,6 +35,6 @@ class cmd_dump_ast(Test):
         lines = result.splitlines()[1:]
         return '\n'.join(lines)
 
-if __name__ == "__main__":
-    cmd_dump_ast().test()
 
+if __name__ == "__main__":
+    CmdDumpAst().test()

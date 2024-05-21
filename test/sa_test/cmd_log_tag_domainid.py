@@ -19,9 +19,9 @@
 from test_base import Test
 
 
-class cmd_log_tag_domainid(Test):
+class CmdLogTagDomainId(Test):
     def get_file_name(self):
-            return __file__
+        return __file__
 
     def run_cmd(self):
         self.set_command_attr(f"-log-tag new_tag -log-domainid new_id -d {self.output_dir} --gen-cpp")
@@ -33,5 +33,4 @@ class cmd_log_tag_domainid(Test):
 
 
 if __name__ == "__main__":
-    cmd_log_tag_domainid().test()
-
+    CmdLogTagDomainId().test()

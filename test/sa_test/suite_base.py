@@ -17,9 +17,10 @@
 #
 
 import os
+import importlib
+
 from util import file_exists, make_binary_file, print_failure, print_success, get_subclasses, get_idl
 from test_base import Test
-import importlib
 
 exclude_file = ["test_base.py", "unit_test.py", "util.py"]
 for file_name in os.listdir(os.path.dirname(os.path.abspath(__file__))):
@@ -28,6 +29,7 @@ for file_name in os.listdir(os.path.dirname(os.path.abspath(__file__))):
             continue
         module_name = file_name[:-3]
         importlib.import_module(module_name)
+
 
 class Suite:
     test_cases = get_subclasses(Test)

@@ -32,8 +32,10 @@ def print_success(info):
 def print_failure(info):
     print("\033[31m{}\033[0m".format(info))
 
+
 def print_info(info):
     print("\033[33m{}\033[0m".format(info))
+
 
 def is_subsequence(first_file, second_file):
     first_info = first_file.read()
@@ -44,6 +46,7 @@ def is_subsequence(first_file, second_file):
             return False
         second_info = second_file.readline()
     return True
+
 
 def content_compare(file1, file2, lhd, rhd):
     line_num = 0
@@ -74,7 +77,7 @@ def compare_target_files(first_file_path, second_file_path):
     for files in common_files:
         if not compare_file("{}{}".format(first_file_path, files), "{}{}.txt".format(second_file_path, files)):
             print("file ", "{}{}".format(first_file_path, files), "{}{}.txt".format(second_file_path, files), \
-                "is different")
+                  "is different")
             return False
     return True
 
@@ -122,6 +125,7 @@ def get_idl():
     relative_path = os.path.join(current_path, get_idl_name())
     return os.path.realpath(relative_path)
 
+
 def get_idl_name():
     idl_name = 'idl-gen'
     if os.name == 'nt':
@@ -130,6 +134,6 @@ def get_idl_name():
         idl_name = 'idl-gen'
     return idl_name
 
+
 def get_subclasses(cls):
     return cls.__subclasses__()
-
