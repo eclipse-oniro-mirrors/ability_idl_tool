@@ -213,6 +213,16 @@ public:
         return interfaceDefs_;
     }
 
+    bool GetHasCacheableProxyMethods() const
+    {
+        return hasCacheableProxyMethods_;
+    }
+
+    void SetHasCacheableProxyMethods(bool cacheable)
+    {
+        hasCacheableProxyMethods_ = cacheable;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -233,6 +243,7 @@ private:
     static TypeStringMap basicTypes_;
 
     std::string idlFilePath_;
+    bool hasCacheableProxyMethods_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

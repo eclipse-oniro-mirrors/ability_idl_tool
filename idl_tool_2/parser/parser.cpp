@@ -396,6 +396,18 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             lexer_.GetToken();
             return true;
         }
+        case TokenType::CACHEABLE: {
+            if (attrs.find(token) != attrs.end()) {
+                LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attributes cacheable"));
+            } else {
+                if (!lexer_.ReadCacheableTime(token)) {
+                    LogError(__func__, __LINE__, token, StringHelper::Format("Cacheable time parse failed"));
+                }
+                attrs.insert(token);
+            }
+            lexer_.GetToken();
+            return true;
+        }
         default:
             LogError(__func__, __LINE__, token, StringHelper::Format("'%s' is a illegal attribute",
                 token.value.c_str()));
@@ -554,7 +566,9 @@ void Parser::ParseInterfaceBody(const AutoPtr<ASTInterfaceType> &interface)
 AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interface)
 {
     AutoPtr<ASTMethod> method = new ASTMethod();
-    method->SetAttribute(ParseMethodAttr());
+    AutoPtr<ASTAttr> methodAttr = ParseMethodAttr();
+    method->SetAttribute(methodAttr);
+    method->SetCacheable(methodAttr);
     method->SetReturnType(ParseMethodReturnType());
 
     // parser method name
@@ -629,6 +643,10 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
                 break;
             case TokenType::ONEWAY:
                 methodAttr->SetValue(ASTAttr::ONEWAY);
+                break;
+            case TokenType::CACHEABLE:
+                methodAttr->SetValue(ASTAttr::CACHEABLE);
+                methodAttr->SetCacheableTimeString(attr.value);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));
@@ -1859,10 +1877,18 @@ bool Parser::CheckIntfSaAstMethods()
 
     for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
         AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
-        if (method->GetAttribute()->GetValue() != ASTAttr::NONE &&
-            method->GetAttribute()->GetValue() != ASTAttr::ONEWAY) {
-            LogError(__func__, __LINE__, std::string("intf sa: method attr only support [oneway]"));
+        if (((method->GetAttribute()->GetValue()) & (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE))) != 0) {
+            LogError(__func__, __LINE__, std::string("intf sa: method attr support oneway or cacheable"));
             return false;
+        }
+        if (method->GetAttribute()->HasValue(ASTAttr::CACHEABLE) &&
+            !method->GetAttribute()->HasValue(ASTAttr::ONEWAY)) {
+            auto ret = method->SetCacheableTime();
+            if (ret) {
+                ast_->SetHasCacheableProxyMethods(true);
+            } else {
+                LogError(__func__, __LINE__, std::string("intf sa: method attr cacheable time invalid"));
+            }
         }
         if ((onewayInterface || method->GetAttribute()->GetValue() == ASTAttr::ONEWAY) &&
             !method->GetReturnType()->IsVoidType()) {
@@ -2007,23 +2033,6 @@ bool Parser::AddAst(const AutoPtr<AST> &ast)
 
     allAsts_[ast->GetFullName()] = ast;
     return true;
-}
-
-void Parser::LogError(const char *funcName, int fileLine, const std::string &message)
-{
-    errors_.push_back(StringHelper::Format("[%s:%d] error:%s", funcName, fileLine, message.c_str()));
-}
-
-void Parser::LogError(const char *funcName, int fileLine, const Token &token, const std::string &message)
-{
-    errors_.push_back(StringHelper::Format("[%s:%d] [%s] error:%s",
-        funcName, fileLine, LocInfo(token).c_str(), message.c_str()));
-}
-
-void Parser::LogErrorBeforeToken(const char *funcName, int fileLine, const Token &token, const std::string &message)
-{
-    errors_.push_back(StringHelper::Format("[%s:%d] [%s] error:%s before '%s' token",
-        funcName, fileLine, LocInfo(token).c_str(), message.c_str(), token.value.c_str()));
 }
 
 void Parser::ShowError()

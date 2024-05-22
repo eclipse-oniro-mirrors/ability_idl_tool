@@ -29,6 +29,7 @@ public:
     static constexpr Attribute FULL = 0x1U << 2;
     static constexpr Attribute ONEWAY = 0x1U << 3;
     static constexpr Attribute CALLBACK = 0x1U << 4;
+    static constexpr Attribute CACHEABLE = 0x1U << 5;
 
     explicit ASTAttr(Attribute value = ASTAttr::NONE) : value_(value) {}
 
@@ -58,8 +59,27 @@ public:
 
     bool Match(SystemLevel level) const;
 
+    int32_t GetCacheableTime()
+    {
+        return cacheableTime_;
+    }
+
+    std::string& GetCacheableTimeString()
+    {
+        return cacheableTimeString_;
+    }
+
+    void SetCacheableTimeString(const std::string &timeStr)
+    {
+        cacheableTimeString_ = timeStr;
+    }
+
+    bool CacheableStrToInt();
+
 private:
     Attribute value_;
+    int32_t cacheableTime_ = 0;
+    std::string cacheableTimeString_;
 };
 
 class ASTParamAttr : public ASTNode {

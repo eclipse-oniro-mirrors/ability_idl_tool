@@ -33,11 +33,19 @@ private:
 
     void EmitInterfaceProxyInHeaderFile(StringBuilder &sb);
 
+    void EmitInterfaceProxyRegisterDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceProxyAddCacheAbleAPI(StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceProxyUnRegisterDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
+
     void EmitInterfaceProxyConstructor(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodDecls(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceProxyDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix);
 
@@ -48,6 +56,17 @@ private:
     void EmitInterfaceProxyMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceProxyMethodPreSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
+
+    void EmitInterfaceProxyMethodPostSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
+
+    void EmitInterfaceProxyMethodErrCode(StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceProxyMethodReply(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodRetValue(AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;

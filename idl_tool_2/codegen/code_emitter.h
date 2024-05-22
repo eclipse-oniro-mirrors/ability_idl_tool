@@ -145,6 +145,7 @@ protected:
     std::string proxyFullName_;
     std::string stubName_;
     std::string stubFullName_;
+    std::string deathRecipientName_;
 };
 } // namespace Idl
 } // namespace OHOS

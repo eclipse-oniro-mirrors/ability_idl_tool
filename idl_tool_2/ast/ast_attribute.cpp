@@ -99,5 +99,18 @@ std::string ASTParamAttr::Dump(const std::string &prefix)
 {
     return prefix + ToString();
 }
+
+bool ASTAttr::CacheableStrToInt()
+{
+    if (!HasValue(ASTAttr::CACHEABLE)) {
+        return false;
+    }
+    try {
+        cacheableTime_ = static_cast<int32_t>(std::stoi(cacheableTimeString_));
+    } catch(...) {
+        return false;
+    }
+    return true;
+}
 } // namespace Idl
 } // namespace OHOS

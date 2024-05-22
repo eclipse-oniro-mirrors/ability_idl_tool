@@ -18,6 +18,7 @@
 
 import os
 import shutil
+import re
 
 from util import exec_command, compare_target_files, file_exists
 from util import get_time_stamp, print_success, print_failure
@@ -126,14 +127,53 @@ class Test:
                 return False
         return compare_target_files(self.output_dir, self.target_dir)
 
+    def hdi_gen_fail_check_ignore_line(self, result: str, target: str):
+        fail_template = r"(.*): \[(\S+):\d+\] \[?(.*)error:(.*)"
+        result_lines = result.split("\n")
+        target_lines = target.split("\n")
+        if len(result_lines) != len(target_lines):
+            print_failure(f"[ERROR] result line(len(result_lines)) != target line(len(target_lines))")
+            return False
+
+        for result_line, target_line in zip(result_lines, target_lines):
+            lhd_obj = re.search(fail_template, result_line)
+            rhd_obj = re.search(fail_template, target_line)
+            if not lhd_obj and not rhd_obj:
+                if result_line == target_line:
+                    continue
+                else:
+                    print_failure(f"[ERROR] actual: {result_line}")
+                    print_failure(f"[ERROR] expect: {target_line}")
+                    return False
+            elif not lhd_obj or not rhd_obj:
+                print_failure(f"[ERROR] actual: {result_line}")
+                print_failure(f"[ERROR] expect: {target_line}")
+                return False
+            lhd_start_check_content = lhd_obj.group(1)
+            rhd_start_check_content = rhd_obj.group(1)
+            lhd_err_func_check_content = lhd_obj.group(2)
+            rhd_err_func_check_content = rhd_obj.group(2)
+            lhd_median_check_content = lhd_obj.group(3)
+            rhd_median_check_content = rhd_obj.group(3)
+            lhd_end_check_content = lhd_obj.group(4)
+            rhd_end_check_content = rhd_obj.group(4)
+            if lhd_start_check_content != rhd_start_check_content or \
+                lhd_err_func_check_content != rhd_err_func_check_content or \
+                lhd_median_check_content != rhd_median_check_content or \
+                lhd_end_check_content != rhd_end_check_content:
+                print_failure(f"[ERROR] actual: {result_line}")
+                print_failure(f"[ERROR] expect: {target_line}")
+                return False
+
+        return True
+
     def run_fail(self):
         status, result = exec_command(self.command)
-
         expected_fail_output = ""
         with open(os.path.join(self.target_dir, "fail_output.txt"), 'r') as target_output:
             expected_fail_output = target_output.read()
 
-        if status != 0 and expected_fail_output == result:
+        if status != 0 and self.hdi_gen_fail_check_ignore_line(result, expected_fail_output):
             return True
         return False
 
