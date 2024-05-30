@@ -336,14 +336,13 @@ bool Lexer::strToInt(const char *str, int strLen, int& number)
 {
     int result = 0;
     int positionWeight = 1;
-    int digit;
     const int ten = 10;
 
     for (int i = strLen - 1; i >= 0; i--) {
         if (str[i] < '0' || str[i] > '9') {
             return false;
         }
-        digit = str[i] - '0';
+        int digit = str[i] - '0';
         if (static_cast<int64_t>(digit * positionWeight) > std::numeric_limits<int32_t>::max() - result) {
             return false;
         }
@@ -358,10 +357,9 @@ bool Lexer::ParseCacheable(int& cacheTime)
 {
     bool ret = true;
     StringBuilder numbersb;
-    char c;
 
     while (!currentFile_->IsEof()) {
-        c = currentFile_->PeekChar();
+        char c = currentFile_->PeekChar();
         if (IsSpace(c)) {
             currentFile_->GetChar();
             continue;
