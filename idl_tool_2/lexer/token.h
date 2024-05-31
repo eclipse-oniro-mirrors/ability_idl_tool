@@ -57,6 +57,7 @@ enum class TokenType {
     FULL,                 // "full"
     LITE,                 // "lite"
     MINI,                 // "mini"
+    CACHEABLE,            // "cacheable"
     IN,                   // "in"
     OUT,                  // "out"
     INOUT,                // "inout"

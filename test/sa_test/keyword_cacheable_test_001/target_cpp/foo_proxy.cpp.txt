@@ -1,0 +1,262 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace idl {
+namespace OHOS {
+ErrCode FooProxy::test001(
+    short param1,
+    int32_t& result)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(param1)) {
+        return ERR_INVALID_DATA;
+    }
+
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_TEST001, data, reply);
+    if (hitCache == true) {
+        ErrCode errCode = reply.ReadInt32();
+        if (FAILED(errCode)) {
+            return errCode;
+        }
+        result = reply.ReadInt32();
+        return ERR_OK;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_TEST001, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_TEST001, data, reply);
+    result = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::test002(
+    int32_t param1)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(param1)) {
+        return ERR_INVALID_DATA;
+    }
+
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_TEST002, data, reply);
+    if (hitCache == true) {
+        ErrCode errCode = reply.ReadInt32();
+        if (FAILED(errCode)) {
+            return errCode;
+        }
+        return ERR_OK;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_TEST002, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_TEST002, data, reply);
+    return ERR_OK;
+}
+
+ErrCode FooProxy::test003(
+    float param1,
+    int32_t& param2)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFloat(param1)) {
+        return ERR_INVALID_DATA;
+    }
+
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_TEST003, data, reply);
+    if (hitCache == true) {
+        ErrCode errCode = reply.ReadInt32();
+        if (FAILED(errCode)) {
+            return errCode;
+        }
+        param2 = reply.ReadInt32();
+        return ERR_OK;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_TEST003, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_TEST003, data, reply);
+    param2 = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::test004(
+    const std::unordered_map<long, long>& inParam,
+    std::unordered_map<long, long>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > MAP_MAX_SIZE) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inParam.size());
+    for (auto it = inParam.begin(); it != inParam.end(); ++it) {
+        if (!data.WriteInt64((it->first))) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteInt64((it->second))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_TEST004, data, reply);
+    if (hitCache == true) {
+        ErrCode errCode = reply.ReadInt32();
+        if (FAILED(errCode)) {
+            return errCode;
+        }
+        int32_t outParamSize = reply.ReadInt32();
+        for (int32_t i = 0; i < outParamSize; ++i) {
+            long key = reply.ReadInt64();
+            long value = reply.ReadInt64();
+            outParam[key] = value;
+        }
+        return ERR_OK;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_TEST004, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_TEST004, data, reply);
+    int32_t outParamSize = reply.ReadInt32();
+    for (int32_t i = 0; i < outParamSize; ++i) {
+        long key = reply.ReadInt64();
+        long value = reply.ReadInt64();
+        outParam[key] = value;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::test005(
+    short param1,
+    double& param2)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(param1)) {
+        return ERR_INVALID_DATA;
+    }
+
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), COMMAND_TEST005, data, reply);
+    if (hitCache == true) {
+        ErrCode errCode = reply.ReadInt32();
+        if (FAILED(errCode)) {
+            return errCode;
+        }
+        param2 = reply.ReadDouble();
+        return ERR_OK;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_TEST005, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_TEST005, data, reply);
+    param2 = reply.ReadDouble();
+    return ERR_OK;
+}
+} // namespace OHOS
+} // namespace idl

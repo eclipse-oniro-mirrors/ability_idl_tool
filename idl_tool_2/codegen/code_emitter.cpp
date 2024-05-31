@@ -185,7 +185,7 @@ std::string CodeEmitter::FileName(const std::string &name) const
         char c = name[i];
         if (isupper(c) != 0) {
             // 2->Index of the last char array.
-            if (i > 1) {
+            if ((i > 1) && (name[i - 1] != '.') && (name[i - 2] != '.')) {
                 sb.Append('_');
             }
             sb.Append(tolower(c));

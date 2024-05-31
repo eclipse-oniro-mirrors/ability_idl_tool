@@ -71,6 +71,9 @@ def compare_target_files(first_file_path, second_file_path):
 
     first_files = set([file[len(first_file_path):] for file in first_files_list])
     second_files = set([file[len(second_file_path):-4] for file in second_files_list])
+    if len(first_files) != len(second_files):
+        print(f"[ERROR] result file num({len(first_files)}) != expect file num({len(second_files)})")
+        return False
 
     common_files = first_files & second_files
 

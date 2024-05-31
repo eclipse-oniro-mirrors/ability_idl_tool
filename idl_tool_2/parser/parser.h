@@ -240,11 +240,22 @@ private:
 
     bool AddAst(const AutoPtr<AST> &ast);
 
-    void LogError(const char *funcName, int fileLine, const std::string &message);
+    void LogError(const char *funcName, int fileLine, const std::string &message)
+    {
+        errors_.push_back(StringHelper::Format("[%s:%d] error:%s", funcName, fileLine, message.c_str()));
+    }
 
-    void LogError(const char *funcName, int fileLine, const Token &token, const std::string &message);
+    void LogError(const char *funcName, int fileLine, const Token &token, const std::string &message)
+    {
+        errors_.push_back(StringHelper::Format("[%s:%d] [%s] error:%s",
+            funcName, fileLine, LocInfo(token).c_str(), message.c_str()));
+    }
 
-    void LogErrorBeforeToken(const char *funcName, int fileLine, const Token &token, const std::string &message);
+    void LogErrorBeforeToken(const char *funcName, int fileLine, const Token &token, const std::string &message)
+    {
+        errors_.push_back(StringHelper::Format("[%s:%d] [%s] error:%s before '%s' token",
+            funcName, fileLine, LocInfo(token).c_str(), message.c_str(), token.value.c_str()));
+    }
 
     void ShowError();
 

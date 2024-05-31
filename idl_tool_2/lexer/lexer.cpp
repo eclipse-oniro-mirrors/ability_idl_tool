@@ -52,6 +52,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"full",           TokenType::FULL         },
     {"lite",           TokenType::LITE         },
     {"mini",           TokenType::MINI         },
+    {"cacheable",      TokenType::CACHEABLE    },
     {"in",             TokenType::IN           },
     {"out",            TokenType::OUT          },
     {"inout",          TokenType::INOUT        },
@@ -180,6 +181,39 @@ void Lexer::SkipEof()
 {
     while (!file_->IsEof()) {}
     havePeek_ = false;
+}
+
+bool Lexer::ReadCacheableTime(Token &token)
+{
+    bool ret = true;
+    StringBuilder sb;
+
+    while (!file_->IsEof()) {
+        char c = file_->PeekChar();
+        if (isspace(c)) {
+            file_->GetChar();
+            continue;
+        }
+        if (!isdigit(c)) {
+            if (c != ']' && c != ',') {
+                ret = false;
+            }
+            break;
+        }
+        sb.Append(c);
+        file_->GetChar();
+    }
+
+    if (ret == false) {
+        return ret;
+    }
+
+    token.value = sb.ToString();
+    if (token.value.empty()) {
+        return false;
+    }
+
+    return ret;
 }
 
 void Lexer::ReadToken(Token &token, bool skipComment)

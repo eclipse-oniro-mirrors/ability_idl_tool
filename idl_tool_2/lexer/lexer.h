@@ -65,6 +65,8 @@ public:
         mode_ = mode;
     }
 
+    bool ReadCacheableTime(Token &token);
+
 private:
     void ReadToken(Token &token, bool skipComment = true);
 

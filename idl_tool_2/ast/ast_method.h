@@ -113,6 +113,28 @@ public:
 
     std::string Dump(const std::string &prefix) override;
 
+    void SetCacheable(AutoPtr<ASTAttr> attr)
+    {
+        if (attr->HasValue(ASTAttr::CACHEABLE)) {
+            attr_->SetValue(ASTAttr::CACHEABLE);
+            attr_->SetCacheableTimeString(attr->GetCacheableTimeString());
+        }
+    }
+
+    bool SetCacheableTime()
+    {
+        return attr_->CacheableStrToInt();
+    }
+
+    int32_t GetCacheableTime()
+    {
+        return attr_->GetCacheableTime();
+    }
+
+    bool GetCacheable()
+    {
+        return attr_->HasValue(ASTAttr::CACHEABLE);
+    }
 private:
     void BuildSignature();
 

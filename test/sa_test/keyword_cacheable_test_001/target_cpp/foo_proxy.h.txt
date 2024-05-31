@@ -1,0 +1,120 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef IDL_OHOS_FOOPROXY_H
+#define IDL_OHOS_FOOPROXY_H
+
+#include "ifoo.h"
+#include <iremote_proxy.h>
+#include "api_cache_manager.h"
+
+namespace idl {
+namespace OHOS {
+class FooProxy : public IRemoteProxy<IFoo> {
+public:
+    explicit FooProxy(
+        const sptr<IRemoteObject>& remote)
+        : IRemoteProxy<IFoo>(remote)
+    {
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST001, 100000);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST002, 0);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST003, 0);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST004, 200000);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST005, 2147483647000);
+
+        if (remote != nullptr) {
+            if (!remote->IsProxyObject()) {
+                return;
+            }
+            deathRecipient_ = new (std::nothrow) FooRecipient(*this);
+            if (deathRecipient_ == nullptr) {
+                return;
+            }
+            if (!remote->AddDeathRecipient(deathRecipient_)) {
+                return;
+            }
+            remote_ = remote;
+        }
+    }
+
+    virtual ~FooProxy()
+    {
+        if (remote_ == nullptr) {
+            return;
+        }
+        if (deathRecipient_ == nullptr) {
+            return;
+        }
+        remote_->RemoveDeathRecipient(deathRecipient_);
+        remote_ = nullptr;
+
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST001);
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST002);
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST003);
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST004);
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST005);
+    }
+
+    ErrCode test001(
+        short param1,
+        int32_t& result) override;
+
+    ErrCode test002(
+        int32_t param1) override;
+
+    ErrCode test003(
+        float param1,
+        int32_t& param2) override;
+
+    ErrCode test004(
+        const std::unordered_map<long, long>& inParam,
+        std::unordered_map<long, long>& outParam) override;
+
+    ErrCode test005(
+        short param1,
+        double& param2) override;
+
+private:
+    class FooRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit FooRecipient(FooProxy &client) : client_(client) {}
+        ~FooRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        FooProxy &client_;
+    };
+
+    void OnRemoteDied(const wptr<IRemoteObject> &remoteObject)
+    {
+        (void)remoteObject;
+        ApiCacheManager::GetInstance().ClearCache(GetDescriptor());
+    }
+    sptr<IRemoteObject> remote_ = nullptr;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
+    static constexpr int32_t COMMAND_TEST001 = MIN_TRANSACTION_ID + 0;
+    static constexpr int32_t COMMAND_TEST002 = MIN_TRANSACTION_ID + 1;
+    static constexpr int32_t COMMAND_TEST003 = MIN_TRANSACTION_ID + 2;
+    static constexpr int32_t COMMAND_TEST004 = MIN_TRANSACTION_ID + 3;
+    static constexpr int32_t COMMAND_TEST005 = MIN_TRANSACTION_ID + 4;
+
+    static inline BrokerDelegator<FooProxy> delegator_;
+};
+} // namespace OHOS
+} // namespace idl
+#endif // IDL_OHOS_FOOPROXY_H
+

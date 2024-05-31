@@ -85,6 +85,8 @@ bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDire
 
         stubName_ = baseName_ + "Stub";
         stubFullName_ = interface_->GetNamespace()->ToString() + stubName_;
+        deathRecipientName_ = StringHelper::StartWith(interfaceName_, "I") ? interfaceName_.substr(1) + "Recipient" :
+            interfaceName_ + "Recipient";
     }
 
     if (!ResolveDirectory(targetDirectory)) {
