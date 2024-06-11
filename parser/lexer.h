@@ -61,6 +61,8 @@ public:
 
     String DumpToken() const;
 
+    String DumpTokenSecond() const;
+
     int GetTokenLineNumber() const
     {
         return tokenLineNo_;

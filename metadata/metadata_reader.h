@@ -28,7 +28,7 @@ public:
     static std::shared_ptr<MetaComponent> ReadMetadataFromFile(const String& filePath);
 
 private:
-    static const char* TAG;
+    static const char* tag;
 };
 } // namespace Idl
 } // namespace OHOS

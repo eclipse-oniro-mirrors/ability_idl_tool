@@ -25,7 +25,7 @@
 
 namespace OHOS {
 namespace Idl {
-const char* Parser::TAG = "Parser";
+const char* Parser::tag = "Parser";
 
 Parser::Parser(const Options& options)
     : options_(options)
@@ -35,7 +35,7 @@ bool Parser::Parse(const String& sourceFile)
 {
     bool ret = lexer_.OpenSourceFile(sourceFile);
     if (!ret) {
-        Logger::E(TAG, "Fail to open file \"%s\".", sourceFile.string());
+        Logger::E(tag, "Fail to open file \"%s\".", sourceFile.string());
         return false;
     }
     ret = ParseFile();
@@ -139,6 +139,15 @@ bool Parser::ParseInterface()
         }
     }
     String interfaceFullName;
+    bool middleRes = ParseInterfaceMiddle(token, interfaceFullName);
+    if (!middleRes) {
+        return middleRes;
+    }
+    return ParseInterfaceEnd(token, interfaceFullName, hasProperties, oneway, ret);
+}
+
+bool Parser::ParseInterfaceMiddle(Token& token, String& interfaceFullName)
+{
     token = lexer_.PeekToken();
     if (token != Token::IDENTIFIER) {
         LogError(token, String::Format("%s is not expected.", lexer_.DumpToken().string()));
@@ -168,7 +177,11 @@ bool Parser::ParseInterface()
             return false;
         }
     }
+    return true;
+}
 
+bool Parser::ParseInterfaceEnd(Token& token, String& interfaceFullName, bool hasProperties, bool oneway, bool ret)
+{
     AutoPtr<ASTInterfaceType> interface = new ASTInterfaceType();
     parsingInterface_ = interface;
     int index = interfaceFullName.LastIndexOf('.');
@@ -179,7 +192,6 @@ bool Parser::ParseInterface()
         interface->SetName(interfaceFullName);
         interface->SetNamespace(NameSpaceEmpty());
     }
-
     // read ';'
     lexer_.GetToken();
     if (token == Token::SEMICOLON) {
@@ -211,9 +223,9 @@ bool Parser::ParseInterface()
             lexer_.GetToken();
             module_->AddInterface(interface);
         }
-
         return ret;
     }
+    return true;
 }
 
 bool Parser::ParseMethodProperties(bool& oneway, bool& cacheable, int& cacheTime)
@@ -759,7 +771,7 @@ void Parser::ShowError()
 {
     ErrorInfo* error = errors_;
     while (error != nullptr) {
-        Logger::E(TAG, "%s[line %d, column %d] %s", error->file_.string(),
+        Logger::E(tag, "%s[line %d, column %d] %s", error->file_.string(),
             error->lineNo_, error->columnNo_, error->message_.string());
         error = error->next_;
     }

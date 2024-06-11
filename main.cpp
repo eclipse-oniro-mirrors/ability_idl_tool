@@ -26,10 +26,8 @@ using namespace OHOS::Idl;
 
 static const char* TAG = "idl";
 
-int main(int argc, char** argv)
+int DoOptionsCheck(Options& options)
 {
-    Options options(argc, argv);
-
     if (options.DoShowUsage()) {
         options.ShowUsage();
         return 0;
@@ -51,9 +49,11 @@ int main(int argc, char** argv)
             options.ShowWarning();
         }
     }
+    return 1;
+}
 
-    std::shared_ptr<MetaComponent> metadata;
-
+int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
+{
     if (options.DoCompile()) {
         Parser parser(options);
         if (!parser.Parse(options.GetSourceFile())) {
@@ -90,7 +90,11 @@ int main(int argc, char** argv)
         metadataFile.Flush();
         metadataFile.Close();
     }
+    return 0;
+}
 
+int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
+{
     if (options.DoGenerateCode()) {
         if (metadata == nullptr) {
             String metadataFile = options.GetMetadataFile();
@@ -107,6 +111,27 @@ int main(int argc, char** argv)
             Logger::E(TAG, "Generate \"%s\" codes failed.", options.GetTargetLanguage().string());
             return -1;
         }
+    }
+    return 0;
+}
+
+int main(int argc, char** argv)
+{
+    Options options(argc, argv);
+    int checkOffRes = DoOptionsCheck(options);
+    if (!checkOffRes) {
+        return checkOffRes;
+    }
+
+    std::shared_ptr<MetaComponent> metadata;
+    int compileRes = DoCompile(options, metadata);
+    if (compileRes) {
+        return compileRes;
+    }
+
+    int generateRes = DoGenerage(options, metadata);
+    if (generateRes) {
+        return generateRes;
     }
 
     return 0;
