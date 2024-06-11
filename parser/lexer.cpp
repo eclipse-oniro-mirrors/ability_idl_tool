@@ -291,6 +291,14 @@ String Lexer::DumpToken() const
             return comment_;
         case Token::DOT:
             return ".";
+        default:
+            return DumpTokenSecond();
+    }
+}
+
+String Lexer::DumpTokenSecond() const
+{
+    switch (currentToken_) {
         case Token::DOUBLE:
             return "double";
         case Token::END_OF_FILE:

@@ -21,46 +21,46 @@
 
 namespace OHOS {
 namespace Idl {
-const char* MetadataReader::TAG = "MetadataReader";
+const char* MetadataReader::tag = "MetadataReader";
 
 std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const String& filePath)
 {
     File file(filePath, File::READ);
     if (!file.IsValid()) {
-        Logger::E(TAG, "Open \"%s\" file failed.", filePath.string());
+        Logger::E(tag, "Open \"%s\" file failed.", filePath.string());
         return nullptr;
     }
 
     if (!file.Reset()) {
-        Logger::E(TAG, "Reset \"%s\" file failed.", filePath.string());
+        Logger::E(tag, "Reset \"%s\" file failed.", filePath.string());
         return nullptr;
     }
 
     MetaComponent header;
 
     if (!file.ReadData((void*)&header, sizeof(MetaComponent))) {
-        Logger::E(TAG, "Read \"%s\" file failed.", filePath.string());
+        Logger::E(tag, "Read \"%s\" file failed.", filePath.string());
         return nullptr;
     }
 
     if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ < 0) {
-        Logger::E(TAG, "The metadata in \"%s\" file is bad.", filePath.string());
+        Logger::E(tag, "The metadata in \"%s\" file is bad.", filePath.string());
         return nullptr;
     }
 
     if (!file.Reset()) {
-        Logger::E(TAG, "Reset \"%s\" file failed.", filePath.string());
+        Logger::E(tag, "Reset \"%s\" file failed.", filePath.string());
         return nullptr;
     }
 
     void* data = malloc(header.size_);
     if (data == nullptr) {
-        Logger::E(TAG, "Malloc metadata failed.");
+        Logger::E(tag, "Malloc metadata failed.");
         return nullptr;
     }
 
     if (!file.ReadData(data, header.size_)) {
-        Logger::E(TAG, "Read \"%s\" file failed.", filePath.string());
+        Logger::E(tag, "Read \"%s\" file failed.", filePath.string());
         free(data);
         return nullptr;
     }

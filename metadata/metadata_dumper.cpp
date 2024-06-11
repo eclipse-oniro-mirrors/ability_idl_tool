@@ -18,7 +18,7 @@
 
 namespace OHOS {
 namespace Idl {
-const char* MetadataDumper::TAB = "    ";
+const char* MetadataDumper::tab = "    ";
 void MetadataDumper::Dump(const String& prefix)
 {
     if (metaComponent_ == nullptr) {
@@ -34,54 +34,54 @@ String MetadataDumper::DumpMetaComponent(MetaComponent* mc, const String& prefix
 
     sb.Append(prefix).Append("MetaComponent\n");
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"magic_\" : \"0x%x\",\n", mc->magic_);
-    sb.Append(prefix + TAB).AppendFormat("\"size_\" : \"%d\",\n", mc->size_);
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mc->name_);
-    sb.Append(prefix + TAB).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mc->namespaceNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mc->sequenceableNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mc->interfaceNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"typeNumber_\" : \"%d\",\n", mc->typeNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"magic_\" : \"0x%x\",\n", mc->magic_);
+    sb.Append(prefix + tab).AppendFormat("\"size_\" : \"%d\",\n", mc->size_);
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mc->name_);
+    sb.Append(prefix + tab).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mc->namespaceNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mc->sequenceableNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mc->interfaceNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"typeNumber_\" : \"%d\",\n", mc->typeNumber_);
 
     if (mc->namespaceNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"namespaces_\" : [],\n");
+        sb.Append(prefix + tab).Append("\"namespaces_\" : [],\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"namespaces_\" : [\n");
+        sb.Append(prefix + tab).Append("\"namespaces_\" : [\n");
         for (int i = 0; i < mc->namespaceNumber_; i++) {
-            DumpMetaNamespace(sb, mc->namespaces_[i], prefix + TAB + TAB);
+            DumpMetaNamespace(sb, mc->namespaces_[i], prefix + tab + tab);
             if (i != mc->namespaceNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("],\n");
+        sb.Append("\n" + prefix + tab).Append("],\n");
     }
 
     if (mc->sequenceableNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"sequenceables_\" : [],\n");
+        sb.Append(prefix + tab).Append("\"sequenceables_\" : [],\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"sequenceables_\" : [\n");
+        sb.Append(prefix + tab).Append("\"sequenceables_\" : [\n");
         for (int i = 0; i < mc->sequenceableNumber_; i++) {
-            DumpMetaSequenceable(sb, mc->sequenceables_[i], prefix + TAB + TAB);
+            DumpMetaSequenceable(sb, mc->sequenceables_[i], prefix + tab + tab);
             if (i != mc->sequenceableNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("],\n");
+        sb.Append("\n" + prefix + tab).Append("],\n");
     }
 
     if (mc->interfaceNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"interfaces_\" : [],\n");
+        sb.Append(prefix + tab).Append("\"interfaces_\" : [],\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"interfaces_\" : [\n");
+        sb.Append(prefix + tab).Append("\"interfaces_\" : [\n");
         for (int i = 0; i < mc->interfaceNumber_; i++) {
-            DumpMetaInterface(sb, mc->interfaces_[i], prefix + TAB + TAB);
+            DumpMetaInterface(sb, mc->interfaces_[i], prefix + tab + tab);
             if (i != mc->interfaceNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("],\n");
+        sb.Append("\n" + prefix + tab).Append("],\n");
     }
 
-    sb.Append(prefix + TAB).AppendFormat("\"stringPoolSize_\" : \"%d\"\n", mc->stringPoolSize_);
+    sb.Append(prefix + tab).AppendFormat("\"stringPoolSize_\" : \"%d\"\n", mc->stringPoolSize_);
 
     sb.Append(prefix).Append("}\n");
 
@@ -91,51 +91,51 @@ String MetadataDumper::DumpMetaComponent(MetaComponent* mc, const String& prefix
 void MetadataDumper::DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mn->name_);
-    sb.Append(prefix + TAB).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mn->sequenceableNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mn->interfaceNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mn->namespaceNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mn->name_);
+    sb.Append(prefix + tab).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mn->sequenceableNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mn->interfaceNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mn->namespaceNumber_);
 
     if (mn->sequenceableNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"sequenceableIndexes_\" : [],\n");
+        sb.Append(prefix + tab).Append("\"sequenceableIndexes_\" : [],\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"sequenceableIndexes_\" : [\n");
+        sb.Append(prefix + tab).Append("\"sequenceableIndexes_\" : [\n");
         for (int i = 0; i < mn->sequenceableNumber_; i++) {
             MetaSequenceable* mp = metaComponent_->sequenceables_[mn->sequenceableIndexes_[i]];
-            sb.Append(prefix + TAB + TAB).AppendFormat("{ \"name\" : \"%s\" }", mp->name_);
+            sb.Append(prefix + tab + tab).AppendFormat("{ \"name\" : \"%s\" }", mp->name_);
             if (i != mn->sequenceableNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("],\n");
+        sb.Append("\n" + prefix + tab).Append("],\n");
     }
 
     if (mn->interfaceNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"interfaceIndexes_\" : [],\n");
+        sb.Append(prefix + tab).Append("\"interfaceIndexes_\" : [],\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"interfaceIndexes_\" : [\n");
+        sb.Append(prefix + tab).Append("\"interfaceIndexes_\" : [\n");
         for (int i = 0; i < mn->interfaceNumber_; i++) {
             MetaInterface* mi = metaComponent_->interfaces_[mn->interfaceIndexes_[i]];
-            sb.Append(prefix + TAB + TAB).AppendFormat("{ \"name\" : \"%s\" }", mi->name_);
+            sb.Append(prefix + tab + tab).AppendFormat("{ \"name\" : \"%s\" }", mi->name_);
             if (i != mn->interfaceNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("],\n");
+        sb.Append("\n" + prefix + tab).Append("],\n");
     }
 
     if (mn->namespaceNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"namespaces_\" : []\n");
+        sb.Append(prefix + tab).Append("\"namespaces_\" : []\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"namespaces_\" : [\n");
+        sb.Append(prefix + tab).Append("\"namespaces_\" : [\n");
         for (int i = 0; i < mn->namespaceNumber_; i++) {
             MetaNamespace* innermn = mn->namespaces_[i];
-            DumpMetaNamespace(sb, innermn, prefix + TAB + TAB);
+            DumpMetaNamespace(sb, innermn, prefix + tab + tab);
             if (i != mn->namespaceNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("]\n");
+        sb.Append("\n" + prefix + tab).Append("]\n");
     }
 
     sb.Append(prefix).Append("}");
@@ -144,32 +144,32 @@ void MetadataDumper::DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, con
 void MetadataDumper::DumpMetaSequenceable(StringBuilder& sb, MetaSequenceable* mp, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
-    sb.Append(prefix + TAB).AppendFormat("\"namespace_\" : \"%s\"\n", mp->namespace_);
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
+    sb.Append(prefix + tab).AppendFormat("\"namespace_\" : \"%s\"\n", mp->namespace_);
     sb.Append(prefix).Append("}");
 }
 
 void MetadataDumper::DumpMetaInterface(StringBuilder& sb, MetaInterface* mi, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mi->name_);
-    sb.Append(prefix + TAB).AppendFormat("\"namespace_\" : \"%s\",\n", mi->namespace_);
-    sb.Append(prefix + TAB).AppendFormat("\"properties_\" : \"%s\",\n",
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mi->name_);
+    sb.Append(prefix + tab).AppendFormat("\"namespace_\" : \"%s\",\n", mi->namespace_);
+    sb.Append(prefix + tab).AppendFormat("\"properties_\" : \"%s\",\n",
         (mi->properties_ & INTERFACE_PROPERTY_ONEWAY) != 0 ? "oneway" : "");
-    sb.Append(prefix + TAB).AppendFormat("\"methodNumber_\" : \"%d\",\n", mi->methodNumber_);
-    sb.Append(prefix + TAB).AppendFormat("\"external_\" : \"%d\",\n", mi->external_);
+    sb.Append(prefix + tab).AppendFormat("\"methodNumber_\" : \"%d\",\n", mi->methodNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"external_\" : \"%d\",\n", mi->external_);
 
     if (mi->methodNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"methods_\" : []\n");
+        sb.Append(prefix + tab).Append("\"methods_\" : []\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"methods_\" : [\n");
+        sb.Append(prefix + tab).Append("\"methods_\" : [\n");
         for (int i = 0; i < mi->methodNumber_; i++) {
-            DumpMetaMethod(sb, mi->methods_[i], prefix + TAB + TAB);
+            DumpMetaMethod(sb, mi->methods_[i], prefix + tab + tab);
             if (i != mi->methodNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("]\n");
+        sb.Append("\n" + prefix + tab).Append("]\n");
     }
 
     sb.Append(prefix).Append("}");
@@ -178,25 +178,25 @@ void MetadataDumper::DumpMetaInterface(StringBuilder& sb, MetaInterface* mi, con
 void MetadataDumper::DumpMetaMethod(StringBuilder& sb, MetaMethod* mm, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mm->name_);
-    sb.Append(prefix + TAB).AppendFormat("\"signature_\" : \"%s\",\n", mm->signature_);
-    sb.Append(prefix + TAB).AppendFormat("\"properties_\" : \"%s\",\n",
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mm->name_);
+    sb.Append(prefix + tab).AppendFormat("\"signature_\" : \"%s\",\n", mm->signature_);
+    sb.Append(prefix + tab).AppendFormat("\"properties_\" : \"%s\",\n",
         (mm->properties_ & METHOD_PROPERTY_ONEWAY) != 0 ? "oneway" : "");
     MetaType* type = metaComponent_->types_[mm->returnTypeIndex_];
-    sb.Append(prefix + TAB).AppendFormat("\"returnType_\" : \"%s\",\n", DumpMetaType(type).string());
-    sb.Append(prefix + TAB).AppendFormat("\"parameterNumber_\" : \"%d\",\n", mm->parameterNumber_);
+    sb.Append(prefix + tab).AppendFormat("\"returnType_\" : \"%s\",\n", DumpMetaType(type).string());
+    sb.Append(prefix + tab).AppendFormat("\"parameterNumber_\" : \"%d\",\n", mm->parameterNumber_);
 
     if (mm->parameterNumber_ == 0) {
-        sb.Append(prefix + TAB).Append("\"parameters_\" : []\n");
+        sb.Append(prefix + tab).Append("\"parameters_\" : []\n");
     } else {
-        sb.Append(prefix + TAB).Append("\"parameters_\" : [\n");
+        sb.Append(prefix + tab).Append("\"parameters_\" : [\n");
         for (int i = 0; i < mm->parameterNumber_; i++) {
-            DumpMetaParameter(sb, mm->parameters_[i], prefix + TAB + TAB);
+            DumpMetaParameter(sb, mm->parameters_[i], prefix + tab + tab);
             if (i != mm->parameterNumber_ - 1) {
                 sb.Append(",\n");
             }
         }
-        sb.Append("\n" + prefix + TAB).Append("]\n");
+        sb.Append("\n" + prefix + tab).Append("]\n");
     }
 
     sb.Append(prefix).Append("}");
@@ -205,8 +205,8 @@ void MetadataDumper::DumpMetaMethod(StringBuilder& sb, MetaMethod* mm, const Str
 void MetadataDumper::DumpMetaParameter(StringBuilder& sb, MetaParameter* mp, const String& prefix)
 {
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
-    sb.Append(prefix + TAB).Append("\"attributes_\" : \"");
+    sb.Append(prefix + tab).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
+    sb.Append(prefix + tab).Append("\"attributes_\" : \"");
     bool addComma = false;
     if ((mp->attributes_ & ATTR_IN) == ATTR_IN) {
         sb.Append("in");
@@ -217,7 +217,7 @@ void MetadataDumper::DumpMetaParameter(StringBuilder& sb, MetaParameter* mp, con
     }
     sb.Append("\",\n");
     MetaType* type = metaComponent_->types_[mp->typeIndex_];
-    sb.Append(prefix + TAB).AppendFormat("\"type_\" : \"%s\"\n", DumpMetaType(type).string());
+    sb.Append(prefix + tab).AppendFormat("\"type_\" : \"%s\"\n", DumpMetaType(type).string());
 
     sb.Append(prefix).Append("}");
 }

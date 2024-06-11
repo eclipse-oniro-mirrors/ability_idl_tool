@@ -74,7 +74,7 @@ private:
 
     TypeKind Type2Kind(ASTType* type);
 
-    static const char* TAG;
+    static const char* tag;
     AutoPtr<ASTModule> module_;
     std::shared_ptr<MetaComponent> metaComponent_;
     uintptr_t baseAddr_ = 0;

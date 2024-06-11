@@ -28,7 +28,7 @@ namespace Idl {
 namespace {
 const std::string PROXY = "proxy";
 const std::string THIS_PROXY = "this.proxy";
-static const char* TAG = "TsCodeEmitter";
+static const char* tag = "TsCodeEmitter";
 const std::string UNKNOWN_TYPE = "unknown type";
 const String NEWLINE = "\n";
 const String RETURN_VALUE = "returnValue";
@@ -384,12 +384,13 @@ void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int meth
             }
         }
         for (size_t index = 0; index < methods_[methodIndex].parameters_.size(); index++) {
-            if ((methods_[methodIndex].parameters_[index].attr_ & ATTR_OUT) != 0) {
-                stringBuilder.AppendFormat("%s",
-                    SuffixAdded(methods_[methodIndex].parameters_[index].name_.c_str()).c_str());
-                if (index != methods_[methodIndex].parameters_.size() - 1) {
-                    stringBuilder.Append(", ");
-                }
+            if ((methods_[methodIndex].parameters_[index].attr_ & ATTR_OUT) == 0) {
+                continue;
+            }
+            stringBuilder.AppendFormat("%s",
+                SuffixAdded(methods_[methodIndex].parameters_[index].name_.c_str()).c_str());
+            if (index != methods_[methodIndex].parameters_.size() - 1) {
+                stringBuilder.Append(", ");
             }
         }
         stringBuilder.Append(");\n");
@@ -1153,7 +1154,7 @@ bool TsCodeEmitter::CheckInterfaceType()
         MetaType* returnType = metaComponent_->types_[metaMethod->returnTypeIndex_];
         std::string returnTypeStr = EmitType(returnType).string();
         if (returnTypeStr == UNKNOWN_TYPE) {
-            Logger::E(TAG, "unsupported type in .idl file");
+            Logger::E(tag, "unsupported type in .idl file");
             return false;
         }
         for (int index = 0; index < metaMethod->parameterNumber_; index++) {
@@ -1161,7 +1162,7 @@ bool TsCodeEmitter::CheckInterfaceType()
             MetaType* paraType = metaComponent_->types_[mp->typeIndex_];
             std::string paraTypeStr = EmitType(paraType).string();
             if (paraTypeStr == UNKNOWN_TYPE) {
-                Logger::E(TAG, "unsupported type in .idl file");
+                Logger::E(tag, "unsupported type in .idl file");
                 return false;
             }
         }

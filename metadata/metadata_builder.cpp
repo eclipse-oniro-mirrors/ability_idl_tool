@@ -25,11 +25,11 @@
 
 namespace OHOS {
 namespace Idl {
-const char* MetadataBuilder::TAG = "MetadataBuilder";
+const char* MetadataBuilder::tag = "MetadataBuilder";
 std::shared_ptr<MetaComponent> MetadataBuilder::Build()
 {
     if (!module_->IsValid()) {
-        Logger::E(TAG, "The module is not validate.");
+        Logger::E(tag, "The module is not validate.");
         return nullptr;
     }
 
@@ -37,7 +37,7 @@ std::shared_ptr<MetaComponent> MetadataBuilder::Build()
     if (size_ > 0) {
         void* metadata =  calloc(size_, 1);
         if (metadata == nullptr) {
-            Logger::E(TAG, "Out of memory.");
+            Logger::E(tag, "Out of memory.");
             return nullptr;
         }
         metaComponent_.reset(

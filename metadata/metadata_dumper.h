@@ -53,7 +53,7 @@ private:
 
     String DumpMetaType(MetaType* mt);
 
-    static const char* TAB;
+    static const char* tab;
     MetaComponent* metaComponent_;
 };
 } // namespace Idl
