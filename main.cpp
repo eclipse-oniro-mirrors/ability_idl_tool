@@ -24,7 +24,7 @@
 
 using namespace OHOS::Idl;
 
-static const char* TAG = "idl";
+static const char* g_tag = "idl";
 
 int DoOptionsCheck(Options& options)
 {
@@ -57,14 +57,14 @@ int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
     if (options.DoCompile()) {
         Parser parser(options);
         if (!parser.Parse(options.GetSourceFile())) {
-            Logger::E(TAG, "Parsing .idl failed.");
+            Logger::E(g_tag, "Parsing .idl failed.");
             return -1;
         }
 
         MetadataBuilder builder(parser.GetModule());
         metadata = builder.Build();
         if (metadata == nullptr) {
-            Logger::E(TAG, "Generate metadata failed.");
+            Logger::E(g_tag, "Generate metadata failed.");
             return -1;
         }
     }
@@ -77,7 +77,7 @@ int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
     if (options.DoSaveMetadata()) {
         File metadataFile(options.GetMetadataFile(), File::WRITE);
         if (!metadataFile.IsValid()) {
-            Logger::E(TAG, "Create metadata file failed.");
+            Logger::E(g_tag, "Create metadata file failed.");
             return -1;
         }
 
@@ -100,7 +100,7 @@ int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
             String metadataFile = options.GetMetadataFile();
             metadata = MetadataReader::ReadMetadataFromFile(metadataFile);
             if (metadata == nullptr) {
-                Logger::E(TAG, "Get metadata from \"%s\" failed.", metadataFile.string());
+                Logger::E(g_tag, "Get metadata from \"%s\" failed.", metadataFile.string());
                 return -1;
             }
         }
@@ -108,7 +108,7 @@ int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
         CodeGenerator codeGen(metadata.get(), options.GetTargetLanguage(),
                 options.GetGenerationDirectory(), options.GetAttribute());
         if (!codeGen.Generate()) {
-            Logger::E(TAG, "Generate \"%s\" codes failed.", options.GetTargetLanguage().string());
+            Logger::E(g_tag, "Generate \"%s\" codes failed.", options.GetTargetLanguage().string());
             return -1;
         }
     }
