@@ -192,6 +192,8 @@ private:
     String ConstantName(const String& name);
 
     const std::string UnderlineAdded(const String& name);
+
+    int circleCount = 0;
 };
 } // namespace Idl
 } // namespace OHOS

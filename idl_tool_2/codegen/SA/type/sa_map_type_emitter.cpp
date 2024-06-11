@@ -61,7 +61,7 @@ std::string SaMapTypeEmitter::EmitTsType(TypeMode mode) const
 void SaMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("if (%s.size() > MAP_MAX_SIZE) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(MAP_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix).Append(TAB).AppendFormat(
             "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");

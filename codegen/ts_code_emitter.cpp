@@ -384,12 +384,13 @@ void TsCodeEmitter::EmitInterfaceMethodCallback(MetaMethod* metaMethod, int meth
             }
         }
         for (size_t index = 0; index < methods_[methodIndex].parameters_.size(); index++) {
-            if ((methods_[methodIndex].parameters_[index].attr_ & ATTR_OUT) != 0) {
-                stringBuilder.AppendFormat("%s",
-                    SuffixAdded(methods_[methodIndex].parameters_[index].name_.c_str()).c_str());
-                if (index != methods_[methodIndex].parameters_.size() - 1) {
-                    stringBuilder.Append(", ");
-                }
+            if ((methods_[methodIndex].parameters_[index].attr_ & ATTR_OUT) == 0) {
+                continue;
+            }
+            stringBuilder.AppendFormat("%s",
+                SuffixAdded(methods_[methodIndex].parameters_[index].name_.c_str()).c_str());
+            if (index != methods_[methodIndex].parameters_.size() - 1) {
+                stringBuilder.Append(", ");
             }
         }
         stringBuilder.Append(");\n");
