@@ -59,6 +59,10 @@ private:
 
     bool ParseInterface();
 
+    bool ParseInterfaceMiddle(Token& token, String& interfaceFullName);
+
+    bool ParseInterfaceEnd(Token& token, String& interfaceFullName, bool hasProperties, bool oneway, bool ret);
+
     bool ParseMethod(ASTInterfaceType* interface);
 
     bool ParseMethodProperties(bool& oneway, bool& cacheable, int& cacheTime);
@@ -98,7 +102,7 @@ private:
 
     void ShowError();
 
-    static const char* TAG;
+    static const char* tag;
 
     const Options& options_;
     AutoPtr<ASTModule> module_;

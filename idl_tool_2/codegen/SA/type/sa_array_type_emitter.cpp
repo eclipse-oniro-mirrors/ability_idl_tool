@@ -56,7 +56,7 @@ std::string SaArrayTypeEmitter::EmitTsType(TypeMode mode) const
 void SaArrayTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("if (%s.size() > VECTOR_MAX_SIZE) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix).Append(TAB).Append(
             "HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
@@ -76,7 +76,7 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
     sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.c_str());
-    sb.Append(prefix).AppendFormat("if (%sSize > VECTOR_MAX_SIZE) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).Append("HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
     }
@@ -173,7 +173,7 @@ std::string SaListTypeEmitter::EmitTsType(TypeMode mode) const
 void SaListTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("if (%s.size() > VECTOR_MAX_SIZE) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix).Append(TAB).Append(
             "HiLog::Error(LABEL, \"The list size exceeds the security limit!\");\n");

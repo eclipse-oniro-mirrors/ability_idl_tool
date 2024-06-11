@@ -33,7 +33,7 @@ constexpr int LINE_MAX_SIZE = 1024;
 
 using SharedData = struct SharedData {
     SharedData(int refCount, int size)
-        : refCount_(refCount), size_(size)
+        : refCount_(refCount), shareDataSize(size)
     {}
 
     static SharedData* Allocate(int size);
@@ -53,7 +53,7 @@ using SharedData = struct SharedData {
     }
 
     std::atomic<int> refCount_;
-    int size_;
+    int shareDataSize;
 };
 
 SharedData* SharedData::Allocate(int size)
@@ -172,7 +172,7 @@ int String::GetLength() const
         return 0;
     }
 
-    return SharedData::GetHeader(string_)->size_;
+    return SharedData::GetHeader(string_)->shareDataSize;
 }
 
 char String::operator[](int index) const

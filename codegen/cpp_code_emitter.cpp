@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-#include "codegen/cpp_code_emitter.h"
-
+#include <sstream>
 #include "securec.h"
 #include "util/file.h"
+#include "codegen/cpp_code_emitter.h"
 
 namespace OHOS {
 namespace Idl {
@@ -995,7 +995,7 @@ void CppCodeEmitter::EmitWriteVariableComplex(
     switch (mt->kind_) {
         case TypeKind::Array:
         case TypeKind::List: {
-            sb.Append(prefix).AppendFormat("if (%s.size() > VECTOR_MAX_SIZE) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
             if (logOn_) {
                 if (mt != nullptr && mt->kind_ == TypeKind::Array) {
                     sb.Append(prefix).Append(TAB).Append(
@@ -1018,7 +1018,7 @@ void CppCodeEmitter::EmitWriteVariableComplex(
             break;
         }
         case TypeKind::Map: {
-            sb.Append(prefix).AppendFormat("if (%s.size() > MAP_MAX_SIZE) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(MAP_MAX_SIZE)) {\n", name.c_str());
             if (logOn_) {
                 sb.Append(prefix).Append(TAB).AppendFormat(
                     "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
@@ -1201,20 +1201,26 @@ void CppCodeEmitter::EmitReadVariableList(const String& parcelName, const std::s
                 sb.Append(prefix).AppendFormat("%s %s;\n", EmitType(mt, ATTR_IN, true).string(), name.c_str());
             }
             sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.string());
-            sb.Append(prefix).AppendFormat("if (%sSize > VECTOR_MAX_SIZE) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
             if (logOn_) {
                 sb.Append(prefix + TAB)
                     .Append("HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
             }
             sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
             sb.Append(prefix).Append("}\n");
-            sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
+            circleCount++;
+            std::stringstream circleCountStr;
+            circleCountStr << circleCount;
+            std::string iStr = "i" + circleCountStr.str();
+            std::string valueStr = "value" + circleCountStr.str();
+            sb.Append(prefix).AppendFormat("for (int32_t %s = 0; %s < %sSize; ++%s) {\n",
+                iStr.c_str(), iStr.c_str(), name.c_str(), iStr.c_str());
             MetaType* innerType = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
-            EmitReadVariable(parcelName, "value", innerType, sb, prefix + TAB);
+            EmitReadVariable(parcelName, valueStr.c_str(), innerType, sb, prefix + TAB);
             if (innerType->kind_ == TypeKind::Sequenceable) {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(*%s);\n", name.c_str(), valueStr.c_str());
             } else {
-                sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+                sb.Append(prefix + TAB).AppendFormat("%s.push_back(%s);\n", name.c_str(), valueStr.c_str());
             }
             sb.Append(prefix).Append("}\n");
             break;
