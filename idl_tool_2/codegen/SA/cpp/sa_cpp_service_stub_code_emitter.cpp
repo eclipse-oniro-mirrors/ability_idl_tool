@@ -217,11 +217,7 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
     AutoPtr<ASTType> type = param->GetType();
     const std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
-    if ((type->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) || (type->GetTypeKind() == TypeKind::TYPE_INTERFACE)) {
-        sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
-    } else {
-        sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
-    }
+    sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
 }
 
 void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name, const TypeKind kind,

@@ -39,6 +39,7 @@ public:
     ~Options() = default;
 
     struct Attribute {
+        Attribute() : doHitrace(false), doLog(false) {}
         std::string hitraceTag;
         std::string logTag;
         std::string domainId;
@@ -212,6 +213,7 @@ private:
         genDir(),
         packagePathMap(),
         outPutFile(),
+        attribute(Attribute()),
         doShowUsage(false),
         doShowVersion(false),
         doCompile(false),

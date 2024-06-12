@@ -395,7 +395,7 @@ void SaRustInterfaceCodeEmitter::EmitProxyMethodImpl(AutoPtr<ASTMethod> &method,
     int paramNumber = method->GetParameterNumber();
     for (int j = 0; j < paramNumber; j++) {
         AutoPtr<ASTParameter> param = method->GetParameter(j);
-        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+        typeEmitter = GetTypeEmitter(param->GetType());
         typeEmitter->EmitRustWriteVar("data", GetNameFromParameter(param->GetName()), sb, "        ");
     }
     TypeKind retTypeKind = returnType->GetTypeKind();
@@ -415,7 +415,7 @@ void SaRustInterfaceCodeEmitter::EmitProxyMethodImpl(AutoPtr<ASTMethod> &method,
     if ((retTypeKind == TypeKind::TYPE_UNKNOWN) || (retTypeKind == TypeKind::TYPE_VOID)) {
         sb.Append("        ").Append("Ok(())\n");
     } else {
-        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+        typeEmitter = GetTypeEmitter(returnType);
         typeEmitter->EmitRustReadVar("reply", "result", sb, "        ");
         sb.Append("        ").Append("Ok(result)\n");
     }

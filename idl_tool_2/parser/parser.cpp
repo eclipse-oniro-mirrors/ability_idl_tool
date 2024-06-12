@@ -1810,11 +1810,12 @@ bool Parser::CheckIntfSaAst()
         return false;
     }
 
-    for (const auto &importPair : ast_->GetImports()) {
-        if (importPair.second->GetASTFileType() != ASTFileType::AST_SEQUENCEABLE) {
-            LogError(__func__, __LINE__, std::string("intf sa: import not support"));
-            return false;
-        }
+    const auto &importMap = ast_->GetImports();
+    if (std::any_of(importMap.begin(), importMap.end(), [] (const std::pair<std::string, AutoPtr<AST>> &importPair) {
+        return importPair.second->GetASTFileType() != ASTFileType::AST_SEQUENCEABLE;
+    })) {
+        LogError(__func__, __LINE__, std::string("intf sa: import not support"));
+        return false;
     }
 
     bool definedIntf = false;

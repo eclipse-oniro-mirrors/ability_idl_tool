@@ -80,7 +80,7 @@ public:
 
     virtual void EmitCUnMarshalling(const std::string &name, const std::string &gotoLabel, StringBuilder &sb,
         const std::string &prefix, std::vector<std::string> &freeObjStatements) const;
-    
+
     virtual void EmitCWriteMethods(UtilMethodMap &methods, const std::string &prefix,
         const std::string &methodPrefix, bool isDecl) const;
 
@@ -122,7 +122,7 @@ public:
     static std::string errorCodeName_;
 
 protected:
-    bool isPod_;
+    bool isPod_ = false;
     std::string typeName_;
     std::string name_;
 };

@@ -35,11 +35,6 @@ public:
     std::shared_ptr<MetaComponent> Build();
 
 private:
-    inline size_t Align8(uintptr_t value)
-    {
-        return (((value) + 7) & ~7); // 7二进制111，与111进行运算，保证8字节对齐
-    }
-
     size_t CalculateMetadataSize();
 
     void CalculateMetaComponent(AST* module);

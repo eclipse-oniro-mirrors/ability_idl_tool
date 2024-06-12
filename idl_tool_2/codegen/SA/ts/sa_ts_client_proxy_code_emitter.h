@@ -37,7 +37,7 @@ private:
 
     void EmitInterfaceProxyConstructor(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodImpls(StringBuilder &stringBuilder, const std::string &prefix) const;
+    void EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 

@@ -45,7 +45,7 @@ static int FileParse(Parser &parser)
 
 static void DumpAst(const StrAstMap &allAst)
 {
-    Options &options = Options::GetInstance();
+    const Options &options = Options::GetInstance();
     if (!options.DoDumpAST()) {
         return;
     }
@@ -106,11 +106,11 @@ static int DumpMetaData(const StrAstMap &allAst)
 
 static int ReadMetaData(StrAstMap &astList)
 {
-    Options &options = Options::GetInstance();
+    const Options &options = Options::GetInstance();
     if ((options.GetInterfaceType() != InterfaceType::SA) || options.DoCompile()) {
         return 0;
     }
-    std::string metadataFile = Options::GetInstance().GetMetadataFile();
+    std::string metadataFile = options.GetMetadataFile();
     std::shared_ptr<MetaComponent> metadata = MetadataReader::ReadMetadataFromFile(metadataFile);
     if (metadata == nullptr) {
         Logger::E(TAG, "Get metadata from \"%s\" failed.", metadataFile.c_str());

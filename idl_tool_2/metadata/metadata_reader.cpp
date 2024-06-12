@@ -65,8 +65,7 @@ std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const std::s
         return nullptr;
     }
 
-    std::shared_ptr<MetaComponent> metadata(
-        (MetaComponent*)data, [](MetaComponent* p) { free(p); });
+    std::shared_ptr<MetaComponent> metadata(reinterpret_cast<MetaComponent *>(data), [](MetaComponent* p) { free(p); });
 
     MetadataSerializer serializer((uintptr_t)data);
     serializer.Deserialize();

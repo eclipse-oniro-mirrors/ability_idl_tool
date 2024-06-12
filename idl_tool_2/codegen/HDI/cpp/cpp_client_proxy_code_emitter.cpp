@@ -254,7 +254,6 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodDecl(
 
 void CppClientProxyCodeEmitter::EmitProxyReconnectMethodDecl(StringBuilder &sb, const std::string &prefix) const
 {
-    std::string doubleTab = prefix + TAB;
     sb.Append(prefix).AppendFormat("static int32_t Reconnect(sptr<%s> proxy);\n",
         EmitDefinitionByInterface(interface_, proxyName_).c_str());
 }
@@ -564,7 +563,7 @@ std::string CppClientProxyCodeEmitter::GetNameSpaceByInterface(AutoPtr<ASTInterf
         return "";
     }
     size_t index = value.rfind(':');
-    return (index == std::string::npos) ? value.substr(0) : value.substr(0, index + 1);
+    return (index == std::string::npos) ? value : value.substr(0, index + 1);
 }
 
 void CppClientProxyCodeEmitter::EmitProxyPassthroughtLoadImpl(StringBuilder &sb, const std::string &prefix) const

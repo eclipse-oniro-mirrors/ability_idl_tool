@@ -20,6 +20,8 @@
 #include "ast/ast_map_type.h"
 #include "util/logger.h"
 
+#define ALIGN8(v) (((v) + 7) & ~7)
+
 namespace OHOS {
 namespace Idl {
 std::string MetadataBuilder::tag_ = "MetadataBuilder";
@@ -63,16 +65,16 @@ void MetadataBuilder::CalculateMetaComponent(AST* module)
     size_t typeNumber = module->GetTypeNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(module_->GetName());
     // namespaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaComponent));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
     // sequenceables_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
     // interfaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
     // types_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
     // stringPool_'s address
     baseAddr_ = baseAddr_ + sizeof(MetaType*) * typeNumber;
 
@@ -104,14 +106,14 @@ void MetadataBuilder::CalculateMetaNamespace(ASTNamespace* nspace)
     size_t namespaceNumber = nspace->GetNamespaceNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(nspace->GetName());
     // sequenceables_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaNamespace));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace));
     // interfaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(int) * sequenceableNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(int) * sequenceableNumber);
     // namespaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(int) * interfaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(int) * interfaceNumber);
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber;
 
@@ -123,7 +125,7 @@ void MetadataBuilder::CalculateMetaNamespace(ASTNamespace* nspace)
 void MetadataBuilder::CalculateMetaSequenceable(ASTSequenceableType* sequenceable)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(sequenceable->GetName());
     stringPool_.Add(sequenceable->GetNamespace()->ToString());
     // end address
@@ -135,12 +137,12 @@ void MetadataBuilder::CalculateMetaInterface(ASTInterfaceType* interface)
     size_t methodNumber = interface->GetMethodNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(interface->GetLicense());
     stringPool_.Add(interface->GetName());
     stringPool_.Add(interface->GetNamespace()->ToString());
     // methods_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaInterface));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface));
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaMethod*) * methodNumber;
 
@@ -154,11 +156,11 @@ void MetadataBuilder::CalculateMetaMethod(ASTMethod* method)
     size_t parameterNumber = method->GetParameterNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(method->GetName());
     stringPool_.Add(method->GetSignature());
     // parameters_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaMethod));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaMethod));
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaParameter*) * parameterNumber;
 
@@ -170,7 +172,7 @@ void MetadataBuilder::CalculateMetaMethod(ASTMethod* method)
 void MetadataBuilder::CalculateMetaParameter(ASTParameter* parameter)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     stringPool_.Add(parameter->GetName());
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaParameter);
@@ -179,11 +181,11 @@ void MetadataBuilder::CalculateMetaParameter(ASTParameter* parameter)
 void MetadataBuilder::CalculateMetaType(ASTType* type)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     // nestedTypeIndexes_'s address
     baseAddr_ = baseAddr_ + sizeof(MetaType);
     if (type->IsListType()) {
-        baseAddr_ = Align8(baseAddr_);
+        baseAddr_ = ALIGN8(baseAddr_);
         // end address
         baseAddr_ = baseAddr_ + sizeof(int*);
     } else if (type->IsMapType()) {
@@ -198,7 +200,7 @@ void MetadataBuilder::CalculateMetaType(ASTType* type)
 void MetadataBuilder::CalculateStringPool()
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     // end address
     baseAddr_ = baseAddr_ + stringPool_.GetSize();
 }
@@ -217,7 +219,7 @@ void MetadataBuilder::WriteMetaComponent(AST* module)
     size_t typeNumber = module->GetTypeNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaComponent* mc = reinterpret_cast<MetaComponent*>(baseAddr_);
     mc->magic_ = METADATA_MAGIC_NUMBER;
     mc->size_ = static_cast<int>(size_);
@@ -227,16 +229,16 @@ void MetadataBuilder::WriteMetaComponent(AST* module)
     mc->typeNumber_ = static_cast<int>(typeNumber);
     mc->stringPoolSize_ = stringPool_.GetSize();
     // namespaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaComponent));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
     mc->namespaces_ = reinterpret_cast<MetaNamespace**>(baseAddr_);
     // sequenceables_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber);
     mc->sequenceables_ = reinterpret_cast<MetaSequenceable**>(baseAddr_);
     // interfaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaSequenceable*) * sequenceableNumber);
     mc->interfaces_ = reinterpret_cast<MetaInterface**>(baseAddr_);
     // types_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface*) * interfaceNumber);
     mc->types_ = reinterpret_cast<MetaType**>(baseAddr_);
     // stringPool_'s address
     baseAddr_ = baseAddr_ + sizeof(MetaType*) * typeNumber;
@@ -273,20 +275,20 @@ MetaNamespace* MetadataBuilder::WriteMetaNamespace(ASTNamespace* nspace)
     size_t namespaceNumber = nspace->GetNamespaceNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaNamespace* mn = reinterpret_cast<MetaNamespace*>(baseAddr_);
     mn->name_ = WriteString(nspace->GetName());
     mn->sequenceableNumber_ = static_cast<int>(sequenceableNumber);
     mn->interfaceNumber_ = static_cast<int>(interfaceNumber);
     mn->namespaceNumber_ = static_cast<int>(namespaceNumber);
     // sequenceables_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaNamespace));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaNamespace));
     mn->sequenceableIndexes_ = reinterpret_cast<int*>(baseAddr_);
     // interfaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(int) * sequenceableNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(int) * sequenceableNumber);
     mn->interfaceIndexes_ = reinterpret_cast<int*>(baseAddr_);
     // namespaces_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(int) * interfaceNumber);
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(int) * interfaceNumber);
     mn->namespaces_ = reinterpret_cast<MetaNamespace**>(baseAddr_);
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaNamespace*) * namespaceNumber;
@@ -312,7 +314,7 @@ MetaNamespace* MetadataBuilder::WriteMetaNamespace(ASTNamespace* nspace)
 MetaSequenceable* MetadataBuilder::WriteMetaSequenceable(ASTSequenceableType* parcelabe)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaSequenceable* mp = reinterpret_cast<MetaSequenceable*>(baseAddr_);
     mp->name_ = WriteString(parcelabe->GetName());
     mp->namespace_ = WriteString(parcelabe->GetNamespace()->ToString());
@@ -327,7 +329,7 @@ MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
     size_t methodNumber = interface->GetMethodNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaInterface* mi = reinterpret_cast<MetaInterface*>(baseAddr_);
     mi->license_ = WriteString(interface->GetLicense());
     mi->name_ = WriteString(interface->GetName());
@@ -336,7 +338,7 @@ MetaInterface* MetadataBuilder::WriteMetaInterface(ASTInterfaceType* interface)
     mi->methodNumber_ = static_cast<int>(methodNumber);
     mi->external_ = interface->IsExternal();
     // methods_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaInterface));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaInterface));
     mi->methods_ = reinterpret_cast<MetaMethod**>(baseAddr_);
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaMethod*) * methodNumber;
@@ -353,7 +355,7 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
     size_t parameterNumber = method->GetParameterNumber();
 
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaMethod* mm = reinterpret_cast<MetaMethod*>(baseAddr_);
     mm->name_ = WriteString(method->GetName());
     mm->signature_ = WriteString(method->GetSignature());
@@ -361,7 +363,7 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
     mm->returnTypeIndex_ = module_->IndexOf(method->GetReturnType());
     mm->parameterNumber_ = static_cast<int>(parameterNumber);
     // parameters_'s address
-    baseAddr_ = Align8(baseAddr_ + sizeof(MetaMethod));
+    baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaMethod));
     mm->parameters_ = reinterpret_cast<MetaParameter**>(baseAddr_);
     // end address
     baseAddr_ = baseAddr_ + sizeof(MetaParameter*) * parameterNumber;
@@ -376,7 +378,7 @@ MetaMethod* MetadataBuilder::WriteMetaMethod(ASTMethod* method)
 MetaParameter* MetadataBuilder::WriteMetaParameter(ASTParameter* parameter)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaParameter* mp = reinterpret_cast<MetaParameter*>(baseAddr_);
     mp->name_ = WriteString(parameter->GetName());
     if (parameter->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -395,7 +397,7 @@ MetaParameter* MetadataBuilder::WriteMetaParameter(ASTParameter* parameter)
 MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
 {
     // begin address
-    baseAddr_ = Align8(baseAddr_);
+    baseAddr_ = ALIGN8(baseAddr_);
     MetaType* mt = reinterpret_cast<MetaType*>(baseAddr_);
     mt->kind_ = Type2Kind(type);
     if (type->IsSequenceableType()) {
@@ -409,7 +411,7 @@ MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
     if (type->IsListType()) {
         mt->nestedTypeNumber_ = 1;
         // nestedTypeIndexes_'s address
-        baseAddr_ = Align8(baseAddr_);
+        baseAddr_ = ALIGN8(baseAddr_);
         mt->nestedTypeIndexes_ = reinterpret_cast<int*>(baseAddr_);
         AutoPtr<ASTType> elementType = (static_cast<ASTListType*>(type))->GetElementType();
         mt->nestedTypeIndexes_[0] = module_->IndexOf(elementType);
@@ -419,7 +421,7 @@ MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
         size_t typeNumber = 2;
         mt->nestedTypeNumber_ = static_cast<int>(typeNumber);
         // nestedTypeIndexes_'s address
-        baseAddr_ = Align8(baseAddr_);
+        baseAddr_ = ALIGN8(baseAddr_);
         mt->nestedTypeIndexes_ = reinterpret_cast<int*>(baseAddr_);
         AutoPtr<ASTType> keyType = (static_cast<ASTMapType*>(type))->GetKeyType();
         AutoPtr<ASTType> valueType = (static_cast<ASTMapType*>(type))->GetValueType();
@@ -430,7 +432,7 @@ MetaType* MetadataBuilder::WriteMetaType(ASTType* type)
     } else if (type->IsArrayType()) {
         mt->nestedTypeNumber_ = 1;
         // nestedTypeIndexes_'s address
-        baseAddr_ = Align8(baseAddr_);
+        baseAddr_ = ALIGN8(baseAddr_);
         mt->nestedTypeIndexes_ = reinterpret_cast<int*>(baseAddr_);
         AutoPtr<ASTType> elementType = (static_cast<ASTArrayType*>(type))->GetElementType();
         mt->nestedTypeIndexes_[0] = module_->IndexOf(elementType);
