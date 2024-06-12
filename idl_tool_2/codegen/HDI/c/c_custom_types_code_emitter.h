@@ -75,7 +75,7 @@ private:
     void EmitMemberUnmarshalling(const AutoPtr<ASTType> &type, const std::string &name, const std::string &memberName,
         StringBuilder &sb, const std::string &prefix);
 
-    void EmitStringMemberUnmarshalling(const AutoPtr<HdiTypeEmitter> &type, const std::string &memberName,
+    void EmitStringMemberUnmarshalling(const AutoPtr<HdiTypeEmitter> &typeEmitter, const std::string &memberName,
         const std::string &varName, StringBuilder &sb, const std::string &prefix);
 
     void EmitArrayMemberUnmarshalling(const AutoPtr<ASTType> &type, const std::string &memberName,

@@ -135,7 +135,7 @@ size_t File::Read()
     }
     size_ = count;
     position_ = 0;
-    if (count <= 0 || count >= BUFFER_SIZE) {
+    if ((count == 0) || (count >= BUFFER_SIZE)) {
         return -1;
     }
     return count;

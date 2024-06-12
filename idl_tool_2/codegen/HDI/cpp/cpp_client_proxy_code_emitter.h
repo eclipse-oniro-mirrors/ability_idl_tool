@@ -22,11 +22,9 @@ namespace OHOS {
 namespace Idl {
 class CppClientProxyCodeEmitter : public HDICppCodeEmitter {
 public:
-    CppClientProxyCodeEmitter() : HDICppCodeEmitter()
-    {
-        devmgrDeathRecipientName_ = "IServiceManagerDeathRecipient";
-        devmgrVersionName_ = "OHOS::HDI::ServiceManager::V1_0";
-    }
+    CppClientProxyCodeEmitter() : HDICppCodeEmitter(),
+        devmgrDeathRecipientName_("IServiceManagerDeathRecipient"),
+        devmgrVersionName_("OHOS::HDI::ServiceManager::V1_0") {}
 
     ~CppClientProxyCodeEmitter() override = default;
 

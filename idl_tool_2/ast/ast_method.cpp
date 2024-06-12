@@ -27,11 +27,12 @@ void ASTMethod::CheckOverload(AutoPtr<ASTInterfaceType> interface)
     }
     interface = interface->GetExtendsInterface();
     while (interface != nullptr) {
-        for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
-            if (name_ == method->GetName()) {
-                isOverload_ = true;
-                return;
-            }
+        const std::vector<AutoPtr<ASTMethod>> methodMap =
+            interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel());
+        if (std::any_of(methodMap.begin(), methodMap.end(),
+            [this] (const AutoPtr<ASTMethod> &method) { return name_ == method->GetName();})) {
+            isOverload_ = true;
+            return;
         }
         interface = interface->GetExtendsInterface();
     }

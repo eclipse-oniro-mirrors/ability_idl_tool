@@ -83,10 +83,13 @@ std::string CodeEmitter::PackageToFilePath(const std::string &packageName) const
 std::string CodeEmitter::InterfaceToFilePath(const std::string &interfaceName) const
 {
     std::string fullName = interfaceName;
+    size_t index;
     if (StringHelper::EndWith(fullName, "]")) {
-        fullName = fullName.substr(0, fullName.find("["));
+        index = fullName.find("[");
+        fullName = fullName.substr(0, index);
     }
-    size_t index = fullName.rfind(".");
+
+    index = fullName.rfind(".");
     std::string prefix = fullName.substr(0, index + 1);
     std::string suffix = fullName.substr(index + 1);
     std::string fileName = prefix + (StringHelper::StartWith(suffix, "I") ? suffix.substr(1) : suffix) + "Proxy";
