@@ -26,7 +26,7 @@ using namespace OHOS::Idl;
 
 static const char* TAG = "idl";
 
-int DoOptionsCheck(Options& options)
+static int DoOptionsCheck(Options& options)
 {
     if (options.DoShowUsage()) {
         options.ShowUsage();
@@ -52,7 +52,7 @@ int DoOptionsCheck(Options& options)
     return 1;
 }
 
-int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
+static int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
 {
     if (options.DoCompile()) {
         Parser parser(options);
@@ -93,7 +93,7 @@ int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
     return 0;
 }
 
-int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
+static int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
 {
     if (options.DoGenerateCode()) {
         if (metadata == nullptr) {
