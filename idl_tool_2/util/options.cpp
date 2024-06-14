@@ -313,6 +313,8 @@ bool Options::CheckOptions()
         return CheckSaOptions();
     } else if (interfaceType == InterfaceType::HDI) {
         return CheckHdiOptions();
+    } else if (interfaceType == InterfaceType::SM) {
+        return CheckSmOptions();
     } else {
         Logger::E(TAG, "Interface type 'intf-type' value '%d' invalid, please input 'hdi' or 'sa'.", interfaceType);
         return false;
@@ -466,6 +468,79 @@ bool Options::DoSupportHdiType()
     return ret;
 }
 
+bool Options::DoSupportSmType()
+{
+    bool ret = true;
+
+    if (genLanguage != Language::CPP && genLanguage != Language::JAVA) {
+        Logger::E(TAG, "Option 'intf-type sm' only support language option 'gen-cpp' or 'gen-java'.");
+        ret = false;
+    }
+
+    if (doDumpMetadata) {
+        Logger::E(TAG, "Option 'intf-type sm' not support option 'dump-metadata'.");
+        ret = false;
+    }
+
+    if (doKeywords) {
+        Logger::E(TAG, "Option 'intf-type sm' not support option '-t', '-log-domainid' or '-log-tag'.");
+        ret = false;
+    }
+
+    if (doSaveMetadata) {
+        Logger::E(TAG, "Option 'intf-type sm' not support option '-s'.");
+        ret = false;
+    }
+
+    if (!ret) {
+        printf("Use \"-h, --help\" to show usage.\n");
+    }
+    return ret;
+}
+
+void Options::SetSmDefaultOption()
+{
+    if (systemLevel != SystemLevel::INIT) {
+        systemLevel = SystemLevel::INIT;
+    }
+    if (genMode != GenMode::INIT) {
+        genMode = GenMode::INIT;
+    }
+    return;
+}
+
+bool Options::CheckSmOptions()
+{
+    SetSmDefaultOption();
+    if (!DoSupportSmType()) {
+        return false;
+    }
+
+    if (doCompile) {
+        if (!DoGetHashKey() && !doDumpAST && !doGenerateCode && !doOutDir) {
+            Logger::E(TAG, "nothing to do.");
+            return false;
+        }
+
+        if (!doGenerateCode && doOutDir) {
+            Logger::E(TAG, "no target language.");
+            return false;
+        }
+
+        if (doGenerateCode && !doOutDir) {
+            Logger::E(TAG, "no out directory.");
+            return false;
+        }
+    } else {
+        if (DoGetHashKey() || doDumpAST || doGenerateCode || doOutDir) {
+            Logger::E(TAG, "no idl files.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool Options::SetHiTrace(const std::string &tag)
 {
     doKeywords = true;
@@ -493,6 +568,7 @@ bool Options::SetInterfaceType(const std::string &type)
     static std::map<std::string, InterfaceType> Type = {
         {"hdi", InterfaceType::HDI},
         {"sa", InterfaceType::SA},
+        {"sm", InterfaceType::SM},
     };
 
     auto codeGenIter = Type.find(type);

@@ -261,6 +261,12 @@ private:
 
     bool DoSupportHdiType();
 
+    bool DoSupportSmType();
+
+    void SetSmDefaultOption();
+
+    bool CheckSmOptions();
+
     bool DoSupportSaType();
 
     bool CheckHdiOptions();

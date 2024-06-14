@@ -74,7 +74,8 @@ bool Parser::ParseOne(const std::string &sourceFile)
     }
 
     bool ret = ParseFile();
-    ret = CheckIntegrity() && ret;
+    IntfTypeChecker checker(ast_);
+    ret = checker.CheckIntegrity() && ret;
     ret = AddAst(ast_) && ret;
     if (!ret || !errors_.empty()) {
         ShowError();
@@ -458,6 +459,7 @@ void Parser::ParseInterface(const AttrSet &attrs)
 AutoPtr<ASTAttr> Parser::ParseInfAttrInfo(const AttrSet &attrs)
 {
     AutoPtr<ASTAttr> infAttr = new ASTAttr();
+    InterfaceType interfaceType = Options::GetInstance().GetInterfaceType();
     for (const auto &attr : attrs) {
         switch (attr.kind) {
             case TokenType::FULL:
@@ -481,7 +483,7 @@ AutoPtr<ASTAttr> Parser::ParseInfAttrInfo(const AttrSet &attrs)
         }
     }
 
-    if ((Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) &&
+    if ((interfaceType == InterfaceType::HDI) &&
         (!infAttr->HasValue(ASTAttr::FULL) && !infAttr->HasValue(ASTAttr::LITE) &&
         !infAttr->HasValue(ASTAttr::MINI))) {
         infAttr->SetValue(ASTAttr::FULL | ASTAttr::LITE | ASTAttr::MINI);
@@ -1743,254 +1745,6 @@ void Parser::SetAstFileType()
     } else {
         ast_->SetAStFileType(ASTFileType::AST_TYPES);
     }
-}
-
-bool Parser::CheckIntegrity()
-{
-    if (ast_ == nullptr) {
-        LogError(__func__, __LINE__, std::string("ast is nullptr."));
-        return false;
-    }
-
-    if (ast_->GetName().empty()) {
-        LogError(__func__, __LINE__, std::string("ast's name is empty."));
-        return false;
-    }
-
-    InterfaceType interfaceType = Options::GetInstance().GetInterfaceType();
-    if (interfaceType == InterfaceType::SA) {
-        return CheckIntfSaAst();
-    } else if (interfaceType == InterfaceType::HDI) {
-        return CheckIntfHdiAst();
-    }
-
-    LogError(__func__, __LINE__, std::string("intf type is invalid."));
-    return false;
-}
-
-bool Parser::CheckInterfaceAst()
-{
-    AutoPtr<ASTInterfaceType> interface = ast_->GetInterfaceDef();
-    if (interface == nullptr) {
-        LogError(__func__, __LINE__, std::string("intf hdi: ast's interface is empty."));
-        return false;
-    }
-
-    if (ast_->GetTypeDefinitionNumber() > 0) {
-        LogError(__func__, __LINE__, std::string("intf hdi: interface ast cannot has custom types."));
-        return false;
-    }
-
-    if (interface->GetMethodNumber() == 0) {
-        LogError(__func__, __LINE__, std::string("intf hdi: interface ast has no method."));
-        return false;
-    }
-    return true;
-}
-
-bool Parser::CheckCallbackAst()
-{
-    AutoPtr<ASTInterfaceType> interface = ast_->GetInterfaceDef();
-    if (interface == nullptr) {
-        LogError(__func__, __LINE__, std::string("ast's interface is empty."));
-        return false;
-    }
-
-    if (!interface->IsCallback()) {
-        LogError(__func__, __LINE__, std::string("ast is callback, but ast's interface is not callback."));
-        return false;
-    }
-    return true;
-}
-
-bool Parser::CheckIntfSaAst()
-{
-    if (!ast_->GetPackageName().empty()) {
-        LogError(__func__, __LINE__, std::string("intf sa: package not support"));
-        return false;
-    }
-
-    const auto &importMap = ast_->GetImports();
-    if (std::any_of(importMap.begin(), importMap.end(), [] (const std::pair<std::string, AutoPtr<AST>> &importPair) {
-        return importPair.second->GetASTFileType() != ASTFileType::AST_SEQUENCEABLE;
-    })) {
-        LogError(__func__, __LINE__, std::string("intf sa: import not support"));
-        return false;
-    }
-
-    bool definedIntf = false;
-    for (size_t i = 0; i < ast_->GetInterfaceDefNumber(); i++) {
-        if (!ast_->GetInterfaceDef(i)->IsExternal()) {
-            definedIntf = true;
-            break;
-        }
-    }
-
-    if (!definedIntf) {
-        LogError(__func__, __LINE__, std::string("intf sa: interface is not defined."));
-        return false;
-    }
-
-    ASTAttr::Attribute attr = ast_->GetInterfaceDef()->GetAttribute()->GetValue();
-    if ((attr != ASTAttr::NONE) && (attr != ASTAttr::ONEWAY)) {
-        LogError(__func__, __LINE__, std::string("intf sa: interface attr only support [oneway]"));
-        return false;
-    }
-
-    if (!CheckIntfSaAstTypes() || !CheckIntfSaAstMethods()) {
-        return false;
-    }
-
-    return true;
-}
-
-bool Parser::CheckIntfSaAstTypes()
-{
-    for (const auto &pair : ast_->GetTypes()) {
-        AutoPtr<ASTType> type = pair.second;
-        switch (type->GetTypeKind()) {
-            case TypeKind::TYPE_FILEDESCRIPTOR:
-            case TypeKind::TYPE_ASHMEM:
-            case TypeKind::TYPE_NATIVE_BUFFER:
-            case TypeKind::TYPE_POINTER:
-            case TypeKind::TYPE_SMQ:
-            case TypeKind::TYPE_ENUM:
-            case TypeKind::TYPE_STRUCT:
-            case TypeKind::TYPE_UNION:
-            case TypeKind::TYPE_UCHAR:
-            case TypeKind::TYPE_USHORT:
-            case TypeKind::TYPE_UINT:
-            case TypeKind::TYPE_ULONG:
-                LogError(__func__, __LINE__, StringHelper::Format("intf sa: type '%s' not support",
-                    pair.first.c_str()));
-                return false;
-            default:
-                break;
-        }
-    }
-    return true;
-}
-
-bool Parser::CheckIntfSaAstMethods()
-{
-    AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
-    bool onewayInterface = (interfaceType->GetAttribute()->GetValue() == ASTAttr::ONEWAY);
-
-    for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
-        AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
-        if (((method->GetAttribute()->GetValue()) & (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE))) != 0) {
-            LogError(__func__, __LINE__, std::string("intf sa: method attr support oneway or cacheable"));
-            return false;
-        }
-        if (method->GetAttribute()->HasValue(ASTAttr::CACHEABLE) &&
-            !method->GetAttribute()->HasValue(ASTAttr::ONEWAY)) {
-            auto ret = method->SetCacheableTime();
-            if (ret) {
-                ast_->SetHasCacheableProxyMethods(true);
-            } else {
-                LogError(__func__, __LINE__, std::string("intf sa: method attr cacheable time invalid"));
-            }
-        }
-        if ((onewayInterface || method->GetAttribute()->GetValue() == ASTAttr::ONEWAY) &&
-            !method->GetReturnType()->IsVoidType()) {
-            LogError(__func__, __LINE__,
-                std::string("intf sa: method return type must be void in [oneway] interface or method"));
-            return false;
-        }
-    }
-    return true;
-}
-
-bool Parser::CheckIntfHdiAst()
-{
-    if (ast_->GetPackageName().empty()) {
-        LogError(__func__, __LINE__, std::string("intf hdi ast's package name is empty."));
-        return false;
-    }
-
-    if (!CheckIntfHdiAstFileType() || !CheckIntfHdiAstTypes()) {
-        return false;
-    }
-
-    AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
-    if (interfaceType == nullptr) {
-        return true;
-    }
-
-    if (interfaceType->IsExternal()) {
-        LogError(__func__, __LINE__, std::string("intf hdi: interface not support external"));
-        return false;
-    }
-
-    for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
-        AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
-        for (size_t j = 0; j < method->GetParameterNumber(); j++) {
-            if (!CheckIntfHdiAstParam(method->GetParameter(j), i, j)) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-bool Parser::CheckIntfHdiAstFileType()
-{
-    switch (ast_->GetASTFileType()) {
-        case ASTFileType::AST_IFACE:
-            return CheckInterfaceAst();
-        case ASTFileType::AST_ICALLBACK:
-            return CheckCallbackAst();
-        case ASTFileType::AST_SEQUENCEABLE:
-            LogError(__func__, __LINE__, std::string("it's impossible that ast is sequenceable."));
-            return false;
-        case ASTFileType::AST_TYPES:
-            if (ast_->GetInterfaceDef() != nullptr) {
-                LogError(__func__, __LINE__, std::string("custom ast cannot has interface."));
-                return false;
-            }
-            return true;
-        default:
-            return true;
-    }
-}
-
-bool Parser::CheckIntfHdiAstTypes()
-{
-    for (const auto &pair : ast_->GetTypes()) {
-        AutoPtr<ASTType> type = pair.second;
-        if (type->GetTypeKind() == TypeKind::TYPE_CHAR) {
-            LogError(__func__, __LINE__, StringHelper::Format("intf hdi: type '%s' not support", pair.first.c_str()));
-            return false;
-        }
-    }
-    return true;
-}
-
-bool Parser::CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t methodIdx, size_t paramIdx)
-{
-    ASTParamAttr::ParamAttr paramAttr = param->GetAttribute();
-    if (paramAttr == ASTParamAttr::PARAM_INOUT) {
-        LogError(__func__, __LINE__, StringHelper::Format(
-            "intf hdi: method[%d] param[%d] attr not support [inout] or [in, out]", methodIdx, paramIdx));
-        return false;
-    }
-
-    AutoPtr<ASTType> paramType = param->GetType();
-    if (paramType != nullptr && paramType->IsInterfaceType()) {
-        AutoPtr<ASTInterfaceType> ifaceType = dynamic_cast<ASTInterfaceType *>(paramType.Get());
-        if (ifaceType->IsCallback() && paramAttr != ASTParamAttr::PARAM_IN) {
-            LogError(__func__, __LINE__, StringHelper::Format(
-                "intf hdi: '%s' param of callback interface type must be 'in' attr", param->GetName().c_str()));
-            return false;
-        } else if (!ifaceType->IsCallback() && paramAttr != ASTParamAttr::PARAM_OUT) {
-            LogError(__func__, __LINE__, StringHelper::Format(
-                "intf hdi: '%s' param of interface type must be 'out' attr", param->GetName().c_str()));
-            return false;
-        }
-    }
-
-    return true;
 }
 
 /*

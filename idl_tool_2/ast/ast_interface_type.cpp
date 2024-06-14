@@ -58,6 +58,11 @@ void ASTInterfaceType::SetVersion(size_t majorVer, size_t minorVer)
     minorVersion_ = minorVer;
 }
 
+std::vector<AutoPtr<ASTMethod>> ASTInterfaceType::GetMethods() const
+{
+    return methods_;
+}
+
 std::vector<AutoPtr<ASTMethod>> ASTInterfaceType::GetMethodsBySystem(SystemLevel system) const
 {
     std::vector<AutoPtr<ASTMethod>> methods;

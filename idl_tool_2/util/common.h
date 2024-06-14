@@ -60,6 +60,7 @@ namespace Idl {
     enum class InterfaceType {
         HDI,
         SA,
+        SM,
     };
 
 } // namespace Idl

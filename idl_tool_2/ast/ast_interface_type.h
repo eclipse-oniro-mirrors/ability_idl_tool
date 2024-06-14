@@ -113,6 +113,8 @@ public:
 
     AutoPtr<ASTMethod> GetMethod(size_t index);
 
+    std::vector<AutoPtr<ASTMethod>> GetMethods() const;
+
     std::vector<AutoPtr<ASTMethod>> GetMethodsBySystem(SystemLevel system) const;
 
     inline size_t GetMethodNumber() const
