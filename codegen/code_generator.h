@@ -35,7 +35,7 @@ public:
 private:
     bool ResolveDirectory();
 
-    static const char* TAG;
+    static const char* tag;
     String targetLanguage_;
     String targetDirectory_;
     MetaComponent* metaComponent_;
