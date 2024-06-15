@@ -24,7 +24,7 @@
 
 namespace OHOS {
 namespace Idl {
-const char* CodeGenerator::TAG = "CodeGenerator";
+const char* CodeGenerator::tag = "CodeGenerator";
 CodeGenerator::CodeGenerator(
     MetaComponent* mc, const String& language, const String& dir, const Options::Attribute& att)
     : targetLanguage_(language),
@@ -38,7 +38,7 @@ CodeGenerator::CodeGenerator(
     } else if (language.Equals("ts")) {
         emitter_ = new TsCodeEmitter(metaComponent_);
     } else {
-        Logger::E(TAG, "Unknown language: %s.", language.string());
+        Logger::E(tag, "Unknown language: %s.", language.string());
     }
 
     if (emitter_ != nullptr) {
@@ -75,7 +75,7 @@ bool CodeGenerator::ResolveDirectory()
 #else
     if (mkdir(targetDirectory_.string(), S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
 #endif
-        Logger::E(TAG, "Create \"%s\" directory failed.", targetDirectory_.string());
+        Logger::E(tag, "Create \"%s\" directory failed.", targetDirectory_.string());
         return false;
     }
 

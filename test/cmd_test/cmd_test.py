@@ -344,7 +344,7 @@ class TestCmdRootPackageTest(Test):
 
         expect_result = """[IDL-GEN]: Option 'intf-type sa' not support option 'r'.\n"""
         expect_result += """Use "-h, --help" to show usage."""
-        command = f"{self.cmd} --intf-type sa -r x:/root/"
+        command = f"{self.cmd} --intf-type sa -r x:./"
         ret &= exec_command_check(command, expect_result, RetStatus.ERR)
 
         expect_result = """[IDL-GEN]: The Option "-r" is illegal.\n"""
@@ -357,7 +357,7 @@ class TestCmdRootPackageTest(Test):
         ret &= exec_command_check(command, expect_result, RetStatus.ERR)
 
         expect_result = ""
-        command = f"{self.cmd} --intf-type hdi -r x:/root/"
+        command = f"{self.cmd} --intf-type hdi -r x:./"
         ret &= exec_command_check(command, expect_result, RetStatus.OK)
 
         return ret
@@ -372,7 +372,7 @@ class TestCmdDirectoryTest(Test):
 
         expect_result = "[IDL-GEN]: Option 'intf-type sa' not support option 'D'.\n"
         expect_result += """Use "-h, --help" to show usage."""
-        command = f"{self.cmd} --intf-type sa -D /usr/"
+        command = f"{self.cmd} --intf-type sa -D ./"
         ret &= exec_command_check(command, expect_result, RetStatus.ERR)
 
         expect_result = "[IDL-GEN]: failed to open './x/', errno:2\n"
