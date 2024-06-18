@@ -154,7 +154,8 @@ bool Preprocessor::ParseFileDetail(const std::string &sourceFile, FileDetail &in
 
 bool Preprocessor::ParsePackage(Lexer &lexer, FileDetail &info)
 {
-    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
+    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI ||
+        Options::GetInstance().GetInterfaceType() == InterfaceType::SM) {
         Token token = lexer.PeekToken();
         if (token.kind != TokenType::PACKAGE) {
             Logger::E(TAG, "%s: expected 'package' before '%s' token", LocInfo(token).c_str(), token.value.c_str());

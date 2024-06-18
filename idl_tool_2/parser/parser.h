@@ -30,6 +30,7 @@
 #include "util/autoptr.h"
 #include "util/light_refcount_base.h"
 #include "util/options.h"
+#include "parser/intf_type_check.h"
 
 namespace OHOS {
 namespace Idl {
@@ -197,26 +198,6 @@ private:
     bool CheckTypeByMode(const Token &token, const AutoPtr<ASTType> &type);
 
     void SetAstFileType();
-
-    bool CheckIntegrity();
-
-    bool CheckInterfaceAst();
-
-    bool CheckCallbackAst();
-
-    bool CheckIntfSaAstTypes();
-
-    bool CheckIntfSaAstMethods();
-
-    bool CheckIntfSaAst();
-
-    bool CheckIntfHdiAstFileType();
-
-    bool CheckIntfHdiAstTypes();
-
-    bool CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t methodIdx, size_t paramIdx);
-
-    bool CheckIntfHdiAst();
 
     bool CheckPackageName(const std::string &filePath, const std::string &packageName) const;
 
