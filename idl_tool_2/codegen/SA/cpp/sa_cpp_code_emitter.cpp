@@ -27,17 +27,13 @@ namespace Idl {
 void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles)
 {
     const AST::TypeStringMap &types = ast_->GetTypes();
+
+    // Add header files dependency by default to avoid compatibility problems
+    headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "string_ex");
+    headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "cstdint");
     for (const auto &pair : types) {
         AutoPtr<ASTType> type = pair.second;
         switch (type->GetTypeKind()) {
-            case TypeKind::TYPE_STRING: {
-                headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "string_ex");
-                break;
-            }
-            case TypeKind::TYPE_BYTE: {
-                headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "cstdint");
-                break;
-            }
             case TypeKind::TYPE_ARRAY:
             case TypeKind::TYPE_LIST: {
                 headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "vector");

@@ -24,8 +24,6 @@ class HDICppCodeEmitter : public HDICodeEmitter {
 public:
     ~HDICppCodeEmitter() override = default;
 
-    bool OutPut(const AutoPtr<AST> &ast, const std::string &targetDirectory);
-
 protected:
 
     void GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles);

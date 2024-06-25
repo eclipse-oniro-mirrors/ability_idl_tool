@@ -118,7 +118,7 @@ char File::PeekChar()
 
 bool File::IsEof() const
 {
-    return isEof_ || buffer_[position_] == -1;
+    return isEof_ || buffer_[position_] == static_cast<char>(-1);
 }
 
 size_t File::Read()
