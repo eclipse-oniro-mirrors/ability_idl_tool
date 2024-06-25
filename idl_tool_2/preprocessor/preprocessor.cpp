@@ -154,8 +154,13 @@ bool Preprocessor::ParseFileDetail(const std::string &sourceFile, FileDetail &in
 
 bool Preprocessor::ParsePackage(Lexer &lexer, FileDetail &info)
 {
-    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI ||
-        Options::GetInstance().GetInterfaceType() == InterfaceType::SM) {
+    InterfaceType interfaceType = Options::GetInstance().GetInterfaceType();
+    if (interfaceType == InterfaceType::HDI ||
+        interfaceType == InterfaceType::SM ||
+        interfaceType == InterfaceType::SAM ||
+        interfaceType == InterfaceType::SAM_SM ||
+        interfaceType == InterfaceType::SAM_UDS ||
+        interfaceType == InterfaceType::SM_UDS) {
         Token token = lexer.PeekToken();
         if (token.kind != TokenType::PACKAGE) {
             Logger::E(TAG, "%s: expected 'package' before '%s' token", LocInfo(token).c_str(), token.value.c_str());

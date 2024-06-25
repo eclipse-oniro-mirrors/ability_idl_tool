@@ -135,6 +135,22 @@ public:
     {
         return attr_->HasValue(ASTAttr::CACHEABLE);
     }
+
+    inline void SetFreezeControlReason(const std::string &reason)
+    {
+        freezeControlReason = reason;
+    }
+
+    inline std::string GetFreezeControlReason()
+    {
+        return freezeControlReason == "null"? "" : freezeControlReason;
+    }
+
+    inline bool isFreezeControl() const
+    {
+        return attr_->HasValue(ASTAttr::FREEZECONTROL);
+    }
+
 private:
     void BuildSignature();
 
@@ -145,6 +161,7 @@ private:
     std::vector<AutoPtr<ASTParameter>> parameters_;
     bool isOverload_ = false;  // used to identify if method is overload
     size_t cmdId_;  // used to identify same name method
+    std::string freezeControlReason;
 };
 } // namespace Idl
 } // namespace OHOS

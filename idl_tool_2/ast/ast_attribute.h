@@ -30,6 +30,7 @@ public:
     static constexpr Attribute ONEWAY = 0x1U << 3;
     static constexpr Attribute CALLBACK = 0x1U << 4;
     static constexpr Attribute CACHEABLE = 0x1U << 5;
+    static constexpr Attribute FREEZECONTROL = 0x1U << 6;
 
     explicit ASTAttr(Attribute value = ASTAttr::NONE) : value_(value) {}
 
