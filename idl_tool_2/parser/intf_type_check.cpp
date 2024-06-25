@@ -38,7 +38,11 @@ bool IntfTypeChecker::CheckIntegrity()
         return CheckIntfSaAst();
     } else if (interfaceType == InterfaceType::HDI) {
         return CheckIntfHdiAst();
-    } else if (interfaceType == InterfaceType::SM) {
+    } else if (interfaceType == InterfaceType::SM ||
+        interfaceType == InterfaceType::SAM ||
+        interfaceType == InterfaceType::SAM_SM ||
+        interfaceType == InterfaceType::SAM_UDS ||
+        interfaceType == InterfaceType::SM_UDS) {
         return CheckIntfSmAst();
     }
 

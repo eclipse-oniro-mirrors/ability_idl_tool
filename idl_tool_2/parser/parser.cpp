@@ -44,6 +44,7 @@ static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
 
 static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
+static const std::regex RE_PACKAGE_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")");
 static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
 static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
@@ -109,6 +110,12 @@ bool Parser::ParseFile()
         switch (tokenKind) {
             case TokenType::PACKAGE:
                 ret = ParsePackage() && ret;
+                continue;
+            case TokenType::INTERFACE_TOKEN:
+                ret = ParseInterfaceToken() && ret;
+                continue;
+            case TokenType::SUPPORT_DELEGATOR:
+                ret = ParseSupportDelegator() && ret;
                 continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
@@ -184,14 +191,93 @@ bool Parser::ParsePackage()
 bool Parser::ParserPackageInfo(const std::string &packageName)
 {
     std::cmatch result;
-    if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE) || (result.size() < RE_PACKAGE_NUM)) {
+    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
+        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE) || (result.size() < RE_PACKAGE_NUM)) {
+            return false;
+        }
+
+        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
+        size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
+        size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
+        ast_->SetVersion(majorVersion, minorVersion);
+    } else {
+        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_SM)) {
+            return false;
+        }
+        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
+    }
+    return true;
+}
+
+bool Parser::ParseInterfaceToken()
+{
+    Token token = lexer_.PeekToken();
+    if (token.kind != TokenType::INTERFACE_TOKEN) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected 'interface token'"));
+        return false;
+    }
+    lexer_.GetToken();
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::ID) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected name of interface_token before '%s' token",
+        token.value.c_str()));
+        lexer_.SkipToken(TokenType::SEMICOLON);
+        return false;
+    }
+    std::string interfaceToken = token.value;
+    lexer_.GetToken();
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::SEMICOLON) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected ';' before '%s' token",
+        token.value.c_str()));
+        return false;
+    }
+    lexer_.GetToken();
+
+    if (interfaceToken.empty()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("interface_token name is not expected."));
         return false;
     }
 
-    ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
-    size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
-    size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
-    ast_->SetVersion(majorVersion, minorVersion);
+    ast_->SetInterfaceToken(interfaceToken);
+    return true;
+}
+
+bool Parser::ParseSupportDelegator()
+{
+    Token token = lexer_.PeekToken();
+    if (token.kind != TokenType::SUPPORT_DELEGATOR) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected 'support_delegator'"));
+        return false;
+    }
+    lexer_.GetToken();
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::ID) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected name of suport_delegator before '%s' token",
+        token.value.c_str()));
+        lexer_.SkipToken(TokenType::SEMICOLON);
+        return false;
+    }
+    std::string supportDelegator = token.value;
+    lexer_.GetToken();
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::SEMICOLON) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected ';' before '%s' token",
+        token.value.c_str()));
+        return false;
+    }
+    lexer_.GetToken();
+
+    if (supportDelegator.empty()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("support_delegator name is not expected."));
+        return false;
+    }
+
+    ast_->SetSupportDelegator(supportDelegator);
     return true;
 }
 
@@ -409,6 +495,22 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             lexer_.GetToken();
             return true;
         }
+        case TokenType::FREEZECONTROL: {
+            if (attrs.find(token) != attrs.end()) {
+                LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr freezecontrol"));
+            } else {
+                attrs.insert(token);
+                lexer_.GetToken();
+                token = lexer_.PeekToken();
+                if (token.value == "]") {
+                    LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
+                } else if (token.kind == TokenType::ID) {
+                    freezecontrolAttr_ = token.value;
+                }
+            }
+            lexer_.GetToken();
+            return true;
+        }
         default:
             LogError(__func__, __LINE__, token, StringHelper::Format("'%s' is a illegal attribute",
                 token.value.c_str()));
@@ -567,6 +669,7 @@ void Parser::ParseInterfaceBody(const AutoPtr<ASTInterfaceType> &interface)
 
 AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interface)
 {
+    freezecontrolAttr_ = "";
     AutoPtr<ASTMethod> method = new ASTMethod();
     AutoPtr<ASTAttr> methodAttr = ParseMethodAttr();
     method->SetAttribute(methodAttr);
@@ -602,6 +705,10 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     }
     method->SetCmdId(methodsCount);
     method->CheckOverload(interface);
+
+    if (!freezecontrolAttr_.empty()) {
+        method->SetFreezeControlReason(freezecontrolAttr_);
+    }
 
     return method;
 }
@@ -649,6 +756,9 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
             case TokenType::CACHEABLE:
                 methodAttr->SetValue(ASTAttr::CACHEABLE);
                 methodAttr->SetCacheableTimeString(attr.value);
+                break;
+            case TokenType::FREEZECONTROL:
+                methodAttr->SetValue(ASTAttr::FREEZECONTROL);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));
@@ -900,6 +1010,7 @@ bool Parser::CheckBasicType(Token token)
         case TokenType::INT:
         case TokenType::LONG:
         case TokenType::STRING:
+        case TokenType::STRING16:
         case TokenType::FLOAT:
         case TokenType::DOUBLE:
         case TokenType::FD:

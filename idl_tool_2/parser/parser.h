@@ -75,6 +75,10 @@ private:
 
     bool ParsePackage();
 
+    bool ParseInterfaceToken();
+
+    bool ParseSupportDelegator();
+
     bool ParserPackageInfo(const std::string &packageName);
 
     bool ParseImports();
@@ -274,6 +278,7 @@ private:
     std::vector<std::string> errors_;
     AutoPtr<AST> ast_;
     StrAstMap allAsts_;
+    std::string freezecontrolAttr_;
 };
 } // namespace Idl
 } // namespace OHOS
