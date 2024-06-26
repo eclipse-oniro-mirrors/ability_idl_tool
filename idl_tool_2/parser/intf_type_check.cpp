@@ -348,8 +348,8 @@ bool IntfTypeChecker::CheckIntfSmAstTypes()
 
 bool IntfTypeChecker::CheckSmInterfaceAst()
 {
-    int index;
-    for (int i = 0; i < ast_->GetInterfaceDefNumber(); i++) {
+    size_t index = 0;
+    for (size_t i = 0; i < ast_->GetInterfaceDefNumber(); i++) {
         if (!ast_->GetInterfaceDef(i)->IsExternal()) {
             index = i;
             break;
