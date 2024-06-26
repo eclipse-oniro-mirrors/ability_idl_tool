@@ -47,6 +47,7 @@ static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::
 static const std::regex RE_PACKAGE_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")");
 static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
+static const std::regex RE_IMPORT_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*." + std::string(RE_IDENTIFIER));
 static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
     std::regex_constants::icase);
 static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
@@ -1877,11 +1878,17 @@ bool Parser::CheckPackageName(const std::string &filePath, const std::string &pa
 
 bool Parser::CheckImport(const std::string &importName)
 {
-    if (!std::regex_match(importName.c_str(), RE_IMPORT)) {
-        LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
-        return false;
+    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
+        if (!std::regex_match(importName.c_str(), RE_IMPORT)) {
+            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
+            return false;
+        }
+    } else {
+        if (!std::regex_match(importName.c_str(), RE_IMPORT_SM)) {
+            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
+            return false;
+        }
     }
-
     std::string idlFilePath = Options::GetInstance().GetImportFilePath(importName);
     if (!File::CheckValid(idlFilePath)) {
         LogError(__func__, __LINE__, StringHelper::Format("can not import '%s'", idlFilePath.c_str()));

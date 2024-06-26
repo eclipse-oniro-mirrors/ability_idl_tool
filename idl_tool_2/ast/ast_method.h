@@ -143,7 +143,7 @@ public:
 
     inline std::string GetFreezeControlReason()
     {
-        return freezeControlReason == "null"? "" : freezeControlReason;
+        return freezeControlReason;
     }
 
     inline bool isFreezeControl() const
