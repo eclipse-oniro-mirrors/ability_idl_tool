@@ -25,7 +25,6 @@ bool IntfTypeChecker::CheckIntegrity()
     if (ast_ == nullptr) {
         Logger::E(TAG, StringHelper::Format("[%s:%d] error:ast is nullptr.", __func__, __LINE__).c_str());
         return false;
-        return false;
     }
 
     if (ast_->GetName().empty()) {

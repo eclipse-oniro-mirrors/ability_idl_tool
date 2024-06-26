@@ -44,10 +44,9 @@ static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
 
 static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
-static const std::regex RE_PACKAGE_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")");
+static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
 static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
-static const std::regex RE_IMPORT_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*." + std::string(RE_IDENTIFIER));
 static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
     std::regex_constants::icase);
 static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
@@ -107,7 +106,7 @@ bool Parser::ParseFile()
 
     TokenType tokenKind;
     bool ret = true;
-    while ((tokenKind = lexer_.PeekToken().kind) != TokenType::END_OF_FILE) {
+    while (ret && ((tokenKind = lexer_.PeekToken().kind) != TokenType::END_OF_FILE)) {
         switch (tokenKind) {
             case TokenType::PACKAGE:
                 ret = ParsePackage() && ret;
@@ -202,7 +201,7 @@ bool Parser::ParserPackageInfo(const std::string &packageName)
         size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
         ast_->SetVersion(majorVersion, minorVersion);
     } else {
-        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_SM)) {
+        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SM)) {
             return false;
         }
         ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
@@ -1884,7 +1883,7 @@ bool Parser::CheckImport(const std::string &importName)
             return false;
         }
     } else {
-        if (!std::regex_match(importName.c_str(), RE_IMPORT_SM)) {
+        if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SM)) {
             LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
             return false;
         }

@@ -146,7 +146,7 @@ public:
         return freezeControlReason;
     }
 
-    inline bool isFreezeControl() const
+    inline bool IsFreezeControl() const
     {
         return attr_->HasValue(ASTAttr::FREEZECONTROL);
     }

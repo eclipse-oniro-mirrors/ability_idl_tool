@@ -504,12 +504,8 @@ bool Options::DoSupportSmType()
 
 void Options::SetSmDefaultOption()
 {
-    if (systemLevel != SystemLevel::INIT) {
-        systemLevel = SystemLevel::INIT;
-    }
-    if (genMode != GenMode::INIT) {
-        genMode = GenMode::INIT;
-    }
+    systemLevel = SystemLevel::INIT;
+    genMode = GenMode::INIT;
     return;
 }
 
