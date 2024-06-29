@@ -93,7 +93,7 @@ static int DoCompile(Options& options, std::shared_ptr<MetaComponent>& metadata)
     return 0;
 }
 
-static int DoGenerage(Options& options, std::shared_ptr<MetaComponent>& metadata)
+static int DoGenerage(const Options& options, std::shared_ptr<MetaComponent>& metadata)
 {
     if (options.DoGenerateCode()) {
         if (metadata == nullptr) {

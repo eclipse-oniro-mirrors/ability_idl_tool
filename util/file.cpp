@@ -41,11 +41,15 @@ File::File(const String& path, int mode)
         if (absolutePath != nullptr) {
             pathTmp = absolutePath;
             free(absolutePath);
+        } else {
+            pathTmp = path;
         }
 #else
         char absolutePath[_MAX_PATH];
         if (_fullpath(absolutePath, path.string(), _MAX_PATH) == nullptr) {
             pathTmp = absolutePath;
+        } else {
+            pathTmp = path;
         }
 #endif
 
