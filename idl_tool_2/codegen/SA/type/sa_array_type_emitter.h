@@ -46,9 +46,11 @@ public:
 
     void EmitTsReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix, TypeMode mode = TypeMode::NO_MODE) const override;
-protected:
 
+protected:
     AutoPtr<SaTypeEmitter> elementEmitter_;
+    static int circleCount_;
+
 };
 
 class SaListTypeEmitter : public SaArrayTypeEmitter {
