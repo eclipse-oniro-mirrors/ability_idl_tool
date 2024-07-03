@@ -96,6 +96,8 @@ private:
 
     bool ParseAttrUnit(AttrSet &attrs);
 
+    void ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token);
+
     // parse interface type
     void ParseInterface(const AttrSet &attrs = {});
 

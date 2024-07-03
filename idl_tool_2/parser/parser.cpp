@@ -44,7 +44,8 @@ static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
 
 static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
-static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
+static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) +
+    "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
 static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
     std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
 static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
@@ -496,19 +497,7 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             return true;
         }
         case TokenType::FREEZECONTROL: {
-            if (attrs.find(token) != attrs.end()) {
-                LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr freezecontrol"));
-            } else {
-                attrs.insert(token);
-                lexer_.GetToken();
-                token = lexer_.PeekToken();
-                if (token.value == "]") {
-                    LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
-                } else if (token.kind == TokenType::ID) {
-                    freezecontrolAttr_ = token.value;
-                }
-            }
-            lexer_.GetToken();
+            ParseAttrUnitFreezecontrol(attrs, token);
             return true;
         }
         default:
@@ -517,6 +506,24 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             lexer_.SkipToken(TokenType::BRACKETS_RIGHT);
             return false;
     }
+}
+
+void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
+{
+
+    if (attrs.find(token) != attrs.end()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr freezecontrol"));
+    } else {
+        attrs.insert(token);
+        lexer_.GetToken();
+        token = lexer_.PeekToken();
+        if (token.value == "]") {
+            LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
+        } else if (token.kind == TokenType::ID) {
+            freezecontrolAttr_ = token.value;
+        }
+    }
+    lexer_.GetToken();
 }
 
 void Parser::ParseInterface(const AttrSet &attrs)

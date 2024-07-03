@@ -50,7 +50,6 @@ public:
 protected:
     AutoPtr<SaTypeEmitter> elementEmitter_;
     static int circleCount_;
-
 };
 
 class SaListTypeEmitter : public SaArrayTypeEmitter {
