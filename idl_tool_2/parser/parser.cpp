@@ -510,7 +510,6 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
 
 void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
 {
-
     if (attrs.find(token) != attrs.end()) {
         LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr freezecontrol"));
     } else {
