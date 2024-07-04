@@ -44,6 +44,7 @@ enum class TypeKind {
     TYPE_UINT,
     TYPE_ULONG,
     TYPE_STRING,
+    TYPE_STRING16,
     TYPE_FILEDESCRIPTOR,
     TYPE_SEQUENCEABLE,
     TYPE_INTERFACE,
@@ -75,8 +76,8 @@ enum class SerMode {
 
 class ASTType : public ASTNode {
 public:
-    explicit ASTType(bool isPod = true)
-        :isPod_(isPod), name_(), namespace_()
+    explicit ASTType(bool isPod = true, TypeKind typekind = TypeKind::TYPE_UNKNOWN)
+        :isPod_(isPod), typeKind_(typekind), name_(), namespace_()
     {
     }
 
@@ -146,6 +147,8 @@ public:
 
     bool IsPod() const;
 
+    bool IsTypeKind(TypeKind typekind) const;
+
     virtual bool HasInnerType(TypeKind innerType) const;
 
     virtual std::string ToShortString();
@@ -155,6 +158,7 @@ public:
     virtual TypeKind GetTypeKind();
 protected:
     bool isPod_;
+    TypeKind typeKind_;
     std::string name_;
     AutoPtr<ASTNamespace> namespace_;
 };

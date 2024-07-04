@@ -26,7 +26,7 @@ class hash_bad_04(Test):
             os.makedirs(self.target_dir)
         content = f"[IDL-GEN]: IFoo.idl:16:9:package name 'ohos.hdi.foo.v1_0' does not match file path '{file_path}'"
         fail_output = os.path.join(self.target_dir, "fail_output.txt")
-        with os.fdopen(os.open(fail_output, os.O_CREAT | os.O_WRONLY, 0o644), mode='w', encoding='utf-8') as fd:
+        with os.fdopen(os.open(fail_output, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644), mode='w', encoding='utf-8') as fd:
             fd.write(content)
 
     def set_idl_attr(self):

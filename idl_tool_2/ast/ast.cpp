@@ -31,6 +31,7 @@ AST::TypeStringMap AST::basicTypes_ = {
     {"float",          new ASTFloatType()       },
     {"double",         new ASTDoubleType()      },
     {"String",         new ASTStringType()      },
+    {"String16",       new ASTString16Type()    },
     {"char",           new ASTCharType()        },
     {"unsigned char",  new ASTUcharType()       },
     {"unsigned short", new ASTUshortType()      },

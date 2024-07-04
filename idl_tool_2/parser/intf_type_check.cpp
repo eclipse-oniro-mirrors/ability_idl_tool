@@ -25,7 +25,6 @@ bool IntfTypeChecker::CheckIntegrity()
     if (ast_ == nullptr) {
         Logger::E(TAG, StringHelper::Format("[%s:%d] error:ast is nullptr.", __func__, __LINE__).c_str());
         return false;
-        return false;
     }
 
     if (ast_->GetName().empty()) {
@@ -38,7 +37,11 @@ bool IntfTypeChecker::CheckIntegrity()
         return CheckIntfSaAst();
     } else if (interfaceType == InterfaceType::HDI) {
         return CheckIntfHdiAst();
-    } else if (interfaceType == InterfaceType::SM) {
+    } else if (interfaceType == InterfaceType::SM ||
+        interfaceType == InterfaceType::SAM ||
+        interfaceType == InterfaceType::SAM_SM ||
+        interfaceType == InterfaceType::SAM_UDS ||
+        interfaceType == InterfaceType::SM_UDS) {
         return CheckIntfSmAst();
     }
 

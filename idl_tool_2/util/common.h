@@ -61,6 +61,10 @@ namespace Idl {
         HDI,
         SA,
         SM,
+        SM_UDS,
+        SAM,
+        SAM_SM,
+        SAM_UDS,
     };
 
 } // namespace Idl
