@@ -56,7 +56,7 @@ public:
     static int GetHashCode(const std::string &key);
 
     static constexpr size_t lineMaxSize = 2048;  // 2KB
-    static constexpr size_t maxSize = 262144;    // 256KB
+    static constexpr size_t maxSize = 524288;    // 512KB
 };
 
 struct StringHashFunc {

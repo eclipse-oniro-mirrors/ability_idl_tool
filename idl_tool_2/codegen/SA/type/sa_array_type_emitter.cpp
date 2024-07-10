@@ -15,8 +15,12 @@
 
 #include "sa_array_type_emitter.h"
 
+#include <sstream>
+
 namespace OHOS {
 namespace Idl {
+int SaArrayTypeEmitter::circleCount_ = 0;
+
 TypeKind SaArrayTypeEmitter::GetTypeKind()
 {
     return TypeKind::TYPE_ARRAY;
@@ -82,12 +86,19 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append(prefix).AppendFormat("for (int32_t i = 0; i < %sSize; ++i) {\n", name.c_str());
-    elementEmitter_->EmitCppReadVar(parcelName, "value", sb, prefix + TAB);
+    
+    circleCount_++;
+    std::stringstream circleCountStr;
+    circleCountStr << circleCount_;
+    std::string iStr = "i" + circleCountStr.str();
+    std::string valueStr = "value" + circleCountStr.str();
+    sb.Append(prefix).AppendFormat("for (int32_t %s = 0; %s < %sSize; ++%s) {\n",
+        iStr.c_str(), iStr.c_str(), name.c_str(), iStr.c_str());
+    elementEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
     if (elementEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
-        sb.Append(prefix + TAB).AppendFormat("%s.push_back(*value);\n", name.c_str());
+        sb.Append(prefix + TAB).AppendFormat("%s.push_back(*%s);\n", name.c_str(), valueStr.c_str());
     } else {
-        sb.Append(prefix + TAB).AppendFormat("%s.push_back(value);\n", name.c_str());
+        sb.Append(prefix + TAB).AppendFormat("%s.push_back(%s);\n", name.c_str(), valueStr.c_str());
     }
     sb.Append(prefix).Append("}\n");
 }

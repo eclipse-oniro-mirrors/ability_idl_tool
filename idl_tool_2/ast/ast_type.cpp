@@ -177,6 +177,11 @@ bool ASTType::IsPod() const
     return isPod_;
 }
 
+bool ASTType::IsTypeKind(TypeKind typekind) const
+{
+    return typekind == typeKind_;
+}
+
 bool ASTType::HasInnerType(TypeKind innerType) const
 {
     return false;

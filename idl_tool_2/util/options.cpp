@@ -313,7 +313,11 @@ bool Options::CheckOptions()
         return CheckSaOptions();
     } else if (interfaceType == InterfaceType::HDI) {
         return CheckHdiOptions();
-    } else if (interfaceType == InterfaceType::SM) {
+    } else if (interfaceType == InterfaceType::SM ||
+                interfaceType == InterfaceType::SAM ||
+                interfaceType == InterfaceType::SAM_SM ||
+                interfaceType == InterfaceType::SAM_UDS ||
+                interfaceType == InterfaceType::SM_UDS) {
         return CheckSmOptions();
     } else {
         Logger::E(TAG, "Interface type 'intf-type' value '%d' invalid, please input 'hdi' or 'sa'.", interfaceType);
@@ -500,12 +504,8 @@ bool Options::DoSupportSmType()
 
 void Options::SetSmDefaultOption()
 {
-    if (systemLevel != SystemLevel::INIT) {
-        systemLevel = SystemLevel::INIT;
-    }
-    if (genMode != GenMode::INIT) {
-        genMode = GenMode::INIT;
-    }
+    systemLevel = SystemLevel::INIT;
+    genMode = GenMode::INIT;
     return;
 }
 
@@ -569,6 +569,10 @@ bool Options::SetInterfaceType(const std::string &type)
         {"hdi", InterfaceType::HDI},
         {"sa", InterfaceType::SA},
         {"sm", InterfaceType::SM},
+        {"sam", InterfaceType::SAM},
+        {"sam_sm", InterfaceType::SAM_SM},
+        {"sam_uds", InterfaceType::SAM_UDS},
+        {"sm_uds", InterfaceType::SM_UDS},
     };
 
     auto codeGenIter = Type.find(type);

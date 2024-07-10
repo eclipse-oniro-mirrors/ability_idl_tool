@@ -39,6 +39,7 @@
 #include "ast/base/ast_short_type.h"
 #include "ast/ast_smq_type.h"
 #include "ast/base/ast_string_type.h"
+#include "ast/base/ast_string16_type.h"
 #include "ast/ast_struct_type.h"
 #include "ast/base/ast_char_type.h"
 #include "ast/base/ast_uchar_type.h"
@@ -223,6 +224,30 @@ public:
         hasCacheableProxyMethods_ = cacheable;
     }
 
+    inline void SetInterfaceToken(std::string &interfaceToken)
+    {
+        interfaceToken_ = interfaceToken;
+    }
+
+    inline std::string GetInterfaceToken() const
+    {
+        return interfaceToken_;
+    }
+
+    inline void SetSupportDelegator(std::string &supportDelegator)
+    {
+        if (supportDelegator == "on") {
+            supportDelegatorOn_ = true;
+        } else {
+            supportDelegatorOn_ = false;
+        }
+    }
+
+    inline bool GetSupportDelegatorOn() const
+    {
+        return supportDelegatorOn_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -244,6 +269,8 @@ private:
 
     std::string idlFilePath_;
     bool hasCacheableProxyMethods_ = false;
+    std::string interfaceToken_;
+    bool supportDelegatorOn_ = false;
 };
 } // namespace Idl
 } // namespace OHOS
