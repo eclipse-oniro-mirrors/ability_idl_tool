@@ -53,9 +53,15 @@ public:
 
     explicit HidDdkProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Input::Ddk::V1_0::IHidDdk>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~HidDdkProxy() = default;
+    virtual ~HidDdkProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -90,6 +96,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Input::Ddk::V1_0::HidDdkProxy> delegator_;

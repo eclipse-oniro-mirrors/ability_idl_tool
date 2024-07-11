@@ -28,13 +28,6 @@ int32_t FooStub::OnRemoteRequest(
         return ERR_TRANSACTION_FAILED;
     }
     switch (code) {
-        case COMMAND_VOID_TEST_FUNC: {
-            ErrCode errCode = void_test_func();
-            if (!reply.WriteInt32(errCode)) {
-                return ERR_INVALID_VALUE;
-            }
-            return ERR_NONE;
-        }
         case COMMAND_BOOL_TEST_FUNC: {
             std::vector<bool> inParam;
             int32_t inParamSize = data.ReadInt32();
@@ -92,26 +85,26 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case COMMAND_BYTE_TEST_FUNC: {
-            std::vector<int8_t> inParam;
+            std::vector<bool> inParam;
             int32_t inParamSize = data.ReadInt32();
             if (inParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
             for (int32_t i36 = 0; i36 < inParamSize; ++i36) {
-                int8_t value36 = (int8_t)data.ReadInt32();
+                bool value36 = data.ReadInt32() == 1 ? true : false;
                 inParam.push_back(value36);
             }
-            std::vector<int8_t> outParam;
-            std::vector<int8_t> inoutParam;
+            std::vector<bool> outParam;
+            std::vector<bool> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
             for (int32_t i37 = 0; i37 < inoutParamSize; ++i37) {
-                int8_t value37 = (int8_t)data.ReadInt32();
+                bool value37 = data.ReadInt32() == 1 ? true : false;
                 inoutParam.push_back(value37);
             }
-            std::vector<int8_t> result;
+            std::vector<bool> result;
             ErrCode errCode = byte_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
@@ -122,7 +115,7 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 reply.WriteInt32(outParam.size());
                 for (auto it = outParam.begin(); it != outParam.end(); ++it) {
-                    if (!reply.WriteInt32((*it))) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -131,7 +124,7 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 reply.WriteInt32(inoutParam.size());
                 for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
-                    if (!reply.WriteInt32((*it))) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -140,7 +133,7 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 reply.WriteInt32(result.size());
                 for (auto it = result.begin(); it != result.end(); ++it) {
-                    if (!reply.WriteInt32((*it))) {
+                    if (!reply.WriteInt32((*it) ? 1 : 0)) {
                         return ERR_INVALID_DATA;
                     }
                 }

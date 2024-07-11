@@ -53,9 +53,15 @@ public:
 
     explicit UsbDdkProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Usb::Ddk::V1_0::IUsbDdk>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~UsbDdkProxy() = default;
+    virtual ~UsbDdkProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -134,6 +140,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Usb::Ddk::V1_0::UsbDdkProxy> delegator_;

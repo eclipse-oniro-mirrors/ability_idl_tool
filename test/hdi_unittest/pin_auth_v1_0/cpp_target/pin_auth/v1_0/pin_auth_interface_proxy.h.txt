@@ -52,9 +52,15 @@ public:
 
     explicit PinAuthInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::PinAuth::V1_0::IPinAuthInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~PinAuthInterfaceProxy() = default;
+    virtual ~PinAuthInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -79,6 +85,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::PinAuth::V1_0::PinAuthInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::PinAuth::V1_0::PinAuthInterfaceProxy> delegator_;

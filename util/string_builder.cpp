@@ -70,7 +70,7 @@ StringBuilder& StringBuilder::Append(const String& string)
         return *this;
     }
 
-    size_t len = string.GetLength();
+    size_t len = static_cast<size_t>(string.GetLength());
     if (position_ + len >= capacity_) {
         if (!Grow(len)) {
             return *this;

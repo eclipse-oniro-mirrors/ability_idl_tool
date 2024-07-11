@@ -53,9 +53,15 @@ public:
 
     explicit CodecImageProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Codec::Image::V1_0::ICodecImage>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~CodecImageProxy() = default;
+    virtual ~CodecImageProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -105,6 +111,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Codec::Image::V1_0::CodecImageProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Codec::Image::V1_0::CodecImageProxy> delegator_;
