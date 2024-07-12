@@ -53,9 +53,15 @@ public:
 
     explicit UserAuthInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::UserAuth::V1_1::IUserAuthInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~UserAuthInterfaceProxy() = default;
+    virtual ~UserAuthInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -152,6 +158,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::UserAuth::V1_1::UserAuthInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::UserAuth::V1_1::UserAuthInterfaceProxy> delegator_;

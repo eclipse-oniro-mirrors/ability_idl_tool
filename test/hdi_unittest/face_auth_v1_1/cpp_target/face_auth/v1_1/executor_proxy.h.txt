@@ -53,9 +53,15 @@ public:
 
     explicit ExecutorProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::FaceAuth::V1_1::IExecutor>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~ExecutorProxy() = default;
+    virtual ~ExecutorProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -113,6 +119,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::FaceAuth::V1_1::ExecutorProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::FaceAuth::V1_1::ExecutorProxy> delegator_;

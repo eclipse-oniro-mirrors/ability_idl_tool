@@ -52,9 +52,15 @@ public:
 
     explicit SecureElementInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~SecureElementInterfaceProxy() = default;
+    virtual ~SecureElementInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -116,6 +122,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::SecureElement::V1_0::SecureElementInterfaceProxy> delegator_;
