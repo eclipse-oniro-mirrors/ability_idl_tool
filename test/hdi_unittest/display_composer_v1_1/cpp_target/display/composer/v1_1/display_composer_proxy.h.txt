@@ -54,9 +54,15 @@ public:
 
     explicit DisplayComposerProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Display::Composer::V1_1::IDisplayComposer>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~DisplayComposerProxy() = default;
+    virtual ~DisplayComposerProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -180,6 +186,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Display::Composer::V1_1::DisplayComposerProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Display::Composer::V1_1::DisplayComposerProxy> delegator_;

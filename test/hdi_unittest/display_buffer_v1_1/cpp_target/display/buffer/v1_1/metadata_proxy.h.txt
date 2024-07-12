@@ -53,9 +53,15 @@ public:
 
     explicit MetadataProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Display::Buffer::V1_1::IMetadata>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~MetadataProxy() = default;
+    virtual ~MetadataProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -98,6 +104,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Display::Buffer::V1_1::MetadataProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Display::Buffer::V1_1::MetadataProxy> delegator_;

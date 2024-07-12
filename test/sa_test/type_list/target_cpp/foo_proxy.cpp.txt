@@ -16,34 +16,6 @@
 #include "foo_proxy.h"
 
 namespace test {
-ErrCode FooProxy::void_test_func()
-{
-    MessageParcel data;
-    MessageParcel reply;
-    MessageOption option(MessageOption::TF_SYNC);
-
-    if (!data.WriteInterfaceToken(GetDescriptor())) {
-        return ERR_INVALID_VALUE;
-    }
-
-
-    sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
-        return ERR_INVALID_DATA;
-    }
-    int32_t result = remote->SendRequest(COMMAND_VOID_TEST_FUNC, data, reply, option);
-    if (FAILED(result)) {
-        return result;
-    }
-
-    ErrCode errCode = reply.ReadInt32();
-    if (FAILED(errCode)) {
-        return errCode;
-    }
-
-    return ERR_OK;
-}
-
 ErrCode FooProxy::bool_test_func(
     const std::vector<bool>& inParam,
     std::vector<bool>& outParam,
@@ -119,10 +91,10 @@ ErrCode FooProxy::bool_test_func(
 }
 
 ErrCode FooProxy::byte_test_func(
-    const std::vector<int8_t>& inParam,
-    std::vector<int8_t>& outParam,
-    std::vector<int8_t>& inoutParam,
-    std::vector<int8_t>& result)
+    const std::vector<bool>& inParam,
+    std::vector<bool>& outParam,
+    std::vector<bool>& inoutParam,
+    std::vector<bool>& result)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -137,7 +109,7 @@ ErrCode FooProxy::byte_test_func(
     }
     data.WriteInt32(inParam.size());
     for (auto it = inParam.begin(); it != inParam.end(); ++it) {
-        if (!data.WriteInt32((*it))) {
+        if (!data.WriteInt32((*it) ? 1 : 0)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -146,7 +118,7 @@ ErrCode FooProxy::byte_test_func(
     }
     data.WriteInt32(inoutParam.size());
     for (auto it = inoutParam.begin(); it != inoutParam.end(); ++it) {
-        if (!data.WriteInt32((*it))) {
+        if (!data.WriteInt32((*it) ? 1 : 0)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -170,7 +142,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i4 = 0; i4 < outParamSize; ++i4) {
-        int8_t value4 = (int8_t)reply.ReadInt32();
+        bool value4 = reply.ReadInt32() == 1 ? true : false;
         outParam.push_back(value4);
     }
     int32_t inoutParamSize = reply.ReadInt32();
@@ -178,7 +150,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i5 = 0; i5 < inoutParamSize; ++i5) {
-        int8_t value5 = (int8_t)reply.ReadInt32();
+        bool value5 = reply.ReadInt32() == 1 ? true : false;
         inoutParam.push_back(value5);
     }
     int32_t resultSize = reply.ReadInt32();
@@ -186,7 +158,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i6 = 0; i6 < resultSize; ++i6) {
-        int8_t value6 = (int8_t)reply.ReadInt32();
+        bool value6 = reply.ReadInt32() == 1 ? true : false;
         result.push_back(value6);
     }
     return ERR_OK;

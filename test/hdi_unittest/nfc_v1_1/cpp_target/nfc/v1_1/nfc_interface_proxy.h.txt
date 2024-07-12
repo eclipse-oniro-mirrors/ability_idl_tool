@@ -53,9 +53,15 @@ public:
 
     explicit NfcInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Nfc::V1_1::INfcInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~NfcInterfaceProxy() = default;
+    virtual ~NfcInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -111,6 +117,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Nfc::V1_1::NfcInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Nfc::V1_1::NfcInterfaceProxy> delegator_;

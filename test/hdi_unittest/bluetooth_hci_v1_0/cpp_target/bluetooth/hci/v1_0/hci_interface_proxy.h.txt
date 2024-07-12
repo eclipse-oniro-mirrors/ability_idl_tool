@@ -53,9 +53,15 @@ public:
 
     explicit HciInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Bluetooth::Hci::V1_0::IHciInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~HciInterfaceProxy() = default;
+    virtual ~HciInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -89,6 +95,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Bluetooth::Hci::V1_0::HciInterfaceProxy> delegator_;

@@ -53,9 +53,15 @@ public:
 
     explicit IntellVoiceTriggerManagerProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IIntellVoiceTriggerManager>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~IntellVoiceTriggerManagerProxy() = default;
+    virtual ~IntellVoiceTriggerManagerProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -83,6 +89,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerManagerProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::IntelligentVoice::Trigger::V1_0::IntellVoiceTriggerManagerProxy> delegator_;

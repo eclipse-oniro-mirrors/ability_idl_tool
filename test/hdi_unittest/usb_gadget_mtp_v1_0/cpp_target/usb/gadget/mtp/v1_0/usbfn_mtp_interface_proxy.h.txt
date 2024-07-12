@@ -54,9 +54,15 @@ public:
 
     explicit UsbfnMtpInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Usb::Gadget::Mtp::V1_0::IUsbfnMtpInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~UsbfnMtpInterfaceProxy() = default;
+    virtual ~UsbfnMtpInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -114,6 +120,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Usb::Gadget::Mtp::V1_0::UsbfnMtpInterfaceProxy> delegator_;

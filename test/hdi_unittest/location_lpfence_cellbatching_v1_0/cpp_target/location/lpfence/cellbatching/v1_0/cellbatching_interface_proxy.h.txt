@@ -54,9 +54,15 @@ public:
 
     explicit CellbatchingInterfaceProxy(const sptr<IRemoteObject>& remote) : IProxyBroker<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::ICellbatchingInterface>(remote) {
         reconnectRemote_ = nullptr;
+        servMgr_ = nullptr;
+        deathRecipient_ = nullptr;
         isReconnected_ = false;
     }
-    virtual ~CellbatchingInterfaceProxy() = default;
+    virtual ~CellbatchingInterfaceProxy() {
+        if (servMgr_ != nullptr && deathRecipient_ != nullptr) {
+            servMgr_->RemoveDeathRecipient(deathRecipient_);
+        }
+    }
 
     inline bool IsProxy() override
     {
@@ -93,6 +99,7 @@ public:
     bool isReconnected_;
     std::string serviceName_;
     sptr<IRemoteObject> servMgr_;
+    sptr<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceProxy::IServiceManagerDeathRecipient> deathRecipient_;
     sptr<IRemoteObject> reconnectRemote_;
 private:
     static inline BrokerDelegator<OHOS::HDI::Location::Lpfence::Cellbatching::V1_0::CellbatchingInterfaceProxy> delegator_;
