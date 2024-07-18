@@ -32,6 +32,12 @@ export default class FooStub extends rpc.RemoteObject implements IFoo {
     }
     
     async onRemoteMessageRequest(code: number, data:rpc.MessageSequence, reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {
+        let localDescriptor = this.getDescriptor();
+        let remoteDescriptor = data.readInterfaceToken();
+        if (localDescriptor != remoteDescriptor) {
+            console.log("invalid interfaceToken");
+            return false;
+        }
         console.log("onRemoteMessageRequest called, code = " + code);
         switch(code) {
             case FooStub.COMMAND_SEQ_TEST_FUNC: {

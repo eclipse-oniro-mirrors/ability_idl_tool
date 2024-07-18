@@ -320,6 +320,7 @@ void TsCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* metaMethod, int met
     }
     stringBuilder.Append(prefix).Append(TAB).Append("let dataSequence = rpc.MessageSequence.create();\n");
     stringBuilder.Append(prefix).Append(TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("dataSequence.writeInterfaceToken(this.proxy.getDescriptor());\n");
 
     for (int index = 0; index < metaMethod->parameterNumber_; index++) {
         MetaParameter* mp = metaMethod->parameters_[index];
@@ -505,6 +506,16 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& stringBuilder, c
     stringBuilder.Append(prefix).Append(NEWLINE);
     stringBuilder.Append(prefix).Append("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,");
     stringBuilder.Append(" reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(
+        "let localDescriptor = this.getDescriptor();\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(
+        "let remoteDescriptor = data.readInterfaceToken();\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(
+        "if (localDescriptor != remoteDescriptor) {\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append(
+        "console.log(\"invalid interfaceToken\");\n");
+    stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("return false;\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("}\n");
     stringBuilder.Append(prefix).Append(TAB).Append(
         "console.log(\"onRemoteMessageRequest called, code = \" + code);\n");
     stringBuilder.Append(prefix).Append(TAB).Append("switch(code) {\n");

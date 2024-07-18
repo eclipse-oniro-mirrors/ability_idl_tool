@@ -102,6 +102,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod>
     }
     sb.Append(prefix).Append(TAB).Append("let dataSequence = rpc.MessageSequence.create();\n");
     sb.Append(prefix).Append(TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
+    sb.Append(prefix).Append(TAB).Append("dataSequence.writeInterfaceToken(this.proxy.getDescriptor());\n");
 
     int paramNumber = method->GetParameterNumber();
     for (int i = 0; i < paramNumber; i++) {
