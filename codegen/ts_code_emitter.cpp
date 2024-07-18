@@ -526,8 +526,7 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& stringBuilder, c
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("}\n");
     stringBuilder.Append(prefix).Append(TAB).Append("}\n");
     stringBuilder.Append(prefix).Append(TAB).Append("return false;\n");
-    stringBuilder.Append(prefix).Append("}\n");
-    stringBuilder.Append(prefix).Append(NEWLINE);
+    stringBuilder.Append(prefix).Append("}\n\n");
     for (int index = 0; index < metaInterface_->methodNumber_; index++) {
         bool isLastParaTypeIn = false;
         MetaMethod* metaMethod = metaInterface_->methods_[index];
