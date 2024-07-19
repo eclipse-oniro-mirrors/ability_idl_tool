@@ -74,6 +74,16 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb,
     sb.Append(prefix).Append("async onRemoteMessageRequest(code: number, data:rpc.MessageSequence,");
     sb.Append(" reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {\n");
     sb.Append(prefix).Append(TAB).Append(
+        "let localDescriptor = this.getDescriptor();\n");
+    sb.Append(prefix).Append(TAB).Append(
+        "let remoteDescriptor = data.readInterfaceToken();\n");
+    sb.Append(prefix).Append(TAB).Append(
+        "if (localDescriptor != remoteDescriptor) {\n");
+    sb.Append(prefix).Append(TAB).Append(TAB).Append(
+        "console.log(\"invalid interfaceToken\");\n");
+    sb.Append(prefix).Append(TAB).Append(TAB).Append("return false;\n");
+    sb.Append(prefix).Append(TAB).Append("}\n");
+    sb.Append(prefix).Append(TAB).Append(
         "console.log(\"onRemoteMessageRequest called, code = \" + code);\n");
     sb.Append(prefix).Append(TAB).Append("switch(code) {\n");
     int methodNumber = interface_->GetMethodNumber();
