@@ -105,7 +105,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFil
 {
     std::string filePath;
     std::string fileName;
-    int sequenceableNumber = ast_->GetSequenceableDefNumber();
+    int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
         filePath = GetFilePathNoPoint(seqType->GetNamespace()->ToString());
@@ -130,7 +130,7 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
     std::string fullName;
     bool ret = false;
 
-    int sequenceableNumber = ast_->GetSequenceableDefNumber();
+    int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
         np = GetNamespace(seqType->GetNamespace()->ToString());
@@ -175,7 +175,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceBody(StringBuilder &sb, const std::
     sb.Append(prefix).AppendFormat("DECLARE_INTERFACE_DESCRIPTOR(u\"%s\");\n", nameWithoutPath.c_str());
     sb.Append("\n");
 
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethod(method, sb, prefix);

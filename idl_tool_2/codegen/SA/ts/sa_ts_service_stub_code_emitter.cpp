@@ -86,7 +86,7 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb,
     sb.Append(prefix).Append(TAB).Append(
         "console.log(\"onRemoteMessageRequest called, code = \" + code);\n");
     sb.Append(prefix).Append(TAB).Append("switch(code) {\n");
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceStubMethodImpl(method, sb, prefix + TAB + TAB);
@@ -121,7 +121,7 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> 
     bool haveOutPara = false;
     sb.Append(prefix).AppendFormat("case %s.COMMAND_%s: {\n", stubName_.c_str(),
         ConstantName(method->GetName()).c_str());
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -157,7 +157,7 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodPromiseImpl(AutoPtr<ASTM
         sb.AppendFormat(", %s", RETURN_VALUE);
     }
 
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
@@ -190,7 +190,7 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodPromiseImpl(AutoPtr<ASTM
 void SaTsServiceStubCodeEmitter::EmitMethodPromiseOutParamImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {

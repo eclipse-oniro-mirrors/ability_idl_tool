@@ -116,7 +116,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_TRANSACTION_FAILED;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).Append("switch (code) {\n");
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceStubMethodImpl(method, sb, prefix + TAB + TAB);
@@ -134,7 +134,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
 {
     bool hasOutParameter = false;
     sb.Append(prefix).AppendFormat("case COMMAND_%s: {\n", ConstantName(method->GetName()).c_str());
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -182,7 +182,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod>
             sb.Append(prefix + TAB).AppendFormat("%s result;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str());
         }
     }
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     sb.Append(prefix + TAB).AppendFormat("ErrCode errCode = %s(", method->GetName().c_str());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);

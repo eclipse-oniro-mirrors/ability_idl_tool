@@ -65,7 +65,7 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 void SaTsInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb) const
 {
     sb.AppendFormat("export default interface %s {\n", interface_->GetName().c_str());
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethod(method, sb, TAB);
@@ -82,7 +82,7 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceMethod(AutoPtr<ASTMethod> &method, S
     const std::string &prefix) const
 {
     sb.Append(prefix).AppendFormat("%s(", MethodName(method->GetName()).c_str());
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -95,7 +95,7 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceMethod(AutoPtr<ASTMethod> &method, S
 
 void SaTsInterfaceCodeEmitter::EmitInterfaceMethodCallback(AutoPtr<ASTMethod> &method, StringBuilder &sb) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     sb.AppendFormat("export type %sCallback = (%s", MethodName(method->GetName()).c_str(), ERR_CODE_TYPE.c_str());
     AutoPtr<ASTType> returnType = method->GetReturnType();
     if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
