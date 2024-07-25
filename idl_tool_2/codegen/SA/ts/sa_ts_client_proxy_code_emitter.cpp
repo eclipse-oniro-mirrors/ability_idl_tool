@@ -79,7 +79,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &sb
 
 void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethodHead(method, sb, prefix);
@@ -104,7 +104,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod>
     sb.Append(prefix).Append(TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
     sb.Append(prefix).Append(TAB).Append("dataSequence.writeInterfaceToken(this.proxy.getDescriptor());\n");
 
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -147,7 +147,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodErrorCallback(AutoPtr<ASTMet
     TypeKind retKind = method->GetReturnType()->GetTypeKind();
     if ((retKind != TypeKind::TYPE_VOID) || haveOutPara) {
         sb.Append(prefix).AppendFormat("if (%s != 0) {\n", SuffixAdded(ERR_CODE).c_str());
-        int paramNumber = method->GetParameterNumber();
+        int paramNumber = static_cast<int>(method->GetParameterNumber());
         for (int i = 0; i < paramNumber; i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
@@ -179,7 +179,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodCallbackInner(AutoPtr<ASTMet
     const std::string &prefix) const
 {
     // emit return
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {

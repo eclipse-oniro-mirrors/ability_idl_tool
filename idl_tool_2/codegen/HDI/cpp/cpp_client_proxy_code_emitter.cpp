@@ -48,6 +48,7 @@ void CppClientProxyCodeEmitter::EmitCode()
         case GenMode::IPC: {
             EmitProxyHeaderFile();
             EmitProxySourceFile();
+            break;
         }
         default:
             break;

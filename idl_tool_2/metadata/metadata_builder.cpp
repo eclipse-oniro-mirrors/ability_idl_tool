@@ -227,7 +227,7 @@ void MetadataBuilder::WriteMetaComponent(AST* module)
     mc->sequenceableNumber_ = static_cast<int>(sequenceableNumber);
     mc->interfaceNumber_ = static_cast<int>(interfaceNumber);
     mc->typeNumber_ = static_cast<int>(typeNumber);
-    mc->stringPoolSize_ = stringPool_.GetSize();
+    mc->stringPoolSize_ = static_cast<int>(stringPool_.GetSize());
     // namespaces_'s address
     baseAddr_ = ALIGN8(baseAddr_ + sizeof(MetaComponent));
     mc->namespaces_ = reinterpret_cast<MetaNamespace**>(baseAddr_);

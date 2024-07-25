@@ -64,7 +64,7 @@ ptrdiff_t StringPool::AddInternal(const std::string& string)
         Logger::E(TAG, "Error to copy str");
         return -1;
     }
-    dataOffset_ += string.length() + 1;
+    dataOffset_ += static_cast<ptrdiff_t>(string.length()) + 1;
     return addr - data_;
 }
 

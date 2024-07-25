@@ -94,7 +94,7 @@ void SaRustInterfaceCodeEmitter::EmitIPCHeaders(StringBuilder &sb) const
 bool SaRustInterfaceCodeEmitter::EmitCustomHeaders(StringBuilder &sb) const
 {
     uint32_t custom = false;
-    int sequenceableNumber = ast_->GetSequenceableDefNumber();
+    int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
         bool addPathMsRes = AppendRealPath(sb, seqType->GetFullName());
@@ -156,7 +156,7 @@ std::string SaRustInterfaceCodeEmitter::TrimDot(const std::string &fpnp) const
     }
 
     int left = 0;
-    int right = fpnp.length() - 1;
+    int right = static_cast<int>(fpnp.length()) - 1;
     while ((fpnp[left] == ' ') || (fpnp[left] == '.')) {
         left++;
     }
@@ -175,7 +175,7 @@ std::string SaRustInterfaceCodeEmitter::TrimDot(const std::string &fpnp) const
 void SaRustInterfaceCodeEmitter::EmitCommands(StringBuilder &sb) const
 {
     sb.AppendFormat("pub enum %sCode {\n", interfaceName_.c_str());
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         if (i == 0) {
@@ -226,7 +226,7 @@ void SaRustInterfaceCodeEmitter::EmitRemoteObject(StringBuilder &sb) const
 void SaRustInterfaceCodeEmitter::EmitBrokers(StringBuilder &sb) const
 {
     sb.AppendFormat("pub trait %s: IRemoteBroker {\n", interfaceName_.c_str());
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("    fn %s(&self", method->GetName().c_str());
@@ -239,7 +239,7 @@ void SaRustInterfaceCodeEmitter::EmitBrokers(StringBuilder &sb) const
 
 void SaRustInterfaceCodeEmitter::AppendBrokerParameters(StringBuilder &sb, AutoPtr<ASTMethod> &method) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         WrapLine(sb, i, "        ");
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -295,11 +295,11 @@ void SaRustInterfaceCodeEmitter::EmitRemoteRequest(StringBuilder &sb) const
 
 void SaRustInterfaceCodeEmitter::AddRemoteRequestMethods(StringBuilder &sb) const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("        %d => {\n", i + 1);
-        int paramNumber = method->GetParameterNumber();
+        int paramNumber = static_cast<int>(method->GetParameterNumber());
         for (int j = 0; j < paramNumber; j++) {
             AutoPtr<ASTParameter> param = method->GetParameter(j);
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
@@ -325,7 +325,7 @@ void SaRustInterfaceCodeEmitter::AddRemoteRequestMethods(StringBuilder &sb) cons
 
 void SaRustInterfaceCodeEmitter::AddRemoteRequestParameters(StringBuilder &sb, AutoPtr<ASTMethod> &method) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         sb.AppendFormat("&%s", GetNameFromParameter(param->GetName()).c_str());
@@ -338,7 +338,7 @@ void SaRustInterfaceCodeEmitter::AddRemoteRequestParameters(StringBuilder &sb, A
 void SaRustInterfaceCodeEmitter::EmitStub(StringBuilder &sb) const
 {
     sb.AppendFormat("impl %s for RemoteStub<%s> {\n", interfaceName_.c_str(), stubName_.c_str());
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("    fn %s(&self", method->GetName().c_str());
@@ -359,7 +359,7 @@ void SaRustInterfaceCodeEmitter::EmitStub(StringBuilder &sb) const
 
 void SaRustInterfaceCodeEmitter::AppendStubParameters(StringBuilder &sb, AutoPtr<ASTMethod> &method) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         sb.Append(GetNameFromParameter(param->GetName()));
@@ -372,7 +372,7 @@ void SaRustInterfaceCodeEmitter::AppendStubParameters(StringBuilder &sb, AutoPtr
 void SaRustInterfaceCodeEmitter::EmitProxy(StringBuilder &sb) const
 {
     sb.AppendFormat("impl %s for %s {\n", interfaceName_.c_str(), proxyName_.c_str());
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitProxyMethodImpl(method, sb);
@@ -392,7 +392,7 @@ void SaRustInterfaceCodeEmitter::EmitProxyMethodImpl(AutoPtr<ASTMethod> &method,
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
     sb.AppendFormat(") -> Result<%s> {\n", typeEmitter->EmitRustType().c_str());
     sb.Append("        let mut data = MsgParcel::new().expect(\"MsgParcel should success\");\n");
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int j = 0; j < paramNumber; j++) {
         AutoPtr<ASTParameter> param = method->GetParameter(j);
         typeEmitter = GetTypeEmitter(param->GetType());
