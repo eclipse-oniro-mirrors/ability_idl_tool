@@ -97,7 +97,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(Strin
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheAbleAPI(StringBuilder &sb, const std::string &prefix) const
 {
     sb.Append(prefix).Append("{\n");
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         if (!method->GetCacheable() || method->IsOneWay()) {
@@ -131,7 +131,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(Str
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).Append("remote_->RemoveDeathRecipient(deathRecipient_);\n");
     sb.Append(prefix + TAB).Append("remote_ = nullptr;\n");
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     if (methodNumber > 0) {
         sb.Append("\n");
         for (int i = 0; i < methodNumber; i++) {
@@ -167,7 +167,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &s
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder &sb, const std::string &prefix) const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceProxyMethodDecl(method, sb, prefix);
@@ -250,7 +250,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceProxyMethodImpl(method, sb, prefix);
@@ -315,7 +315,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append("\n");
 
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
@@ -356,7 +356,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(StringBuilder 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {

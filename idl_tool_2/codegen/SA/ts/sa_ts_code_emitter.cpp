@@ -19,7 +19,7 @@ namespace OHOS {
 namespace Idl {
 bool SATsCodeEmitter::CheckInterfaceType() const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         AutoPtr<ASTType> type = method->GetReturnType();
@@ -28,7 +28,7 @@ bool SATsCodeEmitter::CheckInterfaceType() const
             Logger::E("SATsCodeEmitter", "unsupported type in .idl file for method '%s'", method->GetName().c_str());
             return false;
         }
-        int paramNumber = method->GetParameterNumber();
+        int paramNumber = static_cast<int>(method->GetParameterNumber());
         for (int j = 0; j < paramNumber; j++) {
             AutoPtr<ASTParameter> param = method->GetParameter(j);
             type = param->GetType();
@@ -81,7 +81,7 @@ const std::string SATsCodeEmitter::SuffixAdded(const std::string &originName) co
 
 void SATsCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.Append(prefix).AppendFormat("static readonly COMMAND_%s = %d;\n",
@@ -91,7 +91,7 @@ void SATsCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::
 
 void SATsCodeEmitter::EmitInterfaceImports(StringBuilder &sb) const
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("import {%sCallback} from \"./%s\";\n", MethodName(method->GetName()).c_str(),
@@ -115,7 +115,7 @@ void SATsCodeEmitter::EmitInterfaceImports(StringBuilder &sb) const
 
 void SATsCodeEmitter::EmitInterfaceSelfDefinedTypeImports(StringBuilder &sb) const
 {
-    int sequenceableNumber = ast_->GetSequenceableDefNumber();
+    int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
         sb.AppendFormat("import %s from \"./%s\";\n", seqType->GetName().c_str(),
@@ -134,7 +134,7 @@ void SATsCodeEmitter::EmitInterfaceMethodHead(AutoPtr<ASTMethod> &method, String
     const std::string &prefix) const
 {
     sb.Append(prefix).AppendFormat("%s(", MethodName(method->GetName()).c_str());
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {

@@ -107,7 +107,7 @@ bool Parser::ParseFile()
 
     TokenType tokenKind;
     bool ret = true;
-    while (ret && ((tokenKind = lexer_.PeekToken().kind) != TokenType::END_OF_FILE)) {
+    while (((tokenKind = lexer_.PeekToken().kind) != TokenType::END_OF_FILE) && ret) {
         switch (tokenKind) {
             case TokenType::PACKAGE:
                 ret = ParsePackage() && ret;

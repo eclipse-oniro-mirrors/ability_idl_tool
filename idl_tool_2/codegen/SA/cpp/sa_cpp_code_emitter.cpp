@@ -89,7 +89,7 @@ void SACppCodeEmitter::EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, Str
 {
     AutoPtr<ASTType> returnType = method->GetReturnType();
     TypeKind retTypeKind = returnType->GetTypeKind();
-    int paramNumber = method->GetParameterNumber();
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
 
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -121,7 +121,7 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
 
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
-    int methodNumber = interface_->GetMethodNumber();
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.Append(prefix).AppendFormat("static constexpr int32_t COMMAND_%s = MIN_TRANSACTION_ID + %d;\n",

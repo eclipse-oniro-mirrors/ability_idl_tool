@@ -44,6 +44,7 @@ void CppCustomTypesCodeEmitter::EmitCode()
         case GenMode::IPC: {
             EmitCustomTypesHeaderFile();
             EmitCustomTypesSourceFile();
+            break;
         }
         default:
             break;

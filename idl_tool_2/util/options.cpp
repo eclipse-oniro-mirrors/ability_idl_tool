@@ -68,7 +68,9 @@ bool Options::Parse(int argc, char *argv[])
     int optIndex = 0;
 
     while ((op = getopt_long_only(argc, argv, optSupportArgs, g_longOpts, &optIndex)) != -1) {
-        ret = ParseSingle(op, std::string(argv[optind - 1]));
+        if (optind > 0 && optind <= argc) {
+            ret = ParseSingle(op, std::string(argv[optind - 1]));
+        }
     }
 
     if (doCompile) {
