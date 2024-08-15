@@ -592,7 +592,7 @@ class CodeGen(object):
         return base_name
 
     # translate idl file name to c/c++ file name
-    # for example, IFoo -> ifoo, foo_proxy, foo_stub, foo_service, foo_driver, foo
+    # for example, IFoo.idl -> ifoo, foo_proxy, foo_stub, foo_service, foo_driver
     @staticmethod
     def get_file_names(idl_detail):
         interface_name = ""
