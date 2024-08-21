@@ -102,7 +102,6 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0100, Function | MediumTest | Level1
  */
 HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1)
 {
-    GTEST_LOG_(INFO) << "AstInterfaceTypeUnitTest, DumpTest_0200, TestSize.Level1";
     AutoPtr<ASTInterfaceType> interfaceType = new ASTInterfaceType();
     String prefix = "prefix";
     String name = "name";
