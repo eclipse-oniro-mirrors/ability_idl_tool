@@ -418,7 +418,7 @@ bool String::EndsWith(const char* string) const
     }
 
     size_t count = strlen(string);
-    size_t len = GetLength();
+    size_t len = static_cast<size_t>(GetLength());
     if (count > len) {
         return false;
     }
@@ -620,7 +620,10 @@ String String::operator+=(const char* string) const
     int newSize = thisSize + strlen(string);
     String newString(newSize);
     if (newString.string_ != nullptr) {
-        (void)memcpy_s(newString.string_, newSize + 1, string_, thisSize);
+        errno_t retMem = memcpy_s(newString.string_, newSize + 1, string_, thisSize);
+        if (retMem != EOK) {
+            Logger::E(String::TAG, "The operator+= char* is error in memcpy_s.");
+        }
         errno_t ret = strcpy_s(newString.string_ + thisSize, newSize + 1 - thisSize,  string);
         if (ret != EOK) {
             Logger::E(String::TAG, "The operator+= char* is error in strcpy_s.");
