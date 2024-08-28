@@ -59,6 +59,9 @@ std::string ASTSequenceableType::Dump(const std::string &prefix)
 
 std::string ASTSequenceableType::GetFullName() const
 {
+    if (namespace_ == nullptr) {
+        return "";
+    }
     return namespace_->ToString() + name_;
 }
 } // namespace Idl

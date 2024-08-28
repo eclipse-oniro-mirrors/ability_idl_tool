@@ -40,7 +40,7 @@ std::string HdiSeqTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("sptr<%s>", typeName_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

@@ -31,7 +31,9 @@ void ASTMethod::BuildSignature()
 {
     StringBuilder sb;
 
-    sb.AppendFormat("(%s)", returnType_->GetSignature().string());
+    if (returnType_ != nullptr) {
+        sb.AppendFormat("(%s)", returnType_->GetSignature().string());
+    }
     for (size_t i = 0; i < parameters_.size(); i++) {
         sb.Append(parameters_[i]->GetType()->GetSignature());
     }
@@ -60,7 +62,9 @@ String ASTMethod::Dump(const String& prefix)
     StringBuilder sb;
 
     sb.Append(prefix);
-    sb.Append(returnType_->ToString()).Append(' ');
+    if (returnType_ != nullptr) {
+        sb.Append(returnType_->ToString()).Append(' ');
+    }
     sb.Append(name_).Append('(');
     if (parameters_.size() > 0) {
         sb.Append('\n');

@@ -388,6 +388,10 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
 
     token = lexer_.GetToken();
     AutoPtr<ASTMethod> method = new ASTMethod();
+    if (method == nullptr) {
+        LogError(token, String("method is nullptr."));
+        return false;
+    }
     SetMethodAttr(method, type, oneway, cacheable, cacheTime);
     if (!ParseMethodBrackets(token, method, ret)) {
         return false;
@@ -487,6 +491,9 @@ bool Parser::ParseParameter(ASTMethod* method)
     lexer_.GetToken();
 
     AutoPtr<ASTParameter> parameter = new ASTParameter();
+    if (parameter == nullptr) {
+        return false;
+    }
 
     if (!ParseParameterInOut(token, parameter)) {
         return false;
@@ -565,6 +572,10 @@ AutoPtr<ASTType> Parser::ParseType()
         lexer_.GetToken();
 
         AutoPtr<ASTArrayType> arrayType = new ASTArrayType();
+        if (arrayType == nullptr) {
+            LogError(token, String("arrayType is nullptr.");
+            return nullptr;
+        }
         arrayType->SetElementType(type);
 
         type = module_->FindType(arrayType->ToString());

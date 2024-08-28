@@ -19,6 +19,9 @@ namespace OHOS {
 namespace Idl {
 String ASTListType::GetSignature()
 {
+    if (elementType_ == nullptr) {
+        return String::Format("LList[];");
+    }
     return String::Format("LList[%s];", elementType_->GetSignature().string());
 }
 
@@ -29,6 +32,9 @@ bool ASTListType::IsListType()
 
 String ASTListType::ToString()
 {
+    if (elementType_ == nullptr) {
+        return String::Format("List<>");
+    }
     return String::Format("List<%s>", elementType_->ToString().string());
 }
 } // namespace Idl

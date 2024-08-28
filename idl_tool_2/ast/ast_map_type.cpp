@@ -19,6 +19,9 @@ namespace OHOS {
 namespace Idl {
 std::string ASTMapType::GetSignature()
 {
+    if (keyType_ == nullptr || valueType_ == nullptr) {
+        return StringHelper::Format("LMap[];");
+    }
     return StringHelper::Format("LMap[%s%s];", keyType_->GetSignature().c_str(), valueType_->GetSignature().c_str());
 }
 
