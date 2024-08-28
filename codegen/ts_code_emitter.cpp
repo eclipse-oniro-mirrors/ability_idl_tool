@@ -508,7 +508,7 @@ void TsCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder& stringBuilder, c
     stringBuilder.Append(" reply:rpc.MessageSequence, option:rpc.MessageOption): Promise<boolean> {\n");
     stringBuilder.Append(prefix).Append(TAB).Append("let localDescriptor = this.getDescriptor();\n");
     stringBuilder.Append(prefix).Append(TAB).Append("let remoteDescriptor = data.readInterfaceToken();\n");
-    stringBuilder.Append(prefix).Append(TAB).Append("if (localDescriptor != remoteDescriptor) {\n");
+    stringBuilder.Append(prefix).Append(TAB).Append("if (localDescriptor !== remoteDescriptor) {\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("console.log(\"invalid interfaceToken\");\n");
     stringBuilder.Append(prefix).Append(TAB).Append(TAB).Append("return false;\n");
     stringBuilder.Append(prefix).Append(TAB).Append("}\n");
