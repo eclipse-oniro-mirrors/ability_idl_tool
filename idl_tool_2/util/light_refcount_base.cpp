@@ -25,6 +25,10 @@ int LightRefCountBase::AddRef()
 
 int LightRefCountBase::Release()
 {
+    if (refCount_ == 0) {
+        delete this;
+        return 0;
+    }
     const int beforeCount = refCount_.fetch_sub(1, std::memory_order_release);
     if (beforeCount - 1 == 0) {
         delete this;

@@ -63,6 +63,9 @@ void CppCodeEmitter::EmitInterfaceStdlibInclusions(StringBuilder& sb)
     bool includeList = false;
     bool includeMap = false;
     bool includeNum = false;
+    if (metaComponent_ == nullptr) {
+        return;
+    }
     for (int i = 0; i < metaComponent_->typeNumber_; i++) {
         MetaType* mt = metaComponent_->types_[i];
         switch (mt->kind_) {

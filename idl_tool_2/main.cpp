@@ -55,7 +55,9 @@ static void DumpAst(const StrAstMap &allAst)
             (ast->GetASTFileType() != ASTFileType::AST_IFACE)) {
             continue;
         }
-        printf("%s\n", astPair.second->Dump("").c_str());
+        if (astPair.second != nullptr) {
+            printf("%s\n", astPair.second->Dump("").c_str());
+        }
     }
 }
 

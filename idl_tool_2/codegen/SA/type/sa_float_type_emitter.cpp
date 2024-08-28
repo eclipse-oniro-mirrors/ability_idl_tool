@@ -35,7 +35,7 @@ std::string SaFloatTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "float";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

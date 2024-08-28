@@ -35,7 +35,7 @@ std::string SaShortTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "short";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

@@ -388,6 +388,10 @@ bool Parser::ParseMethod(ASTInterfaceType* interface)
 
     token = lexer_.GetToken();
     AutoPtr<ASTMethod> method = new ASTMethod();
+    if (method == nullptr) {
+        LogError(token, String("method is nullptr."));
+        return false;
+    }
     SetMethodAttr(method, type, oneway, cacheable, cacheTime);
     if (!ParseMethodBrackets(token, method, ret)) {
         return false;

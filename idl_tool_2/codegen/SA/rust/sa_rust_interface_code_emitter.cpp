@@ -102,7 +102,7 @@ bool SaRustInterfaceCodeEmitter::EmitCustomHeaders(StringBuilder &sb) const
     }
 
     for (auto interface : ast_->GetInterfaceDefs()) {
-        if (interface->IsExternal() == true) {
+        if (interface->IsExternal()) {
             bool addPathMiRes = AppendRealPath(sb, interface->GetFullName());
             custom |= static_cast<uint32_t>(addPathMiRes);
         }

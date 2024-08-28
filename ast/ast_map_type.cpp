@@ -19,6 +19,9 @@ namespace OHOS {
 namespace Idl {
 String ASTMapType::GetSignature()
 {
+    if (keyType_ == nullptr || valueType_ == nullptr) {
+        return String::Format("LMap[];");
+    }
     return String::Format("LMap[%s%s];", keyType_->GetSignature().string(), valueType_->GetSignature().string());
 }
 
@@ -29,6 +32,9 @@ bool ASTMapType::IsMapType()
 
 String ASTMapType::ToString()
 {
+    if (keyType_ == nullptr || valueType_ == nullptr) {
+        return String::Format("Map<, >");
+    }
     return String::Format("Map<%s, %s>", keyType_->ToString().string(), valueType_->ToString().string());
 }
 } // namespace Idl

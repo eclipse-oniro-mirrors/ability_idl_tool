@@ -38,7 +38,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
     sb.Append("\n");
     sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     sb.Append("#include <iremote_proxy.h>\n");
-    if ((ast_ != nullptr) && (ast_->GetHasCacheableProxyMethods() == true)) {
+    if (ast_ != nullptr && ast_->GetHasCacheableProxyMethods()) {
         sb.Append("#include \"api_cache_manager.h\"\n");
     }
     sb.Append("\n");
