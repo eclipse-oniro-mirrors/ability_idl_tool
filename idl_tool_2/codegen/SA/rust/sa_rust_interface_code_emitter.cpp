@@ -102,7 +102,7 @@ bool SaRustInterfaceCodeEmitter::EmitCustomHeaders(StringBuilder &sb) const
     }
 
     for (auto interface : ast_->GetInterfaceDefs()) {
-        if (interface->IsExternal() == true) {
+        if (interface->IsExternal()) {
             bool addPathMiRes = AppendRealPath(sb, interface->GetFullName());
             custom |= static_cast<uint32_t>(addPathMiRes);
         }
@@ -181,7 +181,7 @@ void SaRustInterfaceCodeEmitter::EmitCommands(StringBuilder &sb) const
         if (i == 0) {
             sb.AppendFormat("    %s  = FIRST_CALL_TRANSACTION,\n", GetCodeFromMethod(method->GetName()).c_str());
         } else {
-            sb.AppendFormat("    %s,\n", GetCodeFromMethod(method->GetName()).c_str(), i);
+            sb.AppendFormat("    %s,\n", GetCodeFromMethod(method->GetName()).c_str());
         }
     }
     sb.Append("}\n");

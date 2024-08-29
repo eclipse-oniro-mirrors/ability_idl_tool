@@ -20,6 +20,9 @@ namespace OHOS {
 namespace Idl {
 std::string ASTArrayType::GetSignature()
 {
+    if (elementType_ == nullptr) {
+        return StringHelper::Format("[");
+    }
     return StringHelper::Format("[%s", elementType_->GetSignature().c_str());
 }
 
@@ -42,6 +45,9 @@ bool ASTArrayType::HasInnerType(TypeKind innerTypeKind) const
 
 std::string ASTArrayType::ToString() const
 {
+    if (elementType_ == nullptr) {
+        return StringHelper::Format("[]");
+    }
     return StringHelper::Format("%s[]", elementType_->ToString().c_str());
 }
 
@@ -67,6 +73,9 @@ bool ASTListType::IsListType()
 
 std::string ASTListType::ToString() const
 {
+    if (elementType_ == nullptr) {
+        return StringHelper::Format("List<>");
+    }
     return StringHelper::Format("List<%s>", elementType_->ToString().c_str());
 }
 

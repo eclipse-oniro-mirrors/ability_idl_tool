@@ -44,7 +44,7 @@ std::string HdiMapTypeEmitter::EmitCppType(TypeMode mode) const
             return StringHelper::Format(
                 "std::map<%s, %s>", keyEmitter_->EmitCppType().c_str(), valueEmitter_->EmitCppType().c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

@@ -19,9 +19,15 @@ namespace OHOS {
 namespace Idl {
 bool SATsCodeEmitter::CheckInterfaceType() const
 {
+    if (interface_ == nullptr) {
+        return false;
+    }
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        if (method == nullptr) {
+            return false;
+        }
         AutoPtr<ASTType> type = method->GetReturnType();
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
         if ((type->GetTypeKind() != TypeKind::TYPE_VOID) && (typeEmitter->EmitTsType() == "unknown type")) {
