@@ -32,7 +32,7 @@ std::string FileDetail::Dump() const
     sb.AppendFormat("filePath:%s\n", filePath_.c_str());
     sb.AppendFormat("fileName:%s\n", fileName_.c_str());
     sb.AppendFormat("packageName:%s\n", packageName_.c_str());
-    if (imports_.empty() == 0) {
+    if (imports_.empty()) {
         sb.Append("import:[]\n");
     } else {
         sb.Append("import:[\n");
