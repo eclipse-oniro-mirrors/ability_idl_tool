@@ -573,7 +573,7 @@ AutoPtr<ASTType> Parser::ParseType()
 
         AutoPtr<ASTArrayType> arrayType = new ASTArrayType();
         if (arrayType == nullptr) {
-            LogError(token, String("arrayType is nullptr.");
+            LogError(token, String("arrayType is nullptr."));
             return nullptr;
         }
         arrayType->SetElementType(type);
