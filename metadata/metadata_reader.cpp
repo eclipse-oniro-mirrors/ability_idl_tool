@@ -43,7 +43,7 @@ std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const String
         return nullptr;
     }
 
-    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ < 0) {
+    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ <= 0 || header.size_ > INT_MAX) {
         Logger::E(tag, "The metadata in \"%s\" file is bad.", filePath.string());
         return nullptr;
     }

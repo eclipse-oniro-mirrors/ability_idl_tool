@@ -16,6 +16,7 @@
 #ifndef OHOS_IDL_METADATASERIALIZER_H
 #define OHOS_IDL_METADATASERIALIZER_H
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 

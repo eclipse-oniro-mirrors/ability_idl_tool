@@ -17,6 +17,7 @@
 #define OHOS_IDL_FILE_H
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 
 #include "util/string.h"

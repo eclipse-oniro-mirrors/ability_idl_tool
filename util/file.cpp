@@ -141,7 +141,7 @@ int File::Read()
 
 bool File::ReadData(void* data, size_t size)
 {
-    if (data == nullptr || size == 0) {
+    if (data == nullptr || size == 0 || size > SIZE_MAX) {
         return true;
     }
 

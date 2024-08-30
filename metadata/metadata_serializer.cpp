@@ -153,17 +153,21 @@ void MetadataSerializer::DeserializeMetaComponent(MetaComponent* mc)
     mc->name_ = reinterpret_cast<char*>(DeserializeAdjust(mc->name_));
 
     mc->namespaces_ = reinterpret_cast<MetaNamespace**>(DeserializeAdjust(mc->namespaces_));
-    for (int i = 0; i < mc->namespaceNumber_; i++) {
-        mc->namespaces_[i] = reinterpret_cast<MetaNamespace*>(DeserializeAdjust(mc->namespaces_[i]));
-        MetaNamespace* mn = mc->namespaces_[i];
-        DeserializeMetaNamespace(mn);
+    if (mc->namespaceNumber_ > 0 && mc->namespaceNumber_ < INT_MAX) {
+        for (int i = 0; i < mc->namespaceNumber_; i++) {
+            mc->namespaces_[i] = reinterpret_cast<MetaNamespace*>(DeserializeAdjust(mc->namespaces_[i]));
+            MetaNamespace* mn = mc->namespaces_[i];
+            DeserializeMetaNamespace(mn);
+        }
     }
 
     mc->sequenceables_ = reinterpret_cast<MetaSequenceable**>(DeserializeAdjust(mc->sequenceables_));
-    for (int i = 0; i < mc->sequenceableNumber_; i++) {
-        mc->sequenceables_[i] = reinterpret_cast<MetaSequenceable*>(DeserializeAdjust(mc->sequenceables_[i]));
-        MetaSequenceable* mp = mc->sequenceables_[i];
-        DeserializeMetaSequenceable(mp);
+    if (mc->sequenceableNumber_ > 0 && mc->sequenceableNumber_ < INT_MAX) {
+        for (int i = 0; i < mc->sequenceableNumber_; i++) {
+            mc->sequenceables_[i] = reinterpret_cast<MetaSequenceable*>(DeserializeAdjust(mc->sequenceables_[i]));
+            MetaSequenceable* mp = mc->sequenceables_[i];
+            DeserializeMetaSequenceable(mp);
+        }
     }
 
     mc->interfaces_ = reinterpret_cast<MetaInterface**>(DeserializeAdjust(mc->interfaces_));
@@ -193,10 +197,12 @@ void MetadataSerializer::DeserializeMetaNamespace(MetaNamespace* mn)
     mn->interfaceIndexes_ = reinterpret_cast<int*>(DeserializeAdjust(mn->interfaceIndexes_));
 
     mn->namespaces_ = reinterpret_cast<MetaNamespace**>(DeserializeAdjust(mn->namespaces_));
-    for (int i = 0; i < mn->namespaceNumber_; i++) {
-        mn->namespaces_[i] = reinterpret_cast<MetaNamespace*>(DeserializeAdjust(mn->namespaces_[i]));
-        MetaNamespace* innermn = mn->namespaces_[i];
-        DeserializeMetaNamespace(innermn);
+    if (mn->namespaceNumber_ > 0 && mn->namespaceNumber_ < INT_MAX) {
+        for (int i = 0; i < mn->namespaceNumber_; i++) {
+            mn->namespaces_[i] = reinterpret_cast<MetaNamespace*>(DeserializeAdjust(mn->namespaces_[i]));
+            MetaNamespace* innermn = mn->namespaces_[i];
+            DeserializeMetaNamespace(innermn);
+        }
     }
 }
 
