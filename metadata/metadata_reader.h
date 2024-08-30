@@ -16,6 +16,7 @@
 #ifndef OHOS_IDL_METADATAREADER_H
 #define OHOS_IDL_METADATAREADER_H
 
+#include <climits>
 #include <memory>
 #include "metadata/meta_component.h"
 #include "util/string.h"
