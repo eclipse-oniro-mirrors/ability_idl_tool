@@ -724,6 +724,10 @@ std::string Options::GetRootPath(const std::string &package) const
  */
 std::string Options::GetSubPackage(const std::string &package) const
 {
+    if (interfaceType == InterfaceType::SM ||
+        interfaceType == InterfaceType::SM_UDS) {
+        return package;
+    }
     std::string rootPackage = GetRootPackage(package);
     if (rootPackage.empty()) {
         return package;
