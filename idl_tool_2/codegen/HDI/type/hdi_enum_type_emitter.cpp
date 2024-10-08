@@ -39,7 +39,7 @@ std::string HdiEnumTypeEmitter::EmitCType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("enum %s", name_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 
@@ -53,7 +53,7 @@ std::string HdiEnumTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::PARAM_OUT:
             return StringHelper::Format("%s&", typeName_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

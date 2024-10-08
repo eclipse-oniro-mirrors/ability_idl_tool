@@ -96,7 +96,7 @@ Lexer::Lexer() : filePath_(), file_(nullptr), mode_(ParseMode::DECL_MODE), haveP
 bool Lexer::Reset(const std::string &filePath)
 {
     file_ = std::make_unique<File>(filePath, int(File::READ));
-    if (file_ == nullptr || !file_->IsValid()) {
+    if (!file_->IsValid()) {
         return false;
     }
 

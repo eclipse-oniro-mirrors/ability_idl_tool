@@ -39,7 +39,7 @@ std::string SaMapTypeEmitter::EmitCppType(TypeMode mode) const
             return StringHelper::Format("std::unordered_map<%s, %s>", keyEmitter_->EmitCppType().c_str(),
                 valueEmitter_->EmitCppType().c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

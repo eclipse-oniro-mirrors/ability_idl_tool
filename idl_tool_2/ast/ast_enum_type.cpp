@@ -25,6 +25,9 @@ void ASTEnumType::SetBaseType(const AutoPtr<ASTType> &baseType)
     }
     if (baseType->GetTypeKind() == TypeKind::TYPE_ENUM) {
         AutoPtr<ASTEnumType> parentEnumType = dynamic_cast<ASTEnumType *>(baseType.Get());
+        if (parentEnumType == nullptr) {
+            return;
+        }
         std::vector<AutoPtr<ASTEnumValue>> parentMembers = parentEnumType->GetMembers();
         for (auto member : parentMembers) {
             members_.push_back(member);

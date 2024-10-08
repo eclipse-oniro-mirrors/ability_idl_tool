@@ -35,7 +35,7 @@ std::string SaDoubleTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "double";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

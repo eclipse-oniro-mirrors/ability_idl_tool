@@ -35,7 +35,7 @@ std::string SaLongTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "long";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 
