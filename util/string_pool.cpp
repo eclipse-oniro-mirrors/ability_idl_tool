@@ -70,7 +70,7 @@ ptrdiff_t StringPool::AddInternal(const String& string)
 
 bool StringPool::Grow(size_t expand)
 {
-    size_t newSize = dataOffset_ + expand;
+    size_t newSize = static_cast<size_t>(dataOffset_) + expand;
     if (newSize < dataCapacity_) {
         return true;
     }

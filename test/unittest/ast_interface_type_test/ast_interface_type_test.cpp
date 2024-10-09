@@ -102,20 +102,14 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0100, Function | MediumTest | Level1
  */
 HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1)
 {
-    GTEST_LOG_(INFO)
-        << "AstInterfaceTypeUnitTest, DumpTest_0200, TestSize.Level1";
     AutoPtr<ASTInterfaceType> interfaceType = new ASTInterfaceType();
-
     String prefix = "prefix";
     String name = "name";
     String methodName0 = "methodName0";
     String methodName1 = "methodName1";
     String parameterName0 = "parameterName0";
     String parameterName1 = "parameterName1";
-    String typeName = "typeName";
-    String nspaceStr = "nspaceStr";
-
-    ASTNamespace* nspace  = new ASTNamespace(nspaceStr);
+    ASTNamespace* nspace  = new ASTNamespace("nspaceStr");
     ASTMethod* method0 = new ASTMethod();
     ASTMethod* method1 = new ASTMethod();
     ASTParameter* parameter0 = new ASTParameter();
@@ -124,11 +118,9 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1
     ASTType *methodType1 = new ASTVoidType();
     ASTType *parameterType0 = new ASTVoidType();
     ASTType *parameterType1 = new ASTVoidType();
-
     interfaceType->SetExternal(false);
     interfaceType->SetName(name);
     interfaceType->SetNamespace(nspace);
-
     method0->SetName(methodName0);
     method1->SetName(methodName1);
     method0->SetReturnType(methodType0);
@@ -137,7 +129,6 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1
     method0->AddParameter(parameter1);
     method1->AddParameter(parameter0);
     method1->AddParameter(parameter1);
-
     parameter0->SetInParameter(false);
     parameter1->SetInParameter(false);
     parameter0->SetOutParameter(false);
@@ -146,10 +137,8 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1
     parameter1->SetType(parameterType1);
     parameter0->SetName(parameterName0);
     parameter1->SetName(parameterName1);
-
     interfaceType->AddMethod(method0);
     interfaceType->AddMethod(method1);
-
     String result = interfaceType->Dump(prefix);
     String expectResult = prefix + "interface " + nspace->ToString() + name + " {\n"
       + prefix + "  " + methodType0->ToString() + " " + methodName0 + "(" + "\n"
@@ -159,7 +148,6 @@ HWTEST_F(AstInterfaceTypeUnitTest, DumpTest_0200, Function | MediumTest | Level1
       + prefix + "    " + "[" + "] " + parameterType0->ToString() + " " + parameterName0 + ",\n"
       + prefix + "    " + "[" + "] " + parameterType1->ToString() + " " + parameterName1 + ");\n"
       + prefix + "}\n";
-
     ASSERT_STREQ(result, expectResult);
 }
 } // namespace idl

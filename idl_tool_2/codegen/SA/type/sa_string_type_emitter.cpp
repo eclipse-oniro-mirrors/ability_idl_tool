@@ -35,7 +35,7 @@ std::string SaStringTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "std::string";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

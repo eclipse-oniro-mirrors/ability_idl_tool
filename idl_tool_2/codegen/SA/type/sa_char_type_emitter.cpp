@@ -35,7 +35,7 @@ std::string SaCharTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "zchar";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

@@ -35,7 +35,7 @@ std::string SaIntTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return "int32_t";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

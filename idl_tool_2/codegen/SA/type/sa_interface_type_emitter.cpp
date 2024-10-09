@@ -34,7 +34,7 @@ std::string SaInterfaceTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::PARAM_OUT:
             return StringHelper::Format("sptr<%s>&", typeName_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

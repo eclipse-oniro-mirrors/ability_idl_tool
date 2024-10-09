@@ -99,7 +99,8 @@ StringBuilder& StringBuilder::AppendFormat(const char* format, ...)
         return *this;
     }
 
-    if (position_ + len >= capacity_) {
+    size_t positionTmp = position_ + static_cast<size_t>(len);
+    if (positionTmp >= capacity_) {
         if (!Grow(len)) {
             va_end(args);
             va_end(argsCopy);

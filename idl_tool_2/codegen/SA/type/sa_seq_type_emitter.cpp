@@ -35,7 +35,7 @@ std::string SaSeqTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("%s", typeName_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

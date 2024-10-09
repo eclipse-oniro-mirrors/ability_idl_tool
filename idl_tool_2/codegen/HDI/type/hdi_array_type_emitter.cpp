@@ -39,7 +39,7 @@ std::string HdiArrayTypeEmitter::EmitCType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("%s*", elementEmitter_->EmitCType(TypeMode::NO_MODE).c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

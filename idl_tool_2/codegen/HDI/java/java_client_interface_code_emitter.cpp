@@ -48,7 +48,6 @@ void JavaClientInterfaceCodeEmitter::EmitInterfaceFile()
         File::AdapterPath(StringHelper::Format("%s/%s.java", directory_.c_str(), FileName(interfaceName_).c_str()));
     File file(filePath, File::WRITE);
     StringBuilder sb;
-    printf("%s/%s.java\n", directory_.c_str(), FileName(interfaceName_).c_str());
     EmitLicense(sb);
     EmitPackage(sb);
     sb.Append("\n");

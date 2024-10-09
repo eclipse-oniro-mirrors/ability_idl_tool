@@ -34,7 +34,7 @@ std::string HdiUnionTypeEmitter::EmitCType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("union %s*", name_.c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

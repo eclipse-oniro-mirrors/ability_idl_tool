@@ -19,6 +19,9 @@ namespace OHOS {
 namespace Idl {
 String ASTArrayType::GetSignature()
 {
+    if (elementType_ == nullptr) {
+        return String::Format("[");
+    }
     return String::Format("[%s", elementType_->GetSignature().string());
 }
 
@@ -29,6 +32,9 @@ bool ASTArrayType::IsArrayType()
 
 String ASTArrayType::ToString()
 {
+    if (elementType_ == nullptr) {
+        return String::Format("[]");
+    }
     return String::Format("%s[]", elementType_->ToString().string());
 }
 } // namespace Idl
