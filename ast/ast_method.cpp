@@ -65,7 +65,6 @@ String ASTMethod::Dump(const String& prefix)
     if (returnType_ != nullptr) {
         sb.Append(returnType_->ToString()).Append(' ');
     }
-    sb.Append(returnType_->ToString()).Append(' ');
     sb.Append(name_).Append('(');
     if (parameters_.size() > 0) {
         sb.Append('\n');
