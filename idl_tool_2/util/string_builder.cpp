@@ -154,6 +154,7 @@ bool StringBuilder::Grow(size_t size)
     if (buffer_ != nullptr) {
         int ret = memcpy_s(newBuffer, newSize, buffer_, capacity_);
         free(buffer_);
+        buffer_ = nullptr;
         if (ret != 0) {
             Logger::E(TAG, "memcpy_s error ret = %d!", ret);
             free(newBuffer);
@@ -167,6 +168,9 @@ bool StringBuilder::Grow(size_t size)
 
 std::string StringBuilder::ToString() const
 {
+    if (buffer_ == nullptr) {
+        return "";
+    }
     return std::string(buffer_, position_);
 }
 } // namespace Idl
