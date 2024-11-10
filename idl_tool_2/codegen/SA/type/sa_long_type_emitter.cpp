@@ -26,14 +26,14 @@ std::string SaLongTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "long";
+            return "int64_t";
         case TypeMode::PARAM_IN:
         case TypeMode::PARAM_INOUT:
-            return "long";
+            return "int64_t";
         case TypeMode::PARAM_OUT:
-            return "long&";
+            return "int64_t&";
         case TypeMode::LOCAL_VAR:
-            return "long";
+            return "int64_t";
         default:
             return "unknown type";
     }
