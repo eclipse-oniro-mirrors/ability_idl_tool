@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+#include <unistd.h>
+#include <sys/stat.h>
 #include "sa_code_emitter.h"
 #include "ast/ast_map_type.h"
 #include "type/sa_boolean_type_emitter.h"
@@ -28,10 +30,11 @@
 #include "type/sa_interface_type_emitter.h"
 #include "type/sa_map_type_emitter.h"
 #include "type/sa_array_type_emitter.h"
-
-#include <cctype>
-#include <sys/stat.h>
-#include <unistd.h>
+#include "type/sa_uchar_type_emitter.h"
+#include "type/sa_uint_type_emitter.h"
+#include "type/sa_ulong_type_emitter.h"
+#include "type/sa_ushort_type_emitter.h"
+#include "type/sa_fd_type_emitter.h"
 #include "util/file.h"
 #include "util/options.h"
 #include "util/logger.h"
@@ -49,6 +52,11 @@ SACodeEmitter::TypeEmitterMap SACodeEmitter::basicEmitters_ = {
     {TypeKind::TYPE_DOUBLE,            new SaDoubleTypeEmitter()      },
     {TypeKind::TYPE_CHAR,              new SaCharTypeEmitter()        },
     {TypeKind::TYPE_STRING,            new SaStringTypeEmitter()      },
+    {TypeKind::TYPE_UCHAR,             new SaUcharTypeEmitter()       },
+    {TypeKind::TYPE_UINT,              new SaUintTypeEmitter()        },
+    {TypeKind::TYPE_ULONG,             new SaUlongTypeEmitter()       },
+    {TypeKind::TYPE_USHORT,            new SaUshortTypeEmitter()      },
+    {TypeKind::TYPE_FILEDESCRIPTOR,    new SaFdTypeEmitter()          },
 };
 
 bool SACodeEmitter::OutPut(const AutoPtr<AST> &ast, const std::string &targetDirectory, GenMode mode)

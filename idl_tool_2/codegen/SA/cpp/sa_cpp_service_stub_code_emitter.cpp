@@ -238,6 +238,11 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_LIST:
         case TypeKind::TYPE_MAP:
         case TypeKind::TYPE_ARRAY:
+        case TypeKind::TYPE_UCHAR:
+        case TypeKind::TYPE_UINT:
+        case TypeKind::TYPE_ULONG:
+        case TypeKind::TYPE_USHORT:
+        case TypeKind::TYPE_FILEDESCRIPTOR:
             sb.Append(name.c_str());
             break;
         default:

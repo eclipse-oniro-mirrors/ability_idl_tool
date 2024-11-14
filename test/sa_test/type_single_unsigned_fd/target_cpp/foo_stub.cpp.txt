@@ -1,0 +1,147 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (code) {
+        case COMMAND_UCHAR_TEST_FUNC: {
+            uint8_t inParam = data.ReadUint8();
+            uint8_t outParam;
+            uint8_t inoutParam = data.ReadUint8();
+            uint8_t result;
+            ErrCode errCode = uchar_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint8(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint8(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint8(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_USHORT_TEST_FUNC: {
+            uint16_t inParam = data.ReadUint16();
+            uint16_t outParam;
+            uint16_t inoutParam = data.ReadUint16();
+            uint16_t result;
+            ErrCode errCode = ushort_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint16(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint16(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint16(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_UINT_TEST_FUNC: {
+            uint32_t inParam = data.ReadUint32();
+            uint32_t outParam;
+            uint32_t inoutParam = data.ReadUint32();
+            uint32_t result;
+            ErrCode errCode = uint_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint32(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_ULONG_TEST_FUNC: {
+            uint64_t inParam = data.ReadUint64();
+            uint64_t outParam;
+            uint64_t inoutParam = data.ReadUint64();
+            uint64_t result;
+            ErrCode errCode = ulong_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint64(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint64(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint64(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case COMMAND_FD_TEST_FUNC: {
+            int inParam = data.ReadFileDescriptor();
+            int outParam;
+            int inoutParam = data.ReadFileDescriptor();
+            int result;
+            ErrCode errCode = fd_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFileDescriptor(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFileDescriptor(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFileDescriptor(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

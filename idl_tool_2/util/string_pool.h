@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstddef>
+#include <cstdint>
 #include "util/string_helper.h"
 
 namespace OHOS {

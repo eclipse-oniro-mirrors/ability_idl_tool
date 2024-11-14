@@ -97,7 +97,6 @@ bool IntfTypeChecker::CheckIntfSaAstTypes()
     for (const auto &pair : ast_->GetTypes()) {
         AutoPtr<ASTType> type = pair.second;
         switch (type->GetTypeKind()) {
-            case TypeKind::TYPE_FILEDESCRIPTOR:
             case TypeKind::TYPE_ASHMEM:
             case TypeKind::TYPE_NATIVE_BUFFER:
             case TypeKind::TYPE_POINTER:
@@ -105,10 +104,6 @@ bool IntfTypeChecker::CheckIntfSaAstTypes()
             case TypeKind::TYPE_ENUM:
             case TypeKind::TYPE_STRUCT:
             case TypeKind::TYPE_UNION:
-            case TypeKind::TYPE_UCHAR:
-            case TypeKind::TYPE_USHORT:
-            case TypeKind::TYPE_UINT:
-            case TypeKind::TYPE_ULONG:
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: type '%s' not support", __func__, __LINE__,
                 pair.first.c_str()).c_str());
                 return false;
