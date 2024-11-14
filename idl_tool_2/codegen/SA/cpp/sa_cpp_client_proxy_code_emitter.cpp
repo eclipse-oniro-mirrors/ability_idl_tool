@@ -366,7 +366,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(AutoPtr<ASTMetho
     AutoPtr<ASTType> returnType = method->GetReturnType();
     if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        typeEmitter->EmitCppReadVar("reply.", "result", sb, prefix + TAB, false);
+        typeEmitter->EmitCppReadVar("reply.", "funcResult", sb, prefix + TAB, false);
     }
 }
 
