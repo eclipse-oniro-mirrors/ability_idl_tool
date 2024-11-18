@@ -138,6 +138,36 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case COMMAND_REMOTE_OBJECT_TEST_FUNC: {
+            sptr<IRemoteObject> inParam = data.ReadRemoteObject();
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<IRemoteObject> outParam;
+            sptr<IRemoteObject> inoutParam = data.ReadRemoteObject();
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<IRemoteObject> result = nullptr;
+            ErrCode errCode = remote_object_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteRemoteObject(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
         default:
             return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
     }

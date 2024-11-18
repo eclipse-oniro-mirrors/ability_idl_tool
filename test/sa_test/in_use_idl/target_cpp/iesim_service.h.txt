@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_TELEPHONY_IESIMSERVICE_H
+#define OHOS_TELEPHONY_IESIMSERVICE_H
+
+#include <cstdint>
+#include <iremote_broker.h>
+#include <string_ex.h>
+#include "download_profile_config_info_parcel.h"
+#include "download_profile_result_parcel.h"
+#include "downloadable_profile_parcel.h"
+#include "euicc_info_parcel.h"
+#include "get_downloadable_profiles_result_parcel.h"
+#include "profile_info_list_parcel.h"
+#include "profile_metadata_result_parcel.h"
+#include "response_esim_result.h"
+
+using OHOS::Telephony::DownloadProfileConfigInfo;
+using OHOS::Telephony::DownloadableProfile;
+using OHOS::Telephony::DownloadProfileResult;
+using OHOS::Telephony::EuiccInfo;
+using OHOS::Telephony::GetDownloadableProfileMetadataResult;
+using OHOS::Telephony::GetDownloadableProfilesResult;
+using OHOS::Telephony::GetEuiccProfileInfoListResult;
+using OHOS::Telephony::ResponseEsimResult;
+
+namespace OHOS {
+namespace Telephony {
+class IEsimService : public IRemoteBroker {
+public:
+    DECLARE_INTERFACE_DESCRIPTOR(u"OHOS.Telephony.IEsimService");
+
+    virtual ErrCode GetEid(
+        int32_t slotId,
+        std::string& eId) = 0;
+
+    virtual ErrCode GetOsuStatus(
+        int32_t slotId,
+        int32_t& osuStatus) = 0;
+
+    virtual ErrCode StartOsu(
+        int32_t slotId,
+        int32_t& startOsuResult) = 0;
+
+    virtual ErrCode GetDownloadableProfileMetadata(
+        int32_t slotId,
+        int32_t portIndex,
+        const DownloadableProfile& profile,
+        bool forceDisableProfile,
+        GetDownloadableProfileMetadataResult& profileMetadataResult) = 0;
+
+    virtual ErrCode GetDownloadableProfiles(
+        int32_t slotId,
+        int32_t portIndex,
+        bool forceDisableProfile,
+        GetDownloadableProfilesResult& profileListResult) = 0;
+
+    virtual ErrCode DownloadProfile(
+        int32_t slotId,
+        const DownloadProfileConfigInfo& configInfo,
+        const DownloadableProfile& profile,
+        DownloadProfileResult& downloadProfileResult) = 0;
+
+    virtual ErrCode GetEuiccProfileInfoList(
+        int32_t slotId,
+        GetEuiccProfileInfoListResult& euiccProfileInfoList) = 0;
+
+    virtual ErrCode GetEuiccInfo(
+        int32_t slotId,
+        EuiccInfo& eUiccInfo) = 0;
+
+    virtual ErrCode DeleteProfile(
+        int32_t slotId,
+        const std::string& iccId,
+        int32_t& deleteProfileResult) = 0;
+
+    virtual ErrCode SwitchToProfile(
+        int32_t slotId,
+        int32_t portIndex,
+        const std::string& iccId,
+        bool forceDisableProfile,
+        int32_t& switchToProfileResult) = 0;
+
+    virtual ErrCode SetProfileNickname(
+        int32_t slotId,
+        const std::string& iccId,
+        const std::string& nickname,
+        int32_t& setProfileNicknameResult) = 0;
+
+    virtual ErrCode ResetMemory(
+        int32_t slotId,
+        int32_t resetOption,
+        int32_t& resetMemoryResult) = 0;
+
+    virtual ErrCode ReserveProfilesForFactoryRestore(
+        int32_t slotId,
+        int32_t& restoreResult) = 0;
+
+    virtual ErrCode SetDefaultSmdpAddress(
+        int32_t slotId,
+        const std::string& defaultSmdpAddress,
+        int32_t& setDefaultSmdpAddressResult) = 0;
+
+    virtual ErrCode GetDefaultSmdpAddress(
+        int32_t slotId,
+        std::string& defaultSmdpAddress) = 0;
+
+    virtual ErrCode CancelSession(
+        int32_t slotId,
+        const std::string& transactionId,
+        int32_t cancelReason,
+        ResponseEsimResult& responseResult) = 0;
+
+    virtual ErrCode IsEsimSupported(
+        int32_t slotId) = 0;
+protected:
+    const int VECTOR_MAX_SIZE = 102400;
+    const int LIST_MAX_SIZE = 102400;
+    const int MAP_MAX_SIZE = 102400;
+};
+} // namespace Telephony
+} // namespace OHOS
+#endif // OHOS_TELEPHONY_IESIMSERVICE_H
+

@@ -189,7 +189,12 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod>
         const std::string name = param->GetName();
         AutoPtr<ASTType> type = param->GetType();
         if ((type->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) && (param->GetAttribute() & ASTParamAttr::PARAM_IN)) {
-            const std::string parameterName = "*" + name;
+            std::string parameterName = "*" + name;
+            if (type->GetName() == "IRemoteObject") {
+                parameterName = name;
+            } else {
+                parameterName = "*" + name;
+            }
             sb.Append(parameterName.c_str());
         } else {
             sb.Append(name.c_str());

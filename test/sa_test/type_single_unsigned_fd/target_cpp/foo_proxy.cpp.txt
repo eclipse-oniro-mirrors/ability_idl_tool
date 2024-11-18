@@ -220,4 +220,48 @@ ErrCode FooProxy::fd_test_func(
     funcResult = reply.ReadFileDescriptor();
     return ERR_OK;
 }
+
+ErrCode FooProxy::remote_object_test_func(
+    const sptr<IRemoteObject>& inParam,
+    sptr<IRemoteObject>& outParam,
+    sptr<IRemoteObject>& inoutParam,
+    sptr<IRemoteObject>& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteRemoteObject(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_REMOTE_OBJECT_TEST_FUNC, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadRemoteObject();
+
+    inoutParam = reply.ReadRemoteObject();
+
+    funcResult = reply.ReadRemoteObject();
+
+    return ERR_OK;
+}
 } // namespace test
