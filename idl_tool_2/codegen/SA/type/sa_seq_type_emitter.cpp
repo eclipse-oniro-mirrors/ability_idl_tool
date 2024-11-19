@@ -74,10 +74,10 @@ void SaSeqTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
         sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
         sb.Append(prefix).Append("}\n");
     } else {
-        sb.Append(prefix).AppendFormat("std::unique_ptr<%s> info(%sReadParcelable<%s>());\n", typeName_.c_str(),
-            parcelName.c_str(), typeName_.c_str());
-        sb.Append(prefix).Append("if (info != nullptr) {\n");
-        sb.Append(prefix).Append(TAB).AppendFormat("%s = *info;\n", name.c_str());
+        sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %sInfo(%sReadParcelable<%s>());\n", typeName_.c_str(),
+            name.c_str(), parcelName.c_str(), typeName_.c_str());
+        sb.Append(prefix).AppendFormat("if (%sInfo != nullptr) {\n", name.c_str());
+        sb.Append(prefix).Append(TAB).AppendFormat("%s = *%sInfo;\n", name.c_str(), name.c_str());
         sb.Append(prefix).Append("}\n\n");
     }
 }

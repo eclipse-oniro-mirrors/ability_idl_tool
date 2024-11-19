@@ -100,7 +100,8 @@ void SACppCodeEmitter::EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, Str
     }
     if (retTypeKind != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        sb.Append("\n").Append(prefix).AppendFormat("%s result", typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
+        sb.Append("\n").Append(prefix).AppendFormat("%s funcResult",
+            typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
     }
 }
 

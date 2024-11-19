@@ -55,7 +55,7 @@ ErrCode FooProxy::bool_test_func(
     bool inParam,
     bool& outParam,
     bool inoutParam,
-    bool& result)
+    bool& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -94,7 +94,7 @@ ErrCode FooProxy::bool_test_func(
 
     outParam = reply.ReadInt32() == 1 ? true : false;
     inoutParam = reply.ReadInt32() == 1 ? true : false;
-    result = reply.ReadInt32() == 1 ? true : false;
+    funcResult = reply.ReadInt32() == 1 ? true : false;
     return ERR_OK;
 }
 
@@ -102,7 +102,7 @@ ErrCode FooProxy::byte_test_func(
     int8_t inParam,
     int8_t& outParam,
     int8_t inoutParam,
-    int8_t& result)
+    int8_t& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -141,7 +141,7 @@ ErrCode FooProxy::byte_test_func(
 
     outParam = (int8_t)reply.ReadInt32();
     inoutParam = (int8_t)reply.ReadInt32();
-    result = (int8_t)reply.ReadInt32();
+    funcResult = (int8_t)reply.ReadInt32();
     return ERR_OK;
 }
 
@@ -149,7 +149,7 @@ ErrCode FooProxy::short_test_func(
     short inParam,
     short& outParam,
     short inoutParam,
-    short& result)
+    short& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -188,7 +188,7 @@ ErrCode FooProxy::short_test_func(
 
     outParam = (short)reply.ReadInt32();
     inoutParam = (short)reply.ReadInt32();
-    result = (short)reply.ReadInt32();
+    funcResult = (short)reply.ReadInt32();
     return ERR_OK;
 }
 
@@ -196,7 +196,7 @@ ErrCode FooProxy::int_test_func(
     int32_t inParam,
     int32_t& outParam,
     int32_t inoutParam,
-    int32_t& result)
+    int32_t& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -235,7 +235,7 @@ ErrCode FooProxy::int_test_func(
 
     outParam = reply.ReadInt32();
     inoutParam = reply.ReadInt32();
-    result = reply.ReadInt32();
+    funcResult = reply.ReadInt32();
     return ERR_OK;
 }
 
@@ -243,7 +243,7 @@ ErrCode FooProxy::long_test_func(
     int64_t inParam,
     int64_t& outParam,
     int64_t inoutParam,
-    int64_t& result)
+    int64_t& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -282,7 +282,7 @@ ErrCode FooProxy::long_test_func(
 
     outParam = reply.ReadInt64();
     inoutParam = reply.ReadInt64();
-    result = reply.ReadInt64();
+    funcResult = reply.ReadInt64();
     return ERR_OK;
 }
 
@@ -290,7 +290,7 @@ ErrCode FooProxy::string_test_func(
     const std::string& inParam,
     std::string& outParam,
     const std::string& inoutParam,
-    std::string& result)
+    std::string& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -329,7 +329,7 @@ ErrCode FooProxy::string_test_func(
 
     outParam = Str16ToStr8(reply.ReadString16());
     inoutParam = Str16ToStr8(reply.ReadString16());
-    result = Str16ToStr8(reply.ReadString16());
+    funcResult = Str16ToStr8(reply.ReadString16());
     return ERR_OK;
 }
 
@@ -337,7 +337,7 @@ ErrCode FooProxy::float_test_func(
     float inParam,
     float& outParam,
     float inoutParam,
-    float& result)
+    float& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -376,7 +376,7 @@ ErrCode FooProxy::float_test_func(
 
     outParam = reply.ReadFloat();
     inoutParam = reply.ReadFloat();
-    result = reply.ReadFloat();
+    funcResult = reply.ReadFloat();
     return ERR_OK;
 }
 
@@ -384,7 +384,7 @@ ErrCode FooProxy::double_test_func(
     double inParam,
     double& outParam,
     double inoutParam,
-    double& result)
+    double& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -423,7 +423,7 @@ ErrCode FooProxy::double_test_func(
 
     outParam = reply.ReadDouble();
     inoutParam = reply.ReadDouble();
-    result = reply.ReadDouble();
+    funcResult = reply.ReadDouble();
     return ERR_OK;
 }
 
@@ -431,7 +431,7 @@ ErrCode FooProxy::char_test_func(
     zchar inParam,
     zchar& outParam,
     zchar inoutParam,
-    zchar& result)
+    zchar& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -470,7 +470,7 @@ ErrCode FooProxy::char_test_func(
 
     outParam = (zchar)reply.ReadInt32();
     inoutParam = (zchar)reply.ReadInt32();
-    result = (zchar)reply.ReadInt32();
+    funcResult = (zchar)reply.ReadInt32();
     return ERR_OK;
 }
 
@@ -478,7 +478,7 @@ ErrCode FooProxy::seq_test_func(
     const myseq& inParam,
     myseq& outParam,
     myseq* inoutParam,
-    myseq& result)
+    myseq& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -515,19 +515,19 @@ ErrCode FooProxy::seq_test_func(
         return errCode;
     }
 
-    std::unique_ptr<myseq> info(reply.ReadParcelable<myseq>());
-    if (info != nullptr) {
-        outParam = *info;
+    std::unique_ptr<myseq> outParamInfo(reply.ReadParcelable<myseq>());
+    if (outParamInfo != nullptr) {
+        outParam = *outParamInfo;
     }
 
-    std::unique_ptr<myseq> info(reply.ReadParcelable<myseq>());
-    if (info != nullptr) {
-        inoutParam = *info;
+    std::unique_ptr<myseq> inoutParamInfo(reply.ReadParcelable<myseq>());
+    if (inoutParamInfo != nullptr) {
+        inoutParam = *inoutParamInfo;
     }
 
-    std::unique_ptr<myseq> info(reply.ReadParcelable<myseq>());
-    if (info != nullptr) {
-        result = *info;
+    std::unique_ptr<myseq> funcResultInfo(reply.ReadParcelable<myseq>());
+    if (funcResultInfo != nullptr) {
+        funcResult = *funcResultInfo;
     }
 
     return ERR_OK;
@@ -537,7 +537,7 @@ ErrCode FooProxy::interface_test_func(
     const sptr<myinterface>& inParam,
     sptr<myinterface>& outParam,
     const sptr<myinterface>& inoutParam,
-    sptr<myinterface>& result)
+    sptr<myinterface>& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -584,7 +584,7 @@ ErrCode FooProxy::interface_test_func(
 
     outParam = iface_cast<myinterface>(reply.ReadRemoteObject());
     inoutParam = iface_cast<myinterface>(reply.ReadRemoteObject());
-    result = iface_cast<myinterface>(reply.ReadRemoteObject());
+    funcResult = iface_cast<myinterface>(reply.ReadRemoteObject());
     return ERR_OK;
 }
 } // namespace test
