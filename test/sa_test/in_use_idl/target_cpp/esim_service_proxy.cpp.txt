@@ -1,0 +1,688 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "esim_service_proxy.h"
+
+namespace OHOS {
+namespace Telephony {
+ErrCode EsimServiceProxy::GetEid(
+    int32_t slotId,
+    std::string& eId)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_EID, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    eId = Str16ToStr8(reply.ReadString16());
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetOsuStatus(
+    int32_t slotId,
+    int32_t& osuStatus)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_OSU_STATUS, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    osuStatus = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::StartOsu(
+    int32_t slotId,
+    int32_t& startOsuResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_START_OSU, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    startOsuResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetDownloadableProfileMetadata(
+    int32_t slotId,
+    int32_t portIndex,
+    const DownloadableProfile& profile,
+    bool forceDisableProfile,
+    GetDownloadableProfileMetadataResult& profileMetadataResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(portIndex)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&profile)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(forceDisableProfile ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<GetDownloadableProfileMetadataResult> profileMetadataResultInfo(reply.ReadParcelable<GetDownloadableProfileMetadataResult>());
+    if (profileMetadataResultInfo != nullptr) {
+        profileMetadataResult = *profileMetadataResultInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetDownloadableProfiles(
+    int32_t slotId,
+    int32_t portIndex,
+    bool forceDisableProfile,
+    GetDownloadableProfilesResult& profileListResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(portIndex)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(forceDisableProfile ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_DOWNLOADABLE_PROFILES, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<GetDownloadableProfilesResult> profileListResultInfo(reply.ReadParcelable<GetDownloadableProfilesResult>());
+    if (profileListResultInfo != nullptr) {
+        profileListResult = *profileListResultInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::DownloadProfile(
+    int32_t slotId,
+    const DownloadProfileConfigInfo& configInfo,
+    const DownloadableProfile& profile,
+    DownloadProfileResult& downloadProfileResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&configInfo)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&profile)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_DOWNLOAD_PROFILE, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<DownloadProfileResult> downloadProfileResultInfo(reply.ReadParcelable<DownloadProfileResult>());
+    if (downloadProfileResultInfo != nullptr) {
+        downloadProfileResult = *downloadProfileResultInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetEuiccProfileInfoList(
+    int32_t slotId,
+    GetEuiccProfileInfoListResult& euiccProfileInfoList)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_EUICC_PROFILE_INFO_LIST, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<GetEuiccProfileInfoListResult> euiccProfileInfoListInfo(reply.ReadParcelable<GetEuiccProfileInfoListResult>());
+    if (euiccProfileInfoListInfo != nullptr) {
+        euiccProfileInfoList = *euiccProfileInfoListInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetEuiccInfo(
+    int32_t slotId,
+    EuiccInfo& eUiccInfo)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_EUICC_INFO, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<EuiccInfo> eUiccInfoInfo(reply.ReadParcelable<EuiccInfo>());
+    if (eUiccInfoInfo != nullptr) {
+        eUiccInfo = *eUiccInfoInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::DeleteProfile(
+    int32_t slotId,
+    const std::string& iccId,
+    int32_t& deleteProfileResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(iccId))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_DELETE_PROFILE, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    deleteProfileResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::SwitchToProfile(
+    int32_t slotId,
+    int32_t portIndex,
+    const std::string& iccId,
+    bool forceDisableProfile,
+    int32_t& switchToProfileResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(portIndex)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(iccId))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(forceDisableProfile ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SWITCH_TO_PROFILE, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    switchToProfileResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::SetProfileNickname(
+    int32_t slotId,
+    const std::string& iccId,
+    const std::string& nickname,
+    int32_t& setProfileNicknameResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(iccId))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(nickname))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SET_PROFILE_NICKNAME, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    setProfileNicknameResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::ResetMemory(
+    int32_t slotId,
+    int32_t resetOption,
+    int32_t& resetMemoryResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(resetOption)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_RESET_MEMORY, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    resetMemoryResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::ReserveProfilesForFactoryRestore(
+    int32_t slotId,
+    int32_t& restoreResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    restoreResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::SetDefaultSmdpAddress(
+    int32_t slotId,
+    const std::string& defaultSmdpAddress,
+    int32_t& setDefaultSmdpAddressResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(defaultSmdpAddress))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_SET_DEFAULT_SMDP_ADDRESS, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    setDefaultSmdpAddressResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::GetDefaultSmdpAddress(
+    int32_t slotId,
+    std::string& defaultSmdpAddress)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_DEFAULT_SMDP_ADDRESS, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    defaultSmdpAddress = Str16ToStr8(reply.ReadString16());
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::CancelSession(
+    int32_t slotId,
+    const std::string& transactionId,
+    int32_t cancelReason,
+    ResponseEsimResult& responseResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(transactionId))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(cancelReason)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_CANCEL_SESSION, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<ResponseEsimResult> responseResultInfo(reply.ReadParcelable<ResponseEsimResult>());
+    if (responseResultInfo != nullptr) {
+        responseResult = *responseResultInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode EsimServiceProxy::IsEsimSupported(
+    int32_t slotId)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(slotId)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_IS_ESIM_SUPPORTED, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+} // namespace Telephony
+} // namespace OHOS

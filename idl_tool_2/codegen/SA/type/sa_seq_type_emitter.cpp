@@ -24,18 +24,34 @@ TypeKind SaSeqTypeEmitter::GetTypeKind()
 
 std::string SaSeqTypeEmitter::EmitCppType(TypeMode mode) const
 {
-    switch (mode) {
-        case TypeMode::NO_MODE:
-        case TypeMode::PARAM_IN:
-            return StringHelper::Format("const %s&", typeName_.c_str());
-        case TypeMode::PARAM_INOUT:
-            return StringHelper::Format("%s*", typeName_.c_str());
-        case TypeMode::PARAM_OUT:
-            return StringHelper::Format("%s&", typeName_.c_str());
-        case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("%s", typeName_.c_str());
-        default:
-            return "unknown type";
+    if (typeName_ == "IRemoteObject") {
+        switch (mode) {
+            case TypeMode::PARAM_IN:
+                return StringHelper::Format("const sptr<%s>&", typeName_.c_str());
+            case TypeMode::PARAM_INOUT:
+                return StringHelper::Format("sptr<%s>&", typeName_.c_str());
+            case TypeMode::PARAM_OUT:
+                return StringHelper::Format("sptr<%s>&", typeName_.c_str());
+            case TypeMode::NO_MODE:
+            case TypeMode::LOCAL_VAR:
+                return StringHelper::Format("sptr<%s>", typeName_.c_str());
+            default:
+                return "unknown type";
+        }
+    } else {
+        switch (mode) {
+            case TypeMode::NO_MODE:
+            case TypeMode::PARAM_IN:
+                return StringHelper::Format("const %s&", typeName_.c_str());
+            case TypeMode::PARAM_INOUT:
+                return StringHelper::Format("%s*", typeName_.c_str());
+            case TypeMode::PARAM_OUT:
+                return StringHelper::Format("%s&", typeName_.c_str());
+            case TypeMode::LOCAL_VAR:
+                return StringHelper::Format("%s", typeName_.c_str());
+            default:
+                return "unknown type";
+        }
     }
 }
 
@@ -52,7 +68,11 @@ std::string SaSeqTypeEmitter::EmitTsType(TypeMode mode) const
 void SaSeqTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.c_str(), name.c_str());
+    if (typeName_ == "IRemoteObject") {
+        sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.c_str(), name.c_str());
+    } else {
+        sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.c_str(), name.c_str());
+    }
     if (logOn_) {
         sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
     }
@@ -63,22 +83,39 @@ void SaSeqTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
 void SaSeqTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
-    if (emitType) {
-        sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %s(%sReadParcelable<%s>());\n\n",
-            typeName_.c_str(), name.c_str(), parcelName.c_str(), typeName_.c_str());
-        sb.Append(prefix).AppendFormat("if (!%s) {\n", name.c_str());
-        if (logOn_) {
-            sb.Append(prefix).Append(TAB).AppendFormat(
-                "HiLog::Error(LABEL, \"Read [%s] failed!\");\n", typeName_.c_str());
+    if (typeName_ == "IRemoteObject") {
+        if (emitType) {
+            sb.Append(prefix).AppendFormat("sptr<%s> %s = %sReadRemoteObject();\n",
+                typeName_.c_str(), name.c_str(), parcelName.c_str(), typeName_.c_str());
+            sb.Append(prefix).AppendFormat("if (!%s) {\n", name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat(
+                    "HiLog::Error(LABEL, \"Read [%s] failed!\");\n", typeName_.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n\n");
+        } else {
+            sb.Append(prefix).AppendFormat("%s = %sReadRemoteObject();\n\n",
+                name.c_str(), parcelName.c_str());
         }
-        sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
-        sb.Append(prefix).Append("}\n");
     } else {
-        sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %sInfo(%sReadParcelable<%s>());\n", typeName_.c_str(),
-            name.c_str(), parcelName.c_str(), typeName_.c_str());
-        sb.Append(prefix).AppendFormat("if (%sInfo != nullptr) {\n", name.c_str());
-        sb.Append(prefix).Append(TAB).AppendFormat("%s = *%sInfo;\n", name.c_str(), name.c_str());
-        sb.Append(prefix).Append("}\n\n");
+        if (emitType) {
+            sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %s(%sReadParcelable<%s>());\n",
+                typeName_.c_str(), name.c_str(), parcelName.c_str(), typeName_.c_str());
+            sb.Append(prefix).AppendFormat("if (!%s) {\n", name.c_str());
+            if (logOn_) {
+                sb.Append(prefix).Append(TAB).AppendFormat(
+                    "HiLog::Error(LABEL, \"Read [%s] failed!\");\n", typeName_.c_str());
+            }
+            sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+            sb.Append(prefix).Append("}\n\n");
+        } else {
+            sb.Append(prefix).AppendFormat("std::unique_ptr<%s> %sInfo(%sReadParcelable<%s>());\n",
+                typeName_.c_str(), name.c_str(), parcelName.c_str(), typeName_.c_str());
+            sb.Append(prefix).AppendFormat("if (%sInfo != nullptr) {\n", name.c_str());
+            sb.Append(prefix).Append(TAB).AppendFormat("%s = *%sInfo;\n", name.c_str(), name.c_str());
+            sb.Append(prefix).Append("}\n\n");
+        }
     }
 }
 

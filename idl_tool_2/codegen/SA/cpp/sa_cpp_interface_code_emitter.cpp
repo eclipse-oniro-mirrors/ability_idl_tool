@@ -108,6 +108,9 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFil
     int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
+        if (seqType->GetName() == "IRemoteObject") {
+            continue;
+        }
         filePath = GetFilePathNoPoint(seqType->GetNamespace()->ToString());
         fileName = filePath.empty() ? FileName(seqType->GetName()) : FileName(filePath);
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, fileName);
@@ -133,6 +136,9 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
     int sequenceableNumber = static_cast<int>(ast_->GetSequenceableDefNumber());
     for (int i = 0; i < sequenceableNumber; i++) {
         AutoPtr<ASTSequenceableType> seqType = ast_->GetSequenceableDef(i);
+        if (seqType->GetName() == "IRemoteObject") {
+            continue;
+        }
         np = GetNamespace(seqType->GetNamespace()->ToString());
         if (np.empty()) {
             continue;

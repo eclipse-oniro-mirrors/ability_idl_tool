@@ -1,0 +1,142 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_TELEPHONY_ESIMSERVICEPROXY_H
+#define OHOS_TELEPHONY_ESIMSERVICEPROXY_H
+
+#include "iesim_service.h"
+#include <iremote_proxy.h>
+
+namespace OHOS {
+namespace Telephony {
+class EsimServiceProxy : public IRemoteProxy<IEsimService> {
+public:
+    explicit EsimServiceProxy(
+        const sptr<IRemoteObject>& remote)
+        : IRemoteProxy<IEsimService>(remote)
+    {}
+
+    virtual ~EsimServiceProxy()
+    {}
+
+    ErrCode GetEid(
+        int32_t slotId,
+        std::string& eId) override;
+
+    ErrCode GetOsuStatus(
+        int32_t slotId,
+        int32_t& osuStatus) override;
+
+    ErrCode StartOsu(
+        int32_t slotId,
+        int32_t& startOsuResult) override;
+
+    ErrCode GetDownloadableProfileMetadata(
+        int32_t slotId,
+        int32_t portIndex,
+        const DownloadableProfile& profile,
+        bool forceDisableProfile,
+        GetDownloadableProfileMetadataResult& profileMetadataResult) override;
+
+    ErrCode GetDownloadableProfiles(
+        int32_t slotId,
+        int32_t portIndex,
+        bool forceDisableProfile,
+        GetDownloadableProfilesResult& profileListResult) override;
+
+    ErrCode DownloadProfile(
+        int32_t slotId,
+        const DownloadProfileConfigInfo& configInfo,
+        const DownloadableProfile& profile,
+        DownloadProfileResult& downloadProfileResult) override;
+
+    ErrCode GetEuiccProfileInfoList(
+        int32_t slotId,
+        GetEuiccProfileInfoListResult& euiccProfileInfoList) override;
+
+    ErrCode GetEuiccInfo(
+        int32_t slotId,
+        EuiccInfo& eUiccInfo) override;
+
+    ErrCode DeleteProfile(
+        int32_t slotId,
+        const std::string& iccId,
+        int32_t& deleteProfileResult) override;
+
+    ErrCode SwitchToProfile(
+        int32_t slotId,
+        int32_t portIndex,
+        const std::string& iccId,
+        bool forceDisableProfile,
+        int32_t& switchToProfileResult) override;
+
+    ErrCode SetProfileNickname(
+        int32_t slotId,
+        const std::string& iccId,
+        const std::string& nickname,
+        int32_t& setProfileNicknameResult) override;
+
+    ErrCode ResetMemory(
+        int32_t slotId,
+        int32_t resetOption,
+        int32_t& resetMemoryResult) override;
+
+    ErrCode ReserveProfilesForFactoryRestore(
+        int32_t slotId,
+        int32_t& restoreResult) override;
+
+    ErrCode SetDefaultSmdpAddress(
+        int32_t slotId,
+        const std::string& defaultSmdpAddress,
+        int32_t& setDefaultSmdpAddressResult) override;
+
+    ErrCode GetDefaultSmdpAddress(
+        int32_t slotId,
+        std::string& defaultSmdpAddress) override;
+
+    ErrCode CancelSession(
+        int32_t slotId,
+        const std::string& transactionId,
+        int32_t cancelReason,
+        ResponseEsimResult& responseResult) override;
+
+    ErrCode IsEsimSupported(
+        int32_t slotId) override;
+
+private:
+    static constexpr int32_t COMMAND_GET_EID = MIN_TRANSACTION_ID + 0;
+    static constexpr int32_t COMMAND_GET_OSU_STATUS = MIN_TRANSACTION_ID + 1;
+    static constexpr int32_t COMMAND_START_OSU = MIN_TRANSACTION_ID + 2;
+    static constexpr int32_t COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA = MIN_TRANSACTION_ID + 3;
+    static constexpr int32_t COMMAND_GET_DOWNLOADABLE_PROFILES = MIN_TRANSACTION_ID + 4;
+    static constexpr int32_t COMMAND_DOWNLOAD_PROFILE = MIN_TRANSACTION_ID + 5;
+    static constexpr int32_t COMMAND_GET_EUICC_PROFILE_INFO_LIST = MIN_TRANSACTION_ID + 6;
+    static constexpr int32_t COMMAND_GET_EUICC_INFO = MIN_TRANSACTION_ID + 7;
+    static constexpr int32_t COMMAND_DELETE_PROFILE = MIN_TRANSACTION_ID + 8;
+    static constexpr int32_t COMMAND_SWITCH_TO_PROFILE = MIN_TRANSACTION_ID + 9;
+    static constexpr int32_t COMMAND_SET_PROFILE_NICKNAME = MIN_TRANSACTION_ID + 10;
+    static constexpr int32_t COMMAND_RESET_MEMORY = MIN_TRANSACTION_ID + 11;
+    static constexpr int32_t COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE = MIN_TRANSACTION_ID + 12;
+    static constexpr int32_t COMMAND_SET_DEFAULT_SMDP_ADDRESS = MIN_TRANSACTION_ID + 13;
+    static constexpr int32_t COMMAND_GET_DEFAULT_SMDP_ADDRESS = MIN_TRANSACTION_ID + 14;
+    static constexpr int32_t COMMAND_CANCEL_SESSION = MIN_TRANSACTION_ID + 15;
+    static constexpr int32_t COMMAND_IS_ESIM_SUPPORTED = MIN_TRANSACTION_ID + 16;
+
+    static inline BrokerDelegator<EsimServiceProxy> delegator_;
+};
+} // namespace Telephony
+} // namespace OHOS
+#endif // OHOS_TELEPHONY_ESIMSERVICEPROXY_H
+

@@ -1,0 +1,132 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "quick_fix_manager_proxy.h"
+
+namespace OHOS {
+namespace AAFwk {
+ErrCode QuickFixManagerProxy::ApplyQuickFix(
+    const std::vector<std::string>& quickFixFiles,
+    bool isDebug)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (quickFixFiles.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(quickFixFiles.size());
+    for (auto it = quickFixFiles.begin(); it != quickFixFiles.end(); ++it) {
+        if (!data.WriteString16(Str8ToStr16((*it)))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (!data.WriteInt32(isDebug ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_APPLY_QUICK_FIX, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode QuickFixManagerProxy::GetApplyedQuickFixInfo(
+    const std::string& bundleName,
+    ApplicationQuickFixInfo& quickFixInfo)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteString16(Str8ToStr16(bundleName))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_GET_APPLYED_QUICK_FIX_INFO, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    std::unique_ptr<ApplicationQuickFixInfo> quickFixInfoInfo(reply.ReadParcelable<ApplicationQuickFixInfo>());
+    if (quickFixInfoInfo != nullptr) {
+        quickFixInfo = *quickFixInfoInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode QuickFixManagerProxy::RevokeQuickFix(
+    const std::string& bundleName)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteString16(Str8ToStr16(bundleName))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (remote == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(COMMAND_REVOKE_QUICK_FIX, data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+} // namespace AAFwk
+} // namespace OHOS
