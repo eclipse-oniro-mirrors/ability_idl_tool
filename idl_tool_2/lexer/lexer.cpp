@@ -57,6 +57,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"lite",           TokenType::LITE         },
     {"mini",           TokenType::MINI         },
     {"cacheable",      TokenType::CACHEABLE    },
+    {"ipccode",        TokenType::IPCCODE      },
     {"in",             TokenType::IN           },
     {"out",            TokenType::OUT          },
     {"inout",          TokenType::INOUT        },
@@ -167,7 +168,7 @@ void Lexer::Skip(char untilChar)
 
 void Lexer::SkipToken(TokenType tokenType)
 {
-    while (curToken_.kind != tokenType) {
+    while (curToken_.kind != tokenType && curToken_.kind != TokenType::END_OF_FILE) {
         GetToken(false);
     }
 }

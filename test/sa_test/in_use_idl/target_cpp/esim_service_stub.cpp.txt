@@ -28,8 +28,8 @@ int32_t EsimServiceStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_GET_EID: {
+    switch (static_cast<IEsimServiceIpcCode>(code)) {
+        case IEsimServiceIpcCode::COMMAND_GET_EID: {
             int32_t slotId = data.ReadInt32();
             std::string eId;
             ErrCode errCode = GetEid(slotId, eId);
@@ -43,7 +43,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_OSU_STATUS: {
+        case IEsimServiceIpcCode::COMMAND_GET_OSU_STATUS: {
             int32_t slotId = data.ReadInt32();
             int32_t osuStatus;
             ErrCode errCode = GetOsuStatus(slotId, osuStatus);
@@ -57,7 +57,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_START_OSU: {
+        case IEsimServiceIpcCode::COMMAND_START_OSU: {
             int32_t slotId = data.ReadInt32();
             int32_t startOsuResult;
             ErrCode errCode = StartOsu(slotId, startOsuResult);
@@ -71,7 +71,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA: {
+        case IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA: {
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
             std::unique_ptr<DownloadableProfile> profile(data.ReadParcelable<DownloadableProfile>());
@@ -92,7 +92,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_DOWNLOADABLE_PROFILES: {
+        case IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILES: {
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
             bool forceDisableProfile = data.ReadInt32() == 1 ? true : false;
@@ -108,7 +108,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_DOWNLOAD_PROFILE: {
+        case IEsimServiceIpcCode::COMMAND_DOWNLOAD_PROFILE: {
             int32_t slotId = data.ReadInt32();
             std::unique_ptr<DownloadProfileConfigInfo> configInfo(data.ReadParcelable<DownloadProfileConfigInfo>());
             if (!configInfo) {
@@ -132,7 +132,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_EUICC_PROFILE_INFO_LIST: {
+        case IEsimServiceIpcCode::COMMAND_GET_EUICC_PROFILE_INFO_LIST: {
             int32_t slotId = data.ReadInt32();
             GetEuiccProfileInfoListResult euiccProfileInfoList;
             ErrCode errCode = GetEuiccProfileInfoList(slotId, euiccProfileInfoList);
@@ -146,7 +146,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_EUICC_INFO: {
+        case IEsimServiceIpcCode::COMMAND_GET_EUICC_INFO: {
             int32_t slotId = data.ReadInt32();
             EuiccInfo eUiccInfo;
             ErrCode errCode = GetEuiccInfo(slotId, eUiccInfo);
@@ -160,7 +160,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_DELETE_PROFILE: {
+        case IEsimServiceIpcCode::COMMAND_DELETE_PROFILE: {
             int32_t slotId = data.ReadInt32();
             std::string iccId = Str16ToStr8(data.ReadString16());
             int32_t deleteProfileResult;
@@ -175,7 +175,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SWITCH_TO_PROFILE: {
+        case IEsimServiceIpcCode::COMMAND_SWITCH_TO_PROFILE: {
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
             std::string iccId = Str16ToStr8(data.ReadString16());
@@ -192,7 +192,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SET_PROFILE_NICKNAME: {
+        case IEsimServiceIpcCode::COMMAND_SET_PROFILE_NICKNAME: {
             int32_t slotId = data.ReadInt32();
             std::string iccId = Str16ToStr8(data.ReadString16());
             std::string nickname = Str16ToStr8(data.ReadString16());
@@ -208,7 +208,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_RESET_MEMORY: {
+        case IEsimServiceIpcCode::COMMAND_RESET_MEMORY: {
             int32_t slotId = data.ReadInt32();
             int32_t resetOption = data.ReadInt32();
             int32_t resetMemoryResult;
@@ -223,7 +223,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE: {
+        case IEsimServiceIpcCode::COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE: {
             int32_t slotId = data.ReadInt32();
             int32_t restoreResult;
             ErrCode errCode = ReserveProfilesForFactoryRestore(slotId, restoreResult);
@@ -237,7 +237,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SET_DEFAULT_SMDP_ADDRESS: {
+        case IEsimServiceIpcCode::COMMAND_SET_DEFAULT_SMDP_ADDRESS: {
             int32_t slotId = data.ReadInt32();
             std::string defaultSmdpAddress = Str16ToStr8(data.ReadString16());
             int32_t setDefaultSmdpAddressResult;
@@ -252,7 +252,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_DEFAULT_SMDP_ADDRESS: {
+        case IEsimServiceIpcCode::COMMAND_GET_DEFAULT_SMDP_ADDRESS: {
             int32_t slotId = data.ReadInt32();
             std::string defaultSmdpAddress;
             ErrCode errCode = GetDefaultSmdpAddress(slotId, defaultSmdpAddress);
@@ -266,7 +266,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_CANCEL_SESSION: {
+        case IEsimServiceIpcCode::COMMAND_CANCEL_SESSION: {
             int32_t slotId = data.ReadInt32();
             std::string transactionId = Str16ToStr8(data.ReadString16());
             int32_t cancelReason = data.ReadInt32();
@@ -282,7 +282,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_IS_ESIM_SUPPORTED: {
+        case IEsimServiceIpcCode::COMMAND_IS_ESIM_SUPPORTED: {
             int32_t slotId = data.ReadInt32();
             ErrCode errCode = IsEsimSupported(slotId);
             if (!reply.WriteInt32(errCode)) {

@@ -30,8 +30,8 @@ int32_t FooStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_VOID_TEST_FUNC: {
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_VOID_TEST_FUNC: {
             ErrCode errCode = void_test_func();
             if (!reply.WriteInt32(errCode)) {
                 HiLog::Error(LABEL, "Write Int32 failed!");
@@ -39,7 +39,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_BOOL_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_BOOL_TEST_FUNC: {
             bool inParam = data.ReadInt32() == 1 ? true : false;
             bool outParam;
             bool inoutParam = data.ReadInt32() == 1 ? true : false;
@@ -65,7 +65,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_BYTE_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_BYTE_TEST_FUNC: {
             int8_t inParam = (int8_t)data.ReadInt32();
             int8_t outParam;
             int8_t inoutParam = (int8_t)data.ReadInt32();
@@ -91,7 +91,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SHORT_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_SHORT_TEST_FUNC: {
             short inParam = (short)data.ReadInt32();
             short outParam;
             short inoutParam = (short)data.ReadInt32();
@@ -117,7 +117,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_INT_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_INT_TEST_FUNC: {
             int32_t inParam = data.ReadInt32();
             int32_t outParam;
             int32_t inoutParam = data.ReadInt32();
@@ -143,7 +143,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_LONG_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_LONG_TEST_FUNC: {
             int64_t inParam = data.ReadInt64();
             int64_t outParam;
             int64_t inoutParam = data.ReadInt64();
@@ -169,7 +169,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_STRING_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_STRING_TEST_FUNC: {
             std::string inParam = Str16ToStr8(data.ReadString16());
             std::string outParam;
             std::string inoutParam = Str16ToStr8(data.ReadString16());
@@ -195,7 +195,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_FLOAT_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_FLOAT_TEST_FUNC: {
             float inParam = data.ReadFloat();
             float outParam;
             float inoutParam = data.ReadFloat();
@@ -221,7 +221,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_DOUBLE_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC: {
             double inParam = data.ReadDouble();
             double outParam;
             double inoutParam = data.ReadDouble();
@@ -247,7 +247,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_CHAR_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_CHAR_TEST_FUNC: {
             zchar inParam = (zchar)data.ReadInt32();
             zchar outParam;
             zchar inoutParam = (zchar)data.ReadInt32();
@@ -273,7 +273,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SEQ_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_SEQ_TEST_FUNC: {
             std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
             if (!inParam) {
                 HiLog::Error(LABEL, "Read [myseq] failed!");
@@ -309,7 +309,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_INTERFACE_TEST_FUNC: {
+        case IFooIpcCode::COMMAND_INTERFACE_TEST_FUNC: {
             sptr<myinterface> inParam = iface_cast<myinterface>(data.ReadRemoteObject());
             if (inParam == nullptr) {
                 HiLog::Error(LABEL, "Read [inParam] failed!");

@@ -123,11 +123,20 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
-        sb.Append(prefix).AppendFormat("static constexpr int32_t COMMAND_%s = MIN_TRANSACTION_ID + %d;\n",
-            ConstantName(method->GetName()).c_str(), i);
+        std::string commandCode = "COMMAND_" + ConstantName(method->GetName());
+        bool hasIpcCode = method->HasIpcCode();
+        if (i == 0 && !hasIpcCode) {
+            commandCode += " = MIN_TRANSACTION_ID";
+        } else if (hasIpcCode) {
+            commandCode += " = " + method->GetIpcCodeStr();
+        }
+        commandCode += ",\n";
+        sb.Append(prefix).AppendFormat(commandCode.c_str());
     }
+    sb.Append("};\n\n");
 }
 
 } // namespace Idl

@@ -53,9 +53,6 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubInHeaderFile(StringBuilder &s
     sb.AppendFormat("class %s : public IRemoteStub<%s> {\n", stubName_.c_str(), interfaceName_.c_str());
     sb.Append("public:\n");
     EmitInterfaceStubMethodDecls(sb, TAB);
-    sb.Append("\n");
-    sb.Append("private:\n");
-    EmitInterfaceMethodCommands(sb, TAB);
     sb.Append("};\n");
     EmitEndNamespace(sb);
 }
@@ -115,7 +112,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append("if (localDescriptor != remoteDescriptor) {\n");
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_TRANSACTION_FAILED;\n");
     sb.Append(prefix + TAB).Append("}\n");
-    sb.Append(prefix + TAB).Append("switch (code) {\n");
+    sb.Append(prefix + TAB).AppendFormat("switch (static_cast<%sIpcCode>(code)) {\n", interface_->GetName().c_str());
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
@@ -133,7 +130,8 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
     const std::string &prefix) const
 {
     bool hasOutParameter = false;
-    sb.Append(prefix).AppendFormat("case COMMAND_%s: {\n", ConstantName(method->GetName()).c_str());
+    sb.Append(prefix).AppendFormat("case %sIpcCode::COMMAND_%s: {\n", interface_->GetName().c_str(),
+        ConstantName(method->GetName()).c_str());
     int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);

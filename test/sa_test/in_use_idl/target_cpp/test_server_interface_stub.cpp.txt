@@ -28,8 +28,8 @@ int32_t TestServerInterfaceStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_CREATE_SESSION: {
+    switch (static_cast<ITestServerInterfaceIpcCode>(code)) {
+        case ITestServerInterfaceIpcCode::COMMAND_CREATE_SESSION: {
             std::unique_ptr<SessionToken> sessionToken(data.ReadParcelable<SessionToken>());
             if (!sessionToken) {
                 return ERR_INVALID_DATA;
@@ -41,7 +41,7 @@ int32_t TestServerInterfaceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_SET_PASTE_DATA: {
+        case ITestServerInterfaceIpcCode::COMMAND_SET_PASTE_DATA: {
             std::string text = Str16ToStr8(data.ReadString16());
             ErrCode errCode = SetPasteData(text);
             if (!reply.WriteInt32(errCode)) {
@@ -49,7 +49,7 @@ int32_t TestServerInterfaceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_PUBLISH_COMMON_EVENT: {
+        case ITestServerInterfaceIpcCode::COMMAND_PUBLISH_COMMON_EVENT: {
             std::unique_ptr<CommonEventData> event(data.ReadParcelable<CommonEventData>());
             if (!event) {
                 return ERR_INVALID_DATA;

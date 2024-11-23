@@ -57,6 +57,9 @@ public:
     }
 
 private:
+    static constexpr int MIN_TRANSACTION_ID = 0x01;
+    static constexpr int MAX_TRANSACTION_ID = 0x00ffffff;
+
     class Attribute : public LightRefCountBase {
     public:
         bool isOneWay = false;
@@ -98,12 +101,17 @@ private:
 
     void ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token);
 
+    void ParseAttrUnitIpccode(AttrSet &attrs, Token &token);
+
     // parse interface type
     void ParseInterface(const AttrSet &attrs = {});
 
     AutoPtr<ASTAttr> ParseInfAttrInfo(const AttrSet &attrs);
 
     void CheckInterfaceAttr(const AutoPtr<ASTInterfaceType> &interface, Token token);
+
+    void CheckIpcCodeValue(
+        const AutoPtr<ASTMethod> &method, int32_t &ipcCodeValue, std::unordered_set<int32_t> &ipcCodeSet);
 
     void ParseInterfaceExternal(const AutoPtr<ASTInterfaceType> &interface);
 
