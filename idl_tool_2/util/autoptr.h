@@ -104,6 +104,7 @@ AutoPtr<T>::~AutoPtr()
 {
     if (mPtr != nullptr) {
         mPtr->Release();
+        mPtr = nullptr;
     }
 }
 
