@@ -35,11 +35,13 @@ private:
 
     void EmitInterfaceProxyRegisterDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyAddCacheAbleAPI(StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyAddCacheApi(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyUnRegisterDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyDelCacheApi(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyConstructor(StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyConstructorDecl(StringBuilder &sb, const std::string &prefix) const;
+
+    static void EmitInterfaceProxyRemoteDiedCallback(StringBuilder &sb, const std::string &prefix);
 
     void EmitInterfaceProxyMethodDecls(StringBuilder &sb, const std::string &prefix) const;
 
@@ -50,6 +52,12 @@ private:
     void EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix);
 
     void EmitInterfaceProxyCppFile();
+
+    void EmitInterfaceProxyRemoveDeathRecipient(StringBuilder &sb) const;
+
+    void EmitInterfaceProxyOnRemoteDied(StringBuilder &sb) const;
+
+    void EmitInterfaceProxyConstructorImpl(StringBuilder &sb) const;
 
     void EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const;
 

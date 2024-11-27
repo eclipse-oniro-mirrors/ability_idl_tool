@@ -16,20 +16,22 @@
 #ifndef OHOS_TELEPHONY_ESIMSERVICEPROXY_H
 #define OHOS_TELEPHONY_ESIMSERVICEPROXY_H
 
-#include "iesim_service.h"
+#include <mutex>
 #include <iremote_proxy.h>
+#include "iesim_service.h"
 
 namespace OHOS {
 namespace Telephony {
 class EsimServiceProxy : public IRemoteProxy<IEsimService> {
 public:
-    explicit EsimServiceProxy(
-        const sptr<IRemoteObject>& remote)
-        : IRemoteProxy<IEsimService>(remote)
-    {}
+    explicit EsimServiceProxy(const sptr<IRemoteObject>& remote);
 
-    virtual ~EsimServiceProxy()
-    {}
+    ~EsimServiceProxy() override;
+
+    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
+    {
+        remoteDiedCallback_ = callback;
+    }
 
     ErrCode GetEid(
         int32_t slotId,
@@ -116,7 +118,26 @@ public:
         int32_t slotId) override;
 
 private:
+    class EsimServiceRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit EsimServiceRecipient(EsimServiceProxy& client) : client_(client) {}
+        ~EsimServiceRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        EsimServiceProxy& client_;
+    };
+
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject>& remote);
+
     static inline BrokerDelegator<EsimServiceProxy> delegator_;
+    sptr<IRemoteObject> remote_;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    OnRemoteDiedCallback remoteDiedCallback_;
+    std::mutex mutex_;
 };
 } // namespace Telephony
 } // namespace OHOS

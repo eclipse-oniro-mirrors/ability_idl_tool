@@ -16,55 +16,22 @@
 #ifndef IDL_OHOS_FOOPROXY_H
 #define IDL_OHOS_FOOPROXY_H
 
-#include "ifoo.h"
+#include <mutex>
 #include <iremote_proxy.h>
+#include "ifoo.h"
 #include "api_cache_manager.h"
 
 namespace idl {
 namespace OHOS {
 class FooProxy : public IRemoteProxy<IFoo> {
 public:
-    explicit FooProxy(
-        const sptr<IRemoteObject>& remote)
-        : IRemoteProxy<IFoo>(remote)
+    explicit FooProxy(const sptr<IRemoteObject>& remote);
+
+    ~FooProxy() override;
+
+    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
     {
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), 100000);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), 0);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), 0);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), 200000);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), 2147483647000);
-
-        if (remote != nullptr) {
-            if (!remote->IsProxyObject()) {
-                return;
-            }
-            deathRecipient_ = new (std::nothrow) FooRecipient(*this);
-            if (deathRecipient_ == nullptr) {
-                return;
-            }
-            if (!remote->AddDeathRecipient(deathRecipient_)) {
-                return;
-            }
-            remote_ = remote;
-        }
-    }
-
-    virtual ~FooProxy()
-    {
-        if (remote_ == nullptr) {
-            return;
-        }
-        if (deathRecipient_ == nullptr) {
-            return;
-        }
-        remote_->RemoveDeathRecipient(deathRecipient_);
-        remote_ = nullptr;
-
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001));
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002));
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003));
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004));
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005));
+        remoteDiedCallback_ = callback;
     }
 
     ErrCode test001(
@@ -89,24 +56,24 @@ public:
 private:
     class FooRecipient : public IRemoteObject::DeathRecipient {
     public:
-        explicit FooRecipient(FooProxy &client) : client_(client) {}
+        explicit FooRecipient(FooProxy& client) : client_(client) {}
         ~FooRecipient() override = default;
-        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
         {
             client_.OnRemoteDied(remote);
         }
     private:
-        FooProxy &client_;
+        FooProxy& client_;
     };
 
-    void OnRemoteDied(const wptr<IRemoteObject> &remoteObject)
-    {
-        (void)remoteObject;
-        ApiCacheManager::GetInstance().ClearCache(GetDescriptor());
-    }
-    sptr<IRemoteObject> remote_ = nullptr;
-    sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject>& remote);
+
     static inline BrokerDelegator<FooProxy> delegator_;
+    sptr<IRemoteObject> remote_;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    OnRemoteDiedCallback remoteDiedCallback_;
+    std::mutex mutex_;
 };
 } // namespace OHOS
 } // namespace idl

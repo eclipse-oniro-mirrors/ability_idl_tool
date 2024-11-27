@@ -17,6 +17,76 @@
 
 namespace idl {
 namespace OHOS {
+FooProxy::FooProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IFoo>(remote)
+{
+    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), 100000);
+    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), 0);
+    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), 0);
+    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), 200000);
+    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), 2147483647000);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) FooRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+FooProxy::~FooProxy()
+{
+    RemoveDeathRecipient();
+
+    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001));
+    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002));
+    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003));
+    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004));
+    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005));
+}
+
+void FooProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void FooProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+
+    ApiCacheManager::GetInstance().ClearCache(GetDescriptor());
+}
+
 ErrCode FooProxy::test001(
     short param1,
     int32_t& funcResult)
@@ -33,8 +103,9 @@ ErrCode FooProxy::test001(
         return ERR_INVALID_DATA;
     }
 
-    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply);
-    if (hitCache == true) {
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply);
+    if (hitCache) {
         ErrCode errCode = reply.ReadInt32();
         if (FAILED(errCode)) {
             return errCode;
@@ -44,10 +115,11 @@ ErrCode FooProxy::test001(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -57,7 +129,8 @@ ErrCode FooProxy::test001(
         return errCode;
     }
 
-    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply);
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), data, reply);
     funcResult = reply.ReadInt32();
     return ERR_OK;
 }
@@ -77,8 +150,9 @@ ErrCode FooProxy::test002(
         return ERR_INVALID_DATA;
     }
 
-    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply);
-    if (hitCache == true) {
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply);
+    if (hitCache) {
         ErrCode errCode = reply.ReadInt32();
         if (FAILED(errCode)) {
             return errCode;
@@ -87,10 +161,11 @@ ErrCode FooProxy::test002(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -100,7 +175,8 @@ ErrCode FooProxy::test002(
         return errCode;
     }
 
-    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply);
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), data, reply);
     return ERR_OK;
 }
 
@@ -120,8 +196,9 @@ ErrCode FooProxy::test003(
         return ERR_INVALID_DATA;
     }
 
-    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply);
-    if (hitCache == true) {
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply);
+    if (hitCache) {
         ErrCode errCode = reply.ReadInt32();
         if (FAILED(errCode)) {
             return errCode;
@@ -131,10 +208,11 @@ ErrCode FooProxy::test003(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -144,7 +222,8 @@ ErrCode FooProxy::test003(
         return errCode;
     }
 
-    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply);
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), data, reply);
     param2 = reply.ReadInt32();
     return ERR_OK;
 }
@@ -175,8 +254,9 @@ ErrCode FooProxy::test004(
         }
     }
 
-    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply);
-    if (hitCache == true) {
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply);
+    if (hitCache) {
         ErrCode errCode = reply.ReadInt32();
         if (FAILED(errCode)) {
             return errCode;
@@ -191,10 +271,11 @@ ErrCode FooProxy::test004(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -204,7 +285,8 @@ ErrCode FooProxy::test004(
         return errCode;
     }
 
-    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply);
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply);
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
         int64_t key = reply.ReadInt64();
@@ -230,8 +312,9 @@ ErrCode FooProxy::test005(
         return ERR_INVALID_DATA;
     }
 
-    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply);
-    if (hitCache == true) {
+    bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply);
+    if (hitCache) {
         ErrCode errCode = reply.ReadInt32();
         if (FAILED(errCode)) {
             return errCode;
@@ -241,10 +324,11 @@ ErrCode FooProxy::test005(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -254,7 +338,8 @@ ErrCode FooProxy::test005(
         return errCode;
     }
 
-    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply);
+    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), data, reply);
     param2 = reply.ReadDouble();
     return ERR_OK;
 }

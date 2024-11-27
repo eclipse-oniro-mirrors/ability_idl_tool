@@ -16,6 +16,52 @@
 #include "idl_test_service_proxy.h"
 
 namespace OHOS {
+IdlTestServiceProxy::IdlTestServiceProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IIdlTestService>(remote)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) IdlTestServiceRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+IdlTestServiceProxy::~IdlTestServiceProxy()
+{
+    RemoveDeathRecipient();
+}
+
+void IdlTestServiceProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void IdlTestServiceProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+}
+
 ErrCode IdlTestServiceProxy::TestIntTransaction(
     int32_t val)
 {
@@ -32,10 +78,11 @@ ErrCode IdlTestServiceProxy::TestIntTransaction(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IIdlTestServiceIpcCode::COMMAND_TEST_INT_TRANSACTION), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IIdlTestServiceIpcCode::COMMAND_TEST_INT_TRANSACTION), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -64,10 +111,11 @@ ErrCode IdlTestServiceProxy::TestStringTransaction(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IIdlTestServiceIpcCode::COMMAND_TEST_STRING_TRANSACTION), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IIdlTestServiceIpcCode::COMMAND_TEST_STRING_TRANSACTION), data, reply, option);
     if (FAILED(result)) {
         return result;
     }

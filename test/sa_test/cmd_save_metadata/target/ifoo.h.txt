@@ -26,6 +26,7 @@ using test::myseq;
 using test::myinterface;
 
 namespace test {
+
 enum class IFooIpcCode {
     COMMAND_VOID_TEST_FUNC = MIN_TRANSACTION_ID,
     COMMAND_BOOL_TEST_FUNC,
@@ -41,9 +42,13 @@ enum class IFooIpcCode {
     COMMAND_INTERFACE_TEST_FUNC,
 };
 
+using OnRemoteDiedCallback = std::function<void(const wptr<IRemoteObject>&)>;
+
 class IFoo : public IRemoteBroker {
 public:
     DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
+
+    virtual void RegisterOnRemoteDiedCallback([[maybe_unused]] const OnRemoteDiedCallback& callback) {}
 
     virtual ErrCode void_test_func() = 0;
 

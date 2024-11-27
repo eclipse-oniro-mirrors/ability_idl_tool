@@ -16,20 +16,22 @@
 #ifndef OHOS_AAFWK_QUICKFIXMANAGERPROXY_H
 #define OHOS_AAFWK_QUICKFIXMANAGERPROXY_H
 
-#include "iquick_fix_manager.h"
+#include <mutex>
 #include <iremote_proxy.h>
+#include "iquick_fix_manager.h"
 
 namespace OHOS {
 namespace AAFwk {
 class QuickFixManagerProxy : public IRemoteProxy<IQuickFixManager> {
 public:
-    explicit QuickFixManagerProxy(
-        const sptr<IRemoteObject>& remote)
-        : IRemoteProxy<IQuickFixManager>(remote)
-    {}
+    explicit QuickFixManagerProxy(const sptr<IRemoteObject>& remote);
 
-    virtual ~QuickFixManagerProxy()
-    {}
+    ~QuickFixManagerProxy() override;
+
+    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
+    {
+        remoteDiedCallback_ = callback;
+    }
 
     ErrCode ApplyQuickFix(
         const std::vector<std::string>& quickFixFiles,
@@ -43,7 +45,26 @@ public:
         const std::string& bundleName) override;
 
 private:
+    class QuickFixManagerRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit QuickFixManagerRecipient(QuickFixManagerProxy& client) : client_(client) {}
+        ~QuickFixManagerRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        QuickFixManagerProxy& client_;
+    };
+
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject>& remote);
+
     static inline BrokerDelegator<QuickFixManagerProxy> delegator_;
+    sptr<IRemoteObject> remote_;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    OnRemoteDiedCallback remoteDiedCallback_;
+    std::mutex mutex_;
 };
 } // namespace AAFwk
 } // namespace OHOS

@@ -16,19 +16,21 @@
 #ifndef OHOS_IDLTESTSERVICEPROXY_H
 #define OHOS_IDLTESTSERVICEPROXY_H
 
-#include "iidl_test_service.h"
+#include <mutex>
 #include <iremote_proxy.h>
+#include "iidl_test_service.h"
 
 namespace OHOS {
 class IdlTestServiceProxy : public IRemoteProxy<IIdlTestService> {
 public:
-    explicit IdlTestServiceProxy(
-        const sptr<IRemoteObject>& remote)
-        : IRemoteProxy<IIdlTestService>(remote)
-    {}
+    explicit IdlTestServiceProxy(const sptr<IRemoteObject>& remote);
 
-    virtual ~IdlTestServiceProxy()
-    {}
+    ~IdlTestServiceProxy() override;
+
+    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
+    {
+        remoteDiedCallback_ = callback;
+    }
 
     ErrCode TestIntTransaction(
         int32_t val) override;
@@ -37,7 +39,26 @@ public:
         const std::string& val) override;
 
 private:
+    class IdlTestServiceRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit IdlTestServiceRecipient(IdlTestServiceProxy& client) : client_(client) {}
+        ~IdlTestServiceRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        IdlTestServiceProxy& client_;
+    };
+
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject>& remote);
+
     static inline BrokerDelegator<IdlTestServiceProxy> delegator_;
+    sptr<IRemoteObject> remote_;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    OnRemoteDiedCallback remoteDiedCallback_;
+    std::mutex mutex_;
 };
 } // namespace OHOS
 #endif // OHOS_IDLTESTSERVICEPROXY_H

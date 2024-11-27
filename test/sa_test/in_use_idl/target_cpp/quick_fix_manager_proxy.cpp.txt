@@ -17,6 +17,52 @@
 
 namespace OHOS {
 namespace AAFwk {
+QuickFixManagerProxy::QuickFixManagerProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IQuickFixManager>(remote)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) QuickFixManagerRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+QuickFixManagerProxy::~QuickFixManagerProxy()
+{
+    RemoveDeathRecipient();
+}
+
+void QuickFixManagerProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void QuickFixManagerProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+}
+
 ErrCode QuickFixManagerProxy::ApplyQuickFix(
     const std::vector<std::string>& quickFixFiles,
     bool isDebug)
@@ -43,10 +89,11 @@ ErrCode QuickFixManagerProxy::ApplyQuickFix(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_APPLY_QUICK_FIX), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_APPLY_QUICK_FIX), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -76,10 +123,11 @@ ErrCode QuickFixManagerProxy::GetApplyedQuickFixInfo(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_GET_APPLYED_QUICK_FIX_INFO), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_GET_APPLYED_QUICK_FIX_INFO), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -113,10 +161,11 @@ ErrCode QuickFixManagerProxy::RevokeQuickFix(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_REVOKE_QUICK_FIX), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IQuickFixManagerIpcCode::COMMAND_REVOKE_QUICK_FIX), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
