@@ -1,0 +1,230 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_VOID_TEST_FUNC: {
+            ErrCode errCode = void_test_func();
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_BOOL_TEST_FUNC: {
+            bool inParam = data.ReadInt32() == 1 ? true : false;
+            bool outParam;
+            bool inoutParam = data.ReadInt32() == 1 ? true : false;
+            ErrCode errCode = bool_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam ? 1 : 0)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam ? 1 : 0)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_BYTE_TEST_FUNC: {
+            int8_t inParam = (int8_t)data.ReadInt32();
+            int8_t outParam;
+            int8_t inoutParam = (int8_t)data.ReadInt32();
+            ErrCode errCode = byte_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_SHORT_TEST_FUNC: {
+            short inParam = (short)data.ReadInt32();
+            short outParam;
+            short inoutParam = (short)data.ReadInt32();
+            ErrCode errCode = short_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_INT_TEST_FUNC: {
+            int32_t inParam = data.ReadInt32();
+            int32_t outParam;
+            int32_t inoutParam = data.ReadInt32();
+            ErrCode errCode = int_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_LONG_TEST_FUNC: {
+            int64_t inParam = data.ReadInt64();
+            int64_t outParam;
+            int64_t inoutParam = data.ReadInt64();
+            ErrCode errCode = long_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt64(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt64(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_STRING_TEST_FUNC: {
+            std::string inParam = Str16ToStr8(data.ReadString16());
+            std::string outParam = Str16ToStr8(data.ReadString16());
+            std::string inoutParam = Str16ToStr8(data.ReadString16());
+            ErrCode errCode = string_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_FLOAT_TEST_FUNC: {
+            float inParam = data.ReadFloat();
+            float outParam = data.ReadFloat();
+            float inoutParam = data.ReadFloat();
+            ErrCode errCode = float_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC: {
+            double inParam = data.ReadDouble();
+            double outParam;
+            double inoutParam = data.ReadDouble();
+            ErrCode errCode = double_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteDouble(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteDouble(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_SEQ_TEST_FUNC: {
+            std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            myseq outParam;
+            std::unique_ptr<myseq> inoutParam(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(&outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(&inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_INTERFACE_TEST_FUNC: {
+            sptr<myinterface> inParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface> outParam;
+            sptr<myinterface> inoutParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            ErrCode errCode = interface_test_func(inParam, outParam, inoutParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

@@ -28,11 +28,11 @@ public:
         const sptr<IRemoteObject>& remote)
         : IRemoteProxy<IFoo>(remote)
     {
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST001, 100000);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST002, 0);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST003, 0);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST004, 200000);
-        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), COMMAND_TEST005, 2147483647000);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001), 100000);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002), 0);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003), 0);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), 200000);
+        ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), 2147483647000);
 
         if (remote != nullptr) {
             if (!remote->IsProxyObject()) {
@@ -60,11 +60,11 @@ public:
         remote_->RemoveDeathRecipient(deathRecipient_);
         remote_ = nullptr;
 
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST001);
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST002);
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST003);
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST004);
-        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), COMMAND_TEST005);
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST001));
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST002));
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST003));
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004));
+        ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(), static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005));
     }
 
     ErrCode test001(
@@ -106,12 +106,6 @@ private:
     }
     sptr<IRemoteObject> remote_ = nullptr;
     sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
-    static constexpr int32_t COMMAND_TEST001 = MIN_TRANSACTION_ID + 0;
-    static constexpr int32_t COMMAND_TEST002 = MIN_TRANSACTION_ID + 1;
-    static constexpr int32_t COMMAND_TEST003 = MIN_TRANSACTION_ID + 2;
-    static constexpr int32_t COMMAND_TEST004 = MIN_TRANSACTION_ID + 3;
-    static constexpr int32_t COMMAND_TEST005 = MIN_TRANSACTION_ID + 4;
-
     static inline BrokerDelegator<FooProxy> delegator_;
 };
 } // namespace OHOS

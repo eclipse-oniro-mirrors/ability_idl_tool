@@ -28,8 +28,8 @@ int32_t FooStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_TEST001: {
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_TEST001: {
             short param1 = (short)data.ReadInt32();
             int32_t result;
             ErrCode errCode = test001(param1, result);
@@ -43,7 +43,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_TEST002: {
+        case IFooIpcCode::COMMAND_TEST002: {
             int32_t param1 = data.ReadInt32();
             ErrCode errCode = test002(param1);
             if (!reply.WriteInt32(errCode)) {
@@ -51,7 +51,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_TEST003: {
+        case IFooIpcCode::COMMAND_TEST003: {
             float param1 = data.ReadFloat();
             int32_t param2;
             ErrCode errCode = test003(param1, param2);
@@ -65,7 +65,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_TEST004: {
+        case IFooIpcCode::COMMAND_TEST004: {
             std::unordered_map<int64_t, int64_t> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
@@ -95,7 +95,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_TEST005: {
+        case IFooIpcCode::COMMAND_TEST005: {
             short param1 = (short)data.ReadInt32();
             double param2;
             ErrCode errCode = test005(param1, param2);

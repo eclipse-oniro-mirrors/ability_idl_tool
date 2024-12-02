@@ -167,6 +167,7 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
 void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
+    EmitInterfaceMethodCommands(sb, TAB);
     sb.AppendFormat("class %s : public IRemoteBroker {\n", interface_->GetName().c_str());
     sb.Append("public:\n");
     EmitInterfaceBody(sb, TAB);

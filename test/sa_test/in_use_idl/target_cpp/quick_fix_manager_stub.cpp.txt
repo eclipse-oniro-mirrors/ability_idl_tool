@@ -28,8 +28,8 @@ int32_t QuickFixManagerStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_APPLY_QUICK_FIX: {
+    switch (static_cast<IQuickFixManagerIpcCode>(code)) {
+        case IQuickFixManagerIpcCode::COMMAND_APPLY_QUICK_FIX: {
             std::vector<std::string> quickFixFiles;
             int32_t quickFixFilesSize = data.ReadInt32();
             if (quickFixFilesSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
@@ -46,7 +46,7 @@ int32_t QuickFixManagerStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_GET_APPLYED_QUICK_FIX_INFO: {
+        case IQuickFixManagerIpcCode::COMMAND_GET_APPLYED_QUICK_FIX_INFO: {
             std::string bundleName = Str16ToStr8(data.ReadString16());
             ApplicationQuickFixInfo quickFixInfo;
             ErrCode errCode = GetApplyedQuickFixInfo(bundleName, quickFixInfo);
@@ -60,7 +60,7 @@ int32_t QuickFixManagerStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_REVOKE_QUICK_FIX: {
+        case IQuickFixManagerIpcCode::COMMAND_REVOKE_QUICK_FIX: {
             std::string bundleName = Str16ToStr8(data.ReadString16());
             ErrCode errCode = RevokeQuickFix(bundleName);
             if (!reply.WriteInt32(errCode)) {

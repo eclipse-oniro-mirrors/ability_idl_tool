@@ -27,8 +27,8 @@ int32_t IdlTestServiceStub::OnRemoteRequest(
     if (localDescriptor != remoteDescriptor) {
         return ERR_TRANSACTION_FAILED;
     }
-    switch (code) {
-        case COMMAND_TEST_INT_TRANSACTION: {
+    switch (static_cast<IIdlTestServiceIpcCode>(code)) {
+        case IIdlTestServiceIpcCode::COMMAND_TEST_INT_TRANSACTION: {
             int32_t val = data.ReadInt32();
             ErrCode errCode = TestIntTransaction(val);
             if (!reply.WriteInt32(errCode)) {
@@ -36,7 +36,7 @@ int32_t IdlTestServiceStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
-        case COMMAND_TEST_STRING_TRANSACTION: {
+        case IIdlTestServiceIpcCode::COMMAND_TEST_STRING_TRANSACTION: {
             std::string val = Str16ToStr8(data.ReadString16());
             ErrCode errCode = TestStringTransaction(val);
             if (!reply.WriteInt32(errCode)) {

@@ -151,6 +151,23 @@ public:
         return attr_->HasValue(ASTAttr::FREEZECONTROL);
     }
 
+    bool HasIpcCode()
+    {
+        return attr_->HasValue(ASTAttr::IPCCODE);
+    }
+
+    std::string& GetIpcCodeStr()
+    {
+        return attr_->GetIpcCodeStr();
+    }
+
+    void SetIpcCode(const AutoPtr<ASTAttr> &attr)
+    {
+        if (attr->HasValue(ASTAttr::IPCCODE)) {
+            attr_->SetIpcCodeStr(attr->GetIpcCodeStr());
+        }
+    }
+
 private:
     void BuildSignature();
 

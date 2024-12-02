@@ -31,6 +31,7 @@ public:
     static constexpr Attribute CALLBACK = 0x1U << 4;
     static constexpr Attribute CACHEABLE = 0x1U << 5;
     static constexpr Attribute FREEZECONTROL = 0x1U << 6;
+    static constexpr Attribute IPCCODE = 0x1U << 7;
 
     explicit ASTAttr(Attribute value = ASTAttr::NONE) : value_(value) {}
 
@@ -77,10 +78,21 @@ public:
 
     bool CacheableStrToInt();
 
+    std::string& GetIpcCodeStr()
+    {
+        return ipcCodeStr_;
+    }
+
+    void SetIpcCodeStr(const std::string &ipcCodeStr)
+    {
+        ipcCodeStr_ = ipcCodeStr;
+    }
+
 private:
     Attribute value_;
     int32_t cacheableTime_ = 0;
     std::string cacheableTimeString_;
+    std::string ipcCodeStr_;
 };
 
 class ASTParamAttr : public ASTNode {

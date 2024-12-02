@@ -62,6 +62,7 @@ enum class TokenType {
     LITE,                 // "lite"
     MINI,                 // "mini"
     CACHEABLE,            // "cacheable"
+    IPCCODE,              // "ipccode"
     IN,                   // "in"
     OUT,                  // "out"
     INOUT,                // "inout"

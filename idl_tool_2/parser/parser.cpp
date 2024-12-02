@@ -16,6 +16,7 @@
 #include "parser/parser.h"
 
 #include <regex>
+#include <unordered_set>
 
 #include "ast/ast_array_type.h"
 #include "ast/ast_enum_type.h"
@@ -500,6 +501,10 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             ParseAttrUnitFreezecontrol(attrs, token);
             return true;
         }
+        case TokenType::IPCCODE: {
+            ParseAttrUnitIpccode(attrs, token);
+            return true;
+        }
         default:
             LogError(__func__, __LINE__, token, StringHelper::Format("'%s' is a illegal attribute",
                 token.value.c_str()));
@@ -520,6 +525,53 @@ void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
             LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
         } else if (token.kind == TokenType::ID) {
             freezecontrolAttr_ = token.value;
+        }
+    }
+    lexer_.GetToken();
+}
+
+void Parser::ParseAttrUnitIpccode(AttrSet &attrs, Token &token)
+{
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Not support ipccode"));
+        lexer_.GetToken();
+        return;
+    }
+    if (attrs.find(token) != attrs.end()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr ipc code"));
+        lexer_.GetToken();
+        return;
+    }
+
+    Token tokenTmp = token;
+    lexer_.GetToken();
+    token = lexer_.PeekToken();
+    if (token.value == "]" || token.value == "," || token.value.empty()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Ipccode attr cannot be empty"));
+        return;
+    }
+
+    size_t end = 0;
+    int ipcCodeValue = 0;
+    int base = 10; // 10: decimal
+    if (token.value.size() >= sizeof("0x") && token.value[0] == '0' && tolower(token.value[1]) == 'x') {
+        base = 16; // 16: hexadecimal
+    }
+    try {
+        ipcCodeValue = std::stoi(token.value, &end, base);
+    } catch (...) {
+        end = 0;
+    }
+    if (end != token.value.size()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("%s is illegal ipccode value", token.value.c_str()));
+    } else {
+        if (ipcCodeValue < MIN_TRANSACTION_ID || ipcCodeValue > MAX_TRANSACTION_ID) {
+            LogError(__func__, __LINE__, token, StringHelper::Format("ipccode %d is out of range [%d, %d]",
+                ipcCodeValue, MIN_TRANSACTION_ID, MAX_TRANSACTION_ID));
+        } else {
+            tokenTmp.value = std::to_string(ipcCodeValue);
+            attrs.insert(tokenTmp);
         }
     }
     lexer_.GetToken();
@@ -627,6 +679,27 @@ void Parser::CheckInterfaceAttr(const AutoPtr<ASTInterfaceType> &interface, Toke
     }
 }
 
+void Parser::CheckIpcCodeValue(
+    const AutoPtr<ASTMethod> &method, int32_t &ipcCodeValue, std::unordered_set<int32_t> &ipcCodeSet)
+{
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        return;
+    }
+    if (method->HasIpcCode()) {
+        ipcCodeValue = std::stoi(method->GetIpcCodeStr());
+    }
+    if (ipcCodeValue > MAX_TRANSACTION_ID) {
+        LogError(__func__, __LINE__, StringHelper::Format("the ipccode %d is out of range [%d, %d]",
+            ipcCodeValue, MIN_TRANSACTION_ID, MAX_TRANSACTION_ID));
+    } else if (ipcCodeSet.find(ipcCodeValue) != ipcCodeSet.end()) {
+        LogError(__func__, __LINE__, StringHelper::Format("the ipccode %d is duplicated", ipcCodeValue));
+    } else {
+        ipcCodeSet.insert(ipcCodeValue);
+    }
+    ipcCodeValue++;
+}
+
 void Parser::ParseInterfaceExternal(const AutoPtr<ASTInterfaceType> &interface)
 {
     Token token = lexer_.PeekToken();
@@ -650,10 +723,13 @@ void Parser::ParseInterfaceBody(const AutoPtr<ASTInterfaceType> &interface)
 
     // parse method
     token = lexer_.PeekToken();
+    int32_t ipcCodeValue = MIN_TRANSACTION_ID;
+    std::unordered_set<int32_t> ipcCodeSet;
     while (token.kind != TokenType::BRACES_RIGHT && token.kind != TokenType::END_OF_FILE) {
         AutoPtr<ASTMethod> method = ParseMethod(interface);
         interface->AddMethod(method);
         token = lexer_.PeekToken();
+        CheckIpcCodeValue(method, ipcCodeValue, ipcCodeSet);
     }
 
     // expect symbol "}"
@@ -680,6 +756,7 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     AutoPtr<ASTAttr> methodAttr = ParseMethodAttr();
     method->SetAttribute(methodAttr);
     method->SetCacheable(methodAttr);
+    method->SetIpcCode(methodAttr);
     method->SetReturnType(ParseMethodReturnType());
 
     // parser method name
@@ -765,6 +842,10 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
                 break;
             case TokenType::FREEZECONTROL:
                 methodAttr->SetValue(ASTAttr::FREEZECONTROL);
+                break;
+            case TokenType::IPCCODE:
+                methodAttr->SetValue(ASTAttr::IPCCODE);
+                methodAttr->SetIpcCodeStr(attr.value);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));
