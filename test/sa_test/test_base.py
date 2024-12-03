@@ -125,6 +125,9 @@ class Test:
             else:
                 print_failure(f"[ERROR] command:{self.command} not meet expectations")
                 return False
+        if 'type_import' in self.working_dir:
+            self.set_output_dir("out_file")
+            self.set_target_dir("target_file")
         return compare_target_files(self.output_dir, self.target_dir)
 
     def hdi_gen_fail_check_ignore_line(self, result: str, target: str):

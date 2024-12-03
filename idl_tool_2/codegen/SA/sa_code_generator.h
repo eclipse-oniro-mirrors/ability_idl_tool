@@ -32,6 +32,8 @@ public:
 private:
     static CodeGenFunc GetCodeGenPoilcy();
 
+    static void GenCppPath(const AutoPtr<AST> &ast, const std::string &outDir);
+
     static void GenCppCode(const AutoPtr<AST> &ast, const std::string &outDir);
 
     static void GenRustCode(const AutoPtr<AST> &ast, const std::string &outDir);
@@ -40,10 +42,14 @@ private:
 
     static void GeneratorInit() __attribute__((constructor));
 
+    static void GenCodeInit();
+
     static GeneratePolicies policies_;
     static CodeEmitMap cppCodeEmitters_;
     static CodeEmitMap tsCodeEmitters_;
     static CodeEmitMap rustCodeEmitters_;
+    static std::unordered_map<std::string, std::string> genPath_;
+    static std::string mainFilePath_;
 };
 } // namespace Idl
 } // namespace OHOS

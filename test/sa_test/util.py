@@ -75,11 +75,11 @@ def compare_target_files(first_file_path, second_file_path):
         print(f"[ERROR] result file num({len(first_files)}) != expect file num({len(second_files)})")
         return False
 
-    common_files = first_files & second_files
+    common_files = [(f, s) for f in first_files for s in second_files if os.path.basename(f) == os.path.basename(s)]
 
-    for files in common_files:
-        if not compare_file("{}{}".format(first_file_path, files), "{}{}.txt".format(second_file_path, files)):
-            print("file ", "{}{}".format(first_file_path, files), "{}{}.txt".format(second_file_path, files), \
+    for f, s in common_files:
+        if not compare_file("{}{}".format(first_file_path, f), "{}{}.txt".format(second_file_path, s)):
+            print("file ", "{}{}".format(first_file_path, f), "{}{}.txt".format(second_file_path, s), \
                   "is different")
             return False
     return True

@@ -1,0 +1,284 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foocallback_proxy.h"
+
+namespace OHOS {
+namespace callback {
+using namespace OHOS::callback::customtype;
+
+ErrCode FoocallbackProxy::void_test_func()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFoocallbackIpcCode::COMMAND_VOID_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FoocallbackProxy::enum_test_func(
+    FEnum inParam,
+    FEnum& outParam,
+    FEnum& inoutParam,
+    FEnum& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteUint64(static_cast<uint64_t>(inParam))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteUint64(static_cast<uint64_t>(inoutParam))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFoocallbackIpcCode::COMMAND_ENUM_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    {
+        uint64_t enumTmp = 0;
+        if (!reply.ReadUint64(enumTmp)) {
+            return ERR_INVALID_DATA;
+        }
+        outParam = static_cast<FEnum>(enumTmp);
+    }
+    {
+        uint64_t enumTmp = 0;
+        if (!reply.ReadUint64(enumTmp)) {
+            return ERR_INVALID_DATA;
+        }
+        inoutParam = static_cast<FEnum>(enumTmp);
+    }
+    {
+        uint64_t enumTmp = 0;
+        if (!reply.ReadUint64(enumTmp)) {
+            return ERR_INVALID_DATA;
+        }
+        funcResult = static_cast<FEnum>(enumTmp);
+    }
+    return ERR_OK;
+}
+
+ErrCode FoocallbackProxy::struct_test_func(
+    const FStruct& inParam,
+    FStruct& outParam,
+    FStruct& inoutParam,
+    FStruct& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (FStructBlockMarshalling(reply, inParam) != ERR_NONE) {
+        return ERR_INVALID_DATA;
+    }
+    if (FStructBlockMarshalling(reply, inoutParam) != ERR_NONE) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFoocallbackIpcCode::COMMAND_STRUCT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    if (FStructBlockUnmarshalling(data, outParam) != ERR_NONE) {
+        return ERR_INVALID_DATA;
+    }
+    if (FStructBlockUnmarshalling(data, inoutParam) != ERR_NONE) {
+        return ERR_INVALID_DATA;
+    }
+    if (FStructBlockUnmarshalling(data, funcResult) != ERR_NONE) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_OK;
+}
+
+ErrCode FoocallbackProxy::union_test_func(
+    const FUnion& inParam,
+    FUnion& outParam,
+    FUnion& inoutParam,
+    FUnion& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteUnpadBuffer(&inParam, sizeof(FUnion))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteUnpadBuffer(&inoutParam, sizeof(FUnion))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFoocallbackIpcCode::COMMAND_UNION_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    const FUnion *outParamCp = reinterpret_cast<const FUnion *>(reply.ReadUnpadBuffer(sizeof(FUnion)));
+    if (outParamCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&outParam, sizeof(FUnion), outParamCp, sizeof(FUnion)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    const FUnion *inoutParamCp = reinterpret_cast<const FUnion *>(reply.ReadUnpadBuffer(sizeof(FUnion)));
+    if (inoutParamCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&inoutParam, sizeof(FUnion), inoutParamCp, sizeof(FUnion)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    const FUnion *funcResultCp = reinterpret_cast<const FUnion *>(reply.ReadUnpadBuffer(sizeof(FUnion)));
+    if (funcResultCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&funcResult, sizeof(FUnion), funcResultCp, sizeof(FUnion)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_OK;
+}
+
+ErrCode FoocallbackProxy::union_test_func2(
+    const FUnion& inParam,
+    FUnion& outParam,
+    FUnion& inoutParam,
+    FUnionCopy& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteUnpadBuffer(&inParam, sizeof(FUnion))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteUnpadBuffer(&inoutParam, sizeof(FUnion))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFoocallbackIpcCode::COMMAND_UNION_TEST_FUNC2), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    const FUnion *outParamCp = reinterpret_cast<const FUnion *>(reply.ReadUnpadBuffer(sizeof(FUnion)));
+    if (outParamCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&outParam, sizeof(FUnion), outParamCp, sizeof(FUnion)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    const FUnion *inoutParamCp = reinterpret_cast<const FUnion *>(reply.ReadUnpadBuffer(sizeof(FUnion)));
+    if (inoutParamCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&inoutParam, sizeof(FUnion), inoutParamCp, sizeof(FUnion)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    const FUnionCopy *funcResultCp = reinterpret_cast<const FUnionCopy *>(reply.ReadUnpadBuffer(sizeof(FUnionCopy)));
+    if (funcResultCp == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&funcResult, sizeof(FUnionCopy), funcResultCp, sizeof(FUnionCopy)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_OK;
+}
+} // namespace callback
+} // namespace OHOS

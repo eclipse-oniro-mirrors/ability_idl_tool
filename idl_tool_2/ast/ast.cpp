@@ -342,6 +342,11 @@ bool AST::AddImport(const AutoPtr<AST> &importAst)
     return true;
 }
 
+void AST::AddImportName(const std::string &importName)
+{
+    importNames_.emplace_back(importName);
+}
+
 void AST::SetVersion(size_t &majorVer, size_t &minorVer)
 {
     majorVersion_ = majorVer;

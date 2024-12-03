@@ -26,8 +26,8 @@ namespace OHOS {
 namespace Idl {
 
 using CodeEmitMap = std::unordered_map<std::string, AutoPtr<CodeEmitter>>;
-using CodeGenFunc = std::function<void(const AutoPtr<AST>&, const std::string&)>;
 using StrAstMap = std::unordered_map<std::string, AutoPtr<AST>>;
+using CodeGenFunc = std::function<void(const AutoPtr<AST>&, const std::string&)>;
 
 class CodeGenerator : public LightRefCountBase {
 public:

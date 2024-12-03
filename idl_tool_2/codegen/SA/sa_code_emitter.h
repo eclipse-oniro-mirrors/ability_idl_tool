@@ -45,6 +45,8 @@ protected:
     bool logOn_ = false;
 
 private:
+    std::string GetNameWithNamespace(AutoPtr<ASTNamespace> space, const std::string name) const;
+
     AutoPtr<SaTypeEmitter> NewTypeEmitter(AutoPtr<ASTType> astType) const;
 
     AutoPtr<SaTypeEmitter> NewMapTypeEmitter(AutoPtr<ASTType> astType) const;
@@ -52,6 +54,12 @@ private:
     AutoPtr<SaTypeEmitter> NewArrayTypeEmitter(AutoPtr<ASTType> astType) const;
 
     AutoPtr<SaTypeEmitter> NewListTypeEmitter(AutoPtr<ASTType> astType) const;
+
+    AutoPtr<SaTypeEmitter> NewEnumTypeEmitter(AutoPtr<ASTType> astType) const;
+
+    AutoPtr<SaTypeEmitter> NewStructTypeEmitter(AutoPtr<ASTType> astType) const;
+
+    AutoPtr<SaTypeEmitter> NewUnionTypeEmitter(AutoPtr<ASTType> astType) const;
 
     static TypeEmitterMap basicEmitters_;
 };

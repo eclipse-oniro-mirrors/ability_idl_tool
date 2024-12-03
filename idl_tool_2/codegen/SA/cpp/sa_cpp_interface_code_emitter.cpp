@@ -83,6 +83,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceInclusions(StringBuilder &sb)
     HeaderFile::HeaderFileSet headerFiles;
 
     GetStdlibInclusions(headerFiles);
+    GetImportInclusions(headerFiles);
     EmitInterfaceDBinderInclusions(headerFiles);
     EmitInterfaceSelfDefinedTypeInclusions(headerFiles);
 
@@ -166,6 +167,7 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
 void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
+    EmitImportUsingNamespace(sb);
     EmitInterfaceMethodCommands(sb, TAB);
     sb.AppendFormat("class %s : public IRemoteBroker {\n", interface_->GetName().c_str());
     sb.Append("public:\n");

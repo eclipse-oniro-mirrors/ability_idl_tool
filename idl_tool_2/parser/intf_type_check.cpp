@@ -51,40 +51,10 @@ bool IntfTypeChecker::CheckIntegrity()
 
 bool IntfTypeChecker::CheckIntfSaAst()
 {
-    if (!ast_->GetPackageName().empty()) {
-        Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: package not support", __func__, __LINE__).c_str());
-        return false;
+    AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
+    if (interfaceType == nullptr) {
+        return true;
     }
-
-    const auto &importMap = ast_->GetImports();
-    if (std::any_of(importMap.begin(), importMap.end(), [] (const std::pair<std::string, AutoPtr<AST>> &importPair) {
-        return importPair.second->GetASTFileType() != ASTFileType::AST_SEQUENCEABLE;
-    })) {
-        Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: import not support", __func__, __LINE__).c_str());
-        return false;
-    }
-
-    bool definedIntf = false;
-    for (size_t i = 0; i < ast_->GetInterfaceDefNumber(); i++) {
-        if (!ast_->GetInterfaceDef(i)->IsExternal()) {
-            definedIntf = true;
-            break;
-        }
-    }
-
-    if (!definedIntf) {
-        Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: interface is not defined.", __func__,
-            __LINE__).c_str());
-        return false;
-    }
-
-    ASTAttr::Attribute attr = ast_->GetInterfaceDef()->GetAttribute()->GetValue();
-    if ((attr != ASTAttr::NONE) && (attr != ASTAttr::ONEWAY)) {
-        Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: interface attr only support [oneway]", __func__,
-            __LINE__).c_str());
-        return false;
-    }
-
     if (!CheckIntfSaAstTypes() || !CheckIntfSaAstMethods()) {
         return false;
     }
@@ -101,9 +71,6 @@ bool IntfTypeChecker::CheckIntfSaAstTypes()
             case TypeKind::TYPE_NATIVE_BUFFER:
             case TypeKind::TYPE_POINTER:
             case TypeKind::TYPE_SMQ:
-            case TypeKind::TYPE_ENUM:
-            case TypeKind::TYPE_STRUCT:
-            case TypeKind::TYPE_UNION:
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: type '%s' not support", __func__, __LINE__,
                 pair.first.c_str()).c_str());
                 return false;
@@ -123,7 +90,7 @@ bool IntfTypeChecker::CheckIntfSaAstMethods()
         AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
         if (((method->GetAttribute()->GetValue()) &
             (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE | ASTAttr::IPCCODE |
-                ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY))) != 0) {
+                ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY | ASTAttr::CALLBACK))) != 0) {
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr support oneway, cacheable, "
                 "ipccode, ipcincapacity, ipcoutcapacity", __func__, __LINE__).c_str());
             return false;

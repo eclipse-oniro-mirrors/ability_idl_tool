@@ -34,8 +34,10 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, proxyFullName_);
-    sb.Append("\n").Append("#include <iremote_proxy.h>\n")
-        .AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
+
+    sb.Append("\n").Append("#include <iremote_proxy.h>\n");
+    EmitSecurecInclusion(sb);
+    sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     if (ast_ != nullptr && ast_->GetHasCacheableProxyMethods()) {
         sb.Append("#include \"api_cache_manager.h\"\n");
     }
@@ -52,6 +54,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
+    EmitImportUsingNamespace(sb);
     sb.AppendFormat("class %s : public IRemoteProxy<%s> {\n", proxyName_.c_str(), interfaceName_.c_str());
     sb.Append("public:\n");
     EmitInterfaceProxyConstructor(sb, TAB);
@@ -248,6 +251,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
         sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
     }
     EmitBeginNamespace(sb);
+    EmitImportUsingNamespace(sb);
     EmitInterfaceProxyMethodImpls(sb, "");
     EmitEndNamespace(sb);
 

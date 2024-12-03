@@ -120,6 +120,10 @@ void CodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::stri
 
 std::string CodeEmitter::EmitVersionHeaderName(const std::string &name) const
 {
+    InterfaceType interfaceType = Options::GetInstance().GetInterfaceType();
+    if (interfaceType == InterfaceType::SA) {
+        return StringHelper::Format("%s", FileName(name).c_str());
+    }
     return StringHelper::Format("v%u_%u/%s", ast_->GetMajorVer(), ast_->GetMinorVer(), FileName(name).c_str());
 }
 

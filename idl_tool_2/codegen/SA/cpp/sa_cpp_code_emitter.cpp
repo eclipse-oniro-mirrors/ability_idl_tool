@@ -24,6 +24,43 @@
 
 namespace OHOS {
 namespace Idl {
+void SACppCodeEmitter::GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles)
+{
+    for (const auto &importName : ast_->GetImportNames()) {
+        size_t index = importName.rfind(SEPARATOR);
+        if (index == std::string::npos) {
+            index = -1;
+        }
+        std::string fileName = importName.substr(index + 1);
+        std::string relativePath = importName.substr(0, index + 1) + FileName(fileName).c_str();
+        std::replace(relativePath.begin(), relativePath.end(), '\\', '/');
+        headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, relativePath);
+    }
+}
+
+void SACppCodeEmitter::EmitImportUsingNamespace(StringBuilder &sb) const
+{
+    std::unordered_map<std::string, int> usedNamespace;
+    for (const auto &importPair : ast_->GetImports()) {
+        AutoPtr<AST> importAst = importPair.second;
+        if (importAst->GetASTFileType() == ASTFileType::AST_SEQUENCEABLE) {
+            continue;
+        }
+        size_t index = importPair.first.rfind(".");
+        std::string usingName = importPair.first.substr(0, index);
+        if (usingName.empty()) {
+            continue;
+        }
+        std::regex dotToColons("\\.");
+        usingName = std::regex_replace(usingName, dotToColons, "::");
+        if (usedNamespace[usingName] == 0) {
+            usedNamespace[usingName] = 1;
+            sb.Append("using namespace ").AppendFormat("%s;\n", usingName.c_str());
+        }
+    }
+    sb.Append("\n");
+}
+
 void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles)
 {
     const AST::TypeStringMap &types = ast_->GetTypes();
@@ -120,10 +157,34 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
     return StringHelper::Format("unknow param attr %s", name.c_str());
 }
 
+void SACppCodeEmitter::EmitSecurecInclusion(StringBuilder &sb) const
+{
+    size_t methodNumber = interface_->GetMethodNumber();
+    for (size_t i = 0; i < methodNumber; i++) {
+        AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        size_t paramNumber = method->GetParameterNumber();
+        for (size_t j = 0; j < paramNumber; j++) {
+            AutoPtr<ASTParameter> param = method->GetParameter(j);
+            TypeKind paramTypeKind = param->GetType()->GetTypeKind();
+            if (paramTypeKind == TypeKind::TYPE_UNION || paramTypeKind == TypeKind::TYPE_STRUCT) {
+                sb.Append("#include <securec.h>\n");
+                return;
+            }
+        }
+
+        AutoPtr<ASTType> returnType = method->GetReturnType();
+        TypeKind retTypeKind = returnType->GetTypeKind();
+        if (retTypeKind == TypeKind::TYPE_UNION || retTypeKind == TypeKind::TYPE_STRUCT) {
+            sb.Append("#include <securec.h>\n");
+            return;
+        }
+    }
+}
+
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
-    sb.AppendFormat("\nenum class %sIpcCode {\n", interface_->GetName().c_str());
+    sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         std::string commandCode = "COMMAND_" + ConstantName(method->GetName());

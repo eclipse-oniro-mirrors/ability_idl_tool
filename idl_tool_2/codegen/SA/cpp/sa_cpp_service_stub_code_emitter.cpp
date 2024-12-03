@@ -34,8 +34,9 @@ void SaCppServiceStubCodeEmitter::EmitStubHeaderFile()
     EmitLicense(sb);
     EmitHeadMacro(sb, stubFullName_);
     sb.Append("\n");
-    sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     sb.Append("#include <iremote_stub.h>\n");
+    EmitSecurecInclusion(sb);
+    sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     sb.Append("\n");
     EmitInterfaceStubInHeaderFile(sb);
     EmitTailMacro(sb, stubFullName_);
@@ -49,6 +50,7 @@ void SaCppServiceStubCodeEmitter::EmitStubHeaderFile()
 void SaCppServiceStubCodeEmitter::EmitInterfaceStubInHeaderFile(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
+    EmitImportUsingNamespace(sb);
     sb.AppendFormat("class %s : public IRemoteStub<%s> {\n", stubName_.c_str(), interfaceName_.c_str());
     sb.Append("public:\n");
     EmitInterfaceStubMethodDecls(sb, TAB);
@@ -104,6 +106,7 @@ void SaCppServiceStubCodeEmitter::EmitStubSourceFile()
         sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
     }
     EmitBeginNamespace(sb);
+    EmitImportUsingNamespace(sb);
     EmitInterfaceStubMethodImpls(sb, "");
     EmitEndNamespace(sb);
 
@@ -282,6 +285,9 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_ULONG:
         case TypeKind::TYPE_USHORT:
         case TypeKind::TYPE_FILEDESCRIPTOR:
+        case TypeKind::TYPE_ENUM:
+        case TypeKind::TYPE_STRUCT:
+        case TypeKind::TYPE_UNION:
             sb.Append(name.c_str());
             break;
         default:

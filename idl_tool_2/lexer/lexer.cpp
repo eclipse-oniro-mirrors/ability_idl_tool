@@ -236,7 +236,7 @@ void Lexer::ReadToken(Token &token, bool skipComment)
         }
         token.location.row = file_->GetCharLineNumber();
         token.location.col = file_->GetCharColumnNumber();
-        if (isalpha(c) || c == '_') {
+        if (isalpha(c) || c == '_' || (c == '.' && file_->NextChar() == '.')) {
             ReadId(token);
             return;
         } else if (isdigit(c)) {
@@ -285,7 +285,7 @@ void Lexer::ReadId(Token &token)
     sb.Append(c);
     while (!file_->IsEof()) {
         c = file_->PeekChar();
-        if (isalpha(c) || isdigit(c) || c == '_' || c == '.') {
+        if (isalpha(c) || isdigit(c) || c == '_' || c == '.' || c == '/') {
             c = file_->GetChar();
             sb.Append(c);
             continue;

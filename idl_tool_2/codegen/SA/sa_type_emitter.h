@@ -34,6 +34,8 @@ public:
 
     virtual std::string EmitTsType(TypeMode mode = TypeMode::NO_MODE) const;
 
+    virtual std::string EmitCppTypeDecl() const;
+
     virtual void EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix) const;
 
