@@ -16,6 +16,52 @@
 #include "foo_proxy.h"
 
 namespace test {
+FooProxy::FooProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IFoo>(remote)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) FooRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+FooProxy::~FooProxy()
+{
+    RemoveDeathRecipient();
+}
+
+void FooProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void FooProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+}
+
 ErrCode FooProxy::uchar_test_func(
     uint8_t inParam,
     uint8_t& outParam,
@@ -38,10 +84,11 @@ ErrCode FooProxy::uchar_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_UCHAR_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_UCHAR_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -79,10 +126,11 @@ ErrCode FooProxy::ushort_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_USHORT_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_USHORT_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -120,10 +168,11 @@ ErrCode FooProxy::uint_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_UINT_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_UINT_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -161,10 +210,11 @@ ErrCode FooProxy::ulong_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_ULONG_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_ULONG_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -202,10 +252,11 @@ ErrCode FooProxy::fd_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_FD_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FD_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -243,10 +294,11 @@ ErrCode FooProxy::remote_object_test_func(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IFooIpcCode::COMMAND_REMOTE_OBJECT_TEST_FUNC), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_REMOTE_OBJECT_TEST_FUNC), data, reply, option);
     if (FAILED(result)) {
         return result;
     }

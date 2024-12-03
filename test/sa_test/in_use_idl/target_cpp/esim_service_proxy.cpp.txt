@@ -17,6 +17,52 @@
 
 namespace OHOS {
 namespace Telephony {
+EsimServiceProxy::EsimServiceProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IEsimService>(remote)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) EsimServiceRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+EsimServiceProxy::~EsimServiceProxy()
+{
+    RemoveDeathRecipient();
+}
+
+void EsimServiceProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void EsimServiceProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+}
+
 ErrCode EsimServiceProxy::GetEid(
     int32_t slotId,
     std::string& eId)
@@ -34,10 +80,11 @@ ErrCode EsimServiceProxy::GetEid(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EID), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EID), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -68,10 +115,11 @@ ErrCode EsimServiceProxy::GetOsuStatus(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_OSU_STATUS), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_OSU_STATUS), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -102,10 +150,11 @@ ErrCode EsimServiceProxy::StartOsu(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_START_OSU), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_START_OSU), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -148,10 +197,11 @@ ErrCode EsimServiceProxy::GetDownloadableProfileMetadata(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -194,10 +244,11 @@ ErrCode EsimServiceProxy::GetDownloadableProfiles(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILES), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILES), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -240,10 +291,11 @@ ErrCode EsimServiceProxy::DownloadProfile(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_DOWNLOAD_PROFILE), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_DOWNLOAD_PROFILE), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -278,10 +330,11 @@ ErrCode EsimServiceProxy::GetEuiccProfileInfoList(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EUICC_PROFILE_INFO_LIST), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EUICC_PROFILE_INFO_LIST), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -316,10 +369,11 @@ ErrCode EsimServiceProxy::GetEuiccInfo(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EUICC_INFO), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_EUICC_INFO), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -358,10 +412,11 @@ ErrCode EsimServiceProxy::DeleteProfile(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_DELETE_PROFILE), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_DELETE_PROFILE), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -404,10 +459,11 @@ ErrCode EsimServiceProxy::SwitchToProfile(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SWITCH_TO_PROFILE), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SWITCH_TO_PROFILE), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -446,10 +502,11 @@ ErrCode EsimServiceProxy::SetProfileNickname(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SET_PROFILE_NICKNAME), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SET_PROFILE_NICKNAME), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -484,10 +541,11 @@ ErrCode EsimServiceProxy::ResetMemory(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_RESET_MEMORY), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_RESET_MEMORY), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -518,10 +576,11 @@ ErrCode EsimServiceProxy::ReserveProfilesForFactoryRestore(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_RESERVE_PROFILES_FOR_FACTORY_RESTORE), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -556,10 +615,11 @@ ErrCode EsimServiceProxy::SetDefaultSmdpAddress(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SET_DEFAULT_SMDP_ADDRESS), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_SET_DEFAULT_SMDP_ADDRESS), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -590,10 +650,11 @@ ErrCode EsimServiceProxy::GetDefaultSmdpAddress(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DEFAULT_SMDP_ADDRESS), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_GET_DEFAULT_SMDP_ADDRESS), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -632,10 +693,11 @@ ErrCode EsimServiceProxy::CancelSession(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_CANCEL_SESSION), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_CANCEL_SESSION), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -669,10 +731,11 @@ ErrCode EsimServiceProxy::IsEsimSupported(
     }
 
     sptr<IRemoteObject> remote = Remote();
-    if (remote == nullptr) {
+    if (!remote) {
         return ERR_INVALID_DATA;
     }
-    int32_t result = remote->SendRequest(static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_IS_ESIM_SUPPORTED), data, reply, option);
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IEsimServiceIpcCode::COMMAND_IS_ESIM_SUPPORTED), data, reply, option);
     if (FAILED(result)) {
         return result;
     }

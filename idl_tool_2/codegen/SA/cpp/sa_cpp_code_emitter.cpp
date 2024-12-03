@@ -123,7 +123,7 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
-    sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
+    sb.AppendFormat("\nenum class %sIpcCode {\n", interface_->GetName().c_str());
     for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         std::string commandCode = "COMMAND_" + ConstantName(method->GetName());

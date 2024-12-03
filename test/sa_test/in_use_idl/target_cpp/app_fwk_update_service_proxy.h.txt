@@ -16,20 +16,22 @@
 #ifndef OHOS_NWEB_APPFWKUPDATESERVICEPROXY_H
 #define OHOS_NWEB_APPFWKUPDATESERVICEPROXY_H
 
-#include "iapp_fwk_update_service.h"
+#include <mutex>
 #include <iremote_proxy.h>
+#include "iapp_fwk_update_service.h"
 
 namespace OHOS {
 namespace NWeb {
 class AppFwkUpdateServiceProxy : public IRemoteProxy<IAppFwkUpdateService> {
 public:
-    explicit AppFwkUpdateServiceProxy(
-        const sptr<IRemoteObject>& remote)
-        : IRemoteProxy<IAppFwkUpdateService>(remote)
-    {}
+    explicit AppFwkUpdateServiceProxy(const sptr<IRemoteObject>& remote);
 
-    virtual ~AppFwkUpdateServiceProxy()
-    {}
+    ~AppFwkUpdateServiceProxy() override;
+
+    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
+    {
+        remoteDiedCallback_ = callback;
+    }
 
     ErrCode VerifyPackageInstall(
         const std::string& bundleName,
@@ -37,7 +39,26 @@ public:
         int32_t& success) override;
 
 private:
+    class AppFwkUpdateServiceRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit AppFwkUpdateServiceRecipient(AppFwkUpdateServiceProxy& client) : client_(client) {}
+        ~AppFwkUpdateServiceRecipient() override = default;
+        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        AppFwkUpdateServiceProxy& client_;
+    };
+
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject>& remote);
+
     static inline BrokerDelegator<AppFwkUpdateServiceProxy> delegator_;
+    sptr<IRemoteObject> remote_;
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    OnRemoteDiedCallback remoteDiedCallback_;
+    std::mutex mutex_;
 };
 } // namespace NWeb
 } // namespace OHOS
