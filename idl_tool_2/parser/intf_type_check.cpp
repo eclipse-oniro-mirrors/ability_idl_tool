@@ -122,9 +122,10 @@ bool IntfTypeChecker::CheckIntfSaAstMethods()
     for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
         AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
         if (((method->GetAttribute()->GetValue()) &
-            (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE | ASTAttr::IPCCODE))) != 0) {
-            Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr support oneway or cacheable or "
-                "ipccode", __func__, __LINE__).c_str());
+            (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE | ASTAttr::IPCCODE |
+                ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY))) != 0) {
+            Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr support oneway, cacheable, "
+                "ipccode, ipcincapacity, ipcoutcapacity", __func__, __LINE__).c_str());
             return false;
         }
         if (method->GetAttribute()->HasValue(ASTAttr::CACHEABLE) &&

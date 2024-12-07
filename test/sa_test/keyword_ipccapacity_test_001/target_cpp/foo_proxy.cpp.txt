@@ -1,0 +1,483 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace test {
+FooProxy::FooProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IFoo>(remote)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (remote_ && remote_ != remote) {
+        RemoveDeathRecipient();
+    }
+    if (remote) {
+        if (!remote->IsProxyObject()) {
+            return;
+        }
+        deathRecipient_ = new (std::nothrow) FooRecipient(*this);
+        if (!deathRecipient_) {
+            return;
+        }
+        if (!remote->AddDeathRecipient(deathRecipient_)) {
+            return;
+        }
+        remote_ = remote;
+    }
+}
+
+FooProxy::~FooProxy()
+{
+    RemoveDeathRecipient();
+}
+
+void FooProxy::RemoveDeathRecipient()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!remote_ || !deathRecipient_) {
+        return;
+    }
+    remote_->RemoveDeathRecipient(deathRecipient_);
+    remote_ = nullptr;
+    deathRecipient_ = nullptr;
+    remoteDiedCallback_ = nullptr;
+}
+
+void FooProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
+{
+    if (remoteDiedCallback_) {
+        remoteDiedCallback_(remote);
+    }
+    RemoveDeathRecipient();
+}
+
+ErrCode FooProxy::bool_test_func(
+    bool inParam,
+    bool& outParam,
+    bool inoutParam,
+    bool& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_BOOL_TEST_FUNC_1)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_BOOL_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadInt32() == 1 ? true : false;
+    inoutParam = reply.ReadInt32() == 1 ? true : false;
+    funcResult = reply.ReadInt32() == 1 ? true : false;
+    return ERR_OK;
+}
+
+ErrCode FooProxy::byte_test_func(
+    int8_t inParam,
+    int8_t& outParam,
+    int8_t inoutParam,
+    int8_t& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_BYTE_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = (int8_t)reply.ReadInt32();
+    inoutParam = (int8_t)reply.ReadInt32();
+    funcResult = (int8_t)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::short_test_func(
+    short inParam,
+    short& outParam,
+    short inoutParam,
+    short& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_SHORT_TEST_FUNC_3)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_SHORT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = (short)reply.ReadInt32();
+    inoutParam = (short)reply.ReadInt32();
+    funcResult = (short)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::char_test_func(
+    zchar inParam,
+    zchar& outParam,
+    zchar inoutParam,
+    zchar& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_CHAR_TEST_FUNC_4)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_CHAR_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = (zchar)reply.ReadInt32();
+    inoutParam = (zchar)reply.ReadInt32();
+    funcResult = (zchar)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::int_test_func(
+    int32_t inParam,
+    int32_t& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_INT_TEST_FUNC_10)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_INT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::long_test_func(
+    int64_t inParam,
+    int64_t& outParam,
+    int64_t inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_LONG_TEST_FUNC_11)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt64(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt64(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_LONG_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadInt64();
+    inoutParam = reply.ReadInt64();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::string_test_func(
+    const std::string& inParam,
+    const std::string& outParam,
+    const std::string& inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteString16(Str8ToStr16(inParam))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(outParam))) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(inoutParam))) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_STRING_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::float_test_func(
+    float inParam,
+    float outParam,
+    float inoutParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_FLOAT_TEST_FUNC_13)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFloat(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFloat(outParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFloat(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FLOAT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::fd_test_func(
+    int inParam,
+    int& outParam,
+    int inoutParam,
+    int& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_FD_TEST_FUNC_14)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFileDescriptor(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFileDescriptor(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FD_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadFileDescriptor();
+    inoutParam = reply.ReadFileDescriptor();
+    funcResult = reply.ReadFileDescriptor();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::double_test_func(
+    double inParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC);
+
+    if (!data.SetMaxCapacity(CAPACITY_DOUBLE_TEST_FUNC_16777215)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteDouble(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+    return ERR_OK;
+}
+} // namespace test

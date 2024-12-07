@@ -19,29 +19,63 @@
 #include <memory>
 #include <set>
 #include <vector>
-
+#include <regex>
+#include <unordered_set>
 #include "ast/ast.h"
 #include "ast/ast_attribute.h"
 #include "ast/ast_interface_type.h"
 #include "ast/ast_method.h"
 #include "ast/ast_type.h"
+#include "ast/ast_enum_type.h"
+#include "ast/ast_parameter.h"
+#include "ast/ast_struct_type.h"
+#include "ast/ast_union_type.h"
 #include "lexer/lexer.h"
 #include "preprocessor/preprocessor.h"
 #include "util/autoptr.h"
 #include "util/light_refcount_base.h"
-#include "util/options.h"
-#include "parser/intf_type_check.h"
 
 namespace OHOS {
 namespace Idl {
-using AttrSet = std::set<Token, TokenTypeCompare>;
+
+static constexpr const char *RE_BIN_DIGIT = "0[b][0|1]+";        // binary digit
+static constexpr const char *RE_OCT_DIGIT = "0[0-7]+";           // octal digit
+static constexpr const char *RE_DEC_DIGIT = "[0-9]+";            // decimal digit
+static constexpr const char *RE_HEX_DIFIT = "0[xX][0-9a-fA-F]+"; // hexadecimal digit
+static constexpr const char *RE_DIGIT_SUFFIX = "(u|l|ll|ul|ull|)$";
+static constexpr const char *RE_IDENTIFIER = "[a-zA-Z_][a-zA-Z0-9_]*";
+
+static constexpr unsigned int RE_PACKAGE_NUM = 3;
+static constexpr unsigned int RE_PACKAGE_INDEX = 0;
+static constexpr unsigned int RE_PACKAGE_MAJOR_VER_INDEX = 1;
+static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
+
+static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
+    "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
+static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) +
+    "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
+static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
+    std::string(RE_DEC_DIGIT) + "_" + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
+static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_DEC_NUM(std::string(RE_DEC_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_HEX_NUM(std::string(RE_HEX_DIFIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+
 struct AstCompare {
     bool operator()(const AutoPtr<AST> &lhs, const AutoPtr<AST> &rhs) const
     {
         return lhs->GetMinorVer() < rhs->GetMinorVer();
     }
 };
+
+using AttrSet = std::set<Token, TokenTypeCompare>;
+
 using AstMergeMap = std::map<std::string, std::set<AutoPtr<AST>, AstCompare>>;
+
 class Parser {
 public:
     Parser() = default;
@@ -59,6 +93,8 @@ public:
 private:
     static constexpr int MIN_TRANSACTION_ID = 0x01;
     static constexpr int MAX_TRANSACTION_ID = 0x00ffffff;
+    static constexpr int MIN_IPC_CAPACITY = 1;
+    static constexpr int MAX_IPC_CAPACITY = 0x0001ffff;
 
     class Attribute : public LightRefCountBase {
     public:
@@ -102,6 +138,8 @@ private:
     void ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token);
 
     void ParseAttrUnitIpccode(AttrSet &attrs, Token &token);
+
+    void ParseAttrUnitIpcCapacity(AttrSet &attrs, Token &token);
 
     // parse interface type
     void ParseInterface(const AttrSet &attrs = {});

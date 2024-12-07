@@ -38,7 +38,7 @@ public:
 
     std::string GetSignature();
 
-    inline void SetAttribute(AutoPtr<ASTAttr> attr)
+    inline void SetAttribute(const AutoPtr<ASTAttr>& attr)
     {
         if (attr_ != nullptr && attr != nullptr) {
             attr_->SetValue(attr->GetValue());
@@ -101,19 +101,19 @@ public:
         cmdId_ = cmdId;
     }
 
-    inline size_t GetCmdId()
+    inline size_t GetCmdId() const
     {
         return cmdId_;
     }
 
-    inline std::string GetMethodIdentifier()
+    inline std::string GetMethodIdentifier() const
     {
         return isOverload_ ? "_" + std::to_string(cmdId_) : "";
     }
 
     std::string Dump(const std::string &prefix) override;
 
-    void SetCacheable(AutoPtr<ASTAttr> attr)
+    void SetCacheable(const AutoPtr<ASTAttr>& attr)
     {
         if (attr->HasValue(ASTAttr::CACHEABLE)) {
             attr_->SetValue(ASTAttr::CACHEABLE);
@@ -168,6 +168,50 @@ public:
         }
     }
 
+    bool HasIpcInCapacity()
+    {
+        return attr_->HasValue(ASTAttr::IPC_IN_CAPACITY);
+    }
+
+    std::string &GetIpcInCapacity()
+    {
+        return attr_->GetIpcInCapacity();
+    }
+
+    void SetIpcInCapacity(const AutoPtr<ASTAttr> &attr)
+    {
+        if (attr->HasValue(ASTAttr::IPC_IN_CAPACITY)) {
+            attr_->SetIpcInCapacity(attr->GetIpcInCapacity());
+        }
+    }
+
+    bool HasIpcOutCapacity()
+    {
+        return attr_->HasValue(ASTAttr::IPC_OUT_CAPACITY);
+    }
+
+    std::string &GetIpcOutCapacity()
+    {
+        return attr_->GetIpcOutCapacity();
+    }
+
+    void SetIpcOutCapacity(const AutoPtr<ASTAttr> &attr)
+    {
+        if (attr->HasValue(ASTAttr::IPC_OUT_CAPACITY)) {
+            attr_->SetIpcOutCapacity(attr->GetIpcOutCapacity());
+        }
+    }
+
+    void SetIpcCode(int32_t ipc_code)
+    {
+        this->ipcCode_ = ipc_code;
+    }
+
+    int32_t GetIpcCode() const
+    {
+        return this->ipcCode_;
+    }
+
 private:
     void BuildSignature();
 
@@ -176,8 +220,9 @@ private:
     AutoPtr<ASTAttr> attr_ = new ASTAttr();
     AutoPtr<ASTType> returnType_;
     std::vector<AutoPtr<ASTParameter>> parameters_;
-    bool isOverload_ = false;  // used to identify if method is overload
-    size_t cmdId_;  // used to identify same name method
+    bool isOverload_ = false; // used to identify if method is overload
+    size_t cmdId_ = 0;        // used to identify same name method
+    int32_t ipcCode_ = 0;
     std::string freezeControlReason;
 };
 } // namespace Idl

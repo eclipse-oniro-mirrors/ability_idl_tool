@@ -14,49 +14,12 @@
  */
 
 #include "parser/parser.h"
-
-#include <regex>
-#include <unordered_set>
-
-#include "ast/ast_array_type.h"
-#include "ast/ast_enum_type.h"
-#include "ast/ast_map_type.h"
-#include "ast/ast_parameter.h"
-#include "ast/ast_sequenceable_type.h"
-#include "ast/ast_smq_type.h"
-#include "ast/ast_struct_type.h"
-#include "ast/ast_union_type.h"
 #include "util/logger.h"
-#include "util/string_builder.h"
+#include "parser/intf_type_check.h"
 
 namespace OHOS {
 namespace Idl {
-static constexpr const char *RE_BIN_DIGIT = "0[b][0|1]+";      // binary digit
-static constexpr const char *RE_OCT_DIGIT = "0[0-7]+";         // octal digit
-static constexpr const char *RE_DEC_DIGIT = "[0-9]+";          // decimal digit
-static constexpr const char *RE_HEX_DIFIT = "0[xX][0-9a-fA-F]+";  // hexadecimal digit
-static constexpr const char *RE_DIGIT_SUFFIX = "(u|l|ll|ul|ull|)$";
-static constexpr const char *RE_IDENTIFIER = "[a-zA-Z_][a-zA-Z0-9_]*";
 
-static constexpr unsigned int RE_PACKAGE_NUM = 3;
-static constexpr unsigned int RE_PACKAGE_INDEX = 0;
-static constexpr unsigned int RE_PACKAGE_MAJOR_VER_INDEX = 1;
-static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
-
-static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
-    "(" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
-static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) +
-    "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
-static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) + ")*\\.[V|v]" +
-    std::string(RE_DEC_DIGIT) + "_"  + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
-static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
-    std::regex_constants::icase);
-static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
-    std::regex_constants::icase);
-static const std::regex RE_DEC_NUM(std::string(RE_DEC_DIGIT) + std::string(RE_DIGIT_SUFFIX),
-    std::regex_constants::icase);
-static const std::regex RE_HEX_NUM(std::string(RE_HEX_DIFIT) + std::string(RE_DIGIT_SUFFIX),
-    std::regex_constants::icase);
 AutoPtr<ASTEnumType> g_currentEnum = nullptr;
 
 bool Parser::Parse(const std::vector<FileDetail> &fileDetails)
@@ -198,7 +161,7 @@ bool Parser::ParserPackageInfo(const std::string &packageName)
             return false;
         }
 
-        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
+        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
         size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
         size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
         ast_->SetVersion(majorVersion, minorVersion);
@@ -206,7 +169,7 @@ bool Parser::ParserPackageInfo(const std::string &packageName)
         if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SM)) {
             return false;
         }
-        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX).c_str());
+        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
     }
     return true;
 }
@@ -444,6 +407,13 @@ AttrSet Parser::ParseAttributeInfo()
     // attrunit
     token = lexer_.PeekToken();
     while (token.kind != TokenType::BRACKETS_RIGHT && token.kind != TokenType::END_OF_FILE) {
+        token = lexer_.PeekToken();
+        if (attrs.find(token) != attrs.end()) {
+            LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attributes '%s'",
+                token.value.c_str()));
+            return attrs;
+        }
+
         if (!ParseAttrUnit(attrs)) {
             return attrs;
         }
@@ -476,24 +446,15 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
         case TokenType::MINI:
         case TokenType::CALLBACK:
         case TokenType::ONEWAY: {
-            if (attrs.find(token) != attrs.end()) {
-                LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attributes '%s'",
-                    token.value.c_str()));
-            } else {
-                attrs.insert(token);
-            }
+            attrs.insert(token);
             lexer_.GetToken();
             return true;
         }
         case TokenType::CACHEABLE: {
-            if (attrs.find(token) != attrs.end()) {
-                LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attributes cacheable"));
-            } else {
-                if (!lexer_.ReadCacheableTime(token)) {
-                    LogError(__func__, __LINE__, token, StringHelper::Format("Cacheable time parse failed"));
-                }
-                attrs.insert(token);
+            if (!lexer_.ReadCacheableTime(token)) {
+                LogError(__func__, __LINE__, token, StringHelper::Format("Cacheable time parse failed"));
             }
+            attrs.insert(token);
             lexer_.GetToken();
             return true;
         }
@@ -503,6 +464,11 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
         }
         case TokenType::IPCCODE: {
             ParseAttrUnitIpccode(attrs, token);
+            return true;
+        }
+        case TokenType::IPC_IN_CAPACITY:
+        case TokenType::IPC_OUT_CAPACITY: {
+            ParseAttrUnitIpcCapacity(attrs, token);
             return true;
         }
         default:
@@ -515,17 +481,13 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
 
 void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
 {
-    if (attrs.find(token) != attrs.end()) {
-        LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr freezecontrol"));
-    } else {
-        attrs.insert(token);
-        lexer_.GetToken();
-        token = lexer_.PeekToken();
-        if (token.value == "]") {
-            LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
-        } else if (token.kind == TokenType::ID) {
-            freezecontrolAttr_ = token.value;
-        }
+    attrs.insert(token);
+    lexer_.GetToken();
+    token = lexer_.PeekToken();
+    if (token.value == "]") {
+        LogError(__func__, __LINE__, token, StringHelper::Format("freezecontrol attr cannot be empty"));
+    } else if (token.kind == TokenType::ID) {
+        freezecontrolAttr_ = token.value;
     }
     lexer_.GetToken();
 }
@@ -535,11 +497,6 @@ void Parser::ParseAttrUnitIpccode(AttrSet &attrs, Token &token)
     Options &options = Options::GetInstance();
     if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
         LogError(__func__, __LINE__, token, StringHelper::Format("Not support ipccode"));
-        lexer_.GetToken();
-        return;
-    }
-    if (attrs.find(token) != attrs.end()) {
-        LogError(__func__, __LINE__, token, StringHelper::Format("Duplicate declared attr ipc code"));
         lexer_.GetToken();
         return;
     }
@@ -571,6 +528,45 @@ void Parser::ParseAttrUnitIpccode(AttrSet &attrs, Token &token)
                 ipcCodeValue, MIN_TRANSACTION_ID, MAX_TRANSACTION_ID));
         } else {
             tokenTmp.value = std::to_string(ipcCodeValue);
+            attrs.insert(tokenTmp);
+        }
+    }
+    lexer_.GetToken();
+}
+
+void Parser::ParseAttrUnitIpcCapacity(AttrSet &attrs, Token &token)
+{
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Not support ipc capacity"));
+        lexer_.GetToken();
+        return;
+    }
+
+    Token tokenTmp = token;
+    lexer_.GetToken();
+    token = lexer_.PeekToken();
+    if (token.value == "]" || token.value == "," || token.value.empty()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("ipc capacity attr cannot be empty"));
+        return;
+    }
+
+    size_t end = 0;
+    int capacity = 0;
+    try {
+        capacity = std::stoi(token.value, &end);
+    } catch (...) {
+        end = 0;
+    }
+    if (end != token.value.size()) {
+        LogError(__func__, __LINE__, token,
+            StringHelper::Format("%s is illegal ipc capacity value", token.value.c_str()));
+    } else {
+        if (capacity < MIN_IPC_CAPACITY || capacity > MAX_IPC_CAPACITY) {
+            LogError(__func__, __LINE__, token, StringHelper::Format("ipc capacity %d is out of range [%d, %d]",
+                capacity, MIN_IPC_CAPACITY, MAX_IPC_CAPACITY));
+        } else {
+            tokenTmp.value = std::to_string(capacity);
             attrs.insert(tokenTmp);
         }
     }
@@ -697,6 +693,7 @@ void Parser::CheckIpcCodeValue(
     } else {
         ipcCodeSet.insert(ipcCodeValue);
     }
+    method->SetIpcCode(ipcCodeValue);
     ipcCodeValue++;
 }
 
@@ -757,6 +754,8 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     method->SetAttribute(methodAttr);
     method->SetCacheable(methodAttr);
     method->SetIpcCode(methodAttr);
+    method->SetIpcInCapacity(methodAttr);
+    method->SetIpcOutCapacity(methodAttr);
     method->SetReturnType(ParseMethodReturnType());
 
     // parser method name
@@ -846,6 +845,14 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
             case TokenType::IPCCODE:
                 methodAttr->SetValue(ASTAttr::IPCCODE);
                 methodAttr->SetIpcCodeStr(attr.value);
+                break;
+            case TokenType::IPC_IN_CAPACITY:
+                methodAttr->SetValue(ASTAttr::IPC_IN_CAPACITY);
+                methodAttr->SetIpcInCapacity(attr.value);
+                break;
+            case TokenType::IPC_OUT_CAPACITY:
+                methodAttr->SetValue(ASTAttr::IPC_OUT_CAPACITY);
+                methodAttr->SetIpcOutCapacity(attr.value);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));
@@ -951,7 +958,7 @@ AutoPtr<ASTParameter> Parser::ParseParam()
 {
     AutoPtr<ASTParamAttr> paramAttr = ParseParamAttr();
     AutoPtr<ASTType> paramType = ParseType();
-    std::string paramName = "";
+    std::string paramName;
 
     // param name
     Token token = lexer_.PeekToken();
