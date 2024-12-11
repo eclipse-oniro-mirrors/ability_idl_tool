@@ -34,7 +34,7 @@ private:
 
     void EmitInterfaceStubInHeaderFile(StringBuilder &sb);
 
-    void EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix) const;
+    static void EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix);
 
     void EmitStubSourceFile();
 
@@ -46,7 +46,11 @@ private:
 
     void EmitLocalVariable(const AutoPtr<ASTParameter> &param, StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitSaReturnParameter(const std::string &name, const TypeKind kind, StringBuilder &sb) const;
+    static void EmitSaReturnParameter(const std::string &name, TypeKind kind, StringBuilder &sb);
+
+    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix);
+
+    void EmitInterfaceSetIpcCapacity(AutoPtr <ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 };
 } // namespace Idl
 } // namespace OHOS

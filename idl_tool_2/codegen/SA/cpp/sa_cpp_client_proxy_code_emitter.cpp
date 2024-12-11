@@ -15,7 +15,6 @@
 
 #include "sa_cpp_client_proxy_code_emitter.h"
 #include "util/file.h"
-#include "util/logger.h"
 #include "util/string_helper.h"
 
 namespace OHOS {
@@ -190,11 +189,26 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDeathRecipient(StringBuilder
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix)
 {
     EmitInterfaceProxyDeathRecipient(sb, prefix);
+
     sb.Append(prefix).AppendFormat("static inline BrokerDelegator<%s> delegator_;\n", proxyName_.c_str())
         .Append(prefix + "sptr<IRemoteObject> remote_;\n")
         .Append(prefix + "sptr<IRemoteObject::DeathRecipient> deathRecipient_;\n")
         .Append(prefix + "OnRemoteDiedCallback remoteDiedCallback_;\n")
         .Append(prefix + "std::mutex mutex_;\n");
+
+    EmitInterfaceProxyIpcCapacityValues(sb, prefix);
+}
+
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix)
+{
+    size_t methodNumber = interface_->GetMethodNumber();
+    for (size_t i = 0; i < methodNumber; i++) {
+        AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        if (method->HasIpcInCapacity()) {
+            sb.Append(prefix).AppendFormat("static constexpr size_t CAPACITY_%s_%d = %s << 10;\n",
+                ConstantName(method->GetName()).c_str(), method->GetIpcCode(), method->GetIpcInCapacity().c_str());
+        }
+    }
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
@@ -329,6 +343,21 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(AutoPt
             interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
 }
 
+void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix) const
+{
+    std::string capacity = StringHelper::Format("CAPACITY_%s_%d", ConstantName(method->GetName()).c_str(),
+        method->GetIpcCode());
+    sb.Append(prefix).AppendFormat("if (!data.SetMaxCapacity(%s)) {\n", capacity.c_str());
+    if (logOn_) {
+        sb.Append(prefix + TAB).AppendFormat(
+            "HiLog::Error(LABEL, \"Failed to set maximum capacity to %%zu\", %s);\n",
+            capacity.c_str());
+    }
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_VALUE;\n");
+    sb.Append(prefix).Append("}\n\n");
+}
+
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
@@ -339,9 +368,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
-    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n",
+    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n",
         method->IsOneWay() ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
-    sb.Append("\n");
+
+    if (method->HasIpcInCapacity()) {
+        EmitInterfaceSetIpcCapacity(method, sb, prefix + TAB);
+    }
+
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");

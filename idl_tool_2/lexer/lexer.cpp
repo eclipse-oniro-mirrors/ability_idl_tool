@@ -58,6 +58,8 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"mini",           TokenType::MINI         },
     {"cacheable",      TokenType::CACHEABLE    },
     {"ipccode",        TokenType::IPCCODE      },
+    {"ipcincapacity",  TokenType::IPC_IN_CAPACITY  },
+    {"ipcoutcapacity", TokenType::IPC_OUT_CAPACITY },
     {"in",             TokenType::IN           },
     {"out",            TokenType::OUT          },
     {"inout",          TokenType::INOUT        },

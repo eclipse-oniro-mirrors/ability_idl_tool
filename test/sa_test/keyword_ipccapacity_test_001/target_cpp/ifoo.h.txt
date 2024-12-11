@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TEST_IFOO_H
+#define TEST_IFOO_H
+
+#include <cstdint>
+#include <iremote_broker.h>
+#include <string_ex.h>
+
+namespace test {
+
+enum class IFooIpcCode {
+    COMMAND_BOOL_TEST_FUNC = MIN_TRANSACTION_ID,
+    COMMAND_BYTE_TEST_FUNC,
+    COMMAND_SHORT_TEST_FUNC,
+    COMMAND_CHAR_TEST_FUNC,
+    COMMAND_INT_TEST_FUNC = 10,
+    COMMAND_LONG_TEST_FUNC,
+    COMMAND_STRING_TEST_FUNC,
+    COMMAND_FLOAT_TEST_FUNC,
+    COMMAND_FD_TEST_FUNC,
+    COMMAND_DOUBLE_TEST_FUNC = 16777215,
+};
+
+using OnRemoteDiedCallback = std::function<void(const wptr<IRemoteObject>&)>;
+
+class IFoo : public IRemoteBroker {
+public:
+    DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
+
+    virtual void RegisterOnRemoteDiedCallback([[maybe_unused]] const OnRemoteDiedCallback& callback) {}
+
+    virtual ErrCode bool_test_func(
+        bool inParam,
+        bool& outParam,
+        bool inoutParam,
+        bool& funcResult) = 0;
+
+    virtual ErrCode byte_test_func(
+        int8_t inParam,
+        int8_t& outParam,
+        int8_t inoutParam,
+        int8_t& funcResult) = 0;
+
+    virtual ErrCode short_test_func(
+        short inParam,
+        short& outParam,
+        short inoutParam,
+        short& funcResult) = 0;
+
+    virtual ErrCode char_test_func(
+        zchar inParam,
+        zchar& outParam,
+        zchar inoutParam,
+        zchar& funcResult) = 0;
+
+    virtual ErrCode int_test_func(
+        int32_t inParam,
+        int32_t& funcResult) = 0;
+
+    virtual ErrCode long_test_func(
+        int64_t inParam,
+        int64_t& outParam,
+        int64_t inoutParam) = 0;
+
+    virtual ErrCode string_test_func(
+        const std::string& inParam,
+        const std::string& outParam,
+        const std::string& inoutParam) = 0;
+
+    virtual ErrCode float_test_func(
+        float inParam,
+        float outParam,
+        float inoutParam) = 0;
+
+    virtual ErrCode fd_test_func(
+        int inParam,
+        int& outParam,
+        int inoutParam,
+        int& funcResult) = 0;
+
+    virtual ErrCode double_test_func(
+        double inParam) = 0;
+protected:
+    const int VECTOR_MAX_SIZE = 102400;
+    const int LIST_MAX_SIZE = 102400;
+    const int MAP_MAX_SIZE = 102400;
+};
+} // namespace test
+#endif // TEST_IFOO_H
+

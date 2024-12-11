@@ -32,6 +32,8 @@ public:
     static constexpr Attribute CACHEABLE = 0x1U << 5;
     static constexpr Attribute FREEZECONTROL = 0x1U << 6;
     static constexpr Attribute IPCCODE = 0x1U << 7;
+    static constexpr Attribute IPC_IN_CAPACITY = 0x1U << 8;
+    static constexpr Attribute IPC_OUT_CAPACITY = 0x1U << 9;
 
     explicit ASTAttr(Attribute value = ASTAttr::NONE) : value_(value) {}
 
@@ -88,11 +90,33 @@ public:
         ipcCodeStr_ = ipcCodeStr;
     }
 
+    std::string &GetIpcInCapacity()
+    {
+        return ipcInCapacity_;
+    }
+
+    void SetIpcInCapacity(const std::string &capacity)
+    {
+        ipcInCapacity_ = capacity;
+    }
+
+    std::string &GetIpcOutCapacity()
+    {
+        return ipcOutCapacity_;
+    }
+
+    void SetIpcOutCapacity(const std::string &capacity)
+    {
+        ipcOutCapacity_ = capacity;
+    }
+
 private:
     Attribute value_;
     int32_t cacheableTime_ = 0;
     std::string cacheableTimeString_;
     std::string ipcCodeStr_;
+    std::string ipcInCapacity_;
+    std::string ipcOutCapacity_;
 };
 
 class ASTParamAttr : public ASTNode {

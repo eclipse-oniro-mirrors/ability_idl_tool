@@ -78,6 +78,10 @@ private:
 
     void EmitInterfaceProxyMethodRetValue(AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
+
+    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix);
+
+    void EmitInterfaceSetIpcCapacity(AutoPtr <ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 };
 } // namespace SA
 } // namespace OHOS

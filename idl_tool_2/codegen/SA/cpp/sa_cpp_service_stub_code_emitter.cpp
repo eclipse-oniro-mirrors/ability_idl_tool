@@ -15,7 +15,6 @@
 
 #include "sa_cpp_service_stub_code_emitter.h"
 #include "util/file.h"
-#include "util/logger.h"
 
 namespace OHOS {
 namespace Idl {
@@ -53,11 +52,30 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubInHeaderFile(StringBuilder &s
     sb.AppendFormat("class %s : public IRemoteStub<%s> {\n", stubName_.c_str(), interfaceName_.c_str());
     sb.Append("public:\n");
     EmitInterfaceStubMethodDecls(sb, TAB);
+    EmitInterfaceProxyIpcCapacityValues(sb, TAB);
     sb.Append("};\n");
     EmitEndNamespace(sb);
 }
 
-void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix) const
+void SaCppServiceStubCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix)
+{
+    StringBuilder values;
+    size_t methodNumber = interface_->GetMethodNumber();
+    for (size_t i = 0; i < methodNumber; i++) {
+        AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        if (method->HasIpcOutCapacity()) {
+            values.Append(prefix).AppendFormat("static constexpr size_t CAPACITY_%s_%d = %s << 10;\n",
+                ConstantName(method->GetName()).c_str(), method->GetIpcCode(), method->GetIpcOutCapacity().c_str());
+        }
+    }
+
+    std::string valuesStr = values.ToString();
+    if (!valuesStr.empty()) {
+        sb.Append("private:\n").Append(valuesStr);
+    }
+}
+
+void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix)
 {
     sb.Append(prefix).Append("int32_t OnRemoteRequest(\n");
     sb.Append(prefix + TAB).Append("uint32_t code,\n");
@@ -126,6 +144,21 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix).Append("}\n");
 }
 
+void SaCppServiceStubCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix) const
+{
+    std::string capacity = StringHelper::Format("CAPACITY_%s_%d", ConstantName(method->GetName()).c_str(),
+        method->GetIpcCode());
+    sb.Append(prefix).AppendFormat("if (!reply.SetMaxCapacity(%s)) {\n", capacity.c_str());
+    if (logOn_) {
+        sb.Append(prefix + TAB).AppendFormat(
+            "HiLog::Error(LABEL, \"Failed to set maximum capacity to %%zu\", %s);\n",
+            capacity.c_str());
+    }
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_VALUE;\n");
+    sb.Append(prefix).Append("}\n");
+}
+
 void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
@@ -151,6 +184,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
     TypeKind retTypeKind = returnType->GetTypeKind();
     if (hasOutParameter || (retTypeKind != TypeKind::TYPE_VOID)) {
         sb.Append(prefix + TAB).Append("if (SUCCEEDED(errCode)) {\n");
+        if (method->HasIpcOutCapacity()) {
+            EmitInterfaceSetIpcCapacity(method, sb, prefix + TAB + TAB);
+        }
         for (int i = 0; i < paramNumber; i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
@@ -224,7 +260,7 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
 }
 
 void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name, const TypeKind kind,
-    StringBuilder &sb) const
+    StringBuilder &sb)
 {
     switch (kind) {
         case TypeKind::TYPE_CHAR:

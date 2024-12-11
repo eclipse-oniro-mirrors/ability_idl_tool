@@ -15,7 +15,6 @@
 
 #include "sa_cpp_interface_code_emitter.h"
 #include "util/file.h"
-#include "util/logger.h"
 
 namespace OHOS {
 namespace Idl {
