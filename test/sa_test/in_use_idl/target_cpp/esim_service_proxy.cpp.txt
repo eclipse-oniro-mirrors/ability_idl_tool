@@ -17,52 +17,6 @@
 
 namespace OHOS {
 namespace Telephony {
-EsimServiceProxy::EsimServiceProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IEsimService>(remote)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (remote_ && remote_ != remote) {
-        RemoveDeathRecipient();
-    }
-    if (remote) {
-        if (!remote->IsProxyObject()) {
-            return;
-        }
-        deathRecipient_ = new (std::nothrow) EsimServiceRecipient(*this);
-        if (!deathRecipient_) {
-            return;
-        }
-        if (!remote->AddDeathRecipient(deathRecipient_)) {
-            return;
-        }
-        remote_ = remote;
-    }
-}
-
-EsimServiceProxy::~EsimServiceProxy()
-{
-    RemoveDeathRecipient();
-}
-
-void EsimServiceProxy::RemoveDeathRecipient()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!remote_ || !deathRecipient_) {
-        return;
-    }
-    remote_->RemoveDeathRecipient(deathRecipient_);
-    remote_ = nullptr;
-    deathRecipient_ = nullptr;
-    remoteDiedCallback_ = nullptr;
-}
-
-void EsimServiceProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
-{
-    if (remoteDiedCallback_) {
-        remoteDiedCallback_(remote);
-    }
-    RemoveDeathRecipient();
-}
-
 ErrCode EsimServiceProxy::GetEid(
     int32_t slotId,
     std::string& eId)
