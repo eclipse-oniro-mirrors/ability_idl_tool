@@ -34,8 +34,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, proxyFullName_);
-    sb.Append("\n").Append("#include <mutex>\n")
-        .Append("#include <iremote_proxy.h>\n")
+    sb.Append("\n").Append("#include <iremote_proxy.h>\n")
         .AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     if (ast_ != nullptr && ast_->GetHasCacheableProxyMethods()) {
         sb.Append("#include \"api_cache_manager.h\"\n");
@@ -54,15 +53,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder &
 {
     EmitBeginNamespace(sb);
     sb.AppendFormat("class %s : public IRemoteProxy<%s> {\n", proxyName_.c_str(), interfaceName_.c_str());
-
     sb.Append("public:\n");
-    EmitInterfaceProxyConstructorDecl(sb, TAB);
-    EmitInterfaceProxyRemoteDiedCallback(sb, TAB);
+    EmitInterfaceProxyConstructor(sb, TAB);
+    sb.Append("\n");
     EmitInterfaceProxyMethodDecls(sb, TAB);
-
+    sb.Append("\n");
     sb.Append("private:\n");
     EmitInterfaceProxyConstants(sb, TAB);
-
     sb.Append("};\n");
     EmitEndNamespace(sb);
 }
@@ -70,11 +67,8 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder &
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(StringBuilder &sb,
     const std::string &prefix) const
 {
-    sb.Append(prefix).Append("if (remote_ && remote_ != remote) {\n")
-        .Append(prefix + TAB).Append("RemoveDeathRecipient();\n")
-        .Append(prefix).Append("}\n")
-        .Append(prefix).Append("if (remote) {\n")
-        .Append(prefix + TAB).Append("if (!remote->IsProxyObject()) {\n");
+    sb.Append(prefix).Append("if (remote_) {\n");
+    sb.Append(prefix + TAB).Append("if (!remote->IsProxyObject()) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"remote is not proxy object!\");\n");
     }
@@ -118,10 +112,22 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &s
         }
     }
     sb.Append("\n");
+    EmitInterfaceProxyRegisterDeathRecipient(sb, prefix + TAB);
+    sb.Append(prefix).Append("}\n");
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDelCacheApi(StringBuilder &sb, const std::string &prefix) const
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(StringBuilder &sb,
+    const std::string &prefix) const
 {
+    sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + TAB).Append("if (remote_ == nullptr) {\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("if (deathRecipient_ == nullptr) {\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("remote_->RemoveDeathRecipient(deathRecipient_);\n");
+    sb.Append(prefix + TAB).Append("remote_ = nullptr;\n");
     size_t methodNumber = interface_->GetMethodNumber();
     if (methodNumber > 0) {
         sb.Append("\n");
@@ -134,12 +140,26 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDelCacheApi(StringBuilder &s
             }
         }
     }
+    sb.Append(prefix).Append("}\n");
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructorDecl(StringBuilder &sb, const std::string &prefix) const
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &sb, const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("explicit %s(const sptr<IRemoteObject>& remote);\n\n", proxyName_.c_str())
-        .Append(prefix).AppendFormat("~%s() override;\n\n", proxyName_.c_str());
+    sb.Append(prefix).AppendFormat("explicit %s(\n", proxyName_.c_str());
+    sb.Append(prefix + TAB).Append("const sptr<IRemoteObject>& remote)\n");
+    sb.Append(prefix + TAB).AppendFormat(": IRemoteProxy<%s>(remote)\n", interfaceName_.c_str());
+    if (ast_->GetHasCacheableProxyMethods()) {
+        EmitInterfaceProxyAddCacheApi(sb, prefix);
+    } else {
+        sb.Append(prefix).Append("{}\n");
+    }
+    sb.Append("\n");
+    sb.Append(prefix).AppendFormat("virtual ~%s()\n", proxyName_.c_str());
+    if (ast_->GetHasCacheableProxyMethods()) {
+        EmitInterfaceProxyUnRegisterDeathRecipient(sb, prefix);
+    } else {
+        sb.Append(prefix).Append("{}\n");
+    }
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder &sb, const std::string &prefix) const
@@ -148,16 +168,10 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder &s
     for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceProxyMethodDecl(method, sb, prefix);
-        sb.Append("\n");
+        if (i != methodNumber - 1) {
+            sb.Append("\n");
+        }
     }
-}
-
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRemoteDiedCallback(StringBuilder &sb, const std::string &prefix)
-{
-    sb.Append(prefix).Append("void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override\n")
-        .Append(prefix).Append("{\n")
-        .Append(prefix + TAB).Append("remoteDiedCallback_ = callback;\n")
-        .Append(prefix).Append("}\n\n");
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
@@ -172,29 +186,32 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDeathRecipient(StringBuilder
 {
     sb.Append(prefix).AppendFormat("class %s : public IRemoteObject::DeathRecipient {\n", deathRecipientName_.c_str());
     sb.Append(prefix).Append("public:\n");
-    sb.Append(prefix + TAB).AppendFormat("explicit %s(%s& client) : client_(client) {}\n", deathRecipientName_.c_str(),
+    sb.Append(prefix + TAB).AppendFormat("explicit %s(%s &client) : client_(client) {}\n", deathRecipientName_.c_str(),
         proxyName_.c_str());
     sb.Append(prefix + TAB).AppendFormat("~%s() override = default;\n", deathRecipientName_.c_str());
-    sb.Append(prefix + TAB).Append("void OnRemoteDied(const wptr<IRemoteObject>& remote) override\n");
+    sb.Append(prefix + TAB).Append("void OnRemoteDied(const wptr<IRemoteObject> &remote) override\n");
     sb.Append(prefix + TAB).Append("{\n");
     sb.Append(prefix + TAB + TAB).Append("client_.OnRemoteDied(remote);\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix).Append("private:\n");
-    sb.Append(prefix + TAB).AppendFormat("%s& client_;\n", proxyName_.c_str());
+    sb.Append(prefix + TAB).AppendFormat("%s &client_;\n", proxyName_.c_str());
     sb.Append(prefix).Append("};\n\n");
-    sb.Append(prefix).Append("void RemoveDeathRecipient();\n");
-    sb.Append(prefix).Append("void OnRemoteDied(const wptr<IRemoteObject>& remote);\n\n");
+
+    sb.Append(prefix).Append("void OnRemoteDied(const wptr<IRemoteObject> &remoteObject)\n");
+    sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + TAB).Append("(void)remoteObject;\n");
+    sb.Append(prefix + TAB).Append("ApiCacheManager::GetInstance().ClearCache(GetDescriptor());\n");
+    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("sptr<IRemoteObject> remote_ = nullptr;\n");
+    sb.Append(prefix).Append("sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;\n");
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix)
 {
-    EmitInterfaceProxyDeathRecipient(sb, prefix);
-
-    sb.Append(prefix).AppendFormat("static inline BrokerDelegator<%s> delegator_;\n", proxyName_.c_str())
-        .Append(prefix + "sptr<IRemoteObject> remote_;\n")
-        .Append(prefix + "sptr<IRemoteObject::DeathRecipient> deathRecipient_;\n")
-        .Append(prefix + "OnRemoteDiedCallback remoteDiedCallback_;\n")
-        .Append(prefix + "std::mutex mutex_;\n");
+    if (ast_->GetHasCacheableProxyMethods()) {
+        EmitInterfaceProxyDeathRecipient(sb, prefix);
+    }
+    sb.Append(prefix).AppendFormat("static inline BrokerDelegator<%s> delegator_;\n", proxyName_.c_str());
 
     EmitInterfaceProxyIpcCapacityValues(sb, prefix);
 }
@@ -231,9 +248,6 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
         sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
     }
     EmitBeginNamespace(sb);
-    EmitInterfaceProxyConstructorImpl(sb);
-    EmitInterfaceProxyRemoveDeathRecipient(sb);
-    EmitInterfaceProxyOnRemoteDied(sb);
     EmitInterfaceProxyMethodImpls(sb, "");
     EmitEndNamespace(sb);
 
@@ -241,61 +255,6 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
     file.WriteData(data.c_str(), data.size());
     file.Flush();
     file.Close();
-}
-
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructorImpl(StringBuilder &sb) const
-{
-    sb.AppendFormat("%s::%s(const sptr<IRemoteObject>& remote) : IRemoteProxy<%s>(remote)\n{\n",
-        proxyName_.c_str(), proxyName_.c_str(), interfaceName_.c_str());
-    if (ast_->GetHasCacheableProxyMethods()) {
-        EmitInterfaceProxyAddCacheApi(sb, TAB);
-    }
-    sb.Append(TAB).Append("std::lock_guard<std::mutex> lock(mutex_);\n");
-    EmitInterfaceProxyRegisterDeathRecipient(sb, TAB);
-    sb.Append("}\n\n");
-
-    sb.AppendFormat("%s::~%s()\n", proxyName_.c_str(), proxyName_.c_str())
-        .Append("{\n")
-        .Append(TAB).Append("RemoveDeathRecipient();\n");
-    if (ast_->GetHasCacheableProxyMethods()) {
-        EmitInterfaceProxyDelCacheApi(sb, TAB);
-    }
-    sb.Append("}\n\n");
-}
-
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRemoveDeathRecipient(StringBuilder &sb) const
-{
-    sb.AppendFormat("void %s::RemoveDeathRecipient()\n", proxyName_.c_str())
-        .Append("{\n")
-        .Append(TAB).Append("std::lock_guard<std::mutex> lock(mutex_);\n");
-    if (logOn_) {
-        sb.Append(TAB).Append("HiLog::Info(LABEL, \"Remove death recipient\");\n");
-    }
-    sb.Append(TAB).Append("if (!remote_ || !deathRecipient_) {\n")
-        .Append(TAB).Append(TAB).Append("return;\n")
-        .Append(TAB).Append("}\n")
-        .Append(TAB).Append("remote_->RemoveDeathRecipient(deathRecipient_);\n")
-        .Append(TAB).Append("remote_ = nullptr;\n")
-        .Append(TAB).Append("deathRecipient_ = nullptr;\n")
-        .Append(TAB).Append("remoteDiedCallback_ = nullptr;\n")
-        .Append("}\n\n");
-}
-
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyOnRemoteDied(StringBuilder &sb) const
-{
-    sb.AppendFormat("void %s::OnRemoteDied(const wptr<IRemoteObject>& remote)\n{\n", proxyName_.c_str());
-    if (logOn_) {
-        sb.Append(TAB).Append("HiLog::Info(LABEL, \"On remote died\");\n");
-    }
-    sb.Append(TAB).Append("if (remoteDiedCallback_) {\n")
-        .Append(TAB).Append(TAB).Append("remoteDiedCallback_(remote);\n")
-        .Append(TAB).Append("}\n")
-        .Append(TAB).Append("RemoveDeathRecipient();\n");
-
-    if (ast_->GetHasCacheableProxyMethods()) {
-        sb.Append("\n").Append(TAB).Append("ApiCacheManager::GetInstance().ClearCache(GetDescriptor());\n");
-    }
-    sb.Append("}\n\n");
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const

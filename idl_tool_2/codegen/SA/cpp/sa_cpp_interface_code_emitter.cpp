@@ -167,7 +167,6 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
     EmitInterfaceMethodCommands(sb, TAB);
-    EmitCallbackDecl(sb);
     sb.AppendFormat("class %s : public IRemoteBroker {\n", interface_->GetName().c_str());
     sb.Append("public:\n");
     EmitInterfaceBody(sb, TAB);
@@ -176,18 +175,11 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
     EmitEndNamespace(sb);
 }
 
-void SaCppInterfaceCodeEmitter::EmitCallbackDecl(StringBuilder &sb)
-{
-    sb.Append("using OnRemoteDiedCallback = std::function<void(const wptr<IRemoteObject>&)>;\n\n");
-}
-
 void SaCppInterfaceCodeEmitter::EmitInterfaceBody(StringBuilder &sb, const std::string &prefix) const
 {
     std::string nameWithoutPath = GetNamespace(interfaceFullName_);
-    sb.Append(prefix).AppendFormat("DECLARE_INTERFACE_DESCRIPTOR(u\"%s\");\n\n", nameWithoutPath.c_str())
-        .Append(prefix)
-        .Append("virtual void RegisterOnRemoteDiedCallback("
-                "[[maybe_unused]] const OnRemoteDiedCallback& callback) {}\n\n");
+    sb.Append(prefix).AppendFormat("DECLARE_INTERFACE_DESCRIPTOR(u\"%s\");\n", nameWithoutPath.c_str());
+    sb.Append("\n");
 
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     for (int i = 0; i < methodNumber; i++) {

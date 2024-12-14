@@ -16,21 +16,19 @@
 #ifndef TEST_FOOPROXY_H
 #define TEST_FOOPROXY_H
 
-#include <mutex>
 #include <iremote_proxy.h>
 #include "ifoo.h"
 
 namespace test {
 class FooProxy : public IRemoteProxy<IFoo> {
 public:
-    explicit FooProxy(const sptr<IRemoteObject>& remote);
+    explicit FooProxy(
+        const sptr<IRemoteObject>& remote)
+        : IRemoteProxy<IFoo>(remote)
+    {}
 
-    ~FooProxy() override;
-
-    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
-    {
-        remoteDiedCallback_ = callback;
-    }
+    virtual ~FooProxy()
+    {}
 
     ErrCode bool_test_func(
         bool inParam,
@@ -85,26 +83,7 @@ public:
         double inParam) override;
 
 private:
-    class FooRecipient : public IRemoteObject::DeathRecipient {
-    public:
-        explicit FooRecipient(FooProxy& client) : client_(client) {}
-        ~FooRecipient() override = default;
-        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
-        {
-            client_.OnRemoteDied(remote);
-        }
-    private:
-        FooProxy& client_;
-    };
-
-    void RemoveDeathRecipient();
-    void OnRemoteDied(const wptr<IRemoteObject>& remote);
-
     static inline BrokerDelegator<FooProxy> delegator_;
-    sptr<IRemoteObject> remote_;
-    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
-    OnRemoteDiedCallback remoteDiedCallback_;
-    std::mutex mutex_;
     static constexpr size_t CAPACITY_BOOL_TEST_FUNC_1 = 1 << 10;
     static constexpr size_t CAPACITY_SHORT_TEST_FUNC_3 = 131071 << 10;
     static constexpr size_t CAPACITY_CHAR_TEST_FUNC_4 = 131071 << 10;

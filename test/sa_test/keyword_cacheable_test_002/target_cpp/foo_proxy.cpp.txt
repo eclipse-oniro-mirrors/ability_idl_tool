@@ -17,64 +17,6 @@
 
 namespace idl {
 namespace OHOS {
-FooProxy::FooProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IFoo>(remote)
-{
-    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
-        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), 0);
-    ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),
-        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005), 2000);
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (remote_ && remote_ != remote) {
-        RemoveDeathRecipient();
-    }
-    if (remote) {
-        if (!remote->IsProxyObject()) {
-            return;
-        }
-        deathRecipient_ = new (std::nothrow) FooRecipient(*this);
-        if (!deathRecipient_) {
-            return;
-        }
-        if (!remote->AddDeathRecipient(deathRecipient_)) {
-            return;
-        }
-        remote_ = remote;
-    }
-}
-
-FooProxy::~FooProxy()
-{
-    RemoveDeathRecipient();
-
-    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
-        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005));
-    ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),
-        static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST005));
-}
-
-void FooProxy::RemoveDeathRecipient()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!remote_ || !deathRecipient_) {
-        return;
-    }
-    remote_->RemoveDeathRecipient(deathRecipient_);
-    remote_ = nullptr;
-    deathRecipient_ = nullptr;
-    remoteDiedCallback_ = nullptr;
-}
-
-void FooProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
-{
-    if (remoteDiedCallback_) {
-        remoteDiedCallback_(remote);
-    }
-    RemoveDeathRecipient();
-
-    ApiCacheManager::GetInstance().ClearCache(GetDescriptor());
-}
-
 ErrCode FooProxy::test001(
     int32_t param1)
 {

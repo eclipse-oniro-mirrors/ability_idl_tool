@@ -19,57 +19,6 @@
 using OHOS::HiviewDFX::HiLog;
 
 namespace test {
-FooProxy::FooProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<IFoo>(remote)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (remote_ && remote_ != remote) {
-        RemoveDeathRecipient();
-    }
-    if (remote) {
-        if (!remote->IsProxyObject()) {
-            HiLog::Error(LABEL, "remote is not proxy object!");
-            return;
-        }
-        deathRecipient_ = new (std::nothrow) FooRecipient(*this);
-        if (!deathRecipient_) {
-            HiLog::Error(LABEL, "deathRecipient_ is nullptr!");
-            return;
-        }
-        if (!remote->AddDeathRecipient(deathRecipient_)) {
-            HiLog::Error(LABEL, "AddDeathRecipient failed!");
-            return;
-        }
-        remote_ = remote;
-    }
-}
-
-FooProxy::~FooProxy()
-{
-    RemoveDeathRecipient();
-}
-
-void FooProxy::RemoveDeathRecipient()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    HiLog::Info(LABEL, "Remove death recipient");
-    if (!remote_ || !deathRecipient_) {
-        return;
-    }
-    remote_->RemoveDeathRecipient(deathRecipient_);
-    remote_ = nullptr;
-    deathRecipient_ = nullptr;
-    remoteDiedCallback_ = nullptr;
-}
-
-void FooProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
-{
-    HiLog::Info(LABEL, "On remote died");
-    if (remoteDiedCallback_) {
-        remoteDiedCallback_(remote);
-    }
-    RemoveDeathRecipient();
-}
-
 ErrCode FooProxy::void_test_func()
 {
     MessageParcel data;

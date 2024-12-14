@@ -17,52 +17,6 @@
 
 namespace OHOS {
 namespace testserver {
-TestServerInterfaceProxy::TestServerInterfaceProxy(const sptr<IRemoteObject>& remote) : IRemoteProxy<ITestServerInterface>(remote)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (remote_ && remote_ != remote) {
-        RemoveDeathRecipient();
-    }
-    if (remote) {
-        if (!remote->IsProxyObject()) {
-            return;
-        }
-        deathRecipient_ = new (std::nothrow) TestServerInterfaceRecipient(*this);
-        if (!deathRecipient_) {
-            return;
-        }
-        if (!remote->AddDeathRecipient(deathRecipient_)) {
-            return;
-        }
-        remote_ = remote;
-    }
-}
-
-TestServerInterfaceProxy::~TestServerInterfaceProxy()
-{
-    RemoveDeathRecipient();
-}
-
-void TestServerInterfaceProxy::RemoveDeathRecipient()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!remote_ || !deathRecipient_) {
-        return;
-    }
-    remote_->RemoveDeathRecipient(deathRecipient_);
-    remote_ = nullptr;
-    deathRecipient_ = nullptr;
-    remoteDiedCallback_ = nullptr;
-}
-
-void TestServerInterfaceProxy::OnRemoteDied(const wptr<IRemoteObject>& remote)
-{
-    if (remoteDiedCallback_) {
-        remoteDiedCallback_(remote);
-    }
-    RemoveDeathRecipient();
-}
-
 ErrCode TestServerInterfaceProxy::CreateSession(
     const SessionToken& sessionToken)
 {

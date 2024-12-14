@@ -16,7 +16,6 @@
 #ifndef OHOS_TESTSERVER_TESTSERVERINTERFACEPROXY_H
 #define OHOS_TESTSERVER_TESTSERVERINTERFACEPROXY_H
 
-#include <mutex>
 #include <iremote_proxy.h>
 #include "itest_server_interface.h"
 
@@ -24,14 +23,13 @@ namespace OHOS {
 namespace testserver {
 class TestServerInterfaceProxy : public IRemoteProxy<ITestServerInterface> {
 public:
-    explicit TestServerInterfaceProxy(const sptr<IRemoteObject>& remote);
+    explicit TestServerInterfaceProxy(
+        const sptr<IRemoteObject>& remote)
+        : IRemoteProxy<ITestServerInterface>(remote)
+    {}
 
-    ~TestServerInterfaceProxy() override;
-
-    void RegisterOnRemoteDiedCallback(const OnRemoteDiedCallback& callback) override
-    {
-        remoteDiedCallback_ = callback;
-    }
+    virtual ~TestServerInterfaceProxy()
+    {}
 
     ErrCode CreateSession(
         const SessionToken& sessionToken) override;
@@ -44,26 +42,7 @@ public:
         bool& re) override;
 
 private:
-    class TestServerInterfaceRecipient : public IRemoteObject::DeathRecipient {
-    public:
-        explicit TestServerInterfaceRecipient(TestServerInterfaceProxy& client) : client_(client) {}
-        ~TestServerInterfaceRecipient() override = default;
-        void OnRemoteDied(const wptr<IRemoteObject>& remote) override
-        {
-            client_.OnRemoteDied(remote);
-        }
-    private:
-        TestServerInterfaceProxy& client_;
-    };
-
-    void RemoveDeathRecipient();
-    void OnRemoteDied(const wptr<IRemoteObject>& remote);
-
     static inline BrokerDelegator<TestServerInterfaceProxy> delegator_;
-    sptr<IRemoteObject> remote_;
-    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
-    OnRemoteDiedCallback remoteDiedCallback_;
-    std::mutex mutex_;
 };
 } // namespace testserver
 } // namespace OHOS

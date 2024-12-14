@@ -52,8 +52,6 @@ private:
     void EmitInterfaceMethod(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceMemberVariables(StringBuilder &sb, const std::string &prefix) const;
-
-    static void EmitCallbackDecl(StringBuilder &sb);
 };
 } // namespace Idl
 } // namespace OHOS
