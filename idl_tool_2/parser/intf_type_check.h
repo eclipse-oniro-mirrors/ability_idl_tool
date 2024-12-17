@@ -18,7 +18,7 @@
 
 #include "ast/ast.h"
 #include "ast/ast_parameter.h"
-#include "util/light_refcount_base.h"
+#include "lexer/token.h"
 
 namespace OHOS {
 namespace Idl {
@@ -30,6 +30,10 @@ public:
     ~IntfTypeChecker() = default;
 
     bool CheckIntegrity();
+
+    static bool CheckBasicType(Token token);
+
+    static bool CheckUserDefType(Token token);
 
 private:
     bool CheckIntfSaAst();
