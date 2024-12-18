@@ -104,11 +104,11 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &s
         if (cacheableTime != 0) {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
                 .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), %d000);\n",
-                    interface_->GetName().c_str(), ConstantName(method->GetName()).c_str(), cacheableTime);
+                interface_->GetName().c_str(), ConstantName(method->GetName()).c_str(), cacheableTime);
         } else {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
                 .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), 0);\n",
-                    interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+                interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
         }
     }
     sb.Append("\n");
@@ -136,7 +136,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(Str
             if (method->GetCacheable() && !method->IsOneWay()) {
                 sb.Append(prefix).Append("ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),\n")
                     .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
-                        interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+                    interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
             }
         }
     }
@@ -284,7 +284,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr
     if ((method->GetCacheable()) && (!method->IsOneWay())) {
         sb.Append(prefix).Append("bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),\n")
             .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);",
-                interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
         sb.Append("\n");
         sb.Append(prefix).Append("if (hitCache) {\n");
         EmitInterfaceProxyMethodErrCode(sb, prefix);
@@ -299,7 +299,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(AutoPt
 {
     sb.Append(prefix + TAB).Append("ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),\n")
         .Append(prefix + TAB + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);\n",
-            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+        interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,
@@ -363,7 +363,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     sb.Append(prefix + TAB).Append("int32_t result = remote->SendRequest(\n")
         .Append(prefix + TAB + TAB)
         .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply, option);\n",
-            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+        interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");

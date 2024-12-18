@@ -20,7 +20,32 @@
 namespace OHOS {
 namespace Idl {
 
-AutoPtr<ASTEnumType> g_currentEnum = nullptr;
+static constexpr unsigned int RE_PACKAGE_NUM = 3;
+static constexpr unsigned int RE_PACKAGE_INDEX = 0;
+static constexpr unsigned int RE_PACKAGE_MAJOR_VER_INDEX = 1;
+static constexpr unsigned int RE_PACKAGE_MINOR_VER_INDEX = 2;
+
+static constexpr char RE_BIN_DIGIT[] = "0[b][0|1]+";        // binary digit
+static constexpr char RE_OCT_DIGIT[] = "0[0-7]+";           // octal digit
+static constexpr char RE_DEC_DIGIT[] = "[0-9]+";            // decimal digit
+static constexpr char RE_HEX_DIFIT[] = "0[xX][0-9a-fA-F]+"; // hexadecimal digit
+static constexpr char RE_DIGIT_SUFFIX[] = "(u|l|ll|ul|ull|)$";
+static constexpr char RE_IDENTIFIER[] = "[a-zA-Z_][a-zA-Z0-9_]*";
+
+static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) +
+    ")*\\.[V|v](" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
+static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) +
+    "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
+static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) +
+    ")*\\.[V|v]" + std::string(RE_DEC_DIGIT) + "_" + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
+static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_OCT_NUM(std::string(RE_OCT_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_DEC_NUM(std::string(RE_DEC_DIGIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
+static const std::regex RE_HEX_NUM(std::string(RE_HEX_DIFIT) + std::string(RE_DIGIT_SUFFIX),
+    std::regex_constants::icase);
 
 bool Parser::Parse(const std::vector<FileDetail> &fileDetails)
 {
@@ -805,8 +830,8 @@ AutoPtr<ASTType> Parser::ParseMethodReturnType()
         return nullptr;
     }
     // parse method return type, maybe not exist
-    if (CheckBasicType(token) || CheckUserDefType(token) || token.kind == TokenType::LIST ||
-        token.kind == TokenType::MAP || token.kind == TokenType::SMQ) {
+    if (IntfTypeChecker::CheckBasicType(token) || IntfTypeChecker::CheckUserDefType(token) ||
+        token.kind == TokenType::LIST || token.kind == TokenType::MAP || token.kind == TokenType::SMQ) {
         return ParseType();
     }
     return nullptr;
@@ -1059,9 +1084,9 @@ AutoPtr<ASTType> Parser::ParseType()
 {
     AutoPtr<ASTType> type = nullptr;
     Token token = lexer_.PeekToken();
-    if (CheckBasicType(token)) {
+    if (IntfTypeChecker::CheckBasicType(token)) {
         type = ParseBasicType();
-    } else if (CheckUserDefType(token)) {
+    } else if (IntfTypeChecker::CheckUserDefType(token)) {
         type = ParseUserDefType();
     } else {
         switch (token.kind) {
@@ -1092,31 +1117,6 @@ AutoPtr<ASTType> Parser::ParseType()
         type = ParseArrayType(type);
     }
     return type;
-}
-
-bool Parser::CheckBasicType(Token token)
-{
-    switch (token.kind) {
-        case TokenType::VOID:
-        case TokenType::BOOLEAN:
-        case TokenType::BYTE:
-        case TokenType::SHORT:
-        case TokenType::INT:
-        case TokenType::LONG:
-        case TokenType::STRING:
-        case TokenType::STRING16:
-        case TokenType::FLOAT:
-        case TokenType::DOUBLE:
-        case TokenType::FD:
-        case TokenType::ASHMEM:
-        case TokenType::NATIVE_BUFFER:
-        case TokenType::POINTER:
-        case TokenType::UNSIGNED:
-        case TokenType::CHAR:
-            return true;
-        default:
-            return false;
-    }
 }
 
 AutoPtr<ASTType> Parser::ParseBasicType()
@@ -1295,20 +1295,6 @@ AutoPtr<ASTType> Parser::ParseSmqType()
     return retType;
 }
 
-bool Parser::CheckUserDefType(Token token)
-{
-    switch (token.kind) {
-        case TokenType::ENUM:
-        case TokenType::STRUCT:
-        case TokenType::UNION:
-        case TokenType::ID:
-        case TokenType::SEQ:
-            return true;
-        default:
-            return false;
-    }
-}
-
 AutoPtr<ASTType> Parser::ParseUserDefType()
 {
     Token token = lexer_.GetToken();
@@ -1330,7 +1316,7 @@ AutoPtr<ASTType> Parser::ParseUserDefType()
 void Parser::ParseEnumDeclaration(const AttrSet &attrs)
 {
     AutoPtr<ASTEnumType> enumType = new ASTEnumType;
-    g_currentEnum = enumType;
+    currentEnum_ = enumType;
     enumType->SetAttribute(ParseUserDefTypeAttr(attrs));
 
     lexer_.GetToken();
@@ -1367,7 +1353,7 @@ void Parser::ParseEnumDeclaration(const AttrSet &attrs)
 
     enumType->SetNamespace(ast_->ParseNamespace(ast_->GetFullName()));
     ast_->AddTypeDefinition(enumType.Get());
-    g_currentEnum = nullptr;
+    currentEnum_ = nullptr;
 }
 
 AutoPtr<ASTType> Parser::ParseEnumBaseType()
@@ -1829,7 +1815,7 @@ AutoPtr<ASTExpr> Parser::ParsePrimaryExpr()
         case TokenType::NUM:
             return ParseNumExpr();
         case TokenType::ID:
-            if (g_currentEnum == nullptr) {
+            if (currentEnum_ == nullptr) {
                 LogError(__func__, __LINE__, token, std::string("this expression is not supported"));
                 lexer_.SkipUntilToken(TokenType::COMMA);
                 return nullptr;
@@ -1858,7 +1844,7 @@ AutoPtr<ASTExpr> Parser::ParseNumExpr()
 AutoPtr<ASTExpr> Parser::ParseEnumExpr()
 {
     Token token = lexer_.GetToken();
-    if (!g_currentEnum->HasMember(token.value)) {
+    if (!currentEnum_->HasMember(token.value)) {
         LogError(__func__, __LINE__, token, StringHelper::Format("unknown enum member: '%s'", token.value.c_str()));
         return nullptr;
     }

@@ -375,5 +375,44 @@ bool IntfTypeChecker::CheckSmInterfaceAst()
     }
     return true;
 }
+
+bool IntfTypeChecker::CheckBasicType(Token token)
+{
+    switch (token.kind) {
+        case TokenType::VOID:
+        case TokenType::BOOLEAN:
+        case TokenType::BYTE:
+        case TokenType::SHORT:
+        case TokenType::INT:
+        case TokenType::LONG:
+        case TokenType::STRING:
+        case TokenType::STRING16:
+        case TokenType::FLOAT:
+        case TokenType::DOUBLE:
+        case TokenType::FD:
+        case TokenType::ASHMEM:
+        case TokenType::NATIVE_BUFFER:
+        case TokenType::POINTER:
+        case TokenType::UNSIGNED:
+        case TokenType::CHAR:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IntfTypeChecker::CheckUserDefType(Token token)
+{
+    switch (token.kind) {
+        case TokenType::ENUM:
+        case TokenType::STRUCT:
+        case TokenType::UNION:
+        case TokenType::ID:
+        case TokenType::SEQ:
+            return true;
+        default:
+            return false;
+    }
+}
 } // namespace Idl
 } // namespace OHOS
