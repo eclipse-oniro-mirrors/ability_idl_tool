@@ -35,6 +35,9 @@
 #include "type/sa_ulong_type_emitter.h"
 #include "type/sa_ushort_type_emitter.h"
 #include "type/sa_fd_type_emitter.h"
+#include "type/sa_enum_type_emitter.h"
+#include "type/sa_struct_type_emitter.h"
+#include "type/sa_union_type_emitter.h"
 #include "util/file.h"
 #include "util/options.h"
 #include "util/logger.h"
@@ -71,7 +74,7 @@ bool SACodeEmitter::OutPut(const AutoPtr<AST> &ast, const std::string &targetDir
 
 bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDirectory, GenMode mode)
 {
-    if ((ast == nullptr) || (ast->GetASTFileType() != ASTFileType::AST_IFACE)) {
+    if ((ast == nullptr) || targetDirectory.empty()) {
         return false;
     }
 
@@ -95,6 +98,8 @@ bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDire
         stubFullName_ = interface_->GetNamespace()->ToString() + stubName_;
         deathRecipientName_ = StringHelper::StartWith(interfaceName_, "I") ? interfaceName_.substr(1) + "Recipient" :
             interfaceName_ + "Recipient";
+    } else if (ast_->GetASTFileType() == ASTFileType::AST_TYPES) {
+        baseName_ = ast_->GetName();
     }
 
     if (!ResolveDirectory(targetDirectory)) {
@@ -171,8 +176,40 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) c
         typeEmitter = NewTypeEmitter(astType);
     }
 
-    typeEmitter->SetTypeName(astType->ToString());
+    if (astType->IsSequenceableType() || astType->IsInterfaceType()) {
+        typeEmitter->SetTypeName(astType->ToShortString());
+    } else if (astType->IsEnumType() || astType->IsStructType() || astType->IsUnionType()) {
+        typeEmitter->SetTypeName(astType->GetName());
+    } else {
+        typeEmitter->SetTypeName(astType->ToString());
+    }
     return typeEmitter;
+}
+
+std::string SACodeEmitter::GetNameWithNamespace(AutoPtr<ASTNamespace> space, const std::string name) const
+{
+    std::vector<std::string> namespaceVec = StringHelper::Split(space->ToString(), ".");
+    std::vector<std::string> result;
+
+    std::string rootPackage = Options::GetInstance().GetRootPackage(space->ToString());
+    size_t rootPackageNum = StringHelper::Split(rootPackage, ".").size();
+
+    for (size_t i = 0; i < namespaceVec.size(); i++) {
+        std::string ns;
+        if (i < rootPackageNum) {
+            ns = StringHelper::StrToUpper(namespaceVec[i]);
+        } else {
+            ns = PascalName(namespaceVec[i]);
+        }
+
+        result.emplace_back(ns);
+    }
+    StringBuilder sb;
+    for (const auto &ns : result) {
+        sb.AppendFormat("%s::", ns.c_str());
+    }
+    sb.Append(name);
+    return sb.ToString();
 }
 
 AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) const
@@ -184,6 +221,12 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) c
             return NewArrayTypeEmitter(astType);
         case TypeKind::TYPE_LIST:
             return NewListTypeEmitter(astType);
+        case TypeKind::TYPE_ENUM:
+            return NewEnumTypeEmitter(astType);
+        case TypeKind::TYPE_STRUCT:
+            return NewStructTypeEmitter(astType);
+        case TypeKind::TYPE_UNION:
+            return NewUnionTypeEmitter(astType);
         case TypeKind::TYPE_SEQUENCEABLE:
             return new SaSeqTypeEmitter();
         case TypeKind::TYPE_INTERFACE:
@@ -224,6 +267,44 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewListTypeEmitter(AutoPtr<ASTType> astTyp
     AutoPtr<SaTypeEmitter> elemEmitter = GetTypeEmitter(elemType);
     listTypeEmitter->SetElementEmitter(elemEmitter);
     return listTypeEmitter.Get();
+}
+
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewEnumTypeEmitter(AutoPtr<ASTType> astType) const
+{
+    AutoPtr<SaEnumTypeEmitter> enumTypeEmitter = new SaEnumTypeEmitter();
+    AutoPtr<ASTEnumType> enumType = static_cast<ASTEnumType*>(astType.Get());
+    if (enumType->GetBaseType() != nullptr) {
+        AutoPtr<SaTypeEmitter> baseTypeEmitter = GetTypeEmitter(enumType->GetBaseType());
+        enumTypeEmitter->SetBaseTypeName(baseTypeEmitter->EmitCppType());
+    }
+    for (auto it : enumType->GetMembers()) {
+        if (it->GetExprValue() == nullptr) {
+            enumTypeEmitter->AddMember(new SaEnumValueEmitter(it->GetName(), std::string("")));
+        } else {
+            enumTypeEmitter->AddMember(new SaEnumValueEmitter(it->GetName(), it->GetExprValue()->EmitCode()));
+        }
+    }
+    return enumTypeEmitter.Get();
+}
+
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewStructTypeEmitter(AutoPtr<ASTType> astType) const
+{
+    AutoPtr<SaStructTypeEmitter> structTypeEmitter = new SaStructTypeEmitter();
+    AutoPtr<ASTStructType> structType = (static_cast<ASTStructType*>(astType.Get()));
+    for (auto it : structType->GetMembers()) {
+        structTypeEmitter->AddMember(std::get<0>(it), GetTypeEmitter(std::get<1>(it)));
+    }
+    return structTypeEmitter.Get();
+}
+
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewUnionTypeEmitter(AutoPtr<ASTType> astType) const
+{
+    AutoPtr<SaUnionTypeEmitter> unionTypeEmitter = new SaUnionTypeEmitter();
+    AutoPtr<ASTUnionType> unionType = (static_cast<ASTUnionType*>(astType.Get()));
+    for (size_t i = 0; i < unionType->GetMemberNumber(); i++) {
+        unionTypeEmitter->AddMember(unionType->GetMemberName(i), GetTypeEmitter(unionType->GetMemberType(i)));
+    }
+    return unionTypeEmitter.Get();
 }
 } // namespace Idl
 } // namespace OHOS

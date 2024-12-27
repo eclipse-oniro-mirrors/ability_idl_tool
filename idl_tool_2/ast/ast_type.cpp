@@ -194,9 +194,6 @@ std::string ASTType::ToShortString()
 
 std::string ASTType::ToString() const
 {
-    if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
-        return name_;
-    }
     return (namespace_ == nullptr) ? name_ : (namespace_->ToString() + name_);
 }
 

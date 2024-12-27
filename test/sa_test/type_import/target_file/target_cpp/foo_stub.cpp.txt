@@ -1,0 +1,223 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace OHOS {
+namespace test {
+using namespace OHOS::callback;
+using namespace OHOS::fcallback;
+using namespace OHOS::custom::idlFile;
+
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_ENUM_TEST_FUNC: {
+            FooEnum inParam;
+            {
+                uint64_t enumTmp = 0;
+                if (!data.ReadUint64(enumTmp)) {
+                    return ERR_INVALID_DATA;
+                }
+                inParam = static_cast<FooEnum>(enumTmp);
+            }
+            FooEnum outParam;
+            FooEnum inoutParam;
+            {
+                uint64_t enumTmp = 0;
+                if (!data.ReadUint64(enumTmp)) {
+                    return ERR_INVALID_DATA;
+                }
+                inoutParam = static_cast<FooEnum>(enumTmp);
+            }
+            FooEnum result;
+            ErrCode errCode = enum_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint64(static_cast<uint64_t>(outParam))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint64(static_cast<uint64_t>(inoutParam))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint64(static_cast<uint64_t>(result))) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_STRUCT_TEST_FUNC: {
+            FooStruct inParam;
+            if (FooStructBlockUnmarshalling(data, inParam) != ERR_NONE) {
+                return ERR_INVALID_DATA;
+            }
+            FooStruct outParam;
+            FooStruct inoutParam;
+            if (FooStructBlockUnmarshalling(data, inoutParam) != ERR_NONE) {
+                return ERR_INVALID_DATA;
+            }
+            FooStruct result;
+            ErrCode errCode = struct_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (FooStructBlockMarshalling(reply, outParam) != ERR_NONE) {
+                    return ERR_INVALID_DATA;
+                }
+                if (FooStructBlockMarshalling(reply, inoutParam) != ERR_NONE) {
+                    return ERR_INVALID_DATA;
+                }
+                if (FooStructBlockMarshalling(reply, result) != ERR_NONE) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_UNION_TEST_FUNC: {
+            FooUnion inParam;
+            const FooUnion *inParamCp = reinterpret_cast<const FooUnion *>(data.ReadUnpadBuffer(sizeof(FooUnion)));
+            if (inParamCp == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            if (memcpy_s(&inParam, sizeof(FooUnion), inParamCp, sizeof(FooUnion)) != EOK) {
+                return ERR_INVALID_DATA;
+            }
+            FooUnion outParam;
+            FooUnion inoutParam;
+            const FooUnion *inoutParamCp = reinterpret_cast<const FooUnion *>(data.ReadUnpadBuffer(sizeof(FooUnion)));
+            if (inoutParamCp == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            if (memcpy_s(&inoutParam, sizeof(FooUnion), inoutParamCp, sizeof(FooUnion)) != EOK) {
+                return ERR_INVALID_DATA;
+            }
+            FooUnion result;
+            ErrCode errCode = union_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUnpadBuffer(&outParam, sizeof(FooUnion))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUnpadBuffer(&inoutParam, sizeof(FooUnion))) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUnpadBuffer(&result, sizeof(FooUnion))) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_CALLBACK_TEST_FUNC: {
+            sptr<IFoocallback> inParam = iface_cast<IFoocallback>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<IFoocallback> outParam;
+            sptr<IFoocallback> inoutParam = iface_cast<IFoocallback>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<IFoocallback> result = nullptr;
+            ErrCode errCode = callback_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (result == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_CALLBACK_TEST_FUNC2: {
+            sptr<ICallback> inParam = iface_cast<ICallback>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<ICallback> outParam;
+            sptr<ICallback> inoutParam = iface_cast<ICallback>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<ICallback> result = nullptr;
+            ErrCode errCode = callback_test_func2(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (result == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result->AsObject())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test
+} // namespace OHOS

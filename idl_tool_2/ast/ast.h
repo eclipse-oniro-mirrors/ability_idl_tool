@@ -105,6 +105,11 @@ public:
         return license_;
     }
 
+    inline std::string GetIdlFile()
+    {
+        return idlFilePath_;
+    }
+
     void SetPackageName(const std::string &packageName);
 
     AutoPtr<ASTNamespace> ParseNamespace(const std::string &nspaceStr);
@@ -176,6 +181,8 @@ public:
 
     bool AddImport(const AutoPtr<AST> &importAst);
 
+    void AddImportName(const std::string &importName);
+
     void ClearImport()
     {
         return imports_.clear();
@@ -184,6 +191,11 @@ public:
     inline const StrASTMap &GetImports() const
     {
         return imports_;
+    }
+
+    inline const std::vector<std::string> &GetImportNames() const
+    {
+        return importNames_;
     }
 
     void SetVersion(size_t &majorVer, size_t &minorVer);
@@ -261,6 +273,7 @@ private:
     std::vector<AutoPtr<ASTType>> typeDefinitions_; // enum, struct, union
     std::vector<AutoPtr<ASTSequenceableType>> sequenceableDefs_;
     std::vector<AutoPtr<ASTInterfaceType>> interfaceDefs_;
+    std::vector<std::string> importNames_;
 
     StrASTMap imports_;
     TypeStringMap types_;

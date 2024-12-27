@@ -778,8 +778,19 @@ std::string Options::GetPackagePath(const std::string &package) const
  * import: ohos.hdi.foo.v1_0.MyTypes
  * packagePath:./drivers/interface/foo/v1_0/MyTypes.idl
  */
-std::string Options::GetImportFilePath(const std::string &import) const
+std::string Options::GetImportFilePath(const std::string &import, const std::string &curPath) const
 {
+    if (interfaceType == InterfaceType::SA && genLanguage == Language::CPP) {
+        size_t index = curPath.rfind(SEPARATOR);
+        if (index == std::string::npos || index == curPath.size() - 1) {
+            Logger::E(TAG, "currrent path:%s, is errno", curPath.c_str());
+            return "";
+        }
+        std::string retPath = curPath.substr(0, index + 1);
+        retPath += import + ".idl";
+        return File::AdapterRealPath(retPath);
+    }
+
     size_t index = import.rfind('.');
     if (index == std::string::npos) {
         return import;

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "lexer/lexer.h"
+#include "util/options.h"
 #include "util/string_helper.h"
 
 namespace OHOS {
@@ -30,6 +31,10 @@ class FileDetail {
 public:
     inline std::string GetFullName() const
     {
+        Options &option = Options::GetInstance();
+        if (option.GetInterfaceType() == InterfaceType::SA && option.GetLanguage() == Language::CPP) {
+            return filePath_;
+        }
         return StringHelper::Format("%s.%s", packageName_.c_str(), fileName_.c_str());
     }
 

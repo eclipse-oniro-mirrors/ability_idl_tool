@@ -21,19 +21,26 @@
 #include <vector>
 #include <regex>
 #include <unordered_set>
+#include <algorithm>
 #include "ast/ast.h"
+#include "ast/ast_array_type.h"
 #include "ast/ast_attribute.h"
 #include "ast/ast_interface_type.h"
 #include "ast/ast_method.h"
 #include "ast/ast_type.h"
 #include "ast/ast_enum_type.h"
+#include "ast/ast_map_type.h"
 #include "ast/ast_parameter.h"
+#include "ast/ast_sequenceable_type.h"
+#include "ast/ast_smq_type.h"
 #include "ast/ast_struct_type.h"
 #include "ast/ast_union_type.h"
 #include "lexer/lexer.h"
+#include "lexer/token.h"
 #include "preprocessor/preprocessor.h"
 #include "util/autoptr.h"
 #include "util/light_refcount_base.h"
+#include "util/logger.h"
 
 namespace OHOS {
 namespace Idl {
@@ -222,7 +229,7 @@ private:
 
     bool CheckPackageName(const std::string &filePath, const std::string &packageName) const;
 
-    bool CheckImport(const std::string &importName);
+    bool CheckImport(const Token &token);
 
     void ParseInterfaceExtends(AutoPtr<ASTInterfaceType> &interface);
 
@@ -230,8 +237,7 @@ private:
 
     bool CheckExtendsName(AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsName);
 
-    bool CheckExtendsVersion(
-        AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsName, AutoPtr<AST> extendsAst);
+    bool CheckExtendsVersion(AutoPtr<AST> extendsAst);
 
     bool CheckImportsVersion(AutoPtr<AST> extendsAst);
 
@@ -259,7 +265,12 @@ private:
             funcName, fileLine, LocInfo(token).c_str(), message.c_str(), token.value.c_str()));
     }
 
-    void ShowError();
+    void ShowError()
+    {
+        for (const auto &errMsg : errors_) {
+            Logger::E(TAG, "%s", errMsg.c_str());
+        }
+    }
 
     bool PostProcess();
 

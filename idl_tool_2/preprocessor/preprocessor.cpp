@@ -107,6 +107,7 @@ bool Preprocessor::CheckAllFilesPath(const std::set<std::string> &sourceFiles)
 bool Preprocessor::AnalyseImportInfo(std::set<std::string> sourceFiles, FileDetailMap &allFileDetails)
 {
     std::set<std::string> processSource(sourceFiles);
+
     while (!processSource.empty()) {
         auto fileIter = processSource.begin();
         FileDetail info;
@@ -194,6 +195,7 @@ bool Preprocessor::ParsePackage(Lexer &lexer, FileDetail &info)
 
 bool Preprocessor::ParseImports(Lexer &lexer, FileDetail &info)
 {
+    Options &option = Options::GetInstance();
     Token token = lexer.PeekToken();
     while (token.kind != TokenType::END_OF_FILE) {
         if (token.kind != TokenType::IMPORT) {
@@ -208,13 +210,21 @@ bool Preprocessor::ParseImports(Lexer &lexer, FileDetail &info)
             Logger::E(TAG, "%s: expected import name before '%s' token", LocInfo(token).c_str(), token.value.c_str());
             return false;
         }
-
-        if (!File::CheckValid(Options::GetInstance().GetImportFilePath(token.value))) {
+        if (option.GetInterfaceType() == InterfaceType::SA && option.GetLanguage() == Language::CPP) {
+#ifdef __MINGW32__
+            std::replace(token.value.begin(), token.value.end(), '/', '\\');
+#endif
+        }
+        if (!File::CheckValid(option.GetImportFilePath(token.value, info.filePath_))) {
             Logger::E(TAG, "%s: import invalid package '%s'", LocInfo(token).c_str(), token.value.c_str());
             return false;
         }
+        if (option.GetInterfaceType() == InterfaceType::SA && option.GetLanguage() == Language::CPP) {
+            info.imports_.emplace(option.GetImportFilePath(token.value, info.filePath_));
+        } else {
+            info.imports_.emplace(token.value);
+        }
 
-        info.imports_.emplace(token.value);
         lexer.GetToken();
 
         token = lexer.PeekToken();
@@ -232,12 +242,19 @@ bool Preprocessor::ParseImports(Lexer &lexer, FileDetail &info)
 bool Preprocessor::LoadOtherIdlFiles(
     const FileDetail &ownerFileDetail, FileDetailMap &allFileDetails, std::set<std::string> &sourceFiles)
 {
+    Options &option = Options::GetInstance();
     for (const auto &importName : ownerFileDetail.imports_) {
         if (allFileDetails.find(importName) != allFileDetails.end()) {
             continue;
         }
 
-        std::string otherFilePath = Options::GetInstance().GetImportFilePath(importName);
+        std::string otherFilePath;
+        if (option.GetInterfaceType() == InterfaceType::SA && option.GetLanguage() == Language::CPP) {
+            otherFilePath = importName;
+        } else {
+            otherFilePath = Options::GetInstance().GetImportFilePath(importName, ownerFileDetail.filePath_);
+        }
+
         if (otherFilePath.empty()) {
             Logger::E(TAG, "importName:%s, is failed", importName.c_str());
             return false;
@@ -253,6 +270,7 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
 {
     FileDetailMap allFileDetailsTemp = allFileDetails;
     std::queue<FileDetail> fileQueue;
+
     for (const auto &filePair : allFileDetailsTemp) {
         const FileDetail &file = filePair.second;
         if (file.imports_.size() == 0) {
@@ -286,7 +304,6 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
     if (compileSourceFiles.size() == allFileDetailsTemp.size()) {
         return true;
     }
-
     PrintCyclefInfo(allFileDetailsTemp);
     return false;
 }

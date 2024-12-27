@@ -29,8 +29,8 @@ std::string SaInterfaceTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::LOCAL_VAR:
             return StringHelper::Format("sptr<%s>", typeName_.c_str());
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
             return StringHelper::Format("const sptr<%s>&", typeName_.c_str());
+        case TypeMode::PARAM_INOUT:
         case TypeMode::PARAM_OUT:
             return StringHelper::Format("sptr<%s>&", typeName_.c_str());
         default:

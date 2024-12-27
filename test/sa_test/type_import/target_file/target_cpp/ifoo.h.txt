@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef OHOS_TEST_IFOO_H
+#define OHOS_TEST_IFOO_H
+
+#include <cstdint>
+#include <iremote_broker.h>
+#include <string_ex.h>
+#include "../fcallback/icallback.h"
+#include "../ifoo_custom.h"
+#include "callback/ifoocallback.h"
+
+namespace OHOS {
+namespace test {
+using namespace OHOS::callback;
+using namespace OHOS::fcallback;
+using namespace OHOS::custom::idlFile;
+
+enum class IFooIpcCode {
+    COMMAND_ENUM_TEST_FUNC = MIN_TRANSACTION_ID,
+    COMMAND_STRUCT_TEST_FUNC,
+    COMMAND_UNION_TEST_FUNC,
+    COMMAND_CALLBACK_TEST_FUNC,
+    COMMAND_CALLBACK_TEST_FUNC2,
+};
+
+class IFoo : public IRemoteBroker {
+public:
+    DECLARE_INTERFACE_DESCRIPTOR(u"OHOS.test.IFoo");
+
+    virtual ErrCode enum_test_func(
+        FooEnum inParam,
+        FooEnum& outParam,
+        FooEnum& inoutParam,
+        FooEnum& funcResult) = 0;
+
+    virtual ErrCode struct_test_func(
+        const FooStruct& inParam,
+        FooStruct& outParam,
+        FooStruct& inoutParam,
+        FooStruct& funcResult) = 0;
+
+    virtual ErrCode union_test_func(
+        const FooUnion& inParam,
+        FooUnion& outParam,
+        FooUnion& inoutParam,
+        FooUnion& funcResult) = 0;
+
+    virtual ErrCode callback_test_func(
+        const sptr<IFoocallback>& inParam,
+        sptr<IFoocallback>& outParam,
+        sptr<IFoocallback>& inoutParam,
+        sptr<IFoocallback>& funcResult) = 0;
+
+    virtual ErrCode callback_test_func2(
+        const sptr<ICallback>& inParam,
+        sptr<ICallback>& outParam,
+        sptr<ICallback>& inoutParam,
+        sptr<ICallback>& funcResult) = 0;
+protected:
+    const int VECTOR_MAX_SIZE = 102400;
+    const int LIST_MAX_SIZE = 102400;
+    const int MAP_MAX_SIZE = 102400;
+};
+} // namespace test
+} // namespace OHOS
+#endif // OHOS_TEST_IFOO_H
+

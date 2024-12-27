@@ -23,10 +23,10 @@
 #include <string>
 #include <algorithm>
 #include <queue>
+#include <unistd.h>
+#include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
-
 #include "util/common.h"
 #include "util/logger.h"
 #include "util/string_helper.h"
@@ -114,6 +114,19 @@ char File::PeekChar()
     }
 
     return buffer_[position_];
+}
+
+char File::NextChar()
+{
+    if (position_ + 1 >= size_) {
+        size_t size = Read();
+        if (size == 0) {
+            isEof_ = true;
+            return '\0';
+        }
+    }
+
+    return buffer_[position_ + 1];
 }
 
 bool File::IsEof() const
@@ -288,6 +301,91 @@ std::string File::RealPath(const std::string &path)
     char *absPath = realpath(path.c_str(), realPath);
 #endif
     return absPath == nullptr ? "" : absPath;
+}
+
+std::string File::CanonicalPath(const std::string &path)
+{
+    std::istringstream ss(path);
+    std::string segment;
+    std::vector<std::string> pathStack;
+
+    while (std::getline(ss, segment, SEPARATOR)) {
+        if (segment == "..") {
+            if (!pathStack.empty()) {
+                pathStack.pop_back();
+            }
+        } else if (!segment.empty() && segment != ".") {
+            pathStack.push_back(segment);
+        }
+    }
+
+    std::string normalizedPath;
+    for (const auto &s : pathStack) {
+        normalizedPath += std::string(1, SEPARATOR) + s;
+    }
+#ifdef __MINGW32__
+    normalizedPath = normalizedPath.substr(1);
+#endif
+
+    return normalizedPath.empty() ? std::string(1, SEPARATOR) : normalizedPath;
+}
+
+std::string File::AbsolutePath(const std::string &path)
+{
+    if (!path.empty() && (path[0] == SEPARATOR || path[1] == ':')) {
+        return path;
+    }
+    char buffer[PATH_MAX + 1];
+#ifdef __MINGW32__
+    if (_getcwd(buffer, sizeof(buffer)) != nullptr) {
+#else
+    if (getcwd(buffer, sizeof(buffer)) != nullptr) {
+#endif
+        return std::string(buffer) + std::string(1, SEPARATOR) + path;
+    }
+    return "";
+}
+
+std::vector<std::string> File::SplitPath(const std::string& path)
+{
+    std::vector<std::string> components;
+    std::istringstream stream(path);
+    std::string segment;
+
+    while (std::getline(stream, segment, SEPARATOR)) {
+        if (!segment.empty()) {
+            components.push_back(segment);
+        }
+    }
+
+    return components;
+}
+
+std::string File::RelativePath(const std::string& pathA, const std::string& pathB)
+{
+    std::vector<std::string> componentsA = SplitPath(pathA);
+    std::vector<std::string> componentsB = SplitPath(pathB);
+
+    size_t i = 0;
+    while (i < componentsA.size() && i < componentsB.size() && componentsA[i] == componentsB[i]) {
+        i++;
+    }
+
+    std::string relativePath;
+
+    for (size_t j = i; j < componentsB.size(); ++j) {
+        relativePath += ".." + std::string(1, SEPARATOR);
+    }
+
+    for (size_t j = i; j < componentsA.size(); ++j) {
+        relativePath += componentsA[j] + std::string(1, SEPARATOR);
+    }
+
+    if (!relativePath.empty() && relativePath.back() == SEPARATOR) {
+        relativePath.pop_back();
+    }
+
+    return relativePath;
 }
 
 bool File::CheckValid(const std::string &path)

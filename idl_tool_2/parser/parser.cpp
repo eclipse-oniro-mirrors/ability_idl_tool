@@ -14,7 +14,6 @@
  */
 
 #include "parser/parser.h"
-#include "util/logger.h"
 #include "parser/intf_type_check.h"
 
 namespace OHOS {
@@ -34,8 +33,15 @@ static constexpr char RE_IDENTIFIER[] = "[a-zA-Z_][a-zA-Z0-9_]*";
 
 static const std::regex RE_PACKAGE(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) +
     ")*\\.[V|v](" + std::string(RE_DEC_DIGIT) + ")_(" + std::string(RE_DEC_DIGIT) + ")");
+
 static const std::regex RE_PACKAGE_OR_IMPORT_SM(std::string(RE_IDENTIFIER) +
     "(?:\\." + std::string(RE_IDENTIFIER) + ")*");
+
+static const std::regex RE_PACKAGE_OR_IMPORT_SA(
+    "(?:\\.\\./)*" +                                        // matches zero or more relative path segments ../
+    std::string(RE_IDENTIFIER) +                            // matches the first identifier
+    "(?:[\\.\\/]" + std::string(RE_IDENTIFIER) + ")*");     // matches additional identifiers, separated by . or /
+
 static const std::regex RE_IMPORT(std::string(RE_IDENTIFIER) + "(?:\\." + std::string(RE_IDENTIFIER) +
     ")*\\.[V|v]" + std::string(RE_DEC_DIGIT) + "_" + std::string(RE_DEC_DIGIT) + "." + std::string(RE_IDENTIFIER));
 static const std::regex RE_BIN_NUM(std::string(RE_BIN_DIGIT) + std::string(RE_DIGIT_SUFFIX),
@@ -113,7 +119,6 @@ bool Parser::ParseFile()
                 continue;
             default:
                 ret = ParseTypeDecls() && ret;
-                continue;
         }
     }
 
@@ -160,10 +165,11 @@ bool Parser::ParsePackage()
     }
     lexer_.GetToken();
 
+    InterfaceType interfaceType = Options::GetInstance().GetInterfaceType();
     if (packageName.empty()) {
         LogError(__func__, __LINE__, std::string("package name is not expected."));
         return false;
-    } else if (!CheckPackageName(lexer_.GetFilePath(), packageName)) {
+    } else if (interfaceType != InterfaceType::SA && !CheckPackageName(lexer_.GetFilePath(), packageName)) {
         LogError(__func__, __LINE__, StringHelper::Format(
             "package name '%s' does not match file apth '%s'.", packageName.c_str(), lexer_.GetFilePath().c_str()));
         return false;
@@ -190,6 +196,11 @@ bool Parser::ParserPackageInfo(const std::string &packageName)
         size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
         size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
         ast_->SetVersion(majorVersion, minorVersion);
+    } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
+        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SA)) {
+            return false;
+        }
+        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
     } else {
         if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SM)) {
             return false;
@@ -313,20 +324,40 @@ void Parser::ParseImportInfo()
         return;
     }
 
-    if (!CheckImport(importName)) {
+    if (!CheckImport(token)) {
         LogError(__func__, __LINE__, token, std::string("import name is illegal"));
         return;
     }
 
     auto iter = allAsts_.find(importName);
     AutoPtr<AST> importAst = (iter != allAsts_.end()) ? iter->second : nullptr;
+
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP) {
+#ifdef __MINGW32__
+        std::replace(importName.begin(), importName.end(), '/', '\\');
+#endif
+        ast_->AddImportName(importName);
+        std::string idlFilePath = token.location.filePath;
+        size_t index = idlFilePath.rfind(SEPARATOR);
+        idlFilePath = File::CanonicalPath(idlFilePath.substr(0, index + 1) + importName + ".idl");
+        importAst = nullptr;
+        for (iter = allAsts_.begin(); iter != allAsts_.end(); ++iter) {
+            AutoPtr<AST> curAst = iter->second;
+            std::string idlFile = curAst->GetIdlFile();
+            if (idlFile == idlFilePath) {
+                importAst = curAst;
+            }
+        }
+    }
+
     if (importAst == nullptr) {
         LogError(__func__, __LINE__, token,
             StringHelper::Format("can not find idl file from import name '%s'", importName.c_str()));
         return;
     }
 
-    if (!CheckImportsVersion(importAst)) {
+    if (options.GetInterfaceType() == InterfaceType::SA && !CheckImportsVersion(importAst)) {
         LogError(__func__, __LINE__, token,
             std::string("extends import version must less than current import version"));
         return;
@@ -600,12 +631,21 @@ void Parser::ParseAttrUnitIpcCapacity(AttrSet &attrs, Token &token)
 
 void Parser::ParseInterface(const AttrSet &attrs)
 {
+    // The priority of the "interface" namespace is higher than that of the "package".
+    Options &options = Options::GetInstance();
+    lexer_.GetToken();
+    Token token = lexer_.PeekToken();
+    if (options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP) {
+        size_t index = token.value.rfind('.');
+        if (std::count(token.value.begin(), token.value.end(), '.') > 1) {
+            ParserPackageInfo(token.value.substr(0, index));
+        }
+    }
+
     AutoPtr<ASTInterfaceType> interfaceType = new ASTInterfaceType;
     AutoPtr<ASTAttr> astAttr = ParseInfAttrInfo(attrs);
     interfaceType->SetAttribute(astAttr);
 
-    lexer_.GetToken();
-    Token token = lexer_.PeekToken();
     if (token.kind != TokenType::ID) {
         LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected interface name"));
     } else {
@@ -1340,9 +1380,9 @@ void Parser::ParseEnumDeclaration(const AttrSet &attrs)
     if (token.kind != TokenType::BRACES_RIGHT) {
         LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '}'"));
         return;
-    } else {
-        lexer_.GetToken();
     }
+
+    lexer_.GetToken();
 
     token = lexer_.PeekToken();
     if (token.kind != TokenType::SEMICOLON) {
@@ -1856,11 +1896,8 @@ AutoPtr<ASTExpr> Parser::ParseEnumExpr()
 
 bool Parser::CheckNumber(const std::string& integerVal) const
 {
-    if (std::regex_match(integerVal, RE_BIN_NUM) || std::regex_match(integerVal, RE_OCT_NUM)||
-        std::regex_match(integerVal, RE_DEC_NUM) || std::regex_match(integerVal, RE_HEX_NUM)) {
-        return true;
-    }
-    return false;
+    return std::regex_match(integerVal, RE_BIN_NUM) || std::regex_match(integerVal, RE_OCT_NUM)||
+        std::regex_match(integerVal, RE_DEC_NUM) || std::regex_match(integerVal, RE_HEX_NUM);
 }
 
 bool Parser::CheckType(const Token &token, const AutoPtr<ASTType> &type)
@@ -1955,10 +1992,16 @@ bool Parser::CheckPackageName(const std::string &filePath, const std::string &pa
     return parentDir == pkgToPath;
 }
 
-bool Parser::CheckImport(const std::string &importName)
+bool Parser::CheckImport(const Token &token)
 {
+    std::string importName = token.value;
     if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
         if (!std::regex_match(importName.c_str(), RE_IMPORT)) {
+            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
+            return false;
+        }
+    } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
+        if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SA)) {
             LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
             return false;
         }
@@ -1968,7 +2011,8 @@ bool Parser::CheckImport(const std::string &importName)
             return false;
         }
     }
-    std::string idlFilePath = Options::GetInstance().GetImportFilePath(importName);
+    std::string idlFilePath = File::CanonicalPath(
+        Options::GetInstance().GetImportFilePath(importName, token.location.filePath));
     if (!File::CheckValid(idlFilePath)) {
         LogError(__func__, __LINE__, StringHelper::Format("can not import '%s'", idlFilePath.c_str()));
         return false;
@@ -1985,13 +2029,6 @@ bool Parser::AddAst(const AutoPtr<AST> &ast)
 
     allAsts_[ast->GetFullName()] = ast;
     return true;
-}
-
-void Parser::ShowError()
-{
-    for (const auto &errMsg : errors_) {
-        Logger::E(TAG, "%s", errMsg.c_str());
-    }
 }
 
 void Parser::ParseInterfaceExtends(AutoPtr<ASTInterfaceType> &interface)
@@ -2019,7 +2056,7 @@ void Parser::ParseExtendsInfo(AutoPtr<ASTInterfaceType> &interfaceType)
         LogError(__func__, __LINE__, token, std::string("extends interface name is empty"));
         return;
     }
-    if (!CheckImport(extendsInterfaceName)) {
+    if (!CheckImport(token)) {
         LogError(__func__, __LINE__, token, std::string("extends interface name is illegal"));
         return;
     }
@@ -2035,7 +2072,7 @@ void Parser::ParseExtendsInfo(AutoPtr<ASTInterfaceType> &interfaceType)
             "extends interface name must same as current interface name '%s'", interfaceType->GetName().c_str()));
         return;
     }
-    if (!CheckExtendsVersion(interfaceType, extendsInterfaceName, extendsAst)) {
+    if (!CheckExtendsVersion(extendsAst)) {
         LogError(__func__, __LINE__, token,
             std::string("extends interface version must less than current interface version"));
         return;
@@ -2048,25 +2085,17 @@ void Parser::ParseExtendsInfo(AutoPtr<ASTInterfaceType> &interfaceType)
 
 bool Parser::CheckExtendsName(AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsInterfaceName)
 {
-    size_t index = extendsInterfaceName.rfind(".");
-    return (extendsInterfaceName.substr(index + 1).compare(interfaceType->GetName()) == 0) ? true : false;
+    return extendsInterfaceName.substr(extendsInterfaceName.rfind('.') + 1) == interfaceType->GetName();
 }
 
-bool Parser::CheckExtendsVersion(
-    AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsName, AutoPtr<AST> extendsAst)
+bool Parser::CheckExtendsVersion(AutoPtr<AST> extendsAst)
 {
-    if (extendsAst->GetMajorVer() != ast_->GetMajorVer() || extendsAst->GetMinorVer() >= ast_->GetMinorVer()) {
-        return false;
-    }
-    return true;
+    return !(extendsAst->GetMajorVer() != ast_->GetMajorVer() || extendsAst->GetMinorVer() >= ast_->GetMinorVer());
 }
 
 bool Parser::CheckImportsVersion(AutoPtr<AST> extendsAst)
 {
-    if (extendsAst->GetMajorVer() != ast_->GetMajorVer() || extendsAst->GetMinorVer() > ast_->GetMinorVer()) {
-        return false;
-    }
-    return true;
+    return !(extendsAst->GetMajorVer() != ast_->GetMajorVer() || extendsAst->GetMinorVer() > ast_->GetMinorVer());
 }
 
 bool Parser::PostProcess()

@@ -48,6 +48,12 @@ std::string SaTypeEmitter::EmitTsType(TypeMode mode) const
     return "unknown type";
 }
 
+std::string SaTypeEmitter::EmitCppTypeDecl() const
+{
+    StringBuilder sb;
+    return sb.ToString();
+}
+
 void SaTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {

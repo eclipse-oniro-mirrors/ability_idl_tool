@@ -25,6 +25,10 @@ public:
     ~SACppCodeEmitter() override = default;
 
 protected:
+    void GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles);
+
+    void EmitImportUsingNamespace(StringBuilder &sb) const;
+
     void GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles);
 
     void EmitBeginNamespace(StringBuilder &sb) const;
@@ -40,6 +44,8 @@ protected:
         bool emitType, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix) override;
+
+    void EmitSecurecInclusion(StringBuilder &sb) const;
 
 private:
     std::string EmitCppParameter(AutoPtr<ASTParameter> &param) const;

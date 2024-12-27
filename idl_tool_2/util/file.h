@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace OHOS {
 namespace Idl {
@@ -43,6 +44,8 @@ public:
     char GetChar();
 
     char PeekChar();
+
+    char NextChar();
 
     bool IsEof() const;
 
@@ -77,6 +80,14 @@ public:
     static std::string AdapterRealPath(const std::string &path);
 
     static std::string RealPath(const std::string &path);
+
+    static std::string CanonicalPath(const std::string &path);
+
+    static std::string AbsolutePath(const std::string &path);
+
+    static std::vector<std::string> SplitPath(const std::string &path);
+
+    static std::string RelativePath(const std::string &pathA, const std::string &pathB);
 
     static bool CheckValid(const std::string &path);
 

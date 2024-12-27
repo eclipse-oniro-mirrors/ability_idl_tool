@@ -151,7 +151,7 @@ public:
 
     std::string GetPackagePath(const std::string &package) const;
 
-    std::string GetImportFilePath(const std::string &import) const;
+    std::string GetImportFilePath(const std::string &import, const std::string &curPath) const;
 
     inline SystemLevel GetSystemLevel() const
     {
