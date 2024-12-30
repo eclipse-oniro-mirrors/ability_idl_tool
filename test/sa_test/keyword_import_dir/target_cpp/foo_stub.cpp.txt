@@ -30,18 +30,20 @@ int32_t FooStub::OnRemoteRequest(
     }
     switch (static_cast<IFooIpcCode>(code)) {
         case IFooIpcCode::COMMAND_SEQ_TEST_FUNC: {
-            std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
-            if (!inParam) {
+            std::unique_ptr<myseq> inParamInfo(data.ReadParcelable<myseq>());
+            if (!inParamInfo) {
                 return ERR_INVALID_DATA;
             }
+            myseq inParam(*inParamInfo);
 
             myseq outParam;
-            std::unique_ptr<myseq> inoutParam(data.ReadParcelable<myseq>());
-            if (!inoutParam) {
+            std::unique_ptr<myseq> inoutParamInfo(data.ReadParcelable<myseq>());
+            if (!inoutParamInfo) {
                 return ERR_INVALID_DATA;
             }
+            myseq inoutParam(*inoutParamInfo);
 
-            ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam);
+            ErrCode errCode = seq_test_func(inParam, outParam, inoutParam);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }
@@ -56,18 +58,20 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_SEQ_TEST_FUNC2: {
-            std::unique_ptr<myseq2> inParam(data.ReadParcelable<myseq2>());
-            if (!inParam) {
+            std::unique_ptr<myseq2> inParamInfo(data.ReadParcelable<myseq2>());
+            if (!inParamInfo) {
                 return ERR_INVALID_DATA;
             }
+            myseq2 inParam(*inParamInfo);
 
             myseq2 outParam;
-            std::unique_ptr<myseq2> inoutParam(data.ReadParcelable<myseq2>());
-            if (!inoutParam) {
+            std::unique_ptr<myseq2> inoutParamInfo(data.ReadParcelable<myseq2>());
+            if (!inoutParamInfo) {
                 return ERR_INVALID_DATA;
             }
+            myseq2 inoutParam(*inoutParamInfo);
 
-            ErrCode errCode = seq_test_func2(*inParam, outParam, *inoutParam);
+            ErrCode errCode = seq_test_func2(inParam, outParam, inoutParam);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }

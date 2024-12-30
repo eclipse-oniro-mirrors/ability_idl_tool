@@ -69,17 +69,17 @@ void CServiceDriverCodeEmitter::EmitLowDriverSourceFile()
     StringBuilder sb;
 
     EmitLicense(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLowDriverInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(baseName_ + "Driver"));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLowDriverBind(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverInit(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLowDriverRelease(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverEntryDefinition(sb);
 
     std::string data = sb.ToString();
@@ -142,29 +142,29 @@ void CServiceDriverCodeEmitter::EmitDriverSourceFile()
 
     EmitLicense(sb);
     EmitDriverInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(baseName_ + "Driver"));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverServiceDecl(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     if (mode_ == GenMode::KERNEL) {
         EmitKernelDriverDispatch(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitDriverInit(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitKernelDriverBind(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitKernelDriverRelease(sb);
     } else {
         EmitDriverDispatch(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitDriverInit(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitDriverBind(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitDriverRelease(sb);
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverEntryDefinition(sb);
 
     std::string data = sb.ToString();
@@ -276,7 +276,7 @@ void CServiceDriverCodeEmitter::EmitKernelDriverBind(StringBuilder &sb)
     sb.AppendFormat("static int Hdf%sDriverBind(struct HdfDeviceObject *deviceObject)\n", baseName_.c_str());
     sb.Append("{\n");
     sb.Append(TAB).Append("HDF_LOGI(\"%{public}s: driver bind start\", __func__);\n");
-    sb.Append("\n");
+    sb.Append('\n');
 
     sb.Append(TAB).AppendFormat("struct Hdf%sHost *%s = (struct Hdf%sHost *)OsalMemCalloc(", baseName_.c_str(),
         hostName_.c_str(), baseName_.c_str());
@@ -286,7 +286,7 @@ void CServiceDriverCodeEmitter::EmitKernelDriverBind(StringBuilder &sb)
         "HDF_LOGE(\"Hdf%sDriverBind create Hdf%sHost object failed!\");\n", baseName_.c_str(), baseName_.c_str());
     sb.Append(TAB).Append(TAB).Append("return HDF_FAILURE;\n");
     sb.Append(TAB).Append("}\n");
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(TAB).AppendFormat("%s->ioService.Dispatch = %sDriverDispatch;\n", hostName_.c_str(), baseName_.c_str());
     sb.Append(TAB).AppendFormat("%s->ioService.Open = NULL;\n", hostName_.c_str());
     sb.Append(TAB).AppendFormat("%s->ioService.Release = NULL;\n", hostName_.c_str());
@@ -296,7 +296,7 @@ void CServiceDriverCodeEmitter::EmitKernelDriverBind(StringBuilder &sb)
     sb.Append(TAB).Append(TAB).Append("HDF_LOGE(\"%{public}s: failed to get service object\", __func__);\n");
     sb.Append(TAB).Append(TAB).Append("return HDF_FAILURE;\n");
     sb.Append(TAB).Append("}\n");
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(TAB).AppendFormat("deviceObject->service = &%s->ioService;\n", hostName_.c_str());
     sb.Append(TAB).Append("return HDF_SUCCESS;\n");
     sb.Append("}\n");

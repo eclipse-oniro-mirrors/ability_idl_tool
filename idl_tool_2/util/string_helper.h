@@ -24,7 +24,7 @@ namespace OHOS {
 namespace Idl {
 class StringHelper {
 public:
-    static std::vector<std::string> Split(std::string sources, const std::string &limit);
+    static std::vector<std::string> Split(const std::string& sources, const std::string &limit);
 
     static bool StartWith(const std::string &value, char prefix);
 
@@ -36,10 +36,10 @@ public:
 
     static std::string Replace(const std::string &value, char oldChar, char newChar);
 
-    static std::string Replace(const std::string &value, const std::string &oldstr, const std::string &newstr);
+    static std::string Replace(const std::string &value, const std::string &oldStr, const std::string &newStr);
 
     static std::string Replace(
-        const std::string &value, size_t position, const std::string &substr, const std::string &newstr);
+        const std::string &value, size_t position, const std::string &substr, const std::string &newStr);
 
     static std::string Replace(const std::string &value, size_t position, size_t len, const std::string &newStr);
 

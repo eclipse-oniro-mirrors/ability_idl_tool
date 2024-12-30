@@ -35,13 +35,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
     EmitLicense(sb);
     EmitHeadMacro(sb, proxyFullName_);
 
-    sb.Append("\n").Append("#include <iremote_proxy.h>\n");
+    sb.Append('\n').Append("#include <iremote_proxy.h>\n");
     EmitSecurecInclusion(sb);
     sb.AppendFormat("#include \"%s.h\"\n", FileName(interfaceName_).c_str());
     if (ast_ != nullptr && ast_->GetHasCacheableProxyMethods()) {
         sb.Append("#include \"api_cache_manager.h\"\n");
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceProxyInHeaderFile(sb);
     EmitTailMacro(sb, proxyFullName_);
 
@@ -51,16 +51,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyHeaderFile()
     file.Close();
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder &sb)
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyInHeaderFile(StringBuilder &sb) const
 {
     EmitBeginNamespace(sb);
     EmitImportUsingNamespace(sb);
     sb.AppendFormat("class %s : public IRemoteProxy<%s> {\n", proxyName_.c_str(), interfaceName_.c_str());
     sb.Append("public:\n");
     EmitInterfaceProxyConstructor(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceProxyMethodDecls(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append("private:\n");
     EmitInterfaceProxyConstants(sb, TAB);
     sb.Append("};\n");
@@ -114,7 +114,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &s
                 interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
         }
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceProxyRegisterDeathRecipient(sb, prefix + TAB);
     sb.Append(prefix).Append("}\n");
 }
@@ -124,16 +124,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(Str
 {
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).Append("if (remote_ == nullptr) {\n");
-    sb.Append(prefix + TAB).Append(TAB).Append("return;\n");
+    sb.Append(prefix + TAB + TAB).Append("return;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).Append("if (deathRecipient_ == nullptr) {\n");
-    sb.Append(prefix + TAB).Append(TAB).Append("return;\n");
+    sb.Append(prefix + TAB + TAB).Append("return;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).Append("remote_->RemoveDeathRecipient(deathRecipient_);\n");
     sb.Append(prefix + TAB).Append("remote_ = nullptr;\n");
     size_t methodNumber = interface_->GetMethodNumber();
     if (methodNumber > 0) {
-        sb.Append("\n");
+        sb.Append('\n');
         for (size_t i = 0; i < methodNumber; i++) {
             AutoPtr<ASTMethod> method = interface_->GetMethod(i);
             if (method->GetCacheable() && !method->IsOneWay()) {
@@ -156,7 +156,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &s
     } else {
         sb.Append(prefix).Append("{}\n");
     }
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(prefix).AppendFormat("virtual ~%s()\n", proxyName_.c_str());
     if (ast_->GetHasCacheableProxyMethods()) {
         EmitInterfaceProxyUnRegisterDeathRecipient(sb, prefix);
@@ -172,12 +172,12 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder &s
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceProxyMethodDecl(method, sb, prefix);
         if (i != methodNumber - 1) {
-            sb.Append("\n");
+            sb.Append('\n');
         }
     }
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecl(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     sb.Append(prefix).AppendFormat("ErrCode %s(", method->GetName().c_str());
@@ -209,7 +209,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDeathRecipient(StringBuilder
     sb.Append(prefix).Append("sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;\n");
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix)
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix) const
 {
     if (ast_->GetHasCacheableProxyMethods()) {
         EmitInterfaceProxyDeathRecipient(sb, prefix);
@@ -219,7 +219,8 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstants(StringBuilder &sb,
     EmitInterfaceProxyIpcCapacityValues(sb, prefix);
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix)
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb,
+    const std::string &prefix) const
 {
     size_t methodNumber = interface_->GetMethodNumber();
     for (size_t i = 0; i < methodNumber; i++) {
@@ -246,7 +247,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
     if (hitraceOn_) {
         sb.Append("#include \"hitrace_meter.h\"\n");
     }
-    sb.Append("\n");
+    sb.Append('\n');
     if (logOn_) {
         sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
     }
@@ -268,12 +269,12 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &s
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceProxyMethodImpl(method, sb, prefix);
         if (i != methodNumber - 1) {
-            sb.Append("\n");
+            sb.Append('\n');
         }
     }
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpl(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     sb.Append(prefix).AppendFormat("ErrCode %s::%s(", proxyName_.c_str(), method->GetName().c_str());
@@ -282,14 +283,14 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpl(AutoPtr<ASTMethod
     EmitInterfaceProxyMethodBody(method, sb, prefix);
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
-    const std::string &prefix) const
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(const AutoPtr<ASTMethod> &method,
+    StringBuilder &sb, const std::string &prefix) const
 {
-    if ((method->GetCacheable()) && (!method->IsOneWay())) {
+    if (method->GetCacheable() && !method->IsOneWay()) {
         sb.Append(prefix).Append("bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),\n")
             .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);",
             interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).Append("if (hitCache) {\n");
         EmitInterfaceProxyMethodErrCode(sb, prefix);
         EmitInterfaceProxyMethodReply(method, sb, prefix);
@@ -298,15 +299,15 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr
     }
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
-    const std::string &prefix) const
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(const AutoPtr<ASTMethod> &method,
+    StringBuilder &sb, const std::string &prefix) const
 {
     sb.Append(prefix + TAB).Append("ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),\n")
         .Append(prefix + TAB + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);\n",
         interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     std::string capacity = StringHelper::Format("CAPACITY_%s_%d", ConstantName(method->GetName()).c_str(),
@@ -321,7 +322,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod>
     sb.Append(prefix).Append("}\n\n");
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     sb.Append(prefix).Append("{\n");
@@ -388,7 +389,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(StringBuilder 
     sb.Append(prefix + TAB).Append("}\n");
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     size_t paramNumber = method->GetParameterNumber();
@@ -405,13 +406,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(AutoPtr<ASTMetho
     }
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodRetValue(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodRetValue(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     if (!method->IsOneWay()) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitInterfaceProxyMethodErrCode(sb, prefix);
-        sb.Append("\n");
+        sb.Append('\n');
         if (method->GetCacheable()) {
             EmitInterfaceProxyMethodPostSendRequest(method, sb, prefix);
         }

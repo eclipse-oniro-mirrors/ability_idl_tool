@@ -64,15 +64,15 @@ void CppClientProxyCodeEmitter::EmitProxyHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, proxyFullName_);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyHeaderInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyDecl(sb, "");
-    sb.Append("\n");
+    sb.Append('\n');
     EmitEndNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailMacro(sb, proxyFullName_);
 
     std::string data = sb.ToString();
@@ -113,12 +113,12 @@ void CppClientProxyCodeEmitter::EmitProxyDecl(StringBuilder &sb, const std::stri
     sb.Append("public:\n");
     if (!interface_->IsSerializable() && (!interface_->IsCallback())) {
         EmitProxyDevmgrDeathRecipient(sb, TAB);
-        sb.Append("\n");
+        sb.Append('\n');
     }
     EmitProxyConstructor(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyMethodDecls(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     if (!interface_->IsSerializable() && (!interface_->IsCallback())) {
         EmitProxyPublicMembers(sb, TAB);
     }
@@ -194,23 +194,23 @@ void CppClientProxyCodeEmitter::EmitProxyMethodDecls(StringBuilder &sb, const st
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitProxyMethodDecl(method, sb, prefix);
-            sb.Append("\n");
+            sb.Append('\n');
         }
         interface = interface->GetExtendsInterface();
     }
     EmitProxyMethodDecl(interface_->GetVersionMethod(), sb, prefix);
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyStaticMethodDecl(method, sb, prefix);
     }
     if (interface_->GetExtendsInterface() == nullptr) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyStaticMethodDecl(interface_->GetVersionMethod(), sb, prefix);
     }
     if (!interface_->IsSerializable() && (!interface_->IsCallback())) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyReconnectMethodDecl(sb, prefix);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyGetRemoteMethodDecl(sb, prefix);
     }
 }
@@ -235,7 +235,7 @@ void CppClientProxyCodeEmitter::EmitProxyMethodDecl(
         paramStr.Append(") override;");
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 
@@ -259,7 +259,7 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodDecl(
         paramStr.Append(");");
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 
@@ -302,12 +302,12 @@ void CppClientProxyCodeEmitter::EmitPassthroughProxySourceFile()
 
     EmitLicense(sb);
     EmitPassthroughProxySourceInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(proxyName_));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
     EmitGetMethodImpl(sb, "");
-    sb.Append("\n");
+    sb.Append('\n');
     EmitPassthroughGetInstanceMethodImpl(sb, "");
     EmitEndNamespace(sb);
 
@@ -356,29 +356,29 @@ void CppClientProxyCodeEmitter::EmitProxySourceFile()
 
     EmitLicense(sb);
     EmitProxySourceInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(proxyName_));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitUtilMethods(sb, true);
-    sb.Append("\n");
+    sb.Append('\n');
     if (interface_->GetExtendsInterface() != nullptr) {
         EmitProxyCastFromMethodImplTemplate(sb, "");
-        sb.Append("\n");
+        sb.Append('\n');
     }
     if (!interface_->IsSerializable()) {
         EmitGetMethodImpl(sb, "");
-        sb.Append("\n");
+        sb.Append('\n');
         EmitGetInstanceMethodImpl(sb, "");
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyCppReconnectMethodImpl(sb, "");
-        sb.Append("\n");
+        sb.Append('\n');
     }
     EmitProxyCastFromMethodImpls(sb, "");
     EmitUtilMethods(sb, false);
     EmitProxyMethodImpls(sb, "");
-    sb.Append("\n");
+    sb.Append('\n');
     EmitEndNamespace(sb);
 
     std::string data = sb.ToString();
@@ -618,7 +618,7 @@ void CppClientProxyCodeEmitter::EmitProxyMethodImpls(StringBuilder &sb, const st
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitProxyMethodImpl(interface, method, sb, prefix);
-            sb.Append("\n");
+            sb.Append('\n');
         }
         interface = interface->GetExtendsInterface();
         if (interface != nullptr) {
@@ -628,11 +628,11 @@ void CppClientProxyCodeEmitter::EmitProxyMethodImpls(StringBuilder &sb, const st
     AutoPtr<ASTMethod> verMethod = interface_->GetVersionMethod();
     EmitProxyMethodImpl(metaInterface, verMethod, sb, prefix);
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyStaticMethodImpl(method, sb, prefix);
     }
     if (interface_->GetExtendsInterface() == nullptr) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitProxyStaticMethodImpl(interface_->GetVersionMethod(), sb, prefix);
     }
 }
@@ -650,7 +650,7 @@ void CppClientProxyCodeEmitter::EmitProxyCastFromMethodImpls(StringBuilder &sb, 
     AutoPtr<ASTInterfaceType> interface = interface_->GetExtendsInterface();
     while (interface != nullptr) {
         EmitProxyCastFromMethodImpl(interface, sb, prefix);
-        sb.Append(prefix).Append("\n");
+        sb.Append(prefix).Append('\n');
         interface = interface->GetExtendsInterface();
     }
 }
@@ -738,10 +738,10 @@ void CppClientProxyCodeEmitter::EmitProxyMethodImpl(const AutoPtr<ASTInterfaceTy
             }
         }
 
-        paramStr.Append(")");
+        paramStr.Append(')');
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
     EmitProxyMethodBody(interface, method, sb, prefix);
 }
@@ -764,7 +764,7 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodImpl(
 
         paramStr.Append("const sptr<IRemoteObject> remote)");
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
     EmitProxyStaticMethodBody(method, sb, prefix);
 }
@@ -798,11 +798,11 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodBody(
     sb.Append(prefix + TAB).AppendFormat("MessageParcel %s;\n", HdiTypeEmitter::dataParcelName_.c_str());
     sb.Append(prefix + TAB).AppendFormat("MessageParcel %s;\n", HdiTypeEmitter::replyParcelName_.c_str());
     sb.Append(prefix + TAB).AppendFormat("MessageOption %s(%s);\n", optionName_.c_str(), option.c_str());
-    sb.Append("\n");
+    sb.Append('\n');
 
     // write interface token
     EmitWriteInterfaceToken(HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
-    sb.Append("\n");
+    sb.Append('\n');
 
     EmitWriteFlagOfNeedSetMem(method, HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
 
@@ -811,7 +811,7 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodBody(
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 EmitWriteMethodParameter(param, HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
-                sb.Append("\n");
+                sb.Append('\n');
             }
         }
     }
@@ -830,12 +830,12 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodBody(
     sb.Append(prefix + TAB).Append("}\n");
 
     if (!method->IsOneWay()) {
-        sb.Append("\n");
+        sb.Append('\n');
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
                 EmitReadMethodParameter(param, TypeMode::PARAM_OUT, sb, prefix + TAB);
-                sb.Append("\n");
+                sb.Append('\n');
             }
         }
     }

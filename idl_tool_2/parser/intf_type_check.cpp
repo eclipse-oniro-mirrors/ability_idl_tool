@@ -49,7 +49,7 @@ bool IntfTypeChecker::CheckIntegrity()
     return false;
 }
 
-bool IntfTypeChecker::CheckIntfSaAst()
+bool IntfTypeChecker::CheckIntfSaAst() const
 {
     AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
     if (interfaceType == nullptr) {
@@ -62,7 +62,7 @@ bool IntfTypeChecker::CheckIntfSaAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfSaAstTypes()
+bool IntfTypeChecker::CheckIntfSaAstTypes() const
 {
     for (const auto &pair : ast_->GetTypes()) {
         AutoPtr<ASTType> type = pair.second;
@@ -81,7 +81,7 @@ bool IntfTypeChecker::CheckIntfSaAstTypes()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfSaAstMethods()
+bool IntfTypeChecker::CheckIntfSaAstMethods() const
 {
     AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
     bool onewayInterface = (interfaceType->GetAttribute()->GetValue() == ASTAttr::ONEWAY);
@@ -97,8 +97,7 @@ bool IntfTypeChecker::CheckIntfSaAstMethods()
         }
         if (method->GetAttribute()->HasValue(ASTAttr::CACHEABLE) &&
             !method->GetAttribute()->HasValue(ASTAttr::ONEWAY)) {
-            auto ret = method->SetCacheableTime();
-            if (ret) {
+            if (method->SetCacheableTime()) {
                 ast_->SetHasCacheableProxyMethods(true);
             } else {
                 Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr cacheable time invalid",
@@ -152,7 +151,7 @@ bool IntfTypeChecker::CheckIntfHdiAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfHdiAstFileType()
+bool IntfTypeChecker::CheckIntfHdiAstFileType() const
 {
     switch (ast_->GetASTFileType()) {
         case ASTFileType::AST_IFACE:
@@ -175,7 +174,7 @@ bool IntfTypeChecker::CheckIntfHdiAstFileType()
     }
 }
 
-bool IntfTypeChecker::CheckIntfHdiAstTypes()
+bool IntfTypeChecker::CheckIntfHdiAstTypes() const
 {
     for (const auto &pair : ast_->GetTypes()) {
         AutoPtr<ASTType> type = pair.second;
@@ -188,7 +187,7 @@ bool IntfTypeChecker::CheckIntfHdiAstTypes()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t methodIdx, size_t paramIdx)
+bool IntfTypeChecker::CheckIntfHdiAstParam(const AutoPtr<ASTParameter>& param, size_t methodIdx, size_t paramIdx)
 {
     ASTParamAttr::ParamAttr paramAttr = param->GetAttribute();
     if (paramAttr == ASTParamAttr::PARAM_INOUT) {
@@ -214,7 +213,7 @@ bool IntfTypeChecker::CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t m
 
     return true;
 }
-bool IntfTypeChecker::CheckInterfaceAst()
+bool IntfTypeChecker::CheckInterfaceAst() const
 {
     AutoPtr<ASTInterfaceType> interface = ast_->GetInterfaceDef();
     if (interface == nullptr) {
@@ -237,7 +236,7 @@ bool IntfTypeChecker::CheckInterfaceAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckCallbackAst()
+bool IntfTypeChecker::CheckCallbackAst() const
 {
     AutoPtr<ASTInterfaceType> interface = ast_->GetInterfaceDef();
     if (interface == nullptr) {
@@ -253,7 +252,7 @@ bool IntfTypeChecker::CheckCallbackAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfSmAst()
+bool IntfTypeChecker::CheckIntfSmAst() const
 {
     if (ast_->GetPackageName().empty()) {
         Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sm ast's package name is empty.", __func__,
@@ -277,7 +276,7 @@ bool IntfTypeChecker::CheckIntfSmAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckIntfSmAstFileType()
+bool IntfTypeChecker::CheckIntfSmAstFileType() const
 {
     switch (ast_->GetASTFileType()) {
         case ASTFileType::AST_IFACE:
@@ -300,7 +299,7 @@ bool IntfTypeChecker::CheckIntfSmAstFileType()
     }
 }
 
-bool IntfTypeChecker::CheckIntfSmAstTypes()
+bool IntfTypeChecker::CheckIntfSmAstTypes() const
 {
     for (const auto &pair : ast_->GetTypes()) {
         AutoPtr<ASTType> type = pair.second;
@@ -313,7 +312,7 @@ bool IntfTypeChecker::CheckIntfSmAstTypes()
     return true;
 }
 
-bool IntfTypeChecker::CheckSmInterfaceAst()
+bool IntfTypeChecker::CheckSmInterfaceAst() const
 {
     size_t index = 0;
     for (size_t i = 0; i < ast_->GetInterfaceDefNumber(); i++) {
@@ -343,7 +342,7 @@ bool IntfTypeChecker::CheckSmInterfaceAst()
     return true;
 }
 
-bool IntfTypeChecker::CheckBasicType(Token token)
+bool IntfTypeChecker::CheckBasicType(const Token& token)
 {
     switch (token.kind) {
         case TokenType::VOID:
@@ -368,7 +367,7 @@ bool IntfTypeChecker::CheckBasicType(Token token)
     }
 }
 
-bool IntfTypeChecker::CheckUserDefType(Token token)
+bool IntfTypeChecker::CheckUserDefType(const Token& token)
 {
     switch (token.kind) {
         case TokenType::ENUM:

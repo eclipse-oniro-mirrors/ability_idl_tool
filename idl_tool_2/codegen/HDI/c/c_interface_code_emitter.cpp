@@ -62,25 +62,25 @@ void CInterfaceCodeEmitter::EmitLowModeInterfaceHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, interfaceFullName_);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitImportInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitHeadExternC(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceVersionMacro(sb);
     if (!interface_->IsSerializable()) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitPreDeclaration(sb);
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceDefinition(sb);
     if (!interface_->IsSerializable()) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitLowModeExternalMethod(sb);
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailExternC(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailMacro(sb, interfaceFullName_);
 
     std::string data = sb.ToString();
@@ -108,29 +108,29 @@ void CInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, interfaceFullName_);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitImportInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitHeadExternC(sb);
     if (!Options::GetInstance().DoPassthrough()) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitPreDeclaration(sb);
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceDesc(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceVersionMacro(sb);
     if (!Options::GetInstance().DoPassthrough()) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitInterfaceBuffSizeMacro(sb);
-        sb.Append("\n");
+        sb.Append('\n');
         EmitInterfaceMethodCommands(sb, "");
     }
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceDefinition(sb);
     EmitExternalMethod(sb);
     EmitTailExternC(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailMacro(sb, interfaceFullName_);
 
     std::string data = sb.ToString();
@@ -191,12 +191,12 @@ void CInterfaceCodeEmitter::EmitInterfaceMethods(StringBuilder &sb, const std::s
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitInterfaceMethod(method, sb, prefix);
-        sb.Append("\n");
+        sb.Append('\n');
     }
 
     EmitInterfaceMethod(interface_->GetVersionMethod(), sb, prefix);
     if (mode_ == GenMode::IPC) {
-        sb.Append("\n");
+        sb.Append('\n');
         EmitAsObjectMethod(sb, TAB);
     }
 }
@@ -221,7 +221,7 @@ void CInterfaceCodeEmitter::EmitInterfaceMethod(
 
         paramStr.Append(");");
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 
@@ -236,9 +236,9 @@ void CInterfaceCodeEmitter::EmitExternalMethod(StringBuilder &sb) const
         return;
     }
 
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceGetMethodDecl(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitInterfaceReleaseMethodDecl(sb);
 }
 
@@ -246,7 +246,7 @@ void CInterfaceCodeEmitter::EmitInterfaceGetMethodDecl(StringBuilder &sb) const
 {
     if (mode_ == GenMode::KERNEL) {
         sb.AppendFormat("struct %s *%sGet(void);\n", interfaceName_.c_str(), interfaceName_.c_str());
-        sb.Append("\n");
+        sb.Append('\n');
         sb.AppendFormat(
             "struct %s *%sGetInstance(const char *instanceName);\n", interfaceName_.c_str(), interfaceName_.c_str());
         return;

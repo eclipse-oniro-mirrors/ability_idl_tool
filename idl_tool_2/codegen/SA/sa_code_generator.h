@@ -30,7 +30,7 @@ public:
     bool DoGenerate(const StrAstMap &allAst) override;
 
 private:
-    static CodeGenFunc GetCodeGenPoilcy();
+    static CodeGenFunc GetCodeGenPolicy();
 
     static void GenCppPath(const AutoPtr<AST> &ast, const std::string &outDir);
 

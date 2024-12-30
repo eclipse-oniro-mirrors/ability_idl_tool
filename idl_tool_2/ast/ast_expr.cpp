@@ -23,13 +23,13 @@ std::string ASTUnaryExpr::Dump(const std::string &prefix)
     StringBuilder sb;
     sb.Append(prefix);
     if (isParenExpr) {
-        sb.Append("(");
+        sb.Append('(');
     }
 
     sb.AppendFormat("%s%s", UnaryOpToString(op_).c_str(), expr_->Dump("").c_str());
 
     if (isParenExpr) {
-        sb.Append(")");
+        sb.Append(')');
     }
 
     return sb.ToString();
@@ -54,13 +54,13 @@ std::string ASTBinaryExpr::Dump(const std::string &prefix)
     StringBuilder sb;
     sb.Append(prefix);
     if (isParenExpr) {
-        sb.Append("(");
+        sb.Append('(');
     }
 
     sb.AppendFormat("%s %s %s", lExpr_->Dump("").c_str(), BinaryOpToString(op_).c_str(), rExpr_->Dump("").c_str());
 
     if (isParenExpr) {
-        sb.Append(")");
+        sb.Append(')');
     }
 
     return sb.ToString();
@@ -99,13 +99,13 @@ std::string ASTNumExpr::Dump(const std::string &prefix)
     StringBuilder sb;
     sb.Append(prefix);
     if (isParenExpr) {
-        sb.Append("(");
+        sb.Append('(');
     }
 
     sb.AppendFormat("%s", value_.c_str());
 
     if (isParenExpr) {
-        sb.Append(")");
+        sb.Append(')');
     }
 
     return sb.ToString();
@@ -116,13 +116,13 @@ std::string ASTEnumExpr::Dump(const std::string &prefix)
     StringBuilder sb;
     sb.Append(prefix);
     if (isParenExpr) {
-        sb.Append("(");
+        sb.Append('(');
     }
 
     sb.AppendFormat("%s", value_.c_str());
 
     if (isParenExpr) {
-        sb.Append(")");
+        sb.Append(')');
     }
 
     return sb.ToString();

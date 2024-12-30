@@ -53,4 +53,4 @@ private:
 } // namespace SA
 } // namespace OHOS
 
-#endif // OHOS_IDL_CPP_CLIENT_PROXY_CODE_EMITTER_H
+#endif // OHOS_IDL_SA_TS_CLIENT_PROXY_CODE_EMITTER_H

@@ -144,7 +144,7 @@ void HdiTypeEmitter::EmitCUnMarshalling(const std::string &name, const std::stri
 void HdiTypeEmitter::EmitFreeStatements(
     const std::vector<std::string> &freeObjStatements, StringBuilder &sb, const std::string &prefix) const
 {
-    for (auto it = freeObjStatements.rbegin(); it != freeObjStatements.rend(); it++) {
+    for (auto it = freeObjStatements.rbegin(); it != freeObjStatements.rend(); ++it) {
         sb.Append(prefix).Append(*it);
     }
 }

@@ -35,7 +35,7 @@ std::string SaTypeEmitter::GetTypeName()
 
 std::string SaTypeEmitter::EmitCppType(TypeMode mode) const
 {
-    return "unknow";
+    return "unknown";
 }
 
 std::string SaTypeEmitter::EmitRustType(bool pt, TypeMode mode) const
@@ -102,5 +102,11 @@ void SaTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std::stri
     (void)sb;
     (void)prefix;
 }
+
+void SaTypeEmitter::SetLogOn(bool logOn)
+{
+    logOn_ = logOn;
+}
+
 } // namespace Idl
 } // namespace OHOS

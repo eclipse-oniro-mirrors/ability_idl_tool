@@ -26,16 +26,14 @@ std::string SaBooleanTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "bool";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "bool";
-        case TypeMode::PARAM_OUT:
-            return "bool&";
         case TypeMode::LOCAL_VAR:
             return "bool";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "bool&";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 
@@ -54,10 +52,10 @@ void SaBooleanTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const 
 {
     sb.Append(prefix).AppendFormat("if (!%sWriteInt32(%s ? 1 : 0)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
             name.c_str());
     }
-    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
 }
 
@@ -65,10 +63,10 @@ void SaBooleanTypeEmitter::EmitCppReadVar(const std::string &parcelName, const s
     const std::string &prefix, bool emitType) const
 {
     if (emitType) {
-        sb.Append(prefix).AppendFormat("%s %s = %sReadInt32() == 1 ? true : false;\n",
+        sb.Append(prefix).AppendFormat("%s %s = %sReadInt32() == 1;\n",
             EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str(), parcelName.c_str());
     } else {
-        sb.Append(prefix).AppendFormat("%s = %sReadInt32() == 1 ? true : false;\n", name.c_str(), parcelName.c_str());
+        sb.Append(prefix).AppendFormat("%s = %sReadInt32() == 1;\n", name.c_str(), parcelName.c_str());
     }
 }
 

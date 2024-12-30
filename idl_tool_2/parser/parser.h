@@ -98,7 +98,7 @@ private:
 
     bool ParseSupportDelegator();
 
-    bool ParserPackageInfo(const std::string &packageName);
+    bool ParserPackageInfo(const std::string &packageName) const;
 
     bool ParseImports();
 
@@ -126,7 +126,7 @@ private:
 
     AutoPtr<ASTAttr> ParseInfAttrInfo(const AttrSet &attrs);
 
-    void CheckInterfaceAttr(const AutoPtr<ASTInterfaceType> &interface, Token token);
+    void CheckInterfaceAttr(const AutoPtr<ASTInterfaceType> &interface, const Token &token);
 
     void CheckIpcCodeValue(
         const AutoPtr<ASTMethod> &method, int32_t &ipcCodeValue, std::unordered_set<int32_t> &ipcCodeSet);
@@ -141,7 +141,7 @@ private:
 
     AutoPtr<ASTAttr> ParseMethodAttr();
 
-    AutoPtr<ASTMethod> CreateGetVersionMethod();
+    AutoPtr<ASTMethod> CreateGetVersionMethod() const;
 
     void CheckMethodAttr(const AutoPtr<ASTInterfaceType> &interface, const AutoPtr<ASTMethod> &method);
 
@@ -151,7 +151,7 @@ private:
 
     bool CheckParamAttr();
 
-    void SetParamAttrVal(Token token, AutoPtr<ASTParamAttr> attr);
+    void SetParamAttrVal(const Token &token, const AutoPtr<ASTParamAttr> &attr);
 
     AutoPtr<ASTParamAttr> ParseParamAttr();
 
@@ -219,32 +219,27 @@ private:
 
     AutoPtr<ASTExpr> ParseEnumExpr();
 
-    bool CheckNumber(const std::string& integerVal) const;
+    bool CheckNumber(const std::string &integerVal) const;
 
     bool CheckType(const Token &token, const AutoPtr<ASTType> &type);
 
     bool CheckTypeByMode(const Token &token, const AutoPtr<ASTType> &type);
 
-    void SetAstFileType();
+    void SetAstFileType() const;
 
     bool CheckPackageName(const std::string &filePath, const std::string &packageName) const;
 
     bool CheckImport(const Token &token);
 
-    void ParseInterfaceExtends(AutoPtr<ASTInterfaceType> &interface);
+    void ParseInterfaceExtends(const AutoPtr<ASTInterfaceType> &interface);
 
-    void ParseExtendsInfo(AutoPtr<ASTInterfaceType> &interfaceType);
+    void ParseExtendsInfo(const AutoPtr<ASTInterfaceType> &interfaceType);
 
-    bool CheckExtendsName(AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsName);
+    bool CheckExtendsName(const AutoPtr<ASTInterfaceType> &interfaceType, const std::string &extendsName);
 
-    bool CheckExtendsVersion(AutoPtr<AST> extendsAst);
+    bool CheckExtendsVersion(const AutoPtr<AST> &extendsAst) const;
 
-    bool CheckImportsVersion(AutoPtr<AST> extendsAst);
-
-    inline static bool IsPrimitiveType(Token token)
-    {
-        return token.kind >= TokenType::BOOLEAN && token.kind <= TokenType::ASHMEM;
-    }
+    bool CheckImportsVersion(const AutoPtr<AST> &extendsAst);
 
     bool AddAst(const AutoPtr<AST> &ast);
 
@@ -265,7 +260,7 @@ private:
             funcName, fileLine, LocInfo(token).c_str(), message.c_str(), token.value.c_str()));
     }
 
-    void ShowError()
+    void ShowError() const
     {
         for (const auto &errMsg : errors_) {
             Logger::E(TAG, "%s", errMsg.c_str());
@@ -278,29 +273,30 @@ private:
 
     bool GetGenVersion(std::vector<size_t> &version, std::string &genPackageName);
 
-    void GetGenNamespace(AutoPtr<ASTNamespace> &ns);
+    void GetGenNamespace(AutoPtr<ASTNamespace> &ns) const;
 
-    void SortAstByName(AstMergeMap &mergeMap, StrAstMap &allAsts);
+    void SortAstByName(AstMergeMap &mergeMap, const StrAstMap &allAsts);
 
-    void MergeAsts(AstMergeMap &mergeMap);
+    void MergeAsts(const AstMergeMap &mergeMap);
 
-    void MergeAst(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeAst(AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void MergeImport(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeImport(const AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void MergeInterfaceDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeInterfaceDef(const AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void MergeTypes(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeTypes(const AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void MergeSequenceableDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeSequenceableDef(const AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+    void MergeTypeDefinitions(const AutoPtr<AST> &targetAst, const AutoPtr<AST> &sourceAst);
 
-    void ModifyImport(StrAstMap &allAsts, std::string &genPackageName);
+    void ModifyImport(const StrAstMap &allAsts, const std::string &genPackageName);
 
-    void ModifyPackageNameAndVersion(StrAstMap &allAsts, std::string &genPackageName, std::vector<size_t> genVersion);
+    void ModifyPackageNameAndVersion(const StrAstMap &allAsts, const std::string &genPackageName,
+        std::vector<size_t> genVersion);
 
-    void ModifyInterfaceNamespace(AutoPtr<ASTNamespace> &ns);
+    void ModifyInterfaceNamespace(const AutoPtr<ASTNamespace> &ns) const;
 
     Lexer lexer_;
     std::vector<std::string> errors_;

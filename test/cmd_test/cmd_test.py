@@ -29,9 +29,14 @@ class RetStatus(Enum):
 
 
 def get_idl():
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    relative_path = os.path.join(current_path, "..", "..", "idl_tool_2", "idl-gen")
-    return os.path.realpath(relative_path)
+    return os.path.realpath(os.path.join("..", "..", "idl_tool_2", get_idl_name()))
+
+
+def get_idl_name():
+    if os.name == 'nt':
+        return 'idl-gen.exe'
+    else:
+        return 'idl-gen'
 
 
 def get_caller_info():

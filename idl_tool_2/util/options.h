@@ -16,7 +16,6 @@
 #ifndef OHOS_IDL_OPTION_H
 #define OHOS_IDL_OPTION_H
 
-#include <map>
 #include <string>
 #include <unordered_map>
 #include <set>
@@ -279,9 +278,9 @@ private:
 
     bool CheckOptions();
 
-    bool ParseSingle(int option, std::string optVal);
+    bool ParseSingle(int option, const std::string& optVal);
 
-    bool ParseOptionWithValue(int option, std::string optVal);
+    bool ParseOptionWithValue(int option, const std::string& optVal);
 
     static const char *optSupportArgs;
 
@@ -321,4 +320,4 @@ private:
 } // namespace Idl
 } // namespace OHOS
 
-#endif // OHOS_HDIL_OPTION_H
+#endif // OHOS_IDL_OPTION_H

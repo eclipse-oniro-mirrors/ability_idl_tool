@@ -26,14 +26,12 @@ std::string SaFloatTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "float";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "float";
-        case TypeMode::PARAM_OUT:
-            return "float&";
         case TypeMode::LOCAL_VAR:
             return "float";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "float&";
         default:
             return "unknown type";
     }
@@ -54,9 +52,9 @@ void SaFloatTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
 {
     sb.Append(prefix).AppendFormat("if (!%sWriteFloat(%s)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
     }
-    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
 }
 

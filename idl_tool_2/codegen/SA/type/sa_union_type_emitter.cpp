@@ -27,7 +27,7 @@ std::string SaUnionTypeEmitter::EmitCppType(TypeMode mode) const
     switch (mode) {
         case TypeMode::NO_MODE:
         case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("%s", typeName_.c_str());
+            return typeName_;
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const %s&", typeName_.c_str());
         case TypeMode::PARAM_INOUT:
@@ -43,7 +43,7 @@ std::string SaUnionTypeEmitter::EmitCppTypeDecl() const
     StringBuilder sb;
     sb.AppendFormat("union %s {\n", typeName_.c_str());
 
-    for (auto it : members_) {
+    for (const auto& it : members_) {
         AutoPtr<SaTypeEmitter> member = std::get<1>(it);
         std::string memberName = std::get<0>(it);
         sb.Append(TAB).AppendFormat("%s %s;\n", member->EmitCppType().c_str(), memberName.c_str());
@@ -71,8 +71,8 @@ void SaUnionTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     if (emitType) {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
-    sb.Append(prefix).AppendFormat("const %s *%sCp = reinterpret_cast<const %s *>(%sReadUnpadBuffer(sizeof(%s)));\n",
-        EmitCppType().c_str(), name.c_str(), EmitCppType().c_str(), parcelName.c_str(), EmitCppType().c_str());
+    sb.Append(prefix).AppendFormat("const auto *%sCp = %sReadUnpadBuffer(sizeof(%s));\n",
+        name.c_str(), parcelName.c_str(), EmitCppType().c_str());
     sb.Append(prefix).AppendFormat("if (%sCp == nullptr) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
@@ -85,7 +85,7 @@ void SaUnionTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Memcpy [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
-    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix).Append("}\n\n");
 }
 } // namespace Idl
 } // namespace OHOS

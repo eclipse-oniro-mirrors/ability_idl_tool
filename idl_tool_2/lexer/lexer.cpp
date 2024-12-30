@@ -94,11 +94,11 @@ Lexer::StrTokenTypeMap Lexer::symbols_ = {
     {"--", TokenType::MMINUS              },
 };
 
-Lexer::Lexer() : filePath_(), file_(nullptr), mode_(ParseMode::DECL_MODE), havePeek_(false), curToken_() {}
+Lexer::Lexer() : file_(nullptr), mode_(ParseMode::DECL_MODE), havePeek_(false), curToken_() {}
 
 bool Lexer::Reset(const std::string &filePath)
 {
-    file_ = std::make_unique<File>(filePath, int(File::READ));
+    file_ = std::make_unique<File>(filePath, File::READ);
     if (!file_->IsValid()) {
         return false;
     }
@@ -353,7 +353,7 @@ void Lexer::ReadBinaryNum(Token &token)
 void Lexer::ReadOctNum(Token &token)
 {
     StringBuilder sb;
-    sb.Append("0");
+    sb.Append('0');
     bool err = false;
 
     while (!file_->IsEof()) {

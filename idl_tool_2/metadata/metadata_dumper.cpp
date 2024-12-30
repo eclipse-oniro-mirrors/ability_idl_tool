@@ -119,7 +119,7 @@ void MetadataDumper::DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, con
         sb.Append("\n" + prefix + tab_).Append("]\n");
     }
 
-    sb.Append(prefix).Append("}");
+    sb.Append(prefix).Append('}');
 }
 
 void MetadataDumper::DumpMetaSequenceables(StringBuilder& sb, MetaComponent* mc, const std::string& prefix)
@@ -143,7 +143,7 @@ void MetadataDumper::DumpMetaSequenceable(StringBuilder& sb, MetaSequenceable* m
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + tab_).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
     sb.Append(prefix + tab_).AppendFormat("\"namespace_\" : \"%s\"\n", mp->namespace_);
-    sb.Append(prefix).Append("}");
+    sb.Append(prefix).Append('}');
 }
 
 void MetadataDumper::DumpMetaInterfaces(StringBuilder& sb, MetaComponent* mc, const std::string& prefix)
@@ -185,7 +185,7 @@ void MetadataDumper::DumpMetaInterface(StringBuilder& sb, MetaInterface* mi, con
         sb.Append("\n" + prefix + tab_).Append("]\n");
     }
 
-    sb.Append(prefix).Append("}");
+    sb.Append(prefix).Append('}');
 }
 
 void MetadataDumper::DumpMetaMethod(StringBuilder& sb, MetaMethod* mm, const std::string& prefix)
@@ -212,7 +212,7 @@ void MetadataDumper::DumpMetaMethod(StringBuilder& sb, MetaMethod* mm, const std
         sb.Append("\n" + prefix + tab_).Append("]\n");
     }
 
-    sb.Append(prefix).Append("}");
+    sb.Append(prefix).Append('}');
 }
 
 void MetadataDumper::DumpMetaParameter(StringBuilder& sb, MetaParameter* mp, const std::string& prefix)
@@ -232,7 +232,7 @@ void MetadataDumper::DumpMetaParameter(StringBuilder& sb, MetaParameter* mp, con
     MetaType* type = metaComponent_->types_[mp->typeIndex_];
     sb.Append(prefix + tab_).AppendFormat("\"type_\" : \"%s\"\n", DumpMetaType(type).c_str());
 
-    sb.Append(prefix).Append("}");
+    sb.Append(prefix).Append('}');
 }
 
 std::string MetadataDumper::DumpMetaType(MetaType* mt)

@@ -21,12 +21,12 @@ namespace OHOS {
 namespace Idl {
 void ASTUnionType::AddMember(const AutoPtr<ASTType> &typeName, std::string name)
 {
-    for (auto it : members_) {
-        if (std::get<0>(it) == name) {
+    for (auto member : members_) {
+        if (std::get<0>(member) == name) {
             return;
         }
     }
-    members_.push_back(std::make_tuple(name, typeName));
+    members_.emplace_back(name, typeName);
 }
 
 std::string ASTUnionType::GetSignature()
@@ -44,10 +44,10 @@ std::string ASTUnionType::Dump(const std::string &prefix)
     StringBuilder sb;
     sb.Append(prefix).Append(attr_->Dump(prefix));
     sb.AppendFormat("union %s {\n", name_.c_str());
-    if (members_.size() > 0) {
-        for (auto it : members_) {
+    if (!members_.empty()) {
+        for (auto member : members_) {
             sb.Append(prefix + "  ");
-            sb.AppendFormat("%s %s;\n", std::get<1>(it)->ToString().c_str(), std::get<0>(it).c_str());
+            sb.AppendFormat("%s %s;\n", std::get<1>(member)->ToString().c_str(), std::get<0>(member).c_str());
         }
     }
     sb.Append(prefix).Append("};\n");

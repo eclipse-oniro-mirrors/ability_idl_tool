@@ -37,7 +37,7 @@ bool Hash::GenHashKey()
 
 bool Hash::FormatStdout(const FileDetailMap &fileDetails)
 {
-    std::vector<std::string> hashInfos = Hash::GetHashInfo(fileDetails);
+    std::vector<std::string> hashInfos = GetHashInfo(fileDetails);
     if (hashInfos.empty()) {
         return false;
     }
@@ -50,7 +50,7 @@ bool Hash::FormatStdout(const FileDetailMap &fileDetails)
 
 bool Hash::FormatFile(const FileDetailMap &fileDetails, const std::string &filePath)
 {
-    std::vector<std::string> hashInfos = Hash::GetHashInfo(fileDetails);
+    std::vector<std::string> hashInfos = GetHashInfo(fileDetails);
     if (hashInfos.empty()) {
         return false;
     }
@@ -75,8 +75,8 @@ std::vector<std::string> Hash::GetHashInfo(const FileDetailMap &fileDetails)
     for (const auto &detail : fileDetails) {
         size_t haskKey = 0;
         std::stringstream hashInfo;
-        if (!Hash::GenFileHashKey(detail.second.filePath_, haskKey)) {
-            return std::vector<std::string>();
+        if (!GenFileHashKey(detail.second.filePath_, haskKey)) {
+            return {};
         }
         hashInfo << detail.first << ":" << haskKey;
         hashInfos.push_back(hashInfo.str());

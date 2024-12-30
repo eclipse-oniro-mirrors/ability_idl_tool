@@ -68,11 +68,11 @@ std::string HdiEnumTypeEmitter::EmitCTypeDecl() const
     StringBuilder sb;
     sb.AppendFormat("enum %s {\n", name_.c_str());
 
-    for (auto it : members_) {
-        if (it->GetValue().empty()) {
-            sb.Append(TAB).AppendFormat("%s,\n", it->GetValueName().c_str());
+    for (const auto& member : members_) {
+        if (member->GetValue().empty()) {
+            sb.Append(TAB).AppendFormat("%s,\n", member->GetValueName().c_str());
         } else {
-            sb.Append(TAB).AppendFormat("%s = %s,\n", it->GetValueName().c_str(), it->GetValue().c_str());
+            sb.Append(TAB).AppendFormat("%s = %s,\n", member->GetValueName().c_str(), member->GetValue().c_str());
         }
     }
 
@@ -89,11 +89,11 @@ std::string HdiEnumTypeEmitter::EmitCppTypeDecl() const
         sb.AppendFormat("enum %s : %s {\n", name_.c_str(), baseTypeName_.c_str());
     }
 
-    for (auto it : members_) {
-        if (it->GetValue().empty()) {
-            sb.Append(TAB).AppendFormat("%s,\n", it->GetValueName().c_str());
+    for (const auto& member : members_) {
+        if (member->GetValue().empty()) {
+            sb.Append(TAB).AppendFormat("%s,\n", member->GetValueName().c_str());
         } else {
-            sb.Append(TAB).AppendFormat("%s = %s,\n", it->GetValueName().c_str(), it->GetValue().c_str());
+            sb.Append(TAB).AppendFormat("%s = %s,\n", member->GetValueName().c_str(), member->GetValue().c_str());
         }
     }
 
