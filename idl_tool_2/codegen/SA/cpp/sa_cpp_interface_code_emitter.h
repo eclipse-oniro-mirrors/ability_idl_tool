@@ -31,7 +31,7 @@ private:
 
     void EmitInterfaceHeaderFile();
 
-    void EmitInterfaceInclusions(StringBuilder &sb);
+    void EmitInterfaceInclusions(StringBuilder &sb) const;
 
     void EmitInterfaceDBinderInclusions(HeaderFile::HeaderFileSet &headerFiles) const;
 
@@ -49,11 +49,11 @@ private:
 
     void EmitInterfaceBody(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceMethod(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceMethod(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceMemberVariables(StringBuilder &sb, const std::string &prefix) const;
 };
 } // namespace Idl
 } // namespace OHOS
 
-#endif // OHOS_IDL_CPP_INTERFACE_CODE_EMITTER_H
+#endif // OHOS_IDL_SA_CPP_INTERFACE_CODE_EMITTER_H

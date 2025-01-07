@@ -103,20 +103,20 @@ ErrCode FooProxy::bool_test_func(
 
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
-        bool key = reply.ReadInt32() == 1 ? true : false;
-        bool value = reply.ReadInt32() == 1 ? true : false;
+        bool key = reply.ReadInt32() == 1;
+        bool value = reply.ReadInt32() == 1;
         outParam[key] = value;
     }
     int32_t inoutParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < inoutParamSize; ++i) {
-        bool key = reply.ReadInt32() == 1 ? true : false;
-        bool value = reply.ReadInt32() == 1 ? true : false;
+        bool key = reply.ReadInt32() == 1;
+        bool value = reply.ReadInt32() == 1;
         inoutParam[key] = value;
     }
     int32_t funcResultSize = reply.ReadInt32();
     for (int32_t i = 0; i < funcResultSize; ++i) {
-        bool key = reply.ReadInt32() == 1 ? true : false;
-        bool value = reply.ReadInt32() == 1 ? true : false;
+        bool key = reply.ReadInt32() == 1;
+        bool value = reply.ReadInt32() == 1;
         funcResult[key] = value;
     }
     return ERR_OK;
@@ -180,20 +180,20 @@ ErrCode FooProxy::byte_test_func(
 
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
-        int8_t key = (int8_t)reply.ReadInt32();
-        int8_t value = (int8_t)reply.ReadInt32();
+        auto key = static_cast<int8_t>(reply.ReadInt32());
+        auto value = static_cast<int8_t>(reply.ReadInt32());
         outParam[key] = value;
     }
     int32_t inoutParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < inoutParamSize; ++i) {
-        int8_t key = (int8_t)reply.ReadInt32();
-        int8_t value = (int8_t)reply.ReadInt32();
+        auto key = static_cast<int8_t>(reply.ReadInt32());
+        auto value = static_cast<int8_t>(reply.ReadInt32());
         inoutParam[key] = value;
     }
     int32_t funcResultSize = reply.ReadInt32();
     for (int32_t i = 0; i < funcResultSize; ++i) {
-        int8_t key = (int8_t)reply.ReadInt32();
-        int8_t value = (int8_t)reply.ReadInt32();
+        auto key = static_cast<int8_t>(reply.ReadInt32());
+        auto value = static_cast<int8_t>(reply.ReadInt32());
         funcResult[key] = value;
     }
     return ERR_OK;
@@ -257,20 +257,20 @@ ErrCode FooProxy::short_test_func(
 
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
-        short key = (short)reply.ReadInt32();
-        short value = (short)reply.ReadInt32();
+        auto key = static_cast<short>(reply.ReadInt32());
+        auto value = static_cast<short>(reply.ReadInt32());
         outParam[key] = value;
     }
     int32_t inoutParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < inoutParamSize; ++i) {
-        short key = (short)reply.ReadInt32();
-        short value = (short)reply.ReadInt32();
+        auto key = static_cast<short>(reply.ReadInt32());
+        auto value = static_cast<short>(reply.ReadInt32());
         inoutParam[key] = value;
     }
     int32_t funcResultSize = reply.ReadInt32();
     for (int32_t i = 0; i < funcResultSize; ++i) {
-        short key = (short)reply.ReadInt32();
-        short value = (short)reply.ReadInt32();
+        auto key = static_cast<short>(reply.ReadInt32());
+        auto value = static_cast<short>(reply.ReadInt32());
         funcResult[key] = value;
     }
     return ERR_OK;
@@ -662,10 +662,10 @@ ErrCode FooProxy::double_test_func(
 }
 
 ErrCode FooProxy::char_test_func(
-    const std::unordered_map<zchar, zchar>& inParam,
-    std::unordered_map<zchar, zchar>& outParam,
-    std::unordered_map<zchar, zchar>& inoutParam,
-    std::unordered_map<zchar, zchar>& funcResult)
+    const std::unordered_map<char, char>& inParam,
+    std::unordered_map<char, char>& outParam,
+    std::unordered_map<char, char>& inoutParam,
+    std::unordered_map<char, char>& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -719,20 +719,20 @@ ErrCode FooProxy::char_test_func(
 
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
-        zchar key = (zchar)reply.ReadInt32();
-        zchar value = (zchar)reply.ReadInt32();
+        char key = (char)reply.ReadInt32();
+        char value = (char)reply.ReadInt32();
         outParam[key] = value;
     }
     int32_t inoutParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < inoutParamSize; ++i) {
-        zchar key = (zchar)reply.ReadInt32();
-        zchar value = (zchar)reply.ReadInt32();
+        char key = (char)reply.ReadInt32();
+        char value = (char)reply.ReadInt32();
         inoutParam[key] = value;
     }
     int32_t funcResultSize = reply.ReadInt32();
     for (int32_t i = 0; i < funcResultSize; ++i) {
-        zchar key = (zchar)reply.ReadInt32();
-        zchar value = (zchar)reply.ReadInt32();
+        char key = (char)reply.ReadInt32();
+        char value = (char)reply.ReadInt32();
         funcResult[key] = value;
     }
     return ERR_OK;
@@ -796,43 +796,49 @@ ErrCode FooProxy::seq_test_func(
 
     int32_t outParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < outParamSize; ++i) {
-        std::unique_ptr<myseq> key(reply.ReadParcelable<myseq>());
-        if (!key) {
+        std::unique_ptr<myseq> keyInfo(reply.ReadParcelable<myseq>());
+        if (!keyInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq key(*keyInfo);
 
-        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
-        if (!value) {
+        std::unique_ptr<myseq> valueInfo(reply.ReadParcelable<myseq>());
+        if (!valueInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq value(*valueInfo);
 
         outParam[key] = value;
     }
     int32_t inoutParamSize = reply.ReadInt32();
     for (int32_t i = 0; i < inoutParamSize; ++i) {
-        std::unique_ptr<myseq> key(reply.ReadParcelable<myseq>());
-        if (!key) {
+        std::unique_ptr<myseq> keyInfo(reply.ReadParcelable<myseq>());
+        if (!keyInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq key(*keyInfo);
 
-        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
-        if (!value) {
+        std::unique_ptr<myseq> valueInfo(reply.ReadParcelable<myseq>());
+        if (!valueInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq value(*valueInfo);
 
         inoutParam[key] = value;
     }
     int32_t funcResultSize = reply.ReadInt32();
     for (int32_t i = 0; i < funcResultSize; ++i) {
-        std::unique_ptr<myseq> key(reply.ReadParcelable<myseq>());
-        if (!key) {
+        std::unique_ptr<myseq> keyInfo(reply.ReadParcelable<myseq>());
+        if (!keyInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq key(*keyInfo);
 
-        std::unique_ptr<myseq> value(reply.ReadParcelable<myseq>());
-        if (!value) {
+        std::unique_ptr<myseq> valueInfo(reply.ReadParcelable<myseq>());
+        if (!valueInfo) {
             return ERR_INVALID_DATA;
         }
+        myseq value(*valueInfo);
 
         funcResult[key] = value;
     }

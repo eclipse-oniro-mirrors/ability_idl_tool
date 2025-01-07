@@ -30,6 +30,7 @@ std::string SaArrayTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
+        case TypeMode::LOCAL_VAR:
             return StringHelper::Format("std::vector<%s>", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const std::vector<%s>&",
@@ -37,10 +38,8 @@ std::string SaArrayTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::PARAM_OUT:
         case TypeMode::PARAM_INOUT:
             return StringHelper::Format("std::vector<%s>&", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
-        case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("std::vector<%s>", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 
@@ -62,10 +61,10 @@ void SaArrayTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
 {
     sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).Append(
+        sb.Append(prefix + TAB).Append(
             "HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
     }
-    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n", name.c_str(), name.c_str());
@@ -86,7 +85,7 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
-    
+
     circleCount_++;
     std::stringstream circleCountStr;
     circleCountStr << circleCount_;
@@ -94,12 +93,8 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     std::string valueStr = "value" + circleCountStr.str();
     sb.Append(prefix).AppendFormat("for (int32_t %s = 0; %s < %sSize; ++%s) {\n",
         iStr.c_str(), iStr.c_str(), name.c_str(), iStr.c_str());
-    elementEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
-    if (elementEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
-        sb.Append(prefix + TAB).AppendFormat("%s.push_back(*%s);\n", name.c_str(), valueStr.c_str());
-    } else {
-        sb.Append(prefix + TAB).AppendFormat("%s.push_back(%s);\n", name.c_str(), valueStr.c_str());
-    }
+    elementEmitter_->EmitCppReadVar(parcelName, valueStr, sb, prefix + TAB);
+    sb.Append(prefix + TAB).AppendFormat("%s.push_back(%s);\n", name.c_str(), valueStr.c_str());
     sb.Append(prefix).Append("}\n");
 }
 
@@ -126,7 +121,7 @@ void SaArrayTypeEmitter::EmitTsWriteVar(const std::string &parcelName, const std
                 "let %sArray:Array<%s> = %s;\n", name.c_str(), elementEmitter_->GetTypeName().c_str(), name.c_str());
             sb.Append(prefix).AppendFormat("%s.writeInt(%sArray.length);\n", parcelName.c_str(), name.c_str());
             sb.Append(prefix).AppendFormat("for (let index = 0; index < %sArray.length; index++) {\n", name.c_str());
-            sb.Append(prefix).Append(TAB).AppendFormat(
+            sb.Append(prefix + TAB).AppendFormat(
                 "%s.writeSequenceable(%s[index]);\n", parcelName.c_str(), name.c_str());
             sb.Append(prefix).AppendFormat("}\n");
         }
@@ -159,11 +154,11 @@ void SaArrayTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std:
             sb.Append(prefix).AppendFormat("let %s:Array<%s> = [];\n", name.c_str(),
                 elementEmitter_->GetTypeName().c_str());
             sb.Append(prefix).AppendFormat("for (let index = 0; index < %sSize; index++) {\n", name.c_str());
-            sb.Append(prefix).Append(TAB).AppendFormat("let %sValue = new %s();\n", name.c_str(),
+            sb.Append(prefix + TAB).AppendFormat("let %sValue = new %s();\n", name.c_str(),
                 elementEmitter_->GetTypeName().c_str());
-            sb.Append(prefix).Append(TAB).AppendFormat(
+            sb.Append(prefix + TAB).AppendFormat(
                 "%s.readSequenceable(%sValue);\n", parcelName.c_str(), name.c_str());
-            sb.Append(prefix).Append(TAB).AppendFormat("%s.push(%sValue);\n", name.c_str(), name.c_str());
+            sb.Append(prefix + TAB).AppendFormat("%s.push(%sValue);\n", name.c_str(), name.c_str());
             sb.Append(prefix).AppendFormat("}\n");
             break;
         default:
@@ -186,10 +181,10 @@ void SaListTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std
 {
     sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).Append(
+        sb.Append(prefix + TAB).Append(
             "HiLog::Error(LABEL, \"The list size exceeds the security limit!\");\n");
     }
-    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n", name.c_str(), name.c_str());

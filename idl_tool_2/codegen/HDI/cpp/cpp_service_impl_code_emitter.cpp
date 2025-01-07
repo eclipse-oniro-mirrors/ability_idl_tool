@@ -58,11 +58,11 @@ void CppServiceImplCodeEmitter::EmitImplHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, implFullName_);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitServiceImplInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitServiceImplDecl(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailMacro(sb, implFullName_);
 
     std::string data = sb.ToString();
@@ -96,7 +96,7 @@ void CppServiceImplCodeEmitter::EmitServiceImplBody(StringBuilder &sb, const std
 {
     (void)prefix;
     EmitServiceImplConstructor(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitServiceImplMethodDecls(sb, TAB);
 }
 
@@ -112,7 +112,7 @@ void CppServiceImplCodeEmitter::EmitServiceImplMethodDecls(StringBuilder &sb, co
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitServiceImplMethodDecl(method, sb, prefix);
-            sb.Append("\n");
+            sb.Append('\n');
         }
         interface = interface->GetExtendsInterface();
     }
@@ -137,7 +137,7 @@ void CppServiceImplCodeEmitter::EmitServiceImplMethodDecl(
         paramStr.Append(") override;");
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 
@@ -150,9 +150,9 @@ void CppServiceImplCodeEmitter::EmitImplSourceFile()
 
     EmitLicense(sb);
     EmitImplSourceInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(implName_));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
     EmitServiceImplGetMethodImpl(sb, "");
     EmitServiceImplMethodImpls(sb, "");
@@ -186,7 +186,7 @@ void CppServiceImplCodeEmitter::EmitServiceImplMethodImpls(StringBuilder &sb, co
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitServiceImplMethodImpl(method, sb, prefix);
-            sb.Append("\n");
+            sb.Append('\n');
         }
         interface = interface->GetExtendsInterface();
     }
@@ -211,7 +211,7 @@ void CppServiceImplCodeEmitter::EmitServiceImplMethodImpl(
         paramStr.AppendFormat(")");
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
 
     sb.Append(prefix).Append("{\n");

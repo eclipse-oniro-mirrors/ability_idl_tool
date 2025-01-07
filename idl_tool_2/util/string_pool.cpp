@@ -82,10 +82,8 @@ bool StringPool::Grow(size_t expand)
         Logger::E(TAG, "Out of memory.");
         return false;
     }
-    errno_t ret = memcpy_s(newData, newSize, data_, dataOffset_);
-    if (ret != EOK) {
+    if (memcpy_s(newData, newSize, data_, dataOffset_) != EOK) {
         free(newData);
-        newData = nullptr;
         return false;
     }
     free(data_);

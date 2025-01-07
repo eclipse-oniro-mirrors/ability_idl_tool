@@ -22,7 +22,7 @@ void RustCodeEmitter::EmitHeadMacro(StringBuilder &sb) const
     sb.Append("#![allow(missing_docs)]\n");
     sb.Append("#![allow(unused_variables)]\n");
     sb.Append("#![allow(unused_mut)]\n");
-    sb.Append("\n");
+    sb.Append('\n');
 }
 
 void RustCodeEmitter::EmitCommonHeaders(StringBuilder &sb) const
@@ -44,7 +44,7 @@ void RustCodeEmitter::EmitCommonHeaders(StringBuilder &sb) const
         }
     }
     if (useMap) {
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 

@@ -35,17 +35,17 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, marcoName);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitHeaderFileInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitCustomTypeDecls(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitCustomTypeFuncDecl(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitEndNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitTailMacro(sb, marcoName);
 
     std::string data = sb.ToString();
@@ -54,7 +54,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
     file.Close();
 }
 
-void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
+void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb) const
 {
     HeaderFile::HeaderFileSet headerFiles;
     headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "cstdbool");
@@ -65,7 +65,7 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     GetImportInclusions(headerFiles);
 
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
             if (EmitCustomTypeNeedSecurec(structType)) {
@@ -98,10 +98,10 @@ bool SaCppCustomTypesCodeEmitter::EmitCustomTypeNeedSecurec(const AutoPtr<ASTStr
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
-        sb.Append(typeEmitter->EmitCppTypeDecl()).Append("\n");
+        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefinition(i));
+        sb.Append(typeEmitter->EmitCppTypeDecl()).Append('\n');
         if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-            sb.Append("\n");
+            sb.Append('\n');
         }
     }
 }
@@ -109,11 +109,11 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             EmitCustomTypeMarshallFuncDecl(sb, type);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-                sb.Append("\n");
+                sb.Append('\n');
             }
         }
     }
@@ -138,9 +138,9 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
 
     EmitLicense(sb);
     EmitSourceFileInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitBeginNamespace(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitCustomTypeDataProcess(sb);
     EmitEndNamespace(sb);
 
@@ -150,7 +150,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
     file.Close();
 }
 
-void SaCppCustomTypesCodeEmitter::EmitSourceFileInclusions(StringBuilder &sb)
+void SaCppCustomTypesCodeEmitter::EmitSourceFileInclusions(StringBuilder &sb) const
 {
     HeaderFile::HeaderFileSet headerFiles;
 
@@ -164,13 +164,13 @@ void SaCppCustomTypesCodeEmitter::EmitSourceFileInclusions(StringBuilder &sb)
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
             EmitCustomTypeMarshallingImpl(sb, structType);
             EmitCustomTypeUnmarshallingImpl(sb, structType);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-                sb.Append("\n");
+                sb.Append('\n');
             }
         }
     }
@@ -197,7 +197,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
             std::string name = StringHelper::Format("%s.%s", objName.c_str(), memberName.c_str());
             GetTypeEmitter(type->GetMemberType(i))->EmitCppWriteVar("data.", name, sb, TAB);
             if (i + 1 < type->GetMemberNumber()) {
-                sb.Append("\n");
+                sb.Append('\n');
             }
         }
     }
@@ -218,8 +218,8 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
 
     if (type->IsPod()) {
         std::string objPtrName = StringHelper::Format("%sPtr", objName.c_str());
-        sb.Append(TAB).AppendFormat("const %s *%s = reinterpret_cast<const %s *>(data.ReadUnpadBuffer(sizeof(%s)));\n",
-            typeName.c_str(), objPtrName.c_str(), typeName.c_str(), typeName.c_str());
+        sb.Append(TAB).AppendFormat("const auto *%s = data.ReadUnpadBuffer(sizeof(%s));\n", objPtrName.c_str(),
+            typeName.c_str());
         sb.Append(TAB).AppendFormat("if (%s == nullptr) {\n", objPtrName.c_str());
         sb.Append(TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
         sb.Append(TAB).Append("}\n\n");
@@ -243,7 +243,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImplNoPod(
         std::string memberName = type->GetMemberName(i);
         std::string name = StringHelper::Format("%s.%s", objName.c_str(), memberName.c_str());
         if (i > 0) {
-            sb.Append("\n");
+            sb.Append('\n');
         }
 
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(memberType);
@@ -269,23 +269,22 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImplNoPod(
     }
 }
 
-void SaCppCustomTypesCodeEmitter::EmitBeginNamespace(StringBuilder &sb)
+void SaCppCustomTypesCodeEmitter::EmitBeginNamespace(StringBuilder &sb) const
 {
-    std::string fullnamespace = ast_->GetPackageName();
-    std::vector<std::string> namespaceVec = StringHelper::Split(fullnamespace, ".");
+    std::string fullNamespace = ast_->GetPackageName();
+    std::vector<std::string> namespaceVec = StringHelper::Split(fullNamespace, ".");
 
     for (const auto &nspace : namespaceVec) {
         sb.AppendFormat("namespace %s {\n", nspace.c_str());
     }
 }
 
-void SaCppCustomTypesCodeEmitter::EmitEndNamespace(StringBuilder &sb)
+void SaCppCustomTypesCodeEmitter::EmitEndNamespace(StringBuilder &sb) const
 {
-    std::string fullnamespace = ast_->GetPackageName();
-    std::vector<std::string> namespaceVec = StringHelper::Split(fullnamespace, ".");
+    std::string fullNamespace = ast_->GetPackageName();
+    std::vector<std::string> namespaceVec = StringHelper::Split(fullNamespace, ".");
 
-    for (std::vector<std::string>::const_reverse_iterator nspaceIter = namespaceVec.rbegin();
-        nspaceIter != namespaceVec.rend(); ++nspaceIter) {
+    for (auto nspaceIter = namespaceVec.rbegin(); nspaceIter != namespaceVec.rend(); ++nspaceIter) {
         sb.AppendFormat("} // namespace %s\n", nspaceIter->c_str());
     }
 }

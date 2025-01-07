@@ -53,21 +53,21 @@ void CppServiceDriverCodeEmitter::EmitDriverSourceFile()
 
     EmitLicense(sb);
     EmitDriverInclusions(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitLogTagMacro(sb, FileName(baseName_ + "Driver"));
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverUsings(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverServiceDecl(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverDispatch(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverInit(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverBind(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverRelease(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitDriverEntryDefinition(sb);
 
     std::string data = sb.ToString();

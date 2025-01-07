@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_IDL_LIGHTREFCOUNTBASE_H
-#define OHOS_IDL_LIGHTREFCOUNTBASE_H
+#ifndef OHOS_IDL_LIGHT_REFCOUNT_BASE_H
+#define OHOS_IDL_LIGHT_REFCOUNT_BASE_H
 
 #include <atomic>
 
@@ -42,4 +42,4 @@ private:
 } // namespace Idl
 } // namespace OHOS
 
-#endif // OHOS_IDL_LIGHTREFCOUNTBASE_H
+#endif // OHOS_IDL_LIGHT_REFCOUNT_BASE_H

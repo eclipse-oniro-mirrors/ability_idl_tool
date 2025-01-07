@@ -36,7 +36,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i34 = 0; i34 < inParamSize; ++i34) {
-                bool value34 = data.ReadInt32() == 1 ? true : false;
+                bool value34 = data.ReadInt32() == 1;
                 inParam.push_back(value34);
             }
             std::vector<bool> outParam;
@@ -46,7 +46,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i35 = 0; i35 < inoutParamSize; ++i35) {
-                bool value35 = data.ReadInt32() == 1 ? true : false;
+                bool value35 = data.ReadInt32() == 1;
                 inoutParam.push_back(value35);
             }
             std::vector<bool> result;
@@ -92,7 +92,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i36 = 0; i36 < inParamSize; ++i36) {
-                bool value36 = data.ReadInt32() == 1 ? true : false;
+                bool value36 = data.ReadInt32() == 1;
                 inParam.push_back(value36);
             }
             std::vector<bool> outParam;
@@ -102,7 +102,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i37 = 0; i37 < inoutParamSize; ++i37) {
-                bool value37 = data.ReadInt32() == 1 ? true : false;
+                bool value37 = data.ReadInt32() == 1;
                 inoutParam.push_back(value37);
             }
             std::vector<bool> result;
@@ -148,7 +148,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i38 = 0; i38 < inParamSize; ++i38) {
-                short value38 = (short)data.ReadInt32();
+                auto value38 = static_cast<short>(data.ReadInt32());
                 inParam.push_back(value38);
             }
             std::vector<short> outParam;
@@ -158,7 +158,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i39 = 0; i39 < inoutParamSize; ++i39) {
-                short value39 = (short)data.ReadInt32();
+                auto value39 = static_cast<short>(data.ReadInt32());
                 inoutParam.push_back(value39);
             }
             std::vector<short> result;
@@ -478,26 +478,26 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_CHAR_TEST_FUNC: {
-            std::vector<zchar> inParam;
+            std::vector<char> inParam;
             int32_t inParamSize = data.ReadInt32();
             if (inParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
             for (int32_t i50 = 0; i50 < inParamSize; ++i50) {
-                zchar value50 = (zchar)data.ReadInt32();
+                char value50 = (char)data.ReadInt32();
                 inParam.push_back(value50);
             }
-            std::vector<zchar> outParam;
-            std::vector<zchar> inoutParam;
+            std::vector<char> outParam;
+            std::vector<char> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
             for (int32_t i51 = 0; i51 < inoutParamSize; ++i51) {
-                zchar value51 = (zchar)data.ReadInt32();
+                char value51 = (char)data.ReadInt32();
                 inoutParam.push_back(value51);
             }
-            std::vector<zchar> result;
+            std::vector<char> result;
             ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
@@ -540,12 +540,13 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i52 = 0; i52 < inParamSize; ++i52) {
-                std::unique_ptr<myseq> value52(data.ReadParcelable<myseq>());
-                if (!value52) {
+                std::unique_ptr<myseq> value52Info(data.ReadParcelable<myseq>());
+                if (!value52Info) {
                     return ERR_INVALID_DATA;
                 }
+                myseq value52(*value52Info);
 
-                inParam.push_back(*value52);
+                inParam.push_back(value52);
             }
             std::vector<myseq> outParam;
             std::vector<myseq> inoutParam;
@@ -554,12 +555,13 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
             for (int32_t i53 = 0; i53 < inoutParamSize; ++i53) {
-                std::unique_ptr<myseq> value53(data.ReadParcelable<myseq>());
-                if (!value53) {
+                std::unique_ptr<myseq> value53Info(data.ReadParcelable<myseq>());
+                if (!value53Info) {
                     return ERR_INVALID_DATA;
                 }
+                myseq value53(*value53Info);
 
-                inoutParam.push_back(*value53);
+                inoutParam.push_back(value53);
             }
             std::vector<myseq> result;
             ErrCode errCode = seq_test_func(inParam, outParam, inoutParam, result);

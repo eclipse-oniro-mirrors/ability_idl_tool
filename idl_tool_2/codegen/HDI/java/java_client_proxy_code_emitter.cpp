@@ -50,9 +50,9 @@ void JavaClientProxyCodeEmitter::EmitProxyFile()
 
     EmitLicense(sb);
     EmitPackage(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyImports(sb);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyImpl(sb);
 
     std::string data = sb.ToString();
@@ -119,15 +119,15 @@ void JavaClientProxyCodeEmitter::EmitProxyImpl(StringBuilder &sb)
 {
     sb.AppendFormat("public class %s implements %s {\n", proxyName_.c_str(), interfaceName_.c_str());
     EmitProxyConstants(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(TAB).AppendFormat(
         "private static final HiLogLabel TAG = new HiLogLabel(HiLog.LOG_CORE, 0xD002510, \"%s\");\n",
         interfaceFullName_.c_str());
     sb.Append(TAB).Append("private final IRemoteObject remote;\n");
     sb.Append(TAB).Append("private static final int ERR_OK = 0;\n");
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyConstructor(sb, TAB);
-    sb.Append("\n");
+    sb.Append('\n');
     EmitProxyMethodImpls(sb, TAB);
     sb.Append("};");
 }
@@ -144,7 +144,7 @@ void JavaClientProxyCodeEmitter::EmitProxyConstructor(StringBuilder &sb, const s
     sb.Append(prefix).AppendFormat("public %s(IRemoteObject remote) {\n", proxyName_.c_str());
     sb.Append(prefix + TAB).Append("this.remote = remote;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(prefix).AppendFormat("@Override\n");
     sb.Append(prefix).Append("public IRemoteObject asObject() {\n");
     sb.Append(prefix + TAB).Append("return remote;\n");
@@ -155,7 +155,7 @@ void JavaClientProxyCodeEmitter::EmitProxyMethodImpls(StringBuilder &sb, const s
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitProxyMethodImpl(method, sb, prefix);
-        sb.Append("\n");
+        sb.Append('\n');
     }
 }
 
@@ -179,7 +179,7 @@ void JavaClientProxyCodeEmitter::EmitProxyMethodImpl(
         paramStr.Append(") throws RemoteException");
 
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append("\n");
+        sb.Append('\n');
     }
     EmitProxyMethodBody(method, sb, prefix);
 }
@@ -191,14 +191,14 @@ void JavaClientProxyCodeEmitter::EmitProxyMethodBody(
     sb.Append(prefix + TAB).Append("MessageParcel data = MessageParcel.obtain();\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply = MessageParcel.obtain();\n");
     sb.Append(prefix + TAB).AppendFormat("MessageOption option = new MessageOption(MessageOption.TF_SYNC);\n");
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(prefix).AppendFormat("    data.writeInterfaceToken(DESCRIPTOR);\n");
 
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         EmitParamWriteVar(param, "data", sb, prefix + TAB);
     }
-    sb.Append("\n");
+    sb.Append('\n');
 
     sb.Append(prefix + TAB).Append("try {\n");
     sb.Append(prefix + TAB + TAB).AppendFormat("if (remote.sendRequest(COMMAND_%s, data, reply, option)) {\n",

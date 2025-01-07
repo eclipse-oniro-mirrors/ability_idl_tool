@@ -73,7 +73,7 @@ std::string CodeEmitter::PackageToFilePath(const std::string &packageName) const
 {
     std::vector<std::string> packageVec = StringHelper::Split(Options::GetInstance().GetSubPackage(packageName), ".");
     StringBuilder filePath;
-    for (auto iter = packageVec.begin(); iter != packageVec.end(); iter++) {
+    for (auto iter = packageVec.begin(); iter != packageVec.end(); ++iter) {
         filePath.Append(FileName(*iter));
         if (iter != packageVec.end() - 1) {
             filePath.Append(SEPARATOR);
@@ -88,11 +88,11 @@ std::string CodeEmitter::InterfaceToFilePath(const std::string &interfaceName) c
     std::string fullName = interfaceName;
     size_t index;
     if (StringHelper::EndWith(fullName, "]")) {
-        index = fullName.find("[");
+        index = fullName.find('[');
         fullName = fullName.substr(0, index);
     }
 
-    index = fullName.rfind(".");
+    index = fullName.rfind('.');
     std::string prefix = fullName.substr(0, index + 1);
     std::string suffix = fullName.substr(index + 1);
     std::string fileName = prefix + (StringHelper::StartWith(suffix, "I") ? suffix.substr(1) : suffix) + "Proxy";
@@ -148,7 +148,7 @@ std::string CodeEmitter::ConstantName(const std::string &name) const
             }
             sb.Append(c);
         } else {
-            sb.Append(toupper(c));
+            sb.Append(static_cast<char>(toupper(c)));
         }
     }
 
@@ -166,7 +166,7 @@ std::string CodeEmitter::PascalName(const std::string &name) const
         char c = name[i];
         if (i == 0) {
             if (islower(c)) {
-                c = toupper(c);
+                c = static_cast<char>(toupper(c));
             }
             sb.Append(c);
         } else {
@@ -175,7 +175,7 @@ std::string CodeEmitter::PascalName(const std::string &name) const
             }
 
             if (islower(c) && name[i - 1] == '_') {
-                c = toupper(c);
+                c = static_cast<char>(toupper(c));
             }
             sb.Append(c);
         }
@@ -220,8 +220,8 @@ std::string CodeEmitter::GetNamespace(const std::string &fpnp) const
 void CodeEmitter::EmitHeadMacro(StringBuilder &sb, const std::string &fullName) const
 {
     std::string macroName = MacroName(fullName);
-    sb.Append("#ifndef ").Append(macroName).Append("\n");
-    sb.Append("#define ").Append(macroName).Append("\n");
+    sb.Append("#ifndef ").Append(macroName).Append('\n');
+    sb.Append("#define ").Append(macroName).Append('\n');
 }
 
 void CodeEmitter::EmitTailMacro(StringBuilder &sb, const std::string &fullName) const
@@ -250,8 +250,7 @@ std::string CodeEmitter::MacroName(const std::string &name) const
         return name;
     }
 
-    std::string macro = StringHelper::StrToUpper(StringHelper::Replace(name, '.', '_')) + "_H";
-    return macro;
+    return StringHelper::StrToUpper(StringHelper::Replace(name, '.', '_')) + "_H";
 }
 } // namespace Idl
 } // namespace OHOS

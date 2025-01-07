@@ -21,28 +21,28 @@ namespace Idl {
 std::string ASTAttr::ToString() const
 {
     std::vector<std::string> attrs;
-    if (value_ & ASTAttr::MINI) {
-        attrs.push_back("mini");
+    if ((value_ & MINI) != 0) {
+        attrs.emplace_back("mini");
     }
 
-    if (value_ & ASTAttr::LITE) {
-        attrs.push_back("lite");
+    if ((value_ & LITE) != 0) {
+        attrs.emplace_back("lite");
     }
 
-    if (value_ & ASTAttr::FULL) {
-        attrs.push_back("full");
+    if ((value_ & FULL) != 0) {
+        attrs.emplace_back("full");
     }
 
-    if (value_ & ASTAttr::ONEWAY) {
-        attrs.push_back("oneway");
+    if ((value_ & ONEWAY) != 0) {
+        attrs.emplace_back("oneway");
     }
 
-    if (value_ & ASTAttr::CALLBACK) {
-        attrs.push_back("callback");
+    if ((value_ & CALLBACK) != 0) {
+        attrs.emplace_back("callback");
     }
 
     StringBuilder sb;
-    sb.Append("[");
+    sb.Append('[');
     for (size_t i = 0; i < attrs.size(); i++) {
         sb.Append(attrs[i]);
         if (i + 1 < attrs.size()) {
@@ -75,23 +75,23 @@ bool ASTAttr::Match(SystemLevel level) const
 std::string ASTParamAttr::ToString() const
 {
     std::vector<std::string> attrs;
-    if (value_ & ASTParamAttr::PARAM_IN) {
-        attrs.push_back("in");
+    if ((value_ & PARAM_IN) != 0) {
+        attrs.emplace_back("in");
     }
 
-    if (value_ & ASTParamAttr::PARAM_OUT) {
-        attrs.push_back("out");
+    if ((value_ & PARAM_OUT) != 0) {
+        attrs.emplace_back("out");
     }
 
     StringBuilder sb;
-    sb.Append("[");
+    sb.Append('[');
     for (size_t i = 0; i < attrs.size(); i++) {
         sb.Append(attrs[i]);
         if (i + 1 < attrs.size()) {
             sb.Append(", ");
         }
     }
-    sb.Append("]");
+    sb.Append(']');
     return sb.ToString();
 }
 

@@ -20,11 +20,9 @@
 
 #include "util/options.h"
 
-#include "util/logger.h"
-
 namespace OHOS {
 namespace Idl {
-void SACppCodeEmitter::GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles)
+void SACppCodeEmitter::GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles) const
 {
     for (const auto &importName : ast_->GetImportNames()) {
         size_t index = importName.rfind(SEPARATOR);
@@ -32,7 +30,7 @@ void SACppCodeEmitter::GetImportInclusions(HeaderFile::HeaderFileSet &headerFile
             index = -1;
         }
         std::string fileName = importName.substr(index + 1);
-        std::string relativePath = importName.substr(0, index + 1) + FileName(fileName).c_str();
+        std::string relativePath = importName.substr(0, index + 1) + FileName(fileName);
         std::replace(relativePath.begin(), relativePath.end(), '\\', '/');
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, relativePath);
     }
@@ -46,7 +44,7 @@ void SACppCodeEmitter::EmitImportUsingNamespace(StringBuilder &sb) const
         if (importAst->GetASTFileType() == ASTFileType::AST_SEQUENCEABLE) {
             continue;
         }
-        size_t index = importPair.first.rfind(".");
+        size_t index = importPair.first.rfind('.');
         std::string usingName = importPair.first.substr(0, index);
         if (usingName.empty()) {
             continue;
@@ -58,10 +56,10 @@ void SACppCodeEmitter::EmitImportUsingNamespace(StringBuilder &sb) const
             sb.Append("using namespace ").AppendFormat("%s;\n", usingName.c_str());
         }
     }
-    sb.Append("\n");
+    sb.Append('\n');
 }
 
-void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles)
+void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles) const
 {
     const AST::TypeStringMap &types = ast_->GetTypes();
 
@@ -88,8 +86,8 @@ void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFile
 
 void SACppCodeEmitter::EmitBeginNamespace(StringBuilder &sb) const
 {
-    std::string fullnamespace = GetNamespace(interface_->GetNamespace()->ToString());
-    std::vector<std::string> namespaceVec = StringHelper::Split(fullnamespace, ".");
+    std::string fullNamespace = GetNamespace(interface_->GetNamespace()->ToString());
+    std::vector<std::string> namespaceVec = StringHelper::Split(fullNamespace, ".");
 
     for (const auto &nspace : namespaceVec) {
         sb.AppendFormat("namespace %s {\n", nspace.c_str());
@@ -98,11 +96,10 @@ void SACppCodeEmitter::EmitBeginNamespace(StringBuilder &sb) const
 
 void SACppCodeEmitter::EmitEndNamespace(StringBuilder &sb) const
 {
-    std::string fullnamespace = GetNamespace(interface_->GetNamespace()->ToString());
-    std::vector<std::string> namespaceVec = StringHelper::Split(fullnamespace, ".");
+    std::string fullNamespace = GetNamespace(interface_->GetNamespace()->ToString());
+    std::vector<std::string> namespaceVec = StringHelper::Split(fullNamespace, ".");
 
-    for (std::vector<std::string>::const_reverse_iterator nspaceIter = namespaceVec.rbegin();
-        nspaceIter != namespaceVec.rend(); ++nspaceIter) {
+    for (auto nspaceIter = namespaceVec.rbegin(); nspaceIter != namespaceVec.rend(); ++nspaceIter) {
         sb.AppendFormat("} // namespace %s\n", nspaceIter->c_str());
     }
 }
@@ -121,28 +118,28 @@ void SACppCodeEmitter::EmitReadMethodParameter(const AutoPtr<ASTParameter> &para
     typeEmitter->EmitCppReadVar(parcelName, param->GetName(), sb, prefix, emitType);
 }
 
-void SACppCodeEmitter::EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SACppCodeEmitter::EmitInterfaceMethodParams(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     AutoPtr<ASTType> returnType = method->GetReturnType();
     TypeKind retTypeKind = returnType->GetTypeKind();
-    int paramNumber = static_cast<int>(method->GetParameterNumber());
+    size_t paramNumber = method->GetParameterNumber();
 
-    for (int i = 0; i < paramNumber; i++) {
+    for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
-        sb.Append("\n").Append(prefix).AppendFormat(EmitCppParameter(param).c_str());
+        sb.Append('\n').Append(prefix).AppendFormat(EmitCppParameter(param).c_str());
         if ((i != paramNumber - 1) || (retTypeKind != TypeKind::TYPE_VOID)) {
-            sb.Append(",");
+            sb.Append(',');
         }
     }
     if (retTypeKind != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        sb.Append("\n").Append(prefix).AppendFormat("%s funcResult",
+        sb.Append('\n').Append(prefix).AppendFormat("%s funcResult",
             typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
     }
 }
 
-std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) const
+std::string SACppCodeEmitter::EmitCppParameter(const AutoPtr<ASTParameter> &param) const
 {
     std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
@@ -154,7 +151,7 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
     } else if (attrAttr == ASTParamAttr::PARAM_OUT) {
         return StringHelper::Format("%s %s", typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str(), name.c_str());
     }
-    return StringHelper::Format("unknow param attr %s", name.c_str());
+    return StringHelper::Format("unknown param attr %s", name.c_str());
 }
 
 void SACppCodeEmitter::EmitSecurecInclusion(StringBuilder &sb) const
@@ -183,9 +180,9 @@ void SACppCodeEmitter::EmitSecurecInclusion(StringBuilder &sb) const
 
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
-    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    size_t methodNumber = interface_->GetMethodNumber();
     sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
-    for (int i = 0; i < methodNumber; i++) {
+    for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         std::string commandCode = "COMMAND_" + ConstantName(method->GetName());
         bool hasIpcCode = method->HasIpcCode();

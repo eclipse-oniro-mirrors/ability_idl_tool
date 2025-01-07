@@ -184,6 +184,7 @@ bool ASTType::IsTypeKind(TypeKind typekind) const
 
 bool ASTType::HasInnerType(TypeKind innerType) const
 {
+    (void)innerType;
     return false;
 }
 

@@ -99,7 +99,7 @@ int32_t FooStub::OnRemoteRequest(
         }
         case IFooIpcCode::COMMAND_UNION_TEST_FUNC: {
             FooUnion inParam;
-            const FooUnion *inParamCp = reinterpret_cast<const FooUnion *>(data.ReadUnpadBuffer(sizeof(FooUnion)));
+            const auto *inParamCp = data.ReadUnpadBuffer(sizeof(FooUnion));
             if (inParamCp == nullptr) {
                 return ERR_INVALID_DATA;
             }
@@ -107,9 +107,10 @@ int32_t FooStub::OnRemoteRequest(
             if (memcpy_s(&inParam, sizeof(FooUnion), inParamCp, sizeof(FooUnion)) != EOK) {
                 return ERR_INVALID_DATA;
             }
+
             FooUnion outParam;
             FooUnion inoutParam;
-            const FooUnion *inoutParamCp = reinterpret_cast<const FooUnion *>(data.ReadUnpadBuffer(sizeof(FooUnion)));
+            const auto *inoutParamCp = data.ReadUnpadBuffer(sizeof(FooUnion));
             if (inoutParamCp == nullptr) {
                 return ERR_INVALID_DATA;
             }
@@ -117,6 +118,7 @@ int32_t FooStub::OnRemoteRequest(
             if (memcpy_s(&inoutParam, sizeof(FooUnion), inoutParamCp, sizeof(FooUnion)) != EOK) {
                 return ERR_INVALID_DATA;
             }
+
             FooUnion result;
             ErrCode errCode = union_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {

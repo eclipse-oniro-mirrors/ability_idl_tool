@@ -113,7 +113,7 @@ void HdiInterfaceTypeEmitter::EmitCppWriteVar(const std::string &parcelName, con
         .AppendFormat("HDF_LOGE(\"%%{public}s: parameter %s is nullptr!\", __func__);\n", name.c_str());
     sb.Append(prefix + TAB).Append("return HDF_ERR_INVALID_PARAM;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append("\n");
+    sb.Append('\n');
     sb.Append(prefix).AppendFormat("if (!%s.WriteRemoteObject(", parcelName.c_str());
     sb.AppendFormat("OHOS::HDI::ObjectCollector::GetInstance().GetOrNewObject(%s, %s::GetDescriptor()))) {\n",
         name.c_str(), typeName_.c_str());
@@ -184,7 +184,7 @@ void HdiInterfaceTypeEmitter::EmitCWriteMethods(UtilMethodMap &methods, const st
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *parcel, const char *desc, void *interface);\n",
             methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *parcel, const char *desc, void *interface)\n",
             methodName.c_str());
         sb.Append(prefix).Append("{\n");
@@ -218,7 +218,7 @@ void HdiInterfaceTypeEmitter::EmitCReadMethods(UtilMethodMap &methods, const std
         sb.Append(prefix).AppendFormat("static struct %s *%s(struct HdfSBuf *parcel);\n", name_.c_str(),
             methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static struct %s *%s(struct HdfSBuf *parcel)\n", name_.c_str(),
             methodName.c_str());
         sb.Append(prefix).Append("{\n");

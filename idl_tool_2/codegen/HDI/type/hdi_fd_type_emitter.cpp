@@ -187,7 +187,7 @@ void HdiFdTypeEmitter::EmitCWriteMethods(
     if (isDecl) {
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *data, int fd);\n", methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *data, int fd)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("if (!HdfSbufWriteInt8(data, fd >= 0 ? 1 : 0)) {\n");
@@ -212,7 +212,7 @@ void HdiFdTypeEmitter::EmitCReadMethods(
     if (isDecl) {
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *data, int *fd);\n", methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static bool %s(struct HdfSBuf *data, int *fd)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("if (data == NULL) {\n");
@@ -262,7 +262,7 @@ void HdiFdTypeEmitter::EmitCppWriteMethods(
     if (isDecl) {
         sb.Append(prefix).AppendFormat("static bool %s(MessageParcel &data, int fd);\n", methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static bool %s(MessageParcel &data, int fd)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("if (!data.WriteBool(fd >= 0 ? true : false)) {\n");
@@ -293,7 +293,7 @@ void HdiFdTypeEmitter::EmitCppReadMethods(
     if (isDecl) {
         sb.Append(prefix).AppendFormat("static bool %s(MessageParcel &data, int &fd);\n", methodName.c_str());
     } else {
-        sb.Append("\n");
+        sb.Append('\n');
         sb.Append(prefix).AppendFormat("static bool %s(MessageParcel &data, int &fd)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("fd = -1;\n");

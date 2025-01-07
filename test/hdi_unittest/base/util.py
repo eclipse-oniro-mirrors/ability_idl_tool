@@ -53,9 +53,9 @@ def dump_ast_compare(line_lhd:str, line_rhd:str):
         return True
     if not line_lhd.startswith("AST") or not line_rhd.startswith("AST"):
         return False
-    ast_templage = r"AST\[name:\s(.*)\sfile:\s(.*)\]"
-    obj_lhd = re.search(ast_templage, line_lhd)
-    obj_rhd = re.search(ast_templage, line_rhd)
+    ast_template = r"AST\[name:\s(.*)\sfile:\s(.*)\]"
+    obj_lhd = re.search(ast_template, line_lhd)
+    obj_rhd = re.search(ast_template, line_rhd)
     if not obj_lhd or not obj_rhd:
         return False
     ast_name_lhd = obj_lhd.group(1)
@@ -133,8 +133,8 @@ def compare_target_files(first_file_path, second_file_path, special_proc_func=No
     for files in common_files:
         if not compare_file("{}{}".format(first_file_path, files),
                             check_file_name_format.format(second_file_path, files), special_proc_func):
-            print("file ", "{}{}".format(first_file_path, files), "{}{}".format(second_file_path, files), \
-                "is different")
+            print("file ", "{}{}".format(first_file_path, files), "{}{}".format(second_file_path, files),
+                  "is different")
             return False
     return True
 
@@ -178,9 +178,14 @@ def get_all_idl_files(idl_path):
 
 
 def get_idl():
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    relative_path = os.path.join(current_path, "..", "..", "..", "idl_tool_2", "idl-gen")
-    return os.path.realpath(relative_path)
+    return os.path.realpath(os.path.join("..", "..", "idl_tool_2", get_idl_name()))
+
+
+def get_idl_name():
+    if os.name == 'nt':
+        return 'idl-gen.exe'
+    else:
+        return 'idl-gen'
 
 
 def get_subclasses(cls):

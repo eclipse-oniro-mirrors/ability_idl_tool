@@ -31,7 +31,7 @@ private:
 
     void EmitInterfaceProxyHeaderFile();
 
-    void EmitInterfaceProxyInHeaderFile(StringBuilder &sb);
+    void EmitInterfaceProxyInHeaderFile(StringBuilder &sb) const;
 
     void EmitInterfaceProxyRegisterDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
 
@@ -43,39 +43,43 @@ private:
 
     void EmitInterfaceProxyMethodDecls(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyMethodDecl(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
+        const;
 
     void EmitInterfaceProxyDeathRecipient(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix);
+    void EmitInterfaceProxyConstants(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceProxyCppFile();
 
     void EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyMethodImpl(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
+        const;
 
-    void EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyMethodBody(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
+        const;
 
-    void EmitInterfaceProxyMethodPreSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    void EmitInterfaceProxyMethodPreSendRequest(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodPostSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    void EmitInterfaceProxyMethodPostSendRequest(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodErrCode(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodReply(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    void EmitInterfaceProxyMethodReply(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodRetValue(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    void EmitInterfaceProxyMethodRetValue(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 
-    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix);
+    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceSetIpcCapacity(AutoPtr <ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceSetIpcCapacity(const AutoPtr <ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
 };
 } // namespace SA
 } // namespace OHOS
 
-#endif // OHOS_IDL_CPP_CLIENT_PROXY_CODE_EMITTER_H
+#endif // OHOS_IDL_SA_CPP_CLIENT_PROXY_CODE_EMITTER_H

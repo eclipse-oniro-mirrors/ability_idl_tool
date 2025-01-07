@@ -53,7 +53,7 @@ bool Preprocessor::Preprocess(std::vector<FileDetail> &fileDetails)
         return false;
     }
 
-    // analyse import infomation of all idl file
+    // analyze import information of all idl files
     FileDetailMap allFileDetails;
     if (!AnalyseImportInfo(sourceFiles, allFileDetails)) {
         return false;
@@ -96,7 +96,7 @@ bool Preprocessor::CheckAllFilesPath(const std::set<std::string> &sourceFiles)
     bool ret = true;
     for (const auto &filePath : sourceFiles) {
         if (!File::CheckValid(filePath)) {
-            Logger::E(TAG, "invailed file path '%s'.", filePath.c_str());
+            Logger::E(TAG, "invalided file path '%s'.", filePath.c_str());
             ret = false;
         }
     }
@@ -104,7 +104,7 @@ bool Preprocessor::CheckAllFilesPath(const std::set<std::string> &sourceFiles)
     return ret;
 }
 
-bool Preprocessor::AnalyseImportInfo(std::set<std::string> sourceFiles, FileDetailMap &allFileDetails)
+bool Preprocessor::AnalyseImportInfo(const std::set<std::string> &sourceFiles, FileDetailMap &allFileDetails)
 {
     std::set<std::string> processSource(sourceFiles);
 
@@ -211,7 +211,7 @@ bool Preprocessor::ParseImports(Lexer &lexer, FileDetail &info)
             return false;
         }
         if (option.GetInterfaceType() == InterfaceType::SA && option.GetLanguage() == Language::CPP) {
-#ifdef __MINGW32__
+#ifdef _WIN32
             std::replace(token.value.begin(), token.value.end(), '/', '\\');
 #endif
         }
@@ -273,7 +273,7 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
 
     for (const auto &filePair : allFileDetailsTemp) {
         const FileDetail &file = filePair.second;
-        if (file.imports_.size() == 0) {
+        if (file.imports_.empty()) {
             fileQueue.push(file);
         }
     }
@@ -282,7 +282,7 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
     while (!fileQueue.empty()) {
         FileDetail curFile = fileQueue.front();
         fileQueue.pop();
-        compileSourceFiles.push_back(allFileDetails.at(curFile.GetFullName()));
+        compileSourceFiles.emplace_back(allFileDetails.at(curFile.GetFullName()));
 
         for (auto &filePair : allFileDetailsTemp) {
             FileDetail &otherFile = filePair.second;
@@ -295,7 +295,7 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
                 otherFile.imports_.erase(position);
             }
 
-            if (otherFile.imports_.size() == 0) {
+            if (otherFile.imports_.empty()) {
                 fileQueue.push(otherFile);
             }
         }
@@ -304,14 +304,14 @@ bool Preprocessor::CheckCircularReference(const FileDetailMap &allFileDetails,
     if (compileSourceFiles.size() == allFileDetailsTemp.size()) {
         return true;
     }
-    PrintCyclefInfo(allFileDetailsTemp);
+    PrintCycleInfo(allFileDetailsTemp);
     return false;
 }
 
-void Preprocessor::PrintCyclefInfo(FileDetailMap &allFileDetails)
+void Preprocessor::PrintCycleInfo(FileDetailMap &allFileDetails)
 {
-    for (FileDetailMap::iterator it = allFileDetails.begin(); it != allFileDetails.end();) {
-        if (it->second.imports_.size() == 0) {
+    for (auto it = allFileDetails.begin(); it != allFileDetails.end();) {
+        if (it->second.imports_.empty()) {
             it = allFileDetails.erase(it);
         } else {
             ++it;
@@ -331,7 +331,7 @@ void Preprocessor::FindCycle(const std::string &curNode, FileDetailMap &allFiles
     });
     if (iter != trace.end()) {
         if (iter == trace.begin()) {
-            // print circular reference infomation
+            // print circular reference information
             StringBuilder sb;
             for (const auto &nodeName : trace) {
                 sb.AppendFormat("%s -> ", nodeName.c_str());

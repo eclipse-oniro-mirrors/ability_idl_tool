@@ -25,17 +25,18 @@ public:
     ~SACppCodeEmitter() override = default;
 
 protected:
-    void GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles);
+    void GetImportInclusions(HeaderFile::HeaderFileSet &headerFiles) const;
 
     void EmitImportUsingNamespace(StringBuilder &sb) const;
 
-    void GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles);
+    void GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFiles) const;
 
-    void EmitBeginNamespace(StringBuilder &sb) const;
+    virtual void EmitBeginNamespace(StringBuilder &sb) const;
 
-    void EmitEndNamespace(StringBuilder &sb) const;
+    virtual void EmitEndNamespace(StringBuilder &sb) const;
 
-    void EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceMethodParams(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
+        const;
 
     void EmitWriteMethodParameter(const AutoPtr<ASTParameter> &param, const std::string &parcelName,
         StringBuilder &sb, const std::string &prefix) const;
@@ -48,9 +49,9 @@ protected:
     void EmitSecurecInclusion(StringBuilder &sb) const;
 
 private:
-    std::string EmitCppParameter(AutoPtr<ASTParameter> &param) const;
+    std::string EmitCppParameter(const AutoPtr<ASTParameter> &param) const;
 };
 } // namespace Idl
 } // namespace OHOS
 
-#endif // OHOS_IDL_CPP_CODE_EMITTER_H
+#endif // OHOS_IDL_SA_CPP_CODE_EMITTER_H

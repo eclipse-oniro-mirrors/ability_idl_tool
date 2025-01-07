@@ -27,9 +27,9 @@ std::string SaUshortTypeEmitter::EmitCppType(TypeMode mode) const
     switch (mode) {
         case TypeMode::NO_MODE:
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
         case TypeMode::LOCAL_VAR:
             return "uint16_t";
+        case TypeMode::PARAM_INOUT:
         case TypeMode::PARAM_OUT:
             return "uint16_t&";
         default:
@@ -42,9 +42,9 @@ void SaUshortTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const s
 {
     sb.Append(prefix).AppendFormat("if (!%sWriteUint16(%s)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
     }
-    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
 }
 

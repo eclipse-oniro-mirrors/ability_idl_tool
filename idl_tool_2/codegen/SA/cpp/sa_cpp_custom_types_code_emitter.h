@@ -32,7 +32,7 @@ private:
 
     void EmitCustomTypesHeaderFile();
 
-    void EmitHeaderFileInclusions(StringBuilder &sb);
+    void EmitHeaderFileInclusions(StringBuilder &sb) const;
 
     void EmitUsingNamespace(StringBuilder &sb);
 
@@ -44,7 +44,7 @@ private:
 
     void EmitCustomTypesSourceFile();
 
-    void EmitSourceFileInclusions(StringBuilder &sb);
+    void EmitSourceFileInclusions(StringBuilder &sb) const;
 
     void GetSourceOtherLibInclusions(HeaderFile::HeaderFileSet &headerFiles) const;
 
@@ -58,9 +58,9 @@ private:
 
     bool EmitCustomTypeNeedSecurec(const AutoPtr<ASTStructType> &type) const;
 
-    void EmitBeginNamespace(StringBuilder &sb);
+    void EmitBeginNamespace(StringBuilder &sb) const override;
 
-    void EmitEndNamespace(StringBuilder &sb);
+    void EmitEndNamespace(StringBuilder &sb) const override;
 };
 } // namespace Idl
 } // namespace OHOS
