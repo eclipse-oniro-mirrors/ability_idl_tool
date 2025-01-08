@@ -223,7 +223,7 @@ void HdiArrayTypeEmitter::EmitCStubReadVar(const std::string &name, const std::s
 
     sb.Append(prefix).AppendFormat("if (%s > 0) {\n", lenName.c_str());
     EmitCMallocVar(name, lenName, gotoLabel, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     if (Options::GetInstance().DoGenerateKernelCode()) {
         sb.Append(prefix + TAB).AppendFormat("for (i = 0; i < %s; i++) {\n", lenName.c_str());
@@ -712,7 +712,7 @@ void HdiArrayTypeEmitter::EmitCWriteMethods(
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, "
             "uint32_t count);\n", methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, const void *data, uint32_t elementSize, "
             "uint32_t count)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
@@ -759,7 +759,7 @@ void HdiArrayTypeEmitter::EmitCReadMethods(
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count);\n",
             methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, void *data, uint32_t elementSize, uint32_t *count)\n",
             methodName.c_str());
         EmitCReadMethodsBody(sb, prefix);
@@ -829,7 +829,7 @@ void HdiArrayTypeEmitter::EmitCStubReadMethods(
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count);\n",
             methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, void **data, uint32_t elementSize, uint32_t *count)\n",
             methodName.c_str());
         sb.Append(prefix).Append("{\n");
@@ -898,7 +898,7 @@ void HdiArrayTypeEmitter::EmitCWriteStrArrayMethods(
     if (isDecl) {
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char **data, uint32_t count);\n", methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char **data, uint32_t count)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("uint32_t i = 0;\n");
@@ -942,7 +942,7 @@ void HdiArrayTypeEmitter::EmitCReadStrArrayMethods(
     if (isDecl) {
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char **data, uint32_t *count);\n", methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char **data, uint32_t *count)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         EmitCReadStrArrayMethodBody(sb, prefix + TAB);
@@ -1023,7 +1023,7 @@ void HdiArrayTypeEmitter::EmitCStubReadStrArrayMethods(
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char ***data, uint32_t *count);\n",
             methodName.c_str());
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.AppendFormat("static bool %s(struct HdfSBuf *parcel, char ***data, uint32_t *count)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         EmitCStubReadStrArrayMethodBody(sb, prefix + TAB);
@@ -1112,7 +1112,7 @@ void HdiArrayTypeEmitter::EmitCppWriteMethods(
         sb.AppendFormat("static bool %s(MessageParcel &parcel, const std::vector<ElementType> &data);\n",
             methodName.c_str());
     } else {
-        sb.Append('\n').Append("template<typename ElementType>\n");
+        sb.Append("\n").Append("template<typename ElementType>\n");
         sb.AppendFormat("static bool %s(MessageParcel &parcel, const std::vector<ElementType> &data)\n",
             methodName.c_str());
         sb.Append(prefix).Append("{\n");
@@ -1151,7 +1151,7 @@ void HdiArrayTypeEmitter::EmitCppReadMethods(
         sb.AppendFormat("static bool %s(MessageParcel &parcel, std::vector<ElementType> &data);\n",
             methodName.c_str());
     } else {
-        sb.Append('\n').Append("template<typename ElementType>\n");
+        sb.Append("\n").Append("template<typename ElementType>\n");
         sb.AppendFormat("static bool %s(MessageParcel &parcel, std::vector<ElementType> &data)\n", methodName.c_str());
         sb.Append(prefix).Append("{\n");
         sb.Append(prefix + TAB).Append("data.clear();\n");

@@ -22,8 +22,8 @@ bool SATsCodeEmitter::CheckInterfaceType() const
     if (interface_ == nullptr) {
         return false;
     }
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         if (method == nullptr) {
             return false;
@@ -87,8 +87,8 @@ const std::string SATsCodeEmitter::SuffixAdded(const std::string &originName) co
 
 void SATsCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.Append(prefix).AppendFormat("static readonly COMMAND_%s = %d;\n",
             ConstantName(method->GetName()).c_str(), i + 1);
@@ -97,8 +97,8 @@ void SATsCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::
 
 void SATsCodeEmitter::EmitInterfaceImports(StringBuilder &sb) const
 {
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("import {%sCallback} from \"./%s\";\n", MethodName(method->GetName()).c_str(),
             FileName(interfaceName_).c_str());

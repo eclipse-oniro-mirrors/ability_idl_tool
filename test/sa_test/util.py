@@ -79,7 +79,7 @@ def compare_target_files(first_file_path, second_file_path):
 
     for f, s in common_files:
         if not compare_file("{}{}".format(first_file_path, f), "{}{}.txt".format(second_file_path, s)):
-            print("file ", "{}{}".format(first_file_path, f), "{}{}.txt".format(second_file_path, s),
+            print("file ", "{}{}".format(first_file_path, f), "{}{}.txt".format(second_file_path, s), \
                   "is different")
             return False
     return True
@@ -124,14 +124,18 @@ def get_all_idl_files(idl_path):
 
 
 def get_idl():
-    return os.path.realpath(get_idl_name())
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    relative_path = os.path.join(current_path, get_idl_name())
+    return os.path.realpath(relative_path)
 
 
 def get_idl_name():
+    idl_name = 'idl-gen'
     if os.name == 'nt':
-        return 'idl-gen.exe'
-    else:
-        return 'idl-gen'
+        idl_name = 'idl-gen.exe'
+    elif os.name == 'posix':
+        idl_name = 'idl-gen'
+    return idl_name
 
 
 def get_subclasses(cls):

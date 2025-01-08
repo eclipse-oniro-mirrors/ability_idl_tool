@@ -111,6 +111,7 @@ class Test:
 
     def run_success(self, no_output=False):
         status, result = exec_command(self.command)
+        expected_output = ""
         if status != 0:
             print_failure(f"[ERROR] command:{self.command} run err")
             return False
@@ -129,7 +130,7 @@ class Test:
             self.set_target_dir("target_file")
         return compare_target_files(self.output_dir, self.target_dir)
 
-    def sa_gen_fail_check_ignore_line(self, result: str, target: str):
+    def hdi_gen_fail_check_ignore_line(self, result: str, target: str):
         fail_template = r"(.*): \[(\S+):\d+\] \[?(.*)error:(.*)"
         result_lines = result.split("\n")
         target_lines = target.split("\n")
@@ -171,10 +172,11 @@ class Test:
 
     def run_fail(self):
         status, result = exec_command(self.command)
+        expected_fail_output = ""
         with open(os.path.join(self.target_dir, "fail_output.txt"), 'r') as target_output:
             expected_fail_output = target_output.read()
 
-        if status != 0 and self.sa_gen_fail_check_ignore_line(result, expected_fail_output):
+        if status != 0 and self.hdi_gen_fail_check_ignore_line(result, expected_fail_output):
             return True
         return False
 

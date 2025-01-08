@@ -20,7 +20,7 @@
 namespace OHOS {
 namespace Idl {
 namespace {
-constexpr uint32_t WRAP_ANCHOR = 4;
+const uint32_t WRAP_ANCHOR = 4;
 }
 
 bool SaRustInterfaceCodeEmitter::ResolveDirectory(const std::string &targetDirectory)
@@ -37,6 +37,7 @@ bool SaRustInterfaceCodeEmitter::ResolveDirectory(const std::string &targetDirec
 void SaRustInterfaceCodeEmitter::EmitCode()
 {
     EmitInterfaceHeaderFile();
+    return;
 }
 
 void SaRustInterfaceCodeEmitter::EmitInterfaceHeaderFile()
@@ -49,23 +50,24 @@ void SaRustInterfaceCodeEmitter::EmitInterfaceHeaderFile()
     EmitLicense(sb);
     EmitHeadMacro(sb);
     EmitHeaders(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCommands(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitRemoteObject(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBrokers(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitRemoteRequest(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStub(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxy(sb);
 
     std::string data = sb.ToString();
     file.WriteData(data.c_str(), data.size());
     file.Flush();
     file.Close();
+    return;
 }
 
 void SaRustInterfaceCodeEmitter::EmitHeaders(StringBuilder &sb) const
@@ -73,20 +75,20 @@ void SaRustInterfaceCodeEmitter::EmitHeaders(StringBuilder &sb) const
     EmitCommonHeaders(sb);
     EmitIPCHeaders(sb);
     if (EmitCustomHeaders(sb)) {
-        sb.Append('\n');
+        sb.Append("\n");
     }
 }
 
 void SaRustInterfaceCodeEmitter::EmitIPCHeaders(StringBuilder &sb) const
 {
     sb.Append("extern crate ipc_rust;\n");
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append("use ipc_rust::{\n");
     sb.Append("    IRemoteBroker, IRemoteObj, RemoteStub, Result,\n");
     sb.Append("    RemoteObj, define_remote_object, FIRST_CALL_TRANSACTION\n");
     sb.Append("};\n");
     sb.Append("use ipc_rust::{MsgParcel, BorrowedMsgParcel};\n");
-    sb.Append('\n');
+    sb.Append("\n");
 }
 
 bool SaRustInterfaceCodeEmitter::EmitCustomHeaders(StringBuilder &sb) const
@@ -142,7 +144,7 @@ std::string SaRustInterfaceCodeEmitter::GeneratePath(const std::string &fpnp) co
     StringBuilder realPath;
     realPath.Append(StringHelper::Replace(path, ".", "::")).Append("::{");
     realPath.Append(StringHelper::Replace(file, ".", ", "));
-    realPath.Append('}');
+    realPath.Append("}");
 
     return realPath.ToString();
 }
@@ -173,8 +175,8 @@ std::string SaRustInterfaceCodeEmitter::TrimDot(const std::string &fpnp) const
 void SaRustInterfaceCodeEmitter::EmitCommands(StringBuilder &sb) const
 {
     sb.AppendFormat("pub enum %sCode {\n", interfaceName_.c_str());
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         if (i == 0) {
             sb.AppendFormat("    %s  = FIRST_CALL_TRANSACTION,\n", GetCodeFromMethod(method->GetName()).c_str());
@@ -224,8 +226,8 @@ void SaRustInterfaceCodeEmitter::EmitRemoteObject(StringBuilder &sb) const
 void SaRustInterfaceCodeEmitter::EmitBrokers(StringBuilder &sb) const
 {
     sb.AppendFormat("pub trait %s: IRemoteBroker {\n", interfaceName_.c_str());
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("    fn %s(&self", method->GetName().c_str());
         AppendBrokerParameters(sb, method);
@@ -293,8 +295,8 @@ void SaRustInterfaceCodeEmitter::EmitRemoteRequest(StringBuilder &sb) const
 
 void SaRustInterfaceCodeEmitter::AddRemoteRequestMethods(StringBuilder &sb) const
 {
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("        %d => {\n", i + 1);
         int paramNumber = static_cast<int>(method->GetParameterNumber());
@@ -336,8 +338,8 @@ void SaRustInterfaceCodeEmitter::AddRemoteRequestParameters(StringBuilder &sb, A
 void SaRustInterfaceCodeEmitter::EmitStub(StringBuilder &sb) const
 {
     sb.AppendFormat("impl %s for RemoteStub<%s> {\n", interfaceName_.c_str(), stubName_.c_str());
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         sb.AppendFormat("    fn %s(&self", method->GetName().c_str());
         AppendBrokerParameters(sb, method);
@@ -349,7 +351,7 @@ void SaRustInterfaceCodeEmitter::EmitStub(StringBuilder &sb) const
         sb.Append(")\n");
         sb.Append("    }\n");
         if (i != methodNumber - 1) {
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
     sb.Append("}\n");
@@ -370,12 +372,12 @@ void SaRustInterfaceCodeEmitter::AppendStubParameters(StringBuilder &sb, AutoPtr
 void SaRustInterfaceCodeEmitter::EmitProxy(StringBuilder &sb) const
 {
     sb.AppendFormat("impl %s for %s {\n", interfaceName_.c_str(), proxyName_.c_str());
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitProxyMethodImpl(method, sb);
         if (i != methodNumber - 1) {
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
     sb.Append("}\n");

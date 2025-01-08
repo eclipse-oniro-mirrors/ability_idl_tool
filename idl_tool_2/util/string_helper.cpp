@@ -21,7 +21,7 @@
 
 namespace OHOS {
 namespace Idl {
-std::vector<std::string> StringHelper::Split(const std::string& sources, const std::string &limit)
+std::vector<std::string> StringHelper::Split(std::string sources, const std::string &limit)
 {
     std::vector<std::string> result;
     if (sources.empty()) {
@@ -86,28 +86,28 @@ std::string StringHelper::Replace(const std::string &value, char oldChar, char n
     }
 
     std::string result = value;
-    for (char &c : result) {
-        if (c != oldChar) {
+    for (size_t i = 0; i < result.size(); i++) {
+        if (result[i] != oldChar) {
             continue;
         }
-        c = newChar;
+        result[i] = newChar;
     }
     return result;
 }
 
-std::string StringHelper::Replace(const std::string &value, const std::string &oldStr, const std::string &newStr)
+std::string StringHelper::Replace(const std::string &value, const std::string &oldstr, const std::string &newstr)
 {
     std::string result = value;
     size_t pos = 0;
-    while ((pos = result.find(oldStr, pos)) != std::string::npos) {
-        result.replace(pos, oldStr.size(), newStr);
-        pos += newStr.size();
+    while ((pos = result.find(oldstr, pos)) != std::string::npos) {
+        result.replace(pos, oldstr.size(), newstr);
+        pos += newstr.size();
     }
     return result;
 }
 
-std::string StringHelper::Replace(const std::string &value, size_t position, const std::string &substr,
-    const std::string &newStr)
+std::string StringHelper::Replace(
+    const std::string &value, size_t position, const std::string &substr, const std::string &newstr)
 {
     if (position >= value.size()) {
         return value;
@@ -115,7 +115,7 @@ std::string StringHelper::Replace(const std::string &value, size_t position, con
 
     std::string prefix = value.substr(0, position);
     std::string suffix = value.substr(position);
-    return prefix + Replace(suffix, substr, newStr);
+    return prefix + Replace(suffix, substr, newstr);
 }
 
 std::string StringHelper::Replace(const std::string &value, size_t position, size_t len, const std::string &newStr)
@@ -134,15 +134,15 @@ std::string StringHelper::SubStr(const std::string &value, size_t start, size_t 
     if (value.empty() || start == std::string::npos || start >= end) {
         return "";
     }
-    return end == std::string::npos ? value.substr(start) : value.substr(start, end - start);
+    return (end == std::string::npos) ? value.substr(start) : value.substr(start, end - start);
 }
 
 std::string StringHelper::StrToLower(const std::string &value)
 {
     std::string result = value;
-    for (char &c : result) {
-        if (std::isupper(c)) {
-            c = static_cast<char>(std::tolower(c));
+    for (size_t i = 0; i < result.size(); i++) {
+        if (std::isupper(result[i])) {
+            result[i] = std::tolower(result[i]);
         }
     }
     return result;
@@ -151,9 +151,9 @@ std::string StringHelper::StrToLower(const std::string &value)
 std::string StringHelper::StrToUpper(const std::string &value)
 {
     std::string result = value;
-    for (char &c : result) {
-        if (std::islower(c)) {
-            c = static_cast<char>(std::toupper(c));
+    for (size_t i = 0; i < result.size(); i++) {
+        if (std::islower(result[i])) {
+            result[i] = std::toupper(result[i]);
         }
     }
     return result;
@@ -163,7 +163,7 @@ std::string StringHelper::FirstToUpper(const std::string &value)
 {
     std::string result = value;
     if (!result.empty()) {
-        result[0] = static_cast<char>(std::toupper(result[0]));
+        result[0] = std::toupper(result[0]);
     }
     return result;
 }
@@ -186,13 +186,13 @@ std::string StringHelper::Format(const char *format, ...)
 
     va_end(args);
     va_end(argsCopy);
-    return {buf, static_cast<size_t>(len)};
+    return std::string(buf, len);
 }
 
 int StringHelper::GetHashCode(const std::string &key)
 {
     // BKDR Hash Function
-    constexpr unsigned int seed = 31; // 31 131 1313 13131 131313 etc..
+    unsigned int seed = 31; // 31 131 1313 13131 131313 etc..
     unsigned int hash = 0;
 
     const char* string = key.c_str();
@@ -201,7 +201,7 @@ int StringHelper::GetHashCode(const std::string &key)
             hash = hash * seed + (*string);
         }
     }
-    return static_cast<int>(hash & 0x7FFFFFFF);
+    return (hash & 0x7FFFFFFF);
 }
 
 } // namespace Idl

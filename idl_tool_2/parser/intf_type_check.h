@@ -25,42 +25,42 @@ namespace Idl {
 
 class IntfTypeChecker {
 public:
-    explicit IntfTypeChecker(AutoPtr<AST> ast) : ast_(std::move(ast)){};
+    IntfTypeChecker(AutoPtr<AST> ast) : ast_(ast){};
 
     ~IntfTypeChecker() = default;
 
     bool CheckIntegrity();
 
-    static bool CheckBasicType(const Token& token);
+    static bool CheckBasicType(Token token);
 
-    static bool CheckUserDefType(const Token& token);
+    static bool CheckUserDefType(Token token);
 
 private:
-    bool CheckIntfSaAst() const;
+    bool CheckIntfSaAst();
 
-    bool CheckIntfSaAstTypes() const;
+    bool CheckIntfSaAstTypes();
 
-    bool CheckIntfSaAstMethods() const;
+    bool CheckIntfSaAstMethods();
 
     bool CheckIntfHdiAst();
 
-    bool CheckIntfHdiAstFileType() const;
+    bool CheckIntfHdiAstFileType();
 
-    bool CheckIntfHdiAstTypes() const;
+    bool CheckIntfHdiAstTypes();
 
-    bool CheckIntfHdiAstParam(const AutoPtr<ASTParameter>& param, size_t methodIdx, size_t paramIdx);
+    bool CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t methodIdx, size_t paramIdx);
 
-    bool CheckInterfaceAst() const;
+    bool CheckInterfaceAst();
 
-    bool CheckCallbackAst() const;
+    bool CheckCallbackAst();
 
-    bool CheckSmInterfaceAst() const;
+    bool CheckSmInterfaceAst();
 
-    bool CheckIntfSmAstFileType() const;
+    bool CheckIntfSmAstFileType();
 
-    bool CheckIntfSmAstTypes() const;
+    bool CheckIntfSmAstTypes();
 
-    bool CheckIntfSmAst() const;
+    bool CheckIntfSmAst();
 
     AutoPtr<AST> ast_;
 };

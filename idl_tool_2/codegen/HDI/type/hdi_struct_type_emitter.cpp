@@ -65,7 +65,7 @@ std::string HdiStructTypeEmitter::EmitCTypeDecl() const
     StringBuilder sb;
     sb.AppendFormat("struct %s {\n", name_.c_str());
 
-    for (const auto& it : members_) {
+    for (auto it : members_) {
         AutoPtr<HdiTypeEmitter> member = std::get<1>(it);
         std::string memberName = std::get<0>(it);
         sb.Append(TAB).AppendFormat("%s %s;\n", member->EmitCType().c_str(), memberName.c_str());
@@ -74,11 +74,11 @@ std::string HdiStructTypeEmitter::EmitCTypeDecl() const
         }
     }
 
-    sb.Append('}');
+    sb.Append("}");
     if (IsPod()) {
         sb.Append(" __attribute__ ((aligned(8)))");
     }
-    sb.Append(';');
+    sb.Append(";");
 
     return sb.ToString();
 }
@@ -88,17 +88,17 @@ std::string HdiStructTypeEmitter::EmitCppTypeDecl() const
     StringBuilder sb;
     sb.AppendFormat("struct %s {\n", name_.c_str());
 
-    for (const auto& it : members_) {
+    for (auto it : members_) {
         AutoPtr<HdiTypeEmitter> member = std::get<1>(it);
         std::string memberName = std::get<0>(it);
         sb.Append(TAB).AppendFormat("%s %s;\n", member->EmitCppType().c_str(), memberName.c_str());
     }
 
-    sb.Append('}');
+    sb.Append("}");
     if (IsPod()) {
         sb.Append(" __attribute__ ((aligned(8)))");
     }
-    sb.Append(';');
+    sb.Append(";");
     return sb.ToString();
 }
 

@@ -175,7 +175,7 @@ public:
         return typeDefinitions_.size();
     }
 
-    AutoPtr<ASTType> GetTypeDefinition(size_t index);
+    AutoPtr<ASTType> GetTypeDefintion(size_t index);
 
     std::string Dump(const std::string &prefix) override;
 
@@ -261,14 +261,14 @@ public:
     }
 
 private:
-    AutoPtr<ASTNamespace> NewNameSpace(const std::string& nameSpace);
+    AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
     ASTFileType astFileType_ = ASTFileType::AST_IFACE;
     std::string name_;
     std::string license_;
     std::string packageName_;
-    size_t majorVersion_ = 0;
-    size_t minorVersion_ = 0;
+    size_t majorVersion_;
+    size_t minorVersion_;
     std::vector<AutoPtr<ASTNamespace>> namespaces_;
     std::vector<AutoPtr<ASTType>> typeDefinitions_; // enum, struct, union
     std::vector<AutoPtr<ASTSequenceableType>> sequenceableDefs_;

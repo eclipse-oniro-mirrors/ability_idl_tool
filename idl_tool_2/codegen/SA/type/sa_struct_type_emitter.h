@@ -24,7 +24,7 @@ class SaStructTypeEmitter : public SaTypeEmitter {
 public:
     inline void AddMember(std::string name, const AutoPtr<SaTypeEmitter> &memberEmiter)
     {
-        members_.emplace_back(name, memberEmiter);
+        members_.push_back(std::make_tuple(name, memberEmiter));
     }
 
     TypeKind GetTypeKind() override;

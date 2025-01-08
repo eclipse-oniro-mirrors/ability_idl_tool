@@ -58,8 +58,9 @@ StringBuilder &StringBuilder::Append(const char *string)
         }
     }
 
-    if (memcpy_s(buffer_ + position_, capacity_ - position_, string, len) != EOK) {
-        Logger::E(TAG, "memcpy_s failed");
+    int ret = memcpy_s(buffer_ + position_, capacity_ - position_, string, len);
+    if (ret != 0) {
+        Logger::E(TAG, "memcpy_s error ret = %d!", ret);
         return *this;
     }
     position_ += len;
@@ -79,8 +80,9 @@ StringBuilder &StringBuilder::Append(const std::string &string)
         }
     }
 
-    if (memcpy_s(buffer_ + position_, capacity_ - position_, string.c_str(), len) != EOK) {
-        Logger::E(TAG, "memcpy_s failed");
+    int ret = memcpy_s(buffer_ + position_, capacity_ - position_, string.c_str(), len);
+    if (ret != 0) {
+        Logger::E(TAG, "memcpy_s error ret = %d!", ret);
         return *this;
     }
     position_ += len;
@@ -150,13 +152,14 @@ bool StringBuilder::Grow(size_t size)
     }
 
     if (buffer_ != nullptr) {
-        if (memcpy_s(newBuffer, newSize, buffer_, capacity_) != EOK) {
-            Logger::E(TAG, "memcpy_s failed");
+        int ret = memcpy_s(newBuffer, newSize, buffer_, capacity_);
+        free(buffer_);
+        buffer_ = nullptr;
+        if (ret != 0) {
+            Logger::E(TAG, "memcpy_s error ret = %d!", ret);
             free(newBuffer);
             return false;
         }
-        free(buffer_);
-        buffer_ = nullptr;
     }
     buffer_ = newBuffer;
     capacity_ = newSize;
@@ -168,7 +171,7 @@ std::string StringBuilder::ToString() const
     if (buffer_ == nullptr) {
         return "";
     }
-    return {buffer_, position_};
+    return std::string(buffer_, position_);
 }
 } // namespace Idl
 } // namespace OHOS

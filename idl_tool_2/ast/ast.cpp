@@ -14,12 +14,15 @@
  */
 
 #include "ast/ast.h"
+
+#include <cstdlib>
+
 #include "util/string_builder.h"
 
 namespace OHOS {
 namespace Idl {
 AST::TypeStringMap AST::basicTypes_ = {
-    {"void",           new ASTVoidType()        },
+    {"void",           new ASTVoidType()     },
     {"boolean",        new ASTBooleanType()     },
     {"byte",           new ASTByteType()        },
     {"short",          new ASTShortType()       },
@@ -43,7 +46,7 @@ AST::TypeStringMap AST::basicTypes_ = {
 void AST::SetIdlFile(const std::string &idlFile)
 {
     idlFilePath_ = idlFile;
-#ifdef _WIN32
+#ifdef __MINGW32__
     size_t index = idlFilePath_.rfind('\\');
 #else
     size_t index = idlFilePath_.rfind('/');
@@ -106,7 +109,7 @@ AutoPtr<ASTNamespace> AST::ParseNamespace(const std::string &nspaceStr)
     return currNspace;
 }
 
-AutoPtr<ASTNamespace> AST::NewNameSpace(const std::string& nameSpace)
+AutoPtr<ASTNamespace> AST::NewNameSpace(std::string nameSpace)
 {
     AutoPtr<ASTNamespace> currNspace = FindNamespace(nameSpace);
     if (currNspace == nullptr) {
@@ -185,7 +188,7 @@ int AST::IndexOf(ASTInterfaceType* interface)
 {
     for (size_t i = 0; i < interfaceDefs_.size(); i++) {
         if (interfaceDefs_[i] == interface) {
-            return static_cast<int>(i);
+            return i;
         }
     }
     return -1;
@@ -195,7 +198,7 @@ int AST::IndexOf(ASTSequenceableType* sequenceable)
 {
     for (size_t i = 0; i < sequenceableDefs_.size(); i++) {
         if (sequenceableDefs_[i] == sequenceable) {
-            return static_cast<int>(i);
+            return i;
         }
     }
     return -1;
@@ -263,7 +266,7 @@ void AST::AddTypeDefinition(const AutoPtr<ASTType> &type)
     typeDefinitions_.push_back(type);
 }
 
-AutoPtr<ASTType> AST::GetTypeDefinition(size_t index)
+AutoPtr<ASTType> AST::GetTypeDefintion(size_t index)
 {
     if (index >= typeDefinitions_.size()) {
         return nullptr;
@@ -281,17 +284,17 @@ std::string AST::Dump(const std::string &prefix)
     } else {
         sb.Append("AST[");
     }
-    sb.Append("name: ").Append(name_).Append(' ');
+    sb.Append("name: ").Append(name_).Append(" ");
     sb.Append("file: ").Append(idlFilePath_);
     sb.Append("]\n");
 
     if (!packageName_.empty()) {
-        sb.Append("package ").Append(packageName_).Append(';');
+        sb.Append("package ").Append(packageName_).Append(";");
         sb.Append('\n');
         sb.Append('\n');
     }
 
-    if (!imports_.empty()) {
+    if (imports_.size() > 0) {
         std::string Keyword = "import";
         if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
             Keyword = "sequenceable";
@@ -299,28 +302,28 @@ std::string AST::Dump(const std::string &prefix)
         for (const auto &import : imports_) {
             sb.AppendFormat("%s %s;\n", Keyword.c_str(), import.first.c_str());
         }
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
-    if (!typeDefinitions_.empty()) {
-        for (const auto& type : typeDefinitions_) {
+    if (typeDefinitions_.size() > 0) {
+        for (auto type : typeDefinitions_) {
             std::string info = type->Dump("");
-            sb.Append(info).Append('\n');
+            sb.Append(info).Append("\n");
         }
     }
 
-    if (!interfaceDefs_.empty()) {
-        for (const auto& type : interfaceDefs_) {
+    if (interfaceDefs_.size() > 0) {
+        for (auto type : interfaceDefs_) {
             if (type->IsExternal()) {
                 std::string info = type->Dump("");
-                sb.Append(info).Append('\n');
+                sb.Append(info).Append("\n");
             }
         }
 
-        for (const auto& type : interfaceDefs_) {
+        for (auto type : interfaceDefs_) {
             if (!type->IsExternal()) {
                 std::string info = type->Dump("");
-                sb.Append(info).Append('\n');
+                sb.Append(info).Append("\n");
             }
         }
     }
@@ -356,7 +359,7 @@ bool AST::IsValid()
         return false;
     }
 
-    return !interfaceDefs_.empty();
+    return interfaceDefs_.size() > 0;
 }
 
 } // namespace Idl

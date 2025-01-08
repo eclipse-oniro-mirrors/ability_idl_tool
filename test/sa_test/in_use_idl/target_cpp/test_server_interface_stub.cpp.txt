@@ -31,13 +31,12 @@ int32_t TestServerInterfaceStub::OnRemoteRequest(
     }
     switch (static_cast<ITestServerInterfaceIpcCode>(code)) {
         case ITestServerInterfaceIpcCode::COMMAND_CREATE_SESSION: {
-            std::unique_ptr<SessionToken> sessionTokenInfo(data.ReadParcelable<SessionToken>());
-            if (!sessionTokenInfo) {
+            std::unique_ptr<SessionToken> sessionToken(data.ReadParcelable<SessionToken>());
+            if (!sessionToken) {
                 return ERR_INVALID_DATA;
             }
-            SessionToken sessionToken(*sessionTokenInfo);
 
-            ErrCode errCode = CreateSession(sessionToken);
+            ErrCode errCode = CreateSession(*sessionToken);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }
@@ -52,14 +51,13 @@ int32_t TestServerInterfaceStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case ITestServerInterfaceIpcCode::COMMAND_PUBLISH_COMMON_EVENT: {
-            std::unique_ptr<CommonEventData> eventInfo(data.ReadParcelable<CommonEventData>());
-            if (!eventInfo) {
+            std::unique_ptr<CommonEventData> event(data.ReadParcelable<CommonEventData>());
+            if (!event) {
                 return ERR_INVALID_DATA;
             }
-            CommonEventData event(*eventInfo);
 
             bool re;
-            ErrCode errCode = PublishCommonEvent(event, re);
+            ErrCode errCode = PublishCommonEvent(*event, re);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }

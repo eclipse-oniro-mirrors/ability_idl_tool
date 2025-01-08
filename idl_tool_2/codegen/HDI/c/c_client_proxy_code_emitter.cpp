@@ -63,15 +63,15 @@ void CClientProxyCodeEmitter::EmitPassthroughProxySourceFile()
 
     EmitLicense(sb);
     EmitPassthroughProxyInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(proxyName_));
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyGetMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitPassthroughGetInstanceMethod(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyReleaseMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitPassthroughReleaseInstanceMethod(sb);
     std::string data = sb.ToString();
     file.WriteData(data.c_str(), data.size());
@@ -121,25 +121,25 @@ void CClientProxyCodeEmitter::EmitProxySourceFile()
 
     EmitLicense(sb);
     EmitProxyInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(proxyName_));
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyDefinition(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, true);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, false);
-    sb.Append('\n');
+    sb.Append("\n");
     if (mode_ != GenMode::KERNEL) {
         EmitProxyCallMethodImpl(sb);
     } else {
         EmitProxyKernelCallMethodImpl(sb);
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyMethodImpls(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyConstruction(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyExternalMethodImpl(sb);
 
     std::string data = sb.ToString();
@@ -259,13 +259,13 @@ void CClientProxyCodeEmitter::EmitProxyMethodImpls(StringBuilder &sb)
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitProxyMethodImpl(method, sb);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     EmitProxyMethodImpl(interface_->GetVersionMethod(), sb);
 
     if (mode_ != GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitProxyAsObjectMethodImpl(sb);
     }
 }
@@ -287,9 +287,9 @@ void CClientProxyCodeEmitter::EmitProxyMethodImpl(const AutoPtr<ASTMethod> &meth
             }
         }
 
-        paramStr.Append(')');
+        paramStr.Append(")");
         sb.Append(SpecificationParam(paramStr, TAB));
-        sb.Append('\n');
+        sb.Append("\n");
     }
     EmitProxyMethodBody(method, sb, "");
 }
@@ -302,38 +302,38 @@ void CClientProxyCodeEmitter::EmitProxyMethodBody(
 
     // Local variable definitions must precede all execution statements.
     EmitMethodNeedLoopVar(method, true, false, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCreateBuf(HdiTypeEmitter::dataParcelName_, HdiTypeEmitter::replyParcelName_, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCheckThisPointer(sb, prefix + TAB);
 
     if (mode_ != GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitWriteInterfaceToken(HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
     }
 
-    sb.Append('\n');
+    sb.Append("\n");
     EmitWriteFlagOfNeedSetMem(method, HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
         if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
             typeEmitter->EmitCWriteVar(TypeMode::PARAM_IN, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
-            sb.Append('\n');
+            sb.Append("\n");
         } else {
             typeEmitter->EmitCProxyWriteOutVar(param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
         }
     }
 
     EmitStubCallMethod(method, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     if (!method->IsOneWay()) {
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
                 EmitReadProxyMethodParameter(param, FINISHED_LABEL, sb, prefix + TAB);
-                sb.Append('\n');
+                sb.Append("\n");
             }
         }
     }
@@ -356,7 +356,7 @@ void CClientProxyCodeEmitter::EmitCreateBuf(const std::string &dataBufName,
         sb.Append(prefix).AppendFormat("struct HdfSBuf *%s = HdfSbufTypedObtain(SBUF_IPC);\n", replyBufName.c_str());
     }
 
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(prefix).AppendFormat("if (%s == NULL || %s == NULL) {\n", dataBufName.c_str(), replyBufName.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: HdfSubf malloc failed!\", __func__);\n");
     sb.Append(prefix + TAB).AppendFormat("%s = HDF_ERR_MALLOC_FAIL;\n", HdiTypeEmitter::errorCodeName_.c_str());
@@ -511,9 +511,9 @@ void CClientProxyCodeEmitter::EmitKernelProxyExternalMethodImpl(StringBuilder &s
     std::string remoteName = "serv";
 
     EmitKernelProxyGetMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitKernelProxyGetInstanceMethodImpl(remoteName, sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitKernelProxyReleaseMethodImpl(remoteName, "HdfIoServiceRecycle", sb);
 }
 
@@ -538,11 +538,11 @@ void CClientProxyCodeEmitter::EmitKernelProxyGetInstanceMethodImpl(const std::st
         serviceName.c_str());
     sb.Append("{\n");
     EmitProxyGetRemoteService(remoteName, serviceName, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCreateProxyObject(objName, remoteName, "HdfIoServiceRecycle", sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCheckVersion(objName, serMajorName, serMinorName, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(TAB).AppendFormat("return %s;\n", objName.c_str());
     sb.Append("}\n");
 }
@@ -569,7 +569,7 @@ void CClientProxyCodeEmitter::EmitSerialProxyExternalMethodImpl(StringBuilder &s
     std::string remoteName = "remote";
 
     EmitIfaceProxyGetMethodImpl(serMajorName, serMinorName, remoteName, sb);
-    sb.Append('\n');
+    sb.Append("\n");
 
     if (interface_->IsCallback()) {
         EmitCbProxyReleaseMethodImpl(remoteName, "HdfRemoteServiceRecycle", sb);
@@ -590,11 +590,11 @@ void CClientProxyCodeEmitter::EmitIfaceProxyGetMethodImpl(const std::string &ser
     sb.Append(TAB).Append(TAB).Append("return NULL;\n");
     sb.Append(TAB).Append("}\n\n");
     EmitProxySetInterfaceDesc(remoteName, "HdfRemoteServiceRecycle", sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCreateProxyObject(objName, remoteName, "HdfRemoteServiceRecycle", sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCheckVersion(objName, serMajorName, serMinorName, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(TAB).AppendFormat("return %s;\n", objName.c_str());
     sb.Append("}\n");
 }
@@ -647,11 +647,11 @@ void CClientProxyCodeEmitter::EmitProxyExternalMethod(StringBuilder &sb)
     std::string serviceName = "serviceName";
 
     EmitProxyGetMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyGetInstanceMethodImpl(remoteName, serviceName, sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyReleaseMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyReleaseInstanceMethodImpl(serviceName, remoteName, "HdfRemoteServiceRecycle", sb);
 }
 
@@ -675,15 +675,15 @@ void CClientProxyCodeEmitter::EmitProxyGetInstanceMethodImpl(const std::string &
         interfaceName_.c_str(), serviceName.c_str());
     sb.Append("{\n");
     EmitProxyLoadOrUnLoadHdiImpl(serviceName, true, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyGetRemoteService(remoteName, serviceName, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxySetInterfaceDesc(remoteName, "HdfRemoteServiceRecycle", sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCreateProxyObject(objName, remoteName, "HdfRemoteServiceRecycle", sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitProxyCheckVersion(objName, serMajorName, serMinorName, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(TAB).AppendFormat("return %s;\n", objName.c_str());
     sb.Append("}\n");
 }
@@ -739,7 +739,7 @@ void CClientProxyCodeEmitter::EmitProxyCreateProxyObject(const std::string &clie
     }
     sb.Append(prefix + TAB).Append("return NULL;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(prefix).AppendFormat("proxy->%s = %s;\n", remoteName.c_str(), remoteName.c_str());
     sb.Append(prefix).AppendFormat("%sProxyConstruct(&proxy->impl);\n", baseName_.c_str());
     sb.Append(prefix).AppendFormat("struct %s *%s = &proxy->impl;\n", interfaceName_.c_str(), clientObjName.c_str());
@@ -801,7 +801,7 @@ void CClientProxyCodeEmitter::EmitProxyReleaseInstanceMethodImpl(const std::stri
     sb.Append(TAB).Append(TAB).Append("return;\n");
     sb.Append(TAB).Append("}\n\n");
     EmitProxyLoadOrUnLoadHdiImpl(serviceName, false, sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(TAB).AppendFormat("struct %sProxy *proxy = CONTAINER_OF(instance, struct %sProxy, impl);\n",
         baseName_.c_str(), baseName_.c_str());
     sb.Append(TAB).AppendFormat("%s(proxy->%s);\n", recycleFuncName.c_str(), remoteName.c_str());

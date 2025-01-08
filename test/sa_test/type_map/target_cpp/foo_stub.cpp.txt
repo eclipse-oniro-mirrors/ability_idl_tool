@@ -40,16 +40,16 @@ int32_t FooStub::OnRemoteRequest(
             std::unordered_map<bool, bool> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
-                bool key = data.ReadInt32() == 1;
-                bool value = data.ReadInt32() == 1;
+                bool key = data.ReadInt32() == 1 ? true : false;
+                bool value = data.ReadInt32() == 1 ? true : false;
                 inParam[key] = value;
             }
             std::unordered_map<bool, bool> outParam;
             std::unordered_map<bool, bool> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inoutParamSize; ++i) {
-                bool key = data.ReadInt32() == 1;
-                bool value = data.ReadInt32() == 1;
+                bool key = data.ReadInt32() == 1 ? true : false;
+                bool value = data.ReadInt32() == 1 ? true : false;
                 inoutParam[key] = value;
             }
             std::unordered_map<bool, bool> result;
@@ -104,16 +104,16 @@ int32_t FooStub::OnRemoteRequest(
             std::unordered_map<int8_t, int8_t> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
-                auto key = static_cast<int8_t>(data.ReadInt32());
-                auto value = static_cast<int8_t>(data.ReadInt32());
+                int8_t key = (int8_t)data.ReadInt32();
+                int8_t value = (int8_t)data.ReadInt32();
                 inParam[key] = value;
             }
             std::unordered_map<int8_t, int8_t> outParam;
             std::unordered_map<int8_t, int8_t> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inoutParamSize; ++i) {
-                auto key = static_cast<int8_t>(data.ReadInt32());
-                auto value = static_cast<int8_t>(data.ReadInt32());
+                int8_t key = (int8_t)data.ReadInt32();
+                int8_t value = (int8_t)data.ReadInt32();
                 inoutParam[key] = value;
             }
             std::unordered_map<int8_t, int8_t> result;
@@ -168,16 +168,16 @@ int32_t FooStub::OnRemoteRequest(
             std::unordered_map<short, short> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
-                auto key = static_cast<short>(data.ReadInt32());
-                auto value = static_cast<short>(data.ReadInt32());
+                short key = (short)data.ReadInt32();
+                short value = (short)data.ReadInt32();
                 inParam[key] = value;
             }
             std::unordered_map<short, short> outParam;
             std::unordered_map<short, short> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inoutParamSize; ++i) {
-                auto key = static_cast<short>(data.ReadInt32());
-                auto value = static_cast<short>(data.ReadInt32());
+                short key = (short)data.ReadInt32();
+                short value = (short)data.ReadInt32();
                 inoutParam[key] = value;
             }
             std::unordered_map<short, short> result;
@@ -549,22 +549,22 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_CHAR_TEST_FUNC: {
-            std::unordered_map<char, char> inParam;
+            std::unordered_map<zchar, zchar> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
-                char key = (char)data.ReadInt32();
-                char value = (char)data.ReadInt32();
+                zchar key = (zchar)data.ReadInt32();
+                zchar value = (zchar)data.ReadInt32();
                 inParam[key] = value;
             }
-            std::unordered_map<char, char> outParam;
-            std::unordered_map<char, char> inoutParam;
+            std::unordered_map<zchar, zchar> outParam;
+            std::unordered_map<zchar, zchar> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inoutParamSize; ++i) {
-                char key = (char)data.ReadInt32();
-                char value = (char)data.ReadInt32();
+                zchar key = (zchar)data.ReadInt32();
+                zchar value = (zchar)data.ReadInt32();
                 inoutParam[key] = value;
             }
-            std::unordered_map<char, char> result;
+            std::unordered_map<zchar, zchar> result;
             ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
@@ -616,17 +616,15 @@ int32_t FooStub::OnRemoteRequest(
             std::unordered_map<const myseq&, const myseq&> inParam;
             int32_t inParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inParamSize; ++i) {
-                std::unique_ptr<myseq> keyInfo(data.ReadParcelable<myseq>());
-                if (!keyInfo) {
+                std::unique_ptr<myseq> key(data.ReadParcelable<myseq>());
+                if (!key) {
                     return ERR_INVALID_DATA;
                 }
-                myseq key(*keyInfo);
 
-                std::unique_ptr<myseq> valueInfo(data.ReadParcelable<myseq>());
-                if (!valueInfo) {
+                std::unique_ptr<myseq> value(data.ReadParcelable<myseq>());
+                if (!value) {
                     return ERR_INVALID_DATA;
                 }
-                myseq value(*valueInfo);
 
                 inParam[key] = value;
             }
@@ -634,17 +632,15 @@ int32_t FooStub::OnRemoteRequest(
             std::unordered_map<const myseq&, const myseq&> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
             for (int32_t i = 0; i < inoutParamSize; ++i) {
-                std::unique_ptr<myseq> keyInfo(data.ReadParcelable<myseq>());
-                if (!keyInfo) {
+                std::unique_ptr<myseq> key(data.ReadParcelable<myseq>());
+                if (!key) {
                     return ERR_INVALID_DATA;
                 }
-                myseq key(*keyInfo);
 
-                std::unique_ptr<myseq> valueInfo(data.ReadParcelable<myseq>());
-                if (!valueInfo) {
+                std::unique_ptr<myseq> value(data.ReadParcelable<myseq>());
+                if (!value) {
                     return ERR_INVALID_DATA;
                 }
-                myseq value(*valueInfo);
 
                 inoutParam[key] = value;
             }

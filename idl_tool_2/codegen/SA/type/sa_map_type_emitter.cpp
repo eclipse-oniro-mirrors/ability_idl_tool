@@ -63,12 +63,12 @@ void SaMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
 {
     sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(MAP_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat(
+        sb.Append(prefix).Append(TAB).AppendFormat(
             "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
     }
-    sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n", name.c_str(), name.c_str());
     keyEmitter_->EmitCppWriteVar(parcelName, "(it->first)", sb, prefix + TAB);
@@ -98,8 +98,8 @@ void SaMapTypeEmitter::EmitRustReadVar(const std::string &result, const std::str
     sb.Append(prefix).Append("for i in 0..len {\n");
     StringBuilder k;
     StringBuilder v;
-    k.Append(name).Append('k');
-    v.Append(name).Append('v');
+    k.Append(name).Append("k");
+    v.Append(name).Append("v");
     keyEmitter_->EmitRustReadVar(result, k.ToString(), sb, prefix + "    ");
     valueEmitter_->EmitRustReadVar(result, v.ToString(), sb, prefix + "    ");
     sb.Append(prefix + "    ").AppendFormat("%s.insert(%s, %s);\n", name.c_str(), k.ToString().c_str(),
@@ -135,7 +135,7 @@ void SaMapTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std::s
     sb.Append(prefix).AppendFormat("for (let i = 0; i < %sSize; ++i) {\n", name.c_str());
     keyEmitter_->EmitTsReadVar(parcelName, "key", sb, prefix + TAB, TypeMode::PARAM_IN);
     valueEmitter_->EmitTsReadVar(parcelName, "value", sb, prefix + TAB, TypeMode::PARAM_IN);
-    sb.Append(prefix + TAB).AppendFormat("%s.set(key, value);\n", name.c_str());
+    sb.Append(prefix).Append(TAB).AppendFormat("%s.set(key, value);\n", name.c_str());
     sb.Append(prefix).Append("}\n");
 }
 } // namespace Idl

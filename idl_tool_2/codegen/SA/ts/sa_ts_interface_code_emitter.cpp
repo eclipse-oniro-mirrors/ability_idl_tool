@@ -51,27 +51,28 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 
     EmitLicense(sb);
     EmitInterfaceSelfDefinedTypeImports(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceDefinition(sb);
-    sb.Append('\n');
+    sb.Append("\n");
 
     std::string data = sb.ToString();
     file.WriteData(data.c_str(), data.size());
     file.Flush();
     file.Close();
+    return;
 }
 
 void SaTsInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb) const
 {
     sb.AppendFormat("export default interface %s {\n", interface_->GetName().c_str());
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethod(method, sb, TAB);
     }
     sb.Append("}\n");
 
-    for (size_t i = 0; i < methodNumber; i++) {
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethodCallback(method, sb);
     }

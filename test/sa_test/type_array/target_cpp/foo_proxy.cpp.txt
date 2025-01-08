@@ -98,7 +98,7 @@ ErrCode FooProxy::bool_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i1 = 0; i1 < outParamSize; ++i1) {
-        bool value1 = reply.ReadInt32() == 1;
+        bool value1 = reply.ReadInt32() == 1 ? true : false;
         outParam.push_back(value1);
     }
     int32_t inoutParamSize = reply.ReadInt32();
@@ -106,7 +106,7 @@ ErrCode FooProxy::bool_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i2 = 0; i2 < inoutParamSize; ++i2) {
-        bool value2 = reply.ReadInt32() == 1;
+        bool value2 = reply.ReadInt32() == 1 ? true : false;
         inoutParam.push_back(value2);
     }
     int32_t funcResultSize = reply.ReadInt32();
@@ -114,7 +114,7 @@ ErrCode FooProxy::bool_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i3 = 0; i3 < funcResultSize; ++i3) {
-        bool value3 = reply.ReadInt32() == 1;
+        bool value3 = reply.ReadInt32() == 1 ? true : false;
         funcResult.push_back(value3);
     }
     return ERR_OK;
@@ -173,7 +173,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i4 = 0; i4 < outParamSize; ++i4) {
-        auto value4 = static_cast<int8_t>(reply.ReadInt32());
+        int8_t value4 = (int8_t)reply.ReadInt32();
         outParam.push_back(value4);
     }
     int32_t inoutParamSize = reply.ReadInt32();
@@ -181,7 +181,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i5 = 0; i5 < inoutParamSize; ++i5) {
-        auto value5 = static_cast<int8_t>(reply.ReadInt32());
+        int8_t value5 = (int8_t)reply.ReadInt32();
         inoutParam.push_back(value5);
     }
     int32_t funcResultSize = reply.ReadInt32();
@@ -189,7 +189,7 @@ ErrCode FooProxy::byte_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i6 = 0; i6 < funcResultSize; ++i6) {
-        auto value6 = static_cast<int8_t>(reply.ReadInt32());
+        int8_t value6 = (int8_t)reply.ReadInt32();
         funcResult.push_back(value6);
     }
     return ERR_OK;
@@ -248,7 +248,7 @@ ErrCode FooProxy::short_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i7 = 0; i7 < outParamSize; ++i7) {
-        auto value7 = static_cast<short>(reply.ReadInt32());
+        short value7 = (short)reply.ReadInt32();
         outParam.push_back(value7);
     }
     int32_t inoutParamSize = reply.ReadInt32();
@@ -256,7 +256,7 @@ ErrCode FooProxy::short_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i8 = 0; i8 < inoutParamSize; ++i8) {
-        auto value8 = static_cast<short>(reply.ReadInt32());
+        short value8 = (short)reply.ReadInt32();
         inoutParam.push_back(value8);
     }
     int32_t funcResultSize = reply.ReadInt32();
@@ -264,7 +264,7 @@ ErrCode FooProxy::short_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i9 = 0; i9 < funcResultSize; ++i9) {
-        auto value9 = static_cast<short>(reply.ReadInt32());
+        short value9 = (short)reply.ReadInt32();
         funcResult.push_back(value9);
     }
     return ERR_OK;
@@ -646,10 +646,10 @@ ErrCode FooProxy::double_test_func(
 }
 
 ErrCode FooProxy::char_test_func(
-    const std::vector<char>& inParam,
-    std::vector<char>& outParam,
-    std::vector<char>& inoutParam,
-    std::vector<char>& funcResult)
+    const std::vector<zchar>& inParam,
+    std::vector<zchar>& outParam,
+    std::vector<zchar>& inoutParam,
+    std::vector<zchar>& funcResult)
 {
     MessageParcel data;
     MessageParcel reply;
@@ -698,7 +698,7 @@ ErrCode FooProxy::char_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i25 = 0; i25 < outParamSize; ++i25) {
-        char value25 = (char)reply.ReadInt32();
+        zchar value25 = (zchar)reply.ReadInt32();
         outParam.push_back(value25);
     }
     int32_t inoutParamSize = reply.ReadInt32();
@@ -706,7 +706,7 @@ ErrCode FooProxy::char_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i26 = 0; i26 < inoutParamSize; ++i26) {
-        char value26 = (char)reply.ReadInt32();
+        zchar value26 = (zchar)reply.ReadInt32();
         inoutParam.push_back(value26);
     }
     int32_t funcResultSize = reply.ReadInt32();
@@ -714,7 +714,7 @@ ErrCode FooProxy::char_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i27 = 0; i27 < funcResultSize; ++i27) {
-        char value27 = (char)reply.ReadInt32();
+        zchar value27 = (zchar)reply.ReadInt32();
         funcResult.push_back(value27);
     }
     return ERR_OK;
@@ -773,39 +773,36 @@ ErrCode FooProxy::seq_test_func(
         return ERR_INVALID_DATA;
     }
     for (int32_t i28 = 0; i28 < outParamSize; ++i28) {
-        std::unique_ptr<myseq> value28Info(reply.ReadParcelable<myseq>());
-        if (!value28Info) {
+        std::unique_ptr<myseq> value28(reply.ReadParcelable<myseq>());
+        if (!value28) {
             return ERR_INVALID_DATA;
         }
-        myseq value28(*value28Info);
 
-        outParam.push_back(value28);
+        outParam.push_back(*value28);
     }
     int32_t inoutParamSize = reply.ReadInt32();
     if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
     for (int32_t i29 = 0; i29 < inoutParamSize; ++i29) {
-        std::unique_ptr<myseq> value29Info(reply.ReadParcelable<myseq>());
-        if (!value29Info) {
+        std::unique_ptr<myseq> value29(reply.ReadParcelable<myseq>());
+        if (!value29) {
             return ERR_INVALID_DATA;
         }
-        myseq value29(*value29Info);
 
-        inoutParam.push_back(value29);
+        inoutParam.push_back(*value29);
     }
     int32_t funcResultSize = reply.ReadInt32();
     if (funcResultSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
     for (int32_t i30 = 0; i30 < funcResultSize; ++i30) {
-        std::unique_ptr<myseq> value30Info(reply.ReadParcelable<myseq>());
-        if (!value30Info) {
+        std::unique_ptr<myseq> value30(reply.ReadParcelable<myseq>());
+        if (!value30) {
             return ERR_INVALID_DATA;
         }
-        myseq value30(*value30Info);
 
-        funcResult.push_back(value30);
+        funcResult.push_back(*value30);
     }
     return ERR_OK;
 }

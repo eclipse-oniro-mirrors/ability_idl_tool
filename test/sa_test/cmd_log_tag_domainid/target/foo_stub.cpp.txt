@@ -41,9 +41,9 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_BOOL_TEST_FUNC: {
-            bool inParam = data.ReadInt32() == 1;
+            bool inParam = data.ReadInt32() == 1 ? true : false;
             bool outParam;
-            bool inoutParam = data.ReadInt32() == 1;
+            bool inoutParam = data.ReadInt32() == 1 ? true : false;
             bool result;
             ErrCode errCode = bool_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
@@ -67,9 +67,9 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_BYTE_TEST_FUNC: {
-            auto inParam = static_cast<int8_t>(data.ReadInt32());
+            int8_t inParam = (int8_t)data.ReadInt32();
             int8_t outParam;
-            auto inoutParam = static_cast<int8_t>(data.ReadInt32());
+            int8_t inoutParam = (int8_t)data.ReadInt32();
             int8_t result;
             ErrCode errCode = byte_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
@@ -93,9 +93,9 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_SHORT_TEST_FUNC: {
-            auto inParam = static_cast<short>(data.ReadInt32());
+            short inParam = (short)data.ReadInt32();
             short outParam;
-            auto inoutParam = static_cast<short>(data.ReadInt32());
+            short inoutParam = (short)data.ReadInt32();
             short result;
             ErrCode errCode = short_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
@@ -249,10 +249,10 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_CHAR_TEST_FUNC: {
-            char inParam = (char)data.ReadInt32();
-            char outParam;
-            char inoutParam = (char)data.ReadInt32();
-            char result;
+            zchar inParam = (zchar)data.ReadInt32();
+            zchar outParam;
+            zchar inoutParam = (zchar)data.ReadInt32();
+            zchar result;
             ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 HiLog::Error(LABEL, "Write Int32 failed!");
@@ -275,23 +275,21 @@ int32_t FooStub::OnRemoteRequest(
             return ERR_NONE;
         }
         case IFooIpcCode::COMMAND_SEQ_TEST_FUNC: {
-            std::unique_ptr<myseq> inParamInfo(data.ReadParcelable<myseq>());
-            if (!inParamInfo) {
+            std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
+            if (!inParam) {
                 HiLog::Error(LABEL, "Read [myseq] failed!");
                 return ERR_INVALID_DATA;
             }
-            myseq inParam(*inParamInfo);
 
             myseq outParam;
-            std::unique_ptr<myseq> inoutParamInfo(data.ReadParcelable<myseq>());
-            if (!inoutParamInfo) {
+            std::unique_ptr<myseq> inoutParam(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
                 HiLog::Error(LABEL, "Read [myseq] failed!");
                 return ERR_INVALID_DATA;
             }
-            myseq inoutParam(*inoutParamInfo);
 
-            myseq result;
-            ErrCode errCode = seq_test_func(inParam, outParam, inoutParam, result);
+            const myseq& result = nullptr;
+            ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 HiLog::Error(LABEL, "Write Int32 failed!");
                 return ERR_INVALID_VALUE;

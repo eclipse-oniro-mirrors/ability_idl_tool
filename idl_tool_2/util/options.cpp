@@ -15,12 +15,16 @@
 
 #include "util/options.h"
 
-#include <map>
-#include <cstdint>
+#include <climits>
 #include <cstdio>
+#include <cstring>
 #include <dirent.h>
 #include <getopt.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+#include <map>
+
 #include "util/common.h"
 #include "util/file.h"
 #include "util/logger.h"
@@ -64,7 +68,7 @@ bool Options::Parse(int argc, char *argv[])
     int op = 0;
     int optIndex = 0;
 
-    if (argc < 0 || argc > UINT16_MAX) {
+    if (argc < INT_MIN || argc > INT_MAX) {
         Logger::E(TAG, "argc out of range");
         return false;
     }
@@ -87,7 +91,7 @@ bool Options::Parse(int argc, char *argv[])
     return ret ? CheckOptions() : ret;
 }
 
-bool Options::ParseSingle(int option, const std::string& optVal)
+bool Options::ParseSingle(int option, std::string optVal)
 {
     bool ret = true;
     switch (option) {
@@ -131,7 +135,7 @@ bool Options::ParseSingle(int option, const std::string& optVal)
     return ret;
 }
 
-bool Options::ParseOptionWithValue(int option, const std::string& optVal)
+bool Options::ParseOptionWithValue(int option, std::string optVal)
 {
     bool ret = true;
     StringBuilder errors;
@@ -259,6 +263,7 @@ void Options::AddSources(const std::string &sourceFile)
 
     if (sourceFiles.insert(realPath).second == false) {
         Logger::E(TAG, "this idl file has been add:%s", sourceFile.c_str());
+        return;
     }
 }
 
@@ -274,7 +279,7 @@ void Options::AddSourcesByDir(const std::string &dir)
 
 bool Options::AddPackagePath(const std::string &packagePath)
 {
-    size_t index = packagePath.find(':');
+    size_t index = packagePath.find(":");
     if (index == std::string::npos || index == packagePath.size() - 1) {
         Logger::E(TAG, "invalid option parameters '%s'.", packagePath.c_str());
         return false;
@@ -442,7 +447,8 @@ void Options::SetHdiDefaultOption()
     if (genMode == GenMode::INIT) {
         genMode = GenMode::IPC;
     }
-    }
+    return;
+}
 
 bool Options::DoSupportHdiType()
 {
@@ -508,6 +514,7 @@ void Options::SetSmDefaultOption()
 {
     systemLevel = SystemLevel::INIT;
     genMode = GenMode::INIT;
+    return;
 }
 
 bool Options::CheckSmOptions()
@@ -596,7 +603,13 @@ bool Options::DoLogOn() const
 bool Options::DoLegalLog() const
 {
     if (genLanguage == Language::CPP) {
-        return domainId.empty() == logTag.empty();
+        if (!domainId.empty() && !logTag.empty()) {
+            return true;
+        } else if (domainId.empty() && logTag.empty()) {
+            return true;
+        } else {
+            return false;
+        }
     }
     return true;
 }
@@ -609,10 +622,11 @@ bool Options::HasErrors() const
 void Options::ShowErrors() const
 {
     std::vector<std::string> illegalOptionsVec = StringHelper::Split(illegalOptions, " ");
-    for (const auto &option : illegalOptionsVec) {
-        Logger::E(TAG, "The Option \"%s\" is illegal.", option.c_str());
+    for (size_t i = 0; i < illegalOptionsVec.size(); i++) {
+        Logger::E(TAG, "The Option \"%s\" is illegal.", illegalOptionsVec[i].c_str());
     }
     printf("Use \"-h, --help\" to show usage.\n");
+    return;
 }
 
 bool Options::HasWarning() const
@@ -735,8 +749,8 @@ std::string Options::GetSubPackage(const std::string &package) const
  */
 std::string Options::GetPackagePath(const std::string &package) const
 {
-    std::string rootPackage;
-    std::string rootPath;
+    std::string rootPackage = "";
+    std::string rootPath = "";
     const auto &packagePaths = GetPackagePathMap();
     for (const auto &packageRoot : packagePaths) {
         if (StringHelper::StartWith(package, packageRoot.first)) {
@@ -769,7 +783,7 @@ std::string Options::GetImportFilePath(const std::string &import, const std::str
     if (interfaceType == InterfaceType::SA && genLanguage == Language::CPP) {
         size_t index = curPath.rfind(SEPARATOR);
         if (index == std::string::npos || index == curPath.size() - 1) {
-            Logger::E(TAG, "current path:%s, is errno", curPath.c_str());
+            Logger::E(TAG, "currrent path:%s, is errno", curPath.c_str());
             return "";
         }
         std::string retPath = curPath.substr(0, index + 1);

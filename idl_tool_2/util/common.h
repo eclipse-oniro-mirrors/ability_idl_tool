@@ -21,7 +21,7 @@ namespace Idl {
     constexpr const char *TAB = "    ";
     constexpr const char *TAG = "IDL-GEN";
 
-#ifndef _WIN32
+#ifndef __MINGW32__
     constexpr char SEPARATOR = '/';
 #else
     constexpr char SEPARATOR = '\\';

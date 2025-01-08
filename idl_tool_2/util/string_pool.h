@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_IDL_STRING_POOL_H
-#define OHOS_IDL_STRING_POOL_H
+#ifndef OHOS_IDL_STRINGPOOL_H
+#define OHOS_IDL_STRINGPOOL_H
 
 #include <unordered_map>
 #include <string>
@@ -34,12 +34,12 @@ public:
 
     ptrdiff_t GetOffset(const std::string& string);
 
-    size_t GetSize() const
+    size_t GetSize()
     {
         return dataOffset_;
     }
 
-    uint8_t* GetData() const
+    uint8_t* GetData()
     {
         return data_;
     }
@@ -57,4 +57,4 @@ private:
 };
 }
 }
-#endif // OHOS_IDL_STRING_POOL_H
+#endif // OHOS_IDL_STRINGPOOL_H

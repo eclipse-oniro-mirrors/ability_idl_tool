@@ -54,11 +54,10 @@ public:
     virtual void EmitTsReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix, TypeMode mode = TypeMode::NO_MODE) const;
 
-    static void SetLogOn(bool logOn);
+    static bool logOn_;
 
 protected:
     std::string typeName_;
-    static bool logOn_;
 };
 } // namespace Idl
 } // namespace OHOS

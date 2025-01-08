@@ -14,6 +14,7 @@
  */
 
 #include "ast/ast_array_type.h"
+#include "util/options.h"
 
 namespace OHOS {
 namespace Idl {
