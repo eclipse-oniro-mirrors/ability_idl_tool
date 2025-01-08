@@ -61,16 +61,16 @@ void CppCustomTypesCodeEmitter::EmitPassthroughCustomTypesHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, marcoName);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitPassthroughHeaderFileInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBeginNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUsingNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCustomTypeDecls(sb);
     EmitEndNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, marcoName);
 
     std::string data = sb.ToString();
@@ -102,23 +102,23 @@ void CppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, marcoName);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitHeaderFileInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceBuffSizeMacro(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitForwardDeclaration(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBeginNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUsingNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCustomTypeDecls(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCustomTypeFuncDecl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitEndNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, marcoName);
 
     std::string data = sb.ToString();
@@ -156,10 +156,10 @@ void CppCustomTypesCodeEmitter::EmitUsingNamespace(StringBuilder &sb)
 void CppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefinition(i));
-        sb.Append(typeEmitter->EmitCppTypeDecl()).Append('\n');
+        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        sb.Append(typeEmitter->EmitCppTypeDecl()).Append("\n");
         if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
 }
@@ -167,11 +167,11 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 void CppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             EmitCustomTypeMarshallFuncDecl(sb, type);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-                sb.Append('\n');
+                sb.Append("\n");
             }
         }
     }
@@ -196,15 +196,15 @@ void CppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
 
     EmitLicense(sb);
     EmitSourceFileInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBeginNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, true);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, false);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCustomTypeDataProcess(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitEndNamespace(sb);
 
     std::string data = sb.ToString();
@@ -235,13 +235,13 @@ void CppCustomTypesCodeEmitter::GetSourceOtherLibInclusions(HeaderFile::HeaderFi
 void CppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
             EmitCustomTypeMarshallingImpl(sb, structType);
             EmitCustomTypeUnmarshallingImpl(sb, structType);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
-                sb.Append('\n');
+                sb.Append("\n");
             }
         }
     }
@@ -268,7 +268,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
             std::string name = StringHelper::Format("%s.%s", objName.c_str(), memberName.c_str());
             GetTypeEmitter(type->GetMemberType(i))->EmitCppMarshalling("data", name, sb, TAB);
             if (i + 1 < type->GetMemberNumber()) {
-                sb.Append('\n');
+                sb.Append("\n");
             }
         }
     }
@@ -304,7 +304,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
             std::string memberName = type->GetMemberName(i);
             std::string name = StringHelper::Format("%s.%s", objName.c_str(), memberName.c_str());
             if (i > 0) {
-                sb.Append('\n');
+                sb.Append("\n");
             }
 
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(memberType);

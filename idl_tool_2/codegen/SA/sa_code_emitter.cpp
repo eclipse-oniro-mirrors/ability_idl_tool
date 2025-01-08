@@ -74,7 +74,6 @@ bool SACodeEmitter::OutPut(const AutoPtr<AST> &ast, const std::string &targetDir
 
 bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDirectory, GenMode mode)
 {
-    (void)mode;
     if ((ast == nullptr) || targetDirectory.empty()) {
         return false;
     }
@@ -82,7 +81,7 @@ bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDire
     CleanData();
 
     ast_ = ast;
-    for (const auto& interface : ast_->GetInterfaceDefs()) {
+    for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == false) {
             interface_ = interface;
             break;
@@ -119,7 +118,7 @@ void SACodeEmitter::CleanData()
     hitraceTag_ = options.GetGenerateHitraceTag();
     hitraceOn_ = options.DoHitraceState();
     logOn_ = options.DoLogOn();
-    SaTypeEmitter::SetLogOn(logOn_);
+    SaTypeEmitter::logOn_ = logOn_;
     ast_ = nullptr;
     interface_ = nullptr;
     directory_ = "";
@@ -135,7 +134,7 @@ void SACodeEmitter::CleanData()
 bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
 {
     directory_ = targetDirectory;
-#ifdef _WIN32
+#ifdef __MINGW32__
     if (targetDirectory.find(":\\") == std::string::npos) {
         char* cwd = getcwd(nullptr, 0);
         directory_ = StringHelper::Format("%s\\%s", cwd, targetDirectory.c_str());
@@ -153,7 +152,7 @@ bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
         return true;
     }
 
-#ifdef _WIN32
+#ifdef __MINGW32__
     if (mkdir(directory_.c_str()) != 0) {
 #else
     if (mkdir(directory_.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
@@ -165,12 +164,12 @@ bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
     return true;
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaTypeEmitter> typeEmitter;
     auto basicTypePair = basicEmitters_.find(astType->GetTypeKind());
     if (basicTypePair != basicEmitters_.end()) {
-        typeEmitter = basicTypePair->second.Get();
+        typeEmitter = (static_cast<SaTypeEmitter*>(basicTypePair->second.Get()));
     }
 
     if (typeEmitter == nullptr) {
@@ -187,7 +186,7 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(const AutoPtr<ASTType>& ast
     return typeEmitter;
 }
 
-std::string SACodeEmitter::GetNameWithNamespace(const AutoPtr<ASTNamespace>& space, const std::string& name) const
+std::string SACodeEmitter::GetNameWithNamespace(AutoPtr<ASTNamespace> space, const std::string name) const
 {
     std::vector<std::string> namespaceVec = StringHelper::Split(space->ToString(), ".");
     std::vector<std::string> result;
@@ -213,7 +212,7 @@ std::string SACodeEmitter::GetNameWithNamespace(const AutoPtr<ASTNamespace>& spa
     return sb.ToString();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) const
 {
     switch (astType->GetTypeKind()) {
         case TypeKind::TYPE_MAP:
@@ -233,18 +232,18 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(const AutoPtr<ASTType>& ast
         case TypeKind::TYPE_INTERFACE:
             return new SaInterfaceTypeEmitter();
         default: {
-            // type doesn't match, new an empty emitter
+            // type not match, new a empty emitter
             AutoPtr<SaTypeEmitter> typeEmitter = new SaTypeEmitter();
             return typeEmitter;
         }
     }
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewMapTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewMapTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaMapTypeEmitter> mapTypeEmitter = new SaMapTypeEmitter();
-    AutoPtr<ASTType> keyType = dynamic_cast<ASTMapType*>(astType.Get())->GetKeyType();
-    AutoPtr<ASTType> valueType = dynamic_cast<ASTMapType*>(astType.Get())->GetValueType();
+    AutoPtr<ASTType> keyType = (static_cast<ASTMapType*>(astType.Get()))->GetKeyType();
+    AutoPtr<ASTType> valueType = (static_cast<ASTMapType*>(astType.Get()))->GetValueType();
     AutoPtr<SaTypeEmitter> keyEmitter = GetTypeEmitter(keyType);
     AutoPtr<SaTypeEmitter> valueEmitter = GetTypeEmitter(valueType);
     mapTypeEmitter->SetKeyEmitter(keyEmitter);
@@ -252,56 +251,56 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewMapTypeEmitter(const AutoPtr<ASTType>& 
     return mapTypeEmitter.Get();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewArrayTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewArrayTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaArrayTypeEmitter> arrayTypeEmitter = new SaArrayTypeEmitter();
-    AutoPtr<ASTType> elemType = dynamic_cast<ASTArrayType*>(astType.Get())->GetElementType();
+    AutoPtr<ASTType> elemType = (static_cast<ASTArrayType*>(astType.Get()))->GetElementType();
     AutoPtr<SaTypeEmitter> elemEmitter = GetTypeEmitter(elemType);
     arrayTypeEmitter->SetElementEmitter(elemEmitter);
     return arrayTypeEmitter.Get();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewListTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewListTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaListTypeEmitter> listTypeEmitter = new SaListTypeEmitter();
-    AutoPtr<ASTType> elemType = dynamic_cast<ASTListType*>(astType.Get())->GetElementType();
+    AutoPtr<ASTType> elemType = (static_cast<ASTListType*>(astType.Get()))->GetElementType();
     AutoPtr<SaTypeEmitter> elemEmitter = GetTypeEmitter(elemType);
     listTypeEmitter->SetElementEmitter(elemEmitter);
     return listTypeEmitter.Get();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewEnumTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewEnumTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaEnumTypeEmitter> enumTypeEmitter = new SaEnumTypeEmitter();
-    AutoPtr<ASTEnumType> enumType = dynamic_cast<ASTEnumType*>(astType.Get());
+    AutoPtr<ASTEnumType> enumType = static_cast<ASTEnumType*>(astType.Get());
     if (enumType->GetBaseType() != nullptr) {
         AutoPtr<SaTypeEmitter> baseTypeEmitter = GetTypeEmitter(enumType->GetBaseType());
         enumTypeEmitter->SetBaseTypeName(baseTypeEmitter->EmitCppType());
     }
-    for (const auto& member : enumType->GetMembers()) {
-        if (member->GetExprValue() == nullptr) {
-            enumTypeEmitter->AddMember(new SaEnumValueEmitter(member->GetName(), std::string("")));
+    for (auto it : enumType->GetMembers()) {
+        if (it->GetExprValue() == nullptr) {
+            enumTypeEmitter->AddMember(new SaEnumValueEmitter(it->GetName(), std::string("")));
         } else {
-            enumTypeEmitter->AddMember(new SaEnumValueEmitter(member->GetName(), member->GetExprValue()->EmitCode()));
+            enumTypeEmitter->AddMember(new SaEnumValueEmitter(it->GetName(), it->GetExprValue()->EmitCode()));
         }
     }
     return enumTypeEmitter.Get();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewStructTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewStructTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaStructTypeEmitter> structTypeEmitter = new SaStructTypeEmitter();
-    AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType*>(astType.Get());
+    AutoPtr<ASTStructType> structType = (static_cast<ASTStructType*>(astType.Get()));
     for (auto it : structType->GetMembers()) {
         structTypeEmitter->AddMember(std::get<0>(it), GetTypeEmitter(std::get<1>(it)));
     }
     return structTypeEmitter.Get();
 }
 
-AutoPtr<SaTypeEmitter> SACodeEmitter::NewUnionTypeEmitter(const AutoPtr<ASTType>& astType) const
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewUnionTypeEmitter(AutoPtr<ASTType> astType) const
 {
     AutoPtr<SaUnionTypeEmitter> unionTypeEmitter = new SaUnionTypeEmitter();
-    AutoPtr<ASTUnionType> unionType = dynamic_cast<ASTUnionType*>(astType.Get());
+    AutoPtr<ASTUnionType> unionType = (static_cast<ASTUnionType*>(astType.Get()));
     for (size_t i = 0; i < unionType->GetMemberNumber(); i++) {
         unionTypeEmitter->AddMember(unionType->GetMemberName(i), GetTypeEmitter(unionType->GetMemberType(i)));
     }

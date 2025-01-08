@@ -29,9 +29,9 @@
 namespace OHOS {
 namespace Idl {
 SACodeGenerator::GeneratePolicies SACodeGenerator::policies_ = {
-    {Language::CPP, GenCppCode},
-    {Language::RUST, GenRustCode},
-    {Language::TS, GenTsCode}
+    {Language::CPP, SACodeGenerator::GenCppCode},
+    {Language::RUST, SACodeGenerator::GenRustCode},
+    {Language::TS, SACodeGenerator::GenTsCode}
 };
 
 CodeEmitMap SACodeGenerator::cppCodeEmitters_ = {
@@ -66,7 +66,7 @@ bool SACodeGenerator::DoGenerate(const StrAstMap &allAst)
 {
     GenCodeInit();
 
-    auto genCodeFunc = GetCodeGenPolicy();
+    auto genCodeFunc = GetCodeGenPoilcy();
     if (!genCodeFunc) {
         return false;
     }
@@ -100,7 +100,7 @@ bool SACodeGenerator::DoGenerate(const StrAstMap &allAst)
     return true;
 }
 
-CodeGenFunc SACodeGenerator::GetCodeGenPolicy()
+CodeGenFunc SACodeGenerator::GetCodeGenPoilcy()
 {
     auto languageIter = policies_.find(Options::GetInstance().GetLanguage());
     if (languageIter == policies_.end()) {
@@ -130,7 +130,7 @@ void SACodeGenerator::GenCppPath(const AutoPtr<AST> &ast, const std::string &out
         }
         std::string relativePath = outDir + relaPath + SEPARATOR + importPath.substr(0, index);
 
-#ifdef _WIN32
+#ifdef __MINGW32__
         std::replace(relativePath.begin(), relativePath.end(), '/', '\\');
 #endif
 
@@ -146,7 +146,7 @@ void SACodeGenerator::GenCppPath(const AutoPtr<AST> &ast, const std::string &out
 
 void SACodeGenerator::GenCppCode(const AutoPtr<AST> &ast, const std::string &outDir)
 {
-    auto mode = GenMode::IPC;
+    GenMode mode = GenMode::IPC;
     switch (ast->GetASTFileType()) {
         case ASTFileType::AST_TYPES: {
             cppCodeEmitters_["types"]->OutPut(ast, genPath_[ast->GetIdlFile()], mode);
@@ -172,6 +172,7 @@ void SACodeGenerator::GenCppCode(const AutoPtr<AST> &ast, const std::string &out
 void SACodeGenerator::GenRustCode(const AutoPtr<AST> &ast, const std::string &outDir)
 {
     rustCodeEmitters_["interface"]->OutPut(ast, outDir, GenMode::IPC);
+    return;
 }
 
 void SACodeGenerator::GenTsCode(const AutoPtr<AST> &ast, const std::string &outDir)
@@ -179,6 +180,7 @@ void SACodeGenerator::GenTsCode(const AutoPtr<AST> &ast, const std::string &outD
     tsCodeEmitters_["interface"]->OutPut(ast, outDir, GenMode::IPC);
     tsCodeEmitters_["proxy"]->OutPut(ast, outDir, GenMode::IPC);
     tsCodeEmitters_["stub"]->OutPut(ast, outDir, GenMode::IPC);
+    return;
 }
 
 void SACodeGenerator::GeneratorInit()

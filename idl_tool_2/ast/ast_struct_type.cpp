@@ -33,12 +33,12 @@ void ASTStructType::SetParentType(const AutoPtr<ASTStructType> &parentType)
 
 void ASTStructType::AddMember(const AutoPtr<ASTType> &typeName, std::string name)
 {
-    for (auto member : members_) {
-        if (std::get<0>(member) == name) {
+    for (auto it : members_) {
+        if (std::get<0>(it) == name) {
             return;
         }
     }
-    members_.emplace_back(name, typeName);
+    members_.push_back(std::make_tuple(name, typeName));
 
     if (!typeName->IsPod()) {
         isPod_ = false;
@@ -64,10 +64,10 @@ std::string ASTStructType::Dump(const std::string &prefix)
     } else {
         sb.AppendFormat("struct %s : %s {\n", name_.c_str(), parentType_->ToString().c_str());
     }
-    if (!members_.empty()) {
-        for (auto member : members_) {
+    if (members_.size() > 0) {
+        for (auto it : members_) {
             sb.Append(prefix + "  ");
-            sb.AppendFormat("%s %s;\n", std::get<1>(member)->ToString().c_str(), std::get<0>(member).c_str());
+            sb.AppendFormat("%s %s;\n", std::get<1>(it)->ToString().c_str(), std::get<0>(it).c_str());
         }
     }
     sb.Append(prefix).Append("};\n");

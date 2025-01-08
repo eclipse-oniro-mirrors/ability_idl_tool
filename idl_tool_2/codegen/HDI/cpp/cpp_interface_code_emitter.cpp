@@ -57,27 +57,27 @@ void CppInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, interfaceFullName_);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceInclusions(sb);
     if (!Options::GetInstance().DoPassthrough()) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitInterfaceBuffSizeMacro(sb);
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBeginNamespace(sb);
     EmitUsingNamespace(sb);
     if (!Options::GetInstance().DoPassthrough()) {
-        sb.Append('\n');
+        sb.Append("\n");
         if (interface_->GetExtendsInterface() == nullptr) {
             EmitInterfaceMethodCommands(sb, "");
         } else {
             EmitInterfaceMethodCommandsWithExtends(sb, "");
         }
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceDefinition(sb);
     EmitEndNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, interfaceFullName_);
 
     std::string data = sb.ToString();
@@ -124,19 +124,19 @@ void CppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
     }
     sb.Append("public:\n");
     EmitInterfaceDescriptor(sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceDestruction(sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     if (!interface_->IsSerializable()) {
         EmitGetMethodDecl(sb, TAB);
-        sb.Append('\n');
+        sb.Append("\n");
     }
     if (interface_->GetExtendsInterface() != nullptr) {
         EmitCastFromDecl(sb, TAB);
-        sb.Append('\n');
+        sb.Append("\n");
     }
     EmitInterfaceMethodsDecl(sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitGetDescMethod(sb, TAB);
     sb.Append("};\n");
 }
@@ -149,8 +149,8 @@ void CppInterfaceCodeEmitter::EmitGetDescMethod(StringBuilder &sb, const std::st
     } else {
         sb.Append(prefix).Append("const std::u16string GetDesc() override");
     }
-    sb.Append('\n');
-    sb.Append(prefix).Append('{').Append('\n');
+    sb.Append("\n");
+    sb.Append(prefix).Append("{").Append("\n");
     sb.Append(prefix + TAB).Append("return metaDescriptor_;\n");
     sb.Append(prefix).Append("}\n");
 }
@@ -191,12 +191,12 @@ void CppInterfaceCodeEmitter::EmitInterfaceMethodsDecl(StringBuilder &sb, const 
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitInterfaceMethodDecl(method, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     EmitInterfaceGetVersionMethod(sb, prefix);
     if (interface_->GetExtendsInterface() == nullptr) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitInterfaceIsProxyMethod(sb, prefix);
     }
 }
@@ -225,7 +225,7 @@ void CppInterfaceCodeEmitter::EmitInterfaceMethodDecl(
 
         paramStr.Append(") = 0;");
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append('\n');
+        sb.Append("\n");
     }
 }
 
@@ -244,11 +244,11 @@ void CppInterfaceCodeEmitter::EmitInterfaceGetVersionMethod(StringBuilder &sb, c
             sb.Append(", ");
         }
     }
-    sb.Append(')');
+    sb.Append(")");
     if (interface_->GetExtendsInterface() != nullptr) {
         sb.Append(" override");
     }
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append(prefix).Append("{\n");
 
     AutoPtr<ASTParameter> majorParam = method->GetParameter(0);

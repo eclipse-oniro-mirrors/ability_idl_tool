@@ -42,4 +42,4 @@ private:
 } // namespace Idl
 } // namespace OHOS
 
-#endif // OHOS_IDL_SA_TS_INTERFACE_CODE_EMITTER_H
+#endif // OHOS_IDL_CPP_INTERFACE_CODE_EMITTER_H

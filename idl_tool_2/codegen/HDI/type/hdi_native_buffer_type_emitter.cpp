@@ -70,7 +70,7 @@ void HdiNativeBufferTypeEmitter::EmitCProxyReadVar(const std::string &name, bool
 {
     sb.Append(prefix);
     if (!isInnerType) {
-        sb.Append('*');
+        sb.Append("*");
     }
     sb.AppendFormat("%s = HdfSbufReadNativeBufferHandle(%s);\n", name.c_str(), replyParcelName_.c_str());
     sb.Append(prefix).AppendFormat("if (%s == NULL) {\n", name.c_str());

@@ -15,6 +15,8 @@
 
 #include "util/file.h"
 
+#include <climits>
+#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
 #include <functional>
@@ -24,6 +26,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include "util/common.h"
 #include "util/logger.h"
 #include "util/string_helper.h"
@@ -137,7 +140,7 @@ size_t File::Read()
         return -1;
     }
 
-    std::fill_n(buffer_, BUFFER_SIZE, 0);
+    std::fill(buffer_, buffer_ + BUFFER_SIZE, 0);
     size_t count = fread(buffer_, 1, BUFFER_SIZE - 1, fd_);
     if (count < BUFFER_SIZE - 1) {
         isError_ = ferror(fd_) != 0;
@@ -146,7 +149,7 @@ size_t File::Read()
     size_ = count;
     position_ = 0;
     if ((count == 0) || (count >= BUFFER_SIZE)) {
-        return 0;
+        return -1;
     }
     return count;
 }
@@ -237,7 +240,7 @@ bool File::CreatePartDir(const std::string &partPath)
             return false;
         }
 
-#ifndef _WIN32
+#ifndef __MINGW32__
         if (mkdir(partPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
 #else
         if (mkdir(partPath.c_str()) < 0) {
@@ -252,7 +255,7 @@ bool File::CreatePartDir(const std::string &partPath)
 
 std::string File::AdapterPath(const std::string &path)
 {
-#ifndef _WIN32
+#ifndef __MINGW32__
     std::string newPath = StringHelper::Replace(path, '\\', '/');
 #else
     std::string newPath = StringHelper::Replace(path, '/', '\\');
@@ -261,7 +264,8 @@ std::string File::AdapterPath(const std::string &path)
     // "foo/v1_0//ifoo.h" -> "foo/v1_0/ifoo.h"
     StringBuilder adapterPath;
     bool hasSep = false;
-    for (const char &c : newPath) {
+    for (size_t i = 0; i < newPath.size(); i++) {
+        char c = newPath[i];
         if (c == SEPARATOR) {
             if (hasSep) {
                 continue;
@@ -291,7 +295,7 @@ std::string File::RealPath(const std::string &path)
     }
 
     char realPath[PATH_MAX + 1];
-#ifdef _WIN32
+#ifdef __MINGW32__
     char *absPath = _fullpath(realPath, path.c_str(), PATH_MAX);
 #else
     char *absPath = realpath(path.c_str(), realPath);
@@ -319,7 +323,7 @@ std::string File::CanonicalPath(const std::string &path)
     for (const auto &s : pathStack) {
         normalizedPath += std::string(1, SEPARATOR) + s;
     }
-#ifdef _WIN32
+#ifdef __MINGW32__
     normalizedPath = normalizedPath.substr(1);
 #endif
 
@@ -332,7 +336,7 @@ std::string File::AbsolutePath(const std::string &path)
         return path;
     }
     char buffer[PATH_MAX + 1];
-#ifdef _WIN32
+#ifdef __MINGW32__
     if (_getcwd(buffer, sizeof(buffer)) != nullptr) {
 #else
     if (getcwd(buffer, sizeof(buffer)) != nullptr) {
@@ -405,7 +409,7 @@ bool File::CheckValid(const std::string &path)
 std::set<std::string> File::FindFiles(const std::string &rootDir)
 {
     if (rootDir.empty()) {
-        return {};
+        return std::set<std::string>();
     }
 
     std::set<std::string> files;
@@ -425,7 +429,7 @@ std::set<std::string> File::FindFiles(const std::string &rootDir)
             if (strcmp(dirInfo->d_name, ".") == 0 || strcmp(dirInfo->d_name, "..") == 0) {
                 continue;
             }
-#ifndef _WIN32
+#ifndef __MINGW32__
             if (dirInfo->d_type == DT_REG && StringHelper::EndWith(dirInfo->d_name, ".idl")) {
                 std::string filePath = dirPath + dirInfo->d_name;
                 files.insert(filePath);

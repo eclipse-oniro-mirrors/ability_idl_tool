@@ -52,11 +52,11 @@ void CppServiceStubCodeEmitter::EmitStubHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, stubFullName_);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubHeaderInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubDecl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, stubFullName_);
 
     std::string data = sb.ToString();
@@ -93,7 +93,7 @@ void CppServiceStubCodeEmitter::GetHeaderOtherLibInclusions(HeaderFile::HeaderFi
 void CppServiceStubCodeEmitter::EmitStubDecl(StringBuilder &sb)
 {
     EmitBeginNamespace(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubUsingNamespace(sb);
     sb.AppendFormat("class %s : public IPCObjectStub {\n", stubName_.c_str());
     EmitStubBody(sb, TAB);
@@ -110,11 +110,11 @@ void CppServiceStubCodeEmitter::EmitStubBody(StringBuilder &sb, const std::strin
 {
     sb.Append("public:\n");
     EmitStubConstructorDecl(sb, prefix);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubOnRequestDecl(sb, prefix);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubMethodDecls(sb, prefix);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubPrivateData(sb, prefix);
 }
 
@@ -134,11 +134,11 @@ void CppServiceStubCodeEmitter::EmitStubMethodDecls(StringBuilder &sb, const std
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitStubStaticMethodDecl(method, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
     if (interface_->GetExtendsInterface() == nullptr) {
         EmitStubStaticMethodDecl(interface_->GetVersionMethod(), sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     sb.Append("private:\n");
@@ -146,12 +146,12 @@ void CppServiceStubCodeEmitter::EmitStubMethodDecls(StringBuilder &sb, const std
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitStubMethodDecl(method, sb, prefix);
-            sb.Append('\n');
+            sb.Append("\n");
         }
         interface = interface->GetExtendsInterface();
     }
     EmitStubMethodDecl(interface_->GetVersionMethod(), sb, prefix);
-    sb.Append('\n');
+    sb.Append("\n");
 }
 
 void CppServiceStubCodeEmitter::EmitStubMethodDecl(
@@ -189,20 +189,20 @@ void CppServiceStubCodeEmitter::EmitStubSourceFile()
 
     EmitLicense(sb);
     EmitStubSourceInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(stubName_));
-    sb.Append('\n');
+    sb.Append("\n");
     EmitBeginNamespace(sb);
     EmitUtilMethods(sb, true);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, false);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceGetMethodImpl(sb, "");
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubConstructorImpl(sb, "");
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubOnRequestMethodImpl(sb, "");
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubMethodImpls(sb, "");
     EmitEndNamespace(sb);
 
@@ -281,9 +281,9 @@ void CppServiceStubCodeEmitter::EmitInterfaceGetMethodImpl(StringBuilder &sb, co
 {
     if (!interface_->IsSerializable()) {
         EmitGetMethodImpl(sb, prefix);
-        sb.Append(prefix).Append('\n');
+        sb.Append(prefix).Append("\n");
         EmitGetInstanceMethodImpl(sb, prefix);
-        sb.Append(prefix).Append('\n');
+        sb.Append(prefix).Append("\n");
     }
 }
 
@@ -380,7 +380,7 @@ void CppServiceStubCodeEmitter::EmitStubMethodImpls(StringBuilder &sb, const std
     while (interface != nullptr) {
         for (const auto &method : interface->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
             EmitStubMethodImpl(interface, method, sb, prefix);
-            sb.Append('\n');
+            sb.Append("\n");
         }
         interface = interface->GetExtendsInterface();
         if (interface != nullptr) {
@@ -390,14 +390,15 @@ void CppServiceStubCodeEmitter::EmitStubMethodImpls(StringBuilder &sb, const std
     AutoPtr<ASTMethod> verMethod = interface_->GetVersionMethod();
     EmitStubMethodImpl(mataInterface, verMethod, sb, prefix);
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubStaticMethodImpl(method, sb, prefix);
     }
     if (interface_->GetExtendsInterface() == nullptr) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubStaticMethodImpl(verMethod, sb, prefix);
     }
-    }
+    return;
+}
 
 void CppServiceStubCodeEmitter::EmitStubMethodImpl(AutoPtr<ASTInterfaceType> interface,
     const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const
@@ -428,7 +429,7 @@ void CppServiceStubCodeEmitter::EmitStubStaticMethodImpl(
 
     // read interface token and check it
     EmitStubReadInterfaceToken(HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     EmitStubReadMemFlag(method, HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
 
@@ -436,22 +437,22 @@ void CppServiceStubCodeEmitter::EmitStubStaticMethodImpl(
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
             EmitReadMethodParameter(param, TypeMode::PARAM_IN, sb, prefix + TAB);
-            sb.Append('\n');
+            sb.Append("\n");
         } else {
             EmitLocalVariable(param, HdiTypeEmitter::dataParcelName_, sb, prefix + TAB);
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
 
     EmitStubCallMethod(method, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     if (!method->IsOneWay()) {
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
                 EmitWriteMethodParameter(param, HdiTypeEmitter::replyParcelName_, sb, prefix + TAB);
-                sb.Append('\n');
+                sb.Append("\n");
             }
         }
     }

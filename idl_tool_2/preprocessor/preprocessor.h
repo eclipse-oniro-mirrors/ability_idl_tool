@@ -59,7 +59,7 @@ public:
 private:
     static bool CheckAllFilesPath(const std::set<std::string> &sourceFiles);
 
-    static bool AnalyseImportInfo(const std::set<std::string> &sourceFiles, FileDetailMap &allFileDetails);
+    static bool AnalyseImportInfo(std::set<std::string> sourceFiles, FileDetailMap &allFileDetails);
 
     static bool ParseFileDetail(const std::string &sourceFile, FileDetail &info);
 
@@ -73,7 +73,7 @@ private:
     static bool CheckCircularReference(const FileDetailMap &allFileDetails,
         std::vector<FileDetail> &compileSourceFiles);
 
-    static void PrintCycleInfo(FileDetailMap &allFileDetails);
+    static void PrintCyclefInfo(FileDetailMap &allFileDetails);
 
     static void FindCycle(const std::string &curNode, FileDetailMap &allFiles, std::vector<std::string> &trace);
 

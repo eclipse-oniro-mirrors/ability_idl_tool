@@ -62,11 +62,11 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, interfaceFullName_);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     if (EmitInterfaceUsings(sb)) {
-        sb.Append('\n');
+        sb.Append("\n");
     }
     EmitInterfaceDefinition(sb);
     EmitTailMacro(sb, interfaceFullName_);
@@ -75,9 +75,10 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceHeaderFile()
     file.WriteData(data.c_str(), data.size());
     file.Flush();
     file.Close();
+    return;
 }
 
-void SaCppInterfaceCodeEmitter::EmitInterfaceInclusions(StringBuilder &sb) const
+void SaCppInterfaceCodeEmitter::EmitInterfaceInclusions(StringBuilder &sb)
 {
     HeaderFile::HeaderFileSet headerFiles;
 
@@ -97,6 +98,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceDBinderInclusions(HeaderFile::Heade
     if (logOn_) {
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, "hilog/log");
     }
+    return;
 }
 
 void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFile::HeaderFileSet &headerFiles) const
@@ -114,7 +116,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFil
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, fileName);
     }
 
-    for (const auto& interface : ast_->GetInterfaceDefs()) {
+    for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == false) {
             continue;
         }
@@ -122,6 +124,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFil
         fileName = FileName(filePath + interface->GetName());
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, fileName);
     }
+    return;
 }
 
 bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
@@ -145,7 +148,7 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
         ret = true;
     }
 
-    for (const auto& interface : ast_->GetInterfaceDefs()) {
+    for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == false) {
             continue;
         }
@@ -178,19 +181,19 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceBody(StringBuilder &sb, const std::
 {
     std::string nameWithoutPath = GetNamespace(interfaceFullName_);
     sb.Append(prefix).AppendFormat("DECLARE_INTERFACE_DESCRIPTOR(u\"%s\");\n", nameWithoutPath.c_str());
-    sb.Append('\n');
+    sb.Append("\n");
 
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethod(method, sb, prefix);
         if (i != methodNumber - 1) {
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
 }
 
-void SaCppInterfaceCodeEmitter::EmitInterfaceMethod(const AutoPtr<ASTMethod> &method, StringBuilder &sb,
+void SaCppInterfaceCodeEmitter::EmitInterfaceMethod(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
     sb.Append(prefix).AppendFormat("virtual ErrCode %s(", method->GetName().c_str());
@@ -202,7 +205,8 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceMemberVariables(StringBuilder &sb, 
 {
     sb.Append("protected:\n");
     if (!domainId_.empty() && !logTag_.empty()) {
-        sb.Append(prefix).AppendFormat("static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
+        sb.Append(prefix).AppendFormat(
+            "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
             domainId_.c_str(), logTag_.c_str());
     }
     sb.Append(prefix).Append("const int VECTOR_MAX_SIZE = 102400;\n");

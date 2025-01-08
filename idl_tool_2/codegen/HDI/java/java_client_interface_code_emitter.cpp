@@ -50,9 +50,9 @@ void JavaClientInterfaceCodeEmitter::EmitInterfaceFile()
     StringBuilder sb;
     EmitLicense(sb);
     EmitPackage(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceImports(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceDefinition(sb);
 
     std::string data = sb.ToString();
@@ -116,14 +116,14 @@ void JavaClientInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
 {
     sb.AppendFormat("public interface %s extends IRemoteBroker {\n", interface_->GetName().c_str());
     EmitInterfaceMethods(sb, TAB);
-    sb.Append('}');
+    sb.Append("}");
 }
 
 void JavaClientInterfaceCodeEmitter::EmitInterfaceMethods(StringBuilder &sb, const std::string &prefix) const
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitInterfaceMethod(method, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 }
 
@@ -145,7 +145,7 @@ void JavaClientInterfaceCodeEmitter::EmitInterfaceMethod(
 
         paramStr.Append(") throws RemoteException;");
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append('\n');
+        sb.Append("\n");
     }
 }
 } // namespace Idl

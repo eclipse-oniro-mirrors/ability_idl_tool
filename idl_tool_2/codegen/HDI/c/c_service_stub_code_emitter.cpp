@@ -59,19 +59,19 @@ void CServiceStubCodeEmitter::EmitServiceStubHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, stubFullName_);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitStubHeaderInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitHeadExternC(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitCbServiceStubDef(sb);
     if (mode_ == GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitCbServiceStubMethodsDcl(sb);
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailExternC(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, stubFullName_);
 
     std::string data = sb.ToString();
@@ -125,38 +125,38 @@ void CServiceStubCodeEmitter::EmitServiceStubSourceFile()
 
     EmitLicense(sb);
     EmitStubSourceInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(stubName_));
     if (mode_ != GenMode::KERNEL && !interface_->IsSerializable()) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitExternalMethodImpl(sb);
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, true);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitUtilMethods(sb, false);
     EmitServiceStubMethodImpls(sb, "");
 
     if (mode_ == GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitKernelStubOnRequestMethodImpl(sb, "");
-        sb.Append('\n');
+        sb.Append("\n");
         EmitKernelStubConstruct(sb);
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubOnRequestMethodImpl(sb, "");
         if (!interface_->IsSerializable()) {
-            sb.Append('\n');
+            sb.Append("\n");
             EmitStubRemoteDispatcher(sb);
         }
 
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubNewInstance(sb);
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubReleaseMethod(sb);
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubConstructor(sb);
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubRegAndUnreg(sb);
     }
 
@@ -207,11 +207,11 @@ void CServiceStubCodeEmitter::GetSourceOtherLibInclusions(HeaderFile::HeaderFile
 void CServiceStubCodeEmitter::EmitExternalMethodImpl(StringBuilder &sb)
 {
     EmitGetMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitGetInstanceMehtodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitReleaseMethodImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitReleaseInstanceMethodImpl(sb);
 }
 
@@ -271,12 +271,12 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpls(StringBuilder &sb, cons
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitServiceStubMethodImpl(method, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     EmitStubGetVerMethodImpl(interface_->GetVersionMethod(), sb, prefix);
     if (mode_ != GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitStubAsObjectMethodImpl(sb, prefix);
     }
 }
@@ -304,13 +304,13 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
             EmitStubLocalVariable(param, sb, prefix + TAB);
         }
 
-        sb.Append('\n');
+        sb.Append("\n");
         EmitReadFlagVariable(readFlag, sb, prefix + TAB);
         for (size_t i = 0; i < method->GetParameterNumber(); i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 EmitReadStubMethodParameter(param, FINISHED_LABEL, sb, prefix + TAB);
-                sb.Append('\n');
+                sb.Append("\n");
             } else {
                 EmitOutVarMemInitialize(param, FINISHED_LABEL, sb, prefix + TAB);
             }
@@ -318,14 +318,14 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
     }
 
     EmitStubCallMethod(method, FINISHED_LABEL, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
             typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
 
@@ -465,7 +465,7 @@ void CServiceStubCodeEmitter::EmitReadCStringStubMethodParameter(const AutoPtr<A
     std::string cloneName = StringHelper::Format("%sCp", param->GetName().c_str());
     typeEmitter->EmitCStubReadVar(cloneName, gotoLabel, sb, prefix);
     if (mode_ == GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         sb.Append(prefix).AppendFormat(
             "%s = (char*)OsalMemCalloc(strlen(%s) + 1);\n", param->GetName().c_str(), cloneName.c_str());
         sb.Append(prefix).AppendFormat("if (%s == NULL) {\n", param->GetName().c_str());
@@ -502,7 +502,7 @@ void CServiceStubCodeEmitter::EmitOutVarMemInitialize(const AutoPtr<ASTParameter
         sb.Append(prefix).Append("}\n\n");
     } else if (type->IsStringType() || type->IsArrayType() || type->IsListType()) {
         typeEmitter->EmitCStubReadOutVar(flagOfSetMemName_, param->GetName(), gotoLabel, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 }
 
@@ -584,9 +584,9 @@ void CServiceStubCodeEmitter::EmitStubGetVerMethodImpl(
 
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(new ASTUintType());
     typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, majorVerName_, FINISHED_LABEL, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, minorVerName_, FINISHED_LABEL, sb, prefix + TAB);
-    sb.Append('\n');
+    sb.Append("\n");
 
     sb.Append(FINISHED_LABEL).Append(":\n");
     sb.Append(prefix + TAB).AppendFormat("return %s;\n", HdiTypeEmitter::errorCodeName_.c_str());

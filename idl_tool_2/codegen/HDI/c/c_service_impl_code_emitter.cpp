@@ -68,19 +68,19 @@ void CServiceImplCodeEmitter::EmitLowServiceImplHeaderFile()
     File file(filePath, File::WRITE);
     StringBuilder sb;
 
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLicense(sb);
     EmitHeadMacro(sb, implFullName_);
     EmitLowServiceImplInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitHeadExternC(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLowServiceImplDefinition(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplExternalMethodsDecl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailExternC(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, implFullName_);
 
     std::string data = sb.ToString();
@@ -115,13 +115,13 @@ void CServiceImplCodeEmitter::EmitLowServiceImplSourceFile()
 
     EmitLicense(sb);
     EmitServiceImplSourceInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(implName_));
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplMethodImpls(sb, "");
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLowServiceImplGetMethod(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplReleaseMethod(sb);
 
     std::string data = sb.ToString();
@@ -163,22 +163,22 @@ void CServiceImplCodeEmitter::EmitServiceImplHeaderFile()
 
     EmitLicense(sb);
     EmitHeadMacro(sb, implFullName_);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplHeaderInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitHeadExternC(sb);
     if (mode_ == GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitKernelServiceImplDef(sb);
     } else if (interface_->IsSerializable()) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitServiceImplDef(sb);
     }
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplExternalMethodsDecl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailExternC(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitTailMacro(sb, implFullName_);
 
     std::string data = sb.ToString();
@@ -223,24 +223,24 @@ void CServiceImplCodeEmitter::EmitServiceImplSourceFile()
 
     EmitLicense(sb);
     EmitServiceImplSourceInclusions(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitLogTagMacro(sb, FileName(implName_));
     if (mode_ != GenMode::KERNEL && !interface_->IsSerializable()) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitServiceImplDef(sb);
     }
 
-    sb.Append('\n');
+    sb.Append("\n");
     EmitServiceImplMethodImpls(sb, "");
     if (mode_ == GenMode::KERNEL) {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitKernelServiceImplGetMethod(sb);
-        sb.Append('\n');
+        sb.Append("\n");
         EmitKernelServiceImplReleaseMethod(sb);
     } else {
-        sb.Append('\n');
+        sb.Append("\n");
         EmitServiceImplGetMethod(sb);
-        sb.Append('\n');
+        sb.Append("\n");
         EmitServiceImplReleaseMethod(sb);
     }
 
@@ -293,7 +293,7 @@ void CServiceImplCodeEmitter::EmitServiceImplMethodImpls(StringBuilder &sb, cons
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {
         EmitServiceImplMethodImpl(method, sb, prefix);
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     EmitServiceImplGetVersionMethod(sb, prefix);
@@ -317,9 +317,9 @@ void CServiceImplCodeEmitter::EmitServiceImplMethodImpl(
             }
         }
 
-        paramStr.Append(')');
+        paramStr.Append(")");
         sb.Append(SpecificationParam(paramStr, prefix + TAB));
-        sb.Append('\n');
+        sb.Append("\n");
     }
 
     sb.Append(prefix).Append("{\n");

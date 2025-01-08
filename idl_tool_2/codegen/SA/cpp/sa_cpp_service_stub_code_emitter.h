@@ -32,7 +32,7 @@ private:
     // ISample.idl -> sample_service_stub.h
     void EmitStubHeaderFile();
 
-    void EmitInterfaceStubInHeaderFile(StringBuilder &sb) const;
+    void EmitInterfaceStubInHeaderFile(StringBuilder &sb);
 
     static void EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix);
 
@@ -40,20 +40,17 @@ private:
 
     void EmitInterfaceStubMethodImpls(StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceStubMethodImpl(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
-        const;
+    void EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
-    void EmitInterfaceStubMethodCall(const AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
-        const;
+    void EmitInterfaceStubMethodCall(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitLocalVariable(const AutoPtr<ASTParameter> &param, StringBuilder &sb, const std::string &prefix) const;
 
     static void EmitSaReturnParameter(const std::string &name, TypeKind kind, StringBuilder &sb);
 
-    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyIpcCapacityValues(StringBuilder &sb, const std::string &prefix);
 
-    void EmitInterfaceSetIpcCapacity(const AutoPtr <ASTMethod> &method, StringBuilder &sb, const std::string &prefix)
-        const;
+    void EmitInterfaceSetIpcCapacity(AutoPtr <ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 };
 } // namespace Idl
 } // namespace OHOS

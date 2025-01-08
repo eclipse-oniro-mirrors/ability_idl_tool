@@ -33,7 +33,7 @@ std::string SaEnumTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::NO_MODE:
         case TypeMode::PARAM_IN:
         case TypeMode::LOCAL_VAR:
-            return typeName_;
+            return StringHelper::Format("%s", typeName_.c_str());
         case TypeMode::PARAM_INOUT:
         case TypeMode::PARAM_OUT:
             return StringHelper::Format("%s&", typeName_.c_str());
@@ -51,11 +51,11 @@ std::string SaEnumTypeEmitter::EmitCppTypeDecl() const
         sb.AppendFormat("enum class %s : %s {\n", typeName_.c_str(), baseTypeName_.c_str());
     }
 
-    for (const auto& member : members_) {
-        if (member->GetValue().empty()) {
-            sb.Append(TAB).AppendFormat("%s,\n", member->GetValueName().c_str());
+    for (auto it : members_) {
+        if (it->GetValue().empty()) {
+            sb.Append(TAB).AppendFormat("%s,\n", it->GetValueName().c_str());
         } else {
-            sb.Append(TAB).AppendFormat("%s = %s,\n", member->GetValueName().c_str(), member->GetValue().c_str());
+            sb.Append(TAB).AppendFormat("%s = %s,\n", it->GetValueName().c_str(), it->GetValue().c_str());
         }
     }
 
@@ -87,9 +87,9 @@ void SaEnumTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std:
     sb.Append(prefix + TAB).AppendFormat("uint64_t %s = 0;\n", tmpVarName.c_str());
     sb.Append(prefix + TAB).AppendFormat("if (!%sReadUint64(%s)) {\n", parcelName.c_str(), tmpVarName.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
     }
-    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).AppendFormat("%s = static_cast<%s>(%s);\n", name.c_str(), EmitCppType().c_str(),
         tmpVarName.c_str());

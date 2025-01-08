@@ -48,9 +48,9 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyFile()
 
     EmitLicense(sb);
     EmitInterfaceImports(sb);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceProxyImpl(sb);
-    sb.Append('\n');
+    sb.Append("\n");
 
     std::string data = sb.ToString();
     file.WriteData(data.c_str(), data.size());
@@ -63,30 +63,30 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyImpl(StringBuilder &sb)
     sb.AppendFormat("export default class %s implements %s {\n", proxyName_.c_str(), interfaceName_.c_str());
     EmitInterfaceProxyConstructor(sb, TAB);
     EmitInterfaceProxyMethodImpls(sb, TAB);
-    sb.Append('\n');
+    sb.Append("\n");
     EmitInterfaceMethodCommands(sb, TAB);
     sb.Append(TAB).Append("private proxy");
-    sb.Append('\n');
+    sb.Append("\n");
     sb.Append("}\n");
 }
 
 void SaTsClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &sb, const std::string &prefix) const
 {
     sb.Append(prefix).Append("constructor(proxy) {\n");
-    sb.Append(prefix + TAB).Append("this.proxy = proxy;\n");
+    sb.Append(prefix).Append(TAB).Append("this.proxy = proxy;\n");
     sb.Append(prefix).Append("}\n\n");
 }
 
 void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &sb, const std::string &prefix) const
 {
-    size_t methodNumber = interface_->GetMethodNumber();
-    for (size_t i = 0; i < methodNumber; i++) {
+    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    for (int i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         EmitInterfaceMethodHead(method, sb, prefix);
         sb.Append("): void\n");
         EmitInterfaceProxyMethodBody(method, sb, prefix);
         if (i != methodNumber - 1) {
-            sb.Append('\n');
+            sb.Append("\n");
         }
     }
 }
@@ -96,13 +96,13 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod>
 {
     bool haveOutPara = false;
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).Append("let option = new rpc.MessageOption();\n");
+    sb.Append(prefix).Append(TAB).Append("let option = new rpc.MessageOption();\n");
     if (method->IsOneWay() || interface_->IsOneWay()) {
-        sb.Append(prefix + TAB).Append("option.setFlags(_option.TF_ASYNC);\n");
+        sb.Append(prefix).Append(TAB).Append("option.setFlags(_option.TF_ASYNC);\n");
     }
-    sb.Append(prefix + TAB).Append("let dataSequence = rpc.MessageSequence.create();\n");
-    sb.Append(prefix + TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
-    sb.Append(prefix + TAB).Append("dataSequence.writeInterfaceToken(this.proxy.getDescriptor());\n");
+    sb.Append(prefix).Append(TAB).Append("let dataSequence = rpc.MessageSequence.create();\n");
+    sb.Append(prefix).Append(TAB).Append("let replySequence = rpc.MessageSequence.create();\n");
+    sb.Append(prefix).Append(TAB).Append("dataSequence.writeInterfaceToken(this.proxy.getDescriptor());\n");
 
     int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
@@ -115,17 +115,18 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod>
             haveOutPara = true;
         }
     }
-    sb.Append(prefix + TAB).AppendFormat(
+    sb.Append(prefix).Append(TAB).AppendFormat(
         "this.proxy.sendMessageRequest(%s.COMMAND_%s, dataSequence, replySequence, option).", proxyName_.c_str(),
         ConstantName(method->GetName()).c_str());
     sb.Append("then((result: rpc.RequestResult) => {\n");
     EmitInterfaceMethodCallback(method, sb, prefix + TAB + TAB, haveOutPara);
-    sb.Append(prefix + TAB).Append("}).catch((e: Error) => ").Append("{\n");
-    sb.Append(prefix + TAB + TAB).Append("console.log(\'sendMessageRequest failed, message: \' + e.message);\n");
-    sb.Append(prefix + TAB).Append("}).finally(() => ").Append("{\n");
-    sb.Append(prefix + TAB + TAB).Append("dataSequence.reclaim();").Append('\n');
-    sb.Append(prefix + TAB + TAB).Append("replySequence.reclaim();").Append('\n');
-    sb.Append(prefix + TAB).Append("});").Append('\n');
+    sb.Append(prefix).Append(TAB).Append("}).catch((e: Error) => ").Append("{\n");
+    sb.Append(prefix).Append(TAB).Append(TAB).Append(
+        "console.log(\'sendMessageRequest failed, message: \' + e.message);\n");
+    sb.Append(prefix).Append(TAB).Append("}).finally(() => ").Append("{\n");
+    sb.Append(prefix).Append(TAB).Append(TAB).Append("dataSequence.reclaim();").Append("\n");
+    sb.Append(prefix).Append(TAB).Append(TAB).Append("replySequence.reclaim();").Append("\n");
+    sb.Append(prefix).Append(TAB).Append("});").Append("\n");
     sb.Append(prefix).Append("}\n");
 }
 
@@ -150,15 +151,15 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodErrorCallback(AutoPtr<ASTMet
         for (int i = 0; i < paramNumber; i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
             if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
-                sb.Append(prefix + TAB).AppendFormat("let %s = undefined;\n",
+                sb.Append(prefix).Append(TAB).AppendFormat("let %s = undefined;\n",
                     SuffixAdded(param->GetName()).c_str());
             }
         }
         if (retKind != TypeKind::TYPE_VOID) {
-            sb.Append(prefix + TAB).AppendFormat(
+            sb.Append(prefix).Append(TAB).AppendFormat(
                 "let %s = undefined;\n", SuffixAdded(RETURN_VALUE).c_str());
         }
-        sb.Append(prefix + TAB).AppendFormat("callback(%s", SuffixAdded(ERR_CODE).c_str());
+        sb.Append(prefix).Append(TAB).AppendFormat("callback(%s", SuffixAdded(ERR_CODE).c_str());
         if (retKind != TypeKind::TYPE_VOID) {
             sb.AppendFormat(", %s", SuffixAdded(RETURN_VALUE).c_str());
         }
@@ -169,7 +170,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodErrorCallback(AutoPtr<ASTMet
             }
         }
         sb.Append(");\n");
-        sb.Append(prefix + TAB).Append("return;\n");
+        sb.Append(prefix).Append(TAB).Append("return;\n");
         sb.Append(prefix).Append("}\n");
     }
 }
@@ -204,7 +205,7 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodCallbackInner(AutoPtr<ASTMet
     }
     sb.Append(");\n");
     sb.Append(prefix).Append("} else {\n");
-    sb.Append(prefix + TAB).Append("console.log(\"sendMessageRequest failed, errCode: \" + result.errCode);\n");
+    sb.Append(prefix).Append(TAB).Append("console.log(\"sendMessageRequest failed, errCode: \" + result.errCode);\n");
     sb.Append(prefix).Append("}\n");
 }
 } // namespace Idl

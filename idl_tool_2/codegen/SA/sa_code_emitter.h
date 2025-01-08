@@ -36,7 +36,7 @@ protected:
 
     void CleanData();
 
-    AutoPtr<SaTypeEmitter> GetTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> GetTypeEmitter(AutoPtr<ASTType> astType) const;
 
     std::string domainId_;
     std::string logTag_;
@@ -45,21 +45,21 @@ protected:
     bool logOn_ = false;
 
 private:
-    std::string GetNameWithNamespace(const AutoPtr<ASTNamespace>& space, const std::string& name) const;
+    std::string GetNameWithNamespace(AutoPtr<ASTNamespace> space, const std::string name) const;
 
-    AutoPtr<SaTypeEmitter> NewTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewMapTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewMapTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewArrayTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewArrayTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewListTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewListTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewEnumTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewEnumTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewStructTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewStructTypeEmitter(AutoPtr<ASTType> astType) const;
 
-    AutoPtr<SaTypeEmitter> NewUnionTypeEmitter(const AutoPtr<ASTType>& astType) const;
+    AutoPtr<SaTypeEmitter> NewUnionTypeEmitter(AutoPtr<ASTType> astType) const;
 
     static TypeEmitterMap basicEmitters_;
 };

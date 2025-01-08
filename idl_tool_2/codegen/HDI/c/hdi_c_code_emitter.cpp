@@ -143,8 +143,8 @@ bool HDICCodeEmitter::EmitNeedLoopVar(const AutoPtr<ASTType> &type, bool needRW,
 void HDICCodeEmitter::EmitHeadMacro(StringBuilder &sb, const std::string &fullName) const
 {
     std::string macroName = MacroName(fullName);
-    sb.Append("#ifndef ").Append(macroName).Append('\n');
-    sb.Append("#define ").Append(macroName).Append('\n');
+    sb.Append("#ifndef ").Append(macroName).Append("\n");
+    sb.Append("#define ").Append(macroName).Append("\n");
 }
 
 void HDICCodeEmitter::EmitTailMacro(StringBuilder &sb, const std::string &fullName) const

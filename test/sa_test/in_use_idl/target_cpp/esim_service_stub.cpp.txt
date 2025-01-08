@@ -75,15 +75,14 @@ int32_t EsimServiceStub::OnRemoteRequest(
         case IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILE_METADATA: {
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
-            std::unique_ptr<DownloadableProfile> profileInfo(data.ReadParcelable<DownloadableProfile>());
-            if (!profileInfo) {
+            std::unique_ptr<DownloadableProfile> profile(data.ReadParcelable<DownloadableProfile>());
+            if (!profile) {
                 return ERR_INVALID_DATA;
             }
-            DownloadableProfile profile(*profileInfo);
 
-            bool forceDisableProfile = data.ReadInt32() == 1;
+            bool forceDisableProfile = data.ReadInt32() == 1 ? true : false;
             GetDownloadableProfileMetadataResult profileMetadataResult;
-            ErrCode errCode = GetDownloadableProfileMetadata(slotId, portIndex, profile, forceDisableProfile, profileMetadataResult);
+            ErrCode errCode = GetDownloadableProfileMetadata(slotId, portIndex, *profile, forceDisableProfile, profileMetadataResult);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }
@@ -97,7 +96,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
         case IEsimServiceIpcCode::COMMAND_GET_DOWNLOADABLE_PROFILES: {
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
-            bool forceDisableProfile = data.ReadInt32() == 1;
+            bool forceDisableProfile = data.ReadInt32() == 1 ? true : false;
             GetDownloadableProfilesResult profileListResult;
             ErrCode errCode = GetDownloadableProfiles(slotId, portIndex, forceDisableProfile, profileListResult);
             if (!reply.WriteInt32(errCode)) {
@@ -112,20 +111,18 @@ int32_t EsimServiceStub::OnRemoteRequest(
         }
         case IEsimServiceIpcCode::COMMAND_DOWNLOAD_PROFILE: {
             int32_t slotId = data.ReadInt32();
-            std::unique_ptr<DownloadProfileConfigInfo> configInfoInfo(data.ReadParcelable<DownloadProfileConfigInfo>());
-            if (!configInfoInfo) {
+            std::unique_ptr<DownloadProfileConfigInfo> configInfo(data.ReadParcelable<DownloadProfileConfigInfo>());
+            if (!configInfo) {
                 return ERR_INVALID_DATA;
             }
-            DownloadProfileConfigInfo configInfo(*configInfoInfo);
 
-            std::unique_ptr<DownloadableProfile> profileInfo(data.ReadParcelable<DownloadableProfile>());
-            if (!profileInfo) {
+            std::unique_ptr<DownloadableProfile> profile(data.ReadParcelable<DownloadableProfile>());
+            if (!profile) {
                 return ERR_INVALID_DATA;
             }
-            DownloadableProfile profile(*profileInfo);
 
             DownloadProfileResult downloadProfileResult;
-            ErrCode errCode = DownloadProfile(slotId, configInfo, profile, downloadProfileResult);
+            ErrCode errCode = DownloadProfile(slotId, *configInfo, *profile, downloadProfileResult);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
             }
@@ -183,7 +180,7 @@ int32_t EsimServiceStub::OnRemoteRequest(
             int32_t slotId = data.ReadInt32();
             int32_t portIndex = data.ReadInt32();
             std::string iccId = Str16ToStr8(data.ReadString16());
-            bool forceDisableProfile = data.ReadInt32() == 1;
+            bool forceDisableProfile = data.ReadInt32() == 1 ? true : false;
             int32_t switchToProfileResult;
             ErrCode errCode = SwitchToProfile(slotId, portIndex, iccId, forceDisableProfile, switchToProfileResult);
             if (!reply.WriteInt32(errCode)) {

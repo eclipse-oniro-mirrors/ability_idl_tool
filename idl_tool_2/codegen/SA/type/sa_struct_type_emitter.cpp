@@ -27,7 +27,7 @@ std::string SaStructTypeEmitter::EmitCppType(TypeMode mode) const
     switch (mode) {
         case TypeMode::NO_MODE:
         case TypeMode::LOCAL_VAR:
-            return typeName_;
+            return StringHelper::Format("%s", typeName_.c_str());
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const %s&", typeName_.c_str());
         case TypeMode::PARAM_INOUT:
@@ -43,7 +43,7 @@ std::string SaStructTypeEmitter::EmitCppTypeDecl() const
     StringBuilder sb;
     sb.AppendFormat("struct %s {\n", typeName_.c_str());
 
-    for (const auto& it : members_) {
+    for (auto it : members_) {
         AutoPtr<SaTypeEmitter> member = std::get<1>(it);
         std::string memberName = std::get<0>(it);
         sb.Append(TAB).AppendFormat("%s %s;\n", member->EmitCppType().c_str(), memberName.c_str());
@@ -56,7 +56,6 @@ std::string SaStructTypeEmitter::EmitCppTypeDecl() const
 void SaStructTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name,
     StringBuilder &sb, const std::string &prefix) const
 {
-    (void)parcelName;
     sb.Append(prefix).AppendFormat(
         "if (%sBlockMarshalling(reply, %s) != ERR_NONE) {\n", EmitCppType().c_str(), name.c_str());
     if (logOn_) {
@@ -69,7 +68,6 @@ void SaStructTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const s
 void SaStructTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
-    (void)parcelName;
     if (emitType) {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
