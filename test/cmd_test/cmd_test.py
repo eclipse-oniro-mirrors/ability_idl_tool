@@ -143,8 +143,8 @@ class TestCmdPrintHelp(Test):
         expect_result += \
             "      --log-domainid <domainid>   "\
             "Place the service domain in <domainid>, Enable log(Pair with -log-tag), only support 'intf-type sa'\n"
-        expect_result += \
-            "      --log-tag <tag>             "\
+        expect_result += "      --client-enable             ""Generate client codes, only support 'intf-type sa'\n"
+        expect_result += "      --log-tag <tag>             "\
             "Place the subsystem name in <tag>, Enable log(Pair with -log-domainid), only support 'intf-type sa'\n"
         expect_result += \
             "  -t <hitrace tag>                "\

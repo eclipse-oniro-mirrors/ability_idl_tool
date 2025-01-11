@@ -62,6 +62,11 @@ public:
         return doCompile;
     }
 
+    inline bool DoClient() const
+    {
+        return doClient;
+    }
+
     inline bool DoDumpAST() const
     {
         return doDumpAST;
@@ -217,6 +222,7 @@ private:
         doShowUsage(false),
         doShowVersion(false),
         doCompile(false),
+        doClient(false),
         doDumpAST(false),
         doDumpMetadata(false),
         doHashKey(false),
@@ -308,6 +314,7 @@ private:
     bool doShowUsage;
     bool doShowVersion; // '-v'
     bool doCompile; // '-c'
+    bool doClient;  // "-client-enable"
     bool doDumpAST;
     bool doDumpMetadata;
     bool doHashKey;

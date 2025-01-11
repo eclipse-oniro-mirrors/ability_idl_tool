@@ -14,6 +14,7 @@
  */
 
 #include "sa_code_generator.h"
+#include "cpp/sa_cpp_client_code_emitter.h"
 #include "cpp/sa_cpp_interface_code_emitter.h"
 #include "cpp/sa_cpp_client_proxy_code_emitter.h"
 #include "cpp/sa_cpp_service_stub_code_emitter.h"
@@ -35,10 +36,11 @@ SACodeGenerator::GeneratePolicies SACodeGenerator::policies_ = {
 };
 
 CodeEmitMap SACodeGenerator::cppCodeEmitters_ = {
-    {"types",     new SaCppCustomTypesCodeEmitter()},
+    {"client", new SaCppClientCodeEmitter()},
     {"interface", new SaCppInterfaceCodeEmitter()},
     {"proxy", new SaCppClientProxyCodeEmitter()},
     {"stub", new SaCppServiceStubCodeEmitter()},
+    {"types", new SaCppCustomTypesCodeEmitter()},
 };
 
 CodeEmitMap SACodeGenerator::tsCodeEmitters_ = {
@@ -147,6 +149,7 @@ void SACodeGenerator::GenCppPath(const AutoPtr<AST> &ast, const std::string &out
 void SACodeGenerator::GenCppCode(const AutoPtr<AST> &ast, const std::string &outDir)
 {
     GenMode mode = GenMode::IPC;
+    bool isClientOn = Options::GetInstance().DoClient();
     switch (ast->GetASTFileType()) {
         case ASTFileType::AST_TYPES: {
             cppCodeEmitters_["types"]->OutPut(ast, genPath_[ast->GetIdlFile()], mode);
@@ -156,6 +159,9 @@ void SACodeGenerator::GenCppCode(const AutoPtr<AST> &ast, const std::string &out
             cppCodeEmitters_["interface"]->OutPut(ast, outDir, mode);
             cppCodeEmitters_["proxy"]->OutPut(ast, outDir, mode);
             cppCodeEmitters_["stub"]->OutPut(ast, outDir, mode);
+            if (isClientOn) {
+                cppCodeEmitters_["client"]->OutPut(ast, outDir, mode);
+            }
             break;
         }
         case ASTFileType::AST_ICALLBACK: {

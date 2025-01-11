@@ -19,12 +19,12 @@
 from test_base import Test
 
 
-class CmdLogTagDomainId(Test):
+class CmdClientEnableLogTagDomainId(Test):
     def get_file_name(self):
         return __file__
 
     def run_cmd(self):
-        self.set_command_attr(f"-log-tag new_tag -log-domainid new_id -d {self.output_dir} --gen-cpp")
+        self.set_command_attr(f"-client-enable -log-tag new_tag -log-domainid new_id -d {self.output_dir} --gen-cpp")
         self.set_cmd_test_env()
         return self.run_choose(True)
 
@@ -33,4 +33,4 @@ class CmdLogTagDomainId(Test):
 
 
 if __name__ == "__main__":
-    CmdLogTagDomainId().test()
+    CmdClientEnableLogTagDomainId().test()

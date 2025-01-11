@@ -37,6 +37,15 @@ protected:
 
     void EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
+    void EmitInterfaceClientMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix, bool includeValue) const;
+
+    void EmitInterfaceClientMethodParamsWithoutType(
+        AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix)  const;
+
+    void EmitParamsWithReturnType(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix, bool includeType) const;
+
     void EmitWriteMethodParameter(const AutoPtr<ASTParameter> &param, const std::string &parcelName,
         StringBuilder &sb, const std::string &prefix) const;
 
