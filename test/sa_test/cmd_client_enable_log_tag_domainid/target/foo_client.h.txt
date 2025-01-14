@@ -1,0 +1,215 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TEST_FOOCLIENT_H
+#define TEST_FOOCLIENT_H
+
+#include <shared_mutex>
+#include <utility>
+#include <iremote_proxy.h>
+#include <if_system_ability_manager.h>
+#include <iservice_registry.h>
+#include <system_ability_load_callback_stub.h>
+#include "ifoo.h"
+
+namespace test {
+
+using FooOnRemoteDiedCallback = std::function<void()>;
+using FooOnLocalCallback = std::function<void(bool status)>;
+
+class FooClient {
+public:
+    explicit FooClient(int32_t systemAbilityId, const std::string &deviceId = "");
+
+    ~FooClient();
+
+    /**
+     * Sync load sa with timeout
+     * @param timeout timeout seconds
+     * @return error code
+     */
+    ErrCode LoadSystemAbility(int32_t timeout);
+
+    /**
+     * Async load sa with a callback
+     * @param cb callback function
+     * @return error code
+     */
+    ErrCode LoadSystemAbility(const FooOnLocalCallback &cb);
+
+    /**
+     * Check sa
+     * @return error code
+     */
+    ErrCode CheckSystemAbility();
+
+    /**
+     * Get proxy status
+     * @return status
+     */
+    bool GetFooProxyStatus();
+
+    /**
+     * Register remote death callback function
+     * @param cb callback function
+     */
+    void RegisterOnRemoteDiedCallback(const FooOnRemoteDiedCallback &cb);
+
+    ErrCode void_test_func1(int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode void_test_func2();
+
+    ErrCode bool_test_func(
+        bool inParam,
+        bool& outParam,
+        bool inoutParam,
+        bool& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode byte_test_func(
+        int8_t inParam,
+        int8_t& outParam,
+        int8_t inoutParam,
+        int8_t& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode short_test_func(
+        short inParam,
+        short& outParam,
+        short inoutParam,
+        short& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode int_test_func(
+        int32_t inParam,
+        int32_t& outParam,
+        int32_t inoutParam,
+        int32_t& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode long_test_func(
+        int64_t inParam,
+        int64_t& outParam,
+        int64_t inoutParam,
+        int64_t& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode string_test_func(
+        const std::string& inParam,
+        std::string& outParam,
+        const std::string& inoutParam,
+        std::string& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode float_test_func(
+        float inParam,
+        float& outParam,
+        float inoutParam,
+        float& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode double_test_func(
+        double inParam,
+        double& outParam,
+        double inoutParam,
+        double& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode char_test_func(
+        zchar inParam,
+        zchar& outParam,
+        zchar inoutParam,
+        zchar& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode seq_test_func(
+        const myseq& inParam,
+        myseq& outParam,
+        myseq* inoutParam,
+        myseq& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+    ErrCode interface_test_func(
+        const sptr<myinterface>& inParam,
+        sptr<myinterface>& outParam,
+        sptr<myinterface>& inoutParam,
+        sptr<myinterface>& funcResult,
+        int32_t timeout = LOAD_SA_TIMEOUT);
+
+private:
+    // death callback class
+    class FooRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        explicit FooRecipient(FooClient &client) : client_(client) {}
+        void OnRemoteDied(const wptr<IRemoteObject> &remote) override
+        {
+            client_.OnRemoteDied(remote);
+        }
+    private:
+        FooClient &client_;
+    };
+    void RemoveDeathRecipient();
+    void OnRemoteDied(const wptr<IRemoteObject> &remote);
+
+    // load callback class
+    class LoadCallback : public SystemAbilityLoadCallbackStub {
+    public:
+        LoadCallback(FooOnLocalCallback cb, FooClient &client): localCallback_(std::move(cb)), client_(client) {}
+        void OnLoadSystemAbilitySuccess(int32_t systemAbilityId, const sptr<IRemoteObject> &remote) override;
+        void OnLoadSystemAbilityFail(int32_t systemAbilityId) override;
+    private:
+        FooOnLocalCallback localCallback_;
+        FooClient &client_;
+    };
+
+    // local load callback class
+    class LocalLoadCallback : public SystemAbilityLoadCallbackStub {
+    public:
+        explicit LocalLoadCallback(FooClient &client) : client_(client) {}
+        void OnLoadSystemAbilitySuccess(int32_t systemAbilityId, const sptr<IRemoteObject> &remote) override;
+        void OnLoadSystemAbilityFail(int32_t systemAbilityId) override;
+    private:
+        FooClient &client_;
+    };
+
+    void SetFooStatus();
+    ErrCode SetFooProxy(const sptr<IRemoteObject> &remote);
+    ErrCode PreventJitter(bool isSync, int32_t timeout = 0);
+    ErrCode LoadSystemAbility() const;
+
+    sptr<IRemoteObject::DeathRecipient> deathRecipient_;
+    sptr<IFoo> proxy_;
+    sptr<IRemoteObject> remote_;
+
+    FooOnRemoteDiedCallback remoteDiedCallback_;
+    sptr<LoadCallback> loadCallback_;
+    sptr<LocalLoadCallback> localLoadCallback_;
+
+    std::shared_mutex mutexRemote_;
+    std::shared_mutex mutexLoadSA_;
+    std::shared_mutex mutexRemoteDied_;
+
+    int32_t systemAbilityId_;
+    std::string deviceId_;
+    std::atomic_bool saLoading_ = false;
+    std::atomic_llong loadStart_ = 0; // microsecond timestamp
+
+    static constexpr int32_t LOAD_SA_TIMEOUT = 4;    // default load sa timeout is 4 seconds
+    static constexpr double MICROSECOND_TO_SECOND = 1000000.0;    // microseconds to seconds
+    static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, new_id, "new_tag"};
+};
+} // namespace test
+#endif // TEST_FOOCLIENT_H
+

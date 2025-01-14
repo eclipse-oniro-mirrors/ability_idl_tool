@@ -37,6 +37,7 @@ const char *Options::optSupportArgs = "hvcs:m:p:d:r:o:D:t:";
 static struct option g_longOpts[] = {
     {"help",          no_argument,       nullptr, 'h'},
     {"version",       no_argument,       nullptr, 'v'},
+    {"client-enable", no_argument,       nullptr, 'C'},
     {"system",        required_argument, nullptr, 'S'},
     {"mode",          required_argument, nullptr, 'm'},
     {"gen-c",         no_argument,       nullptr, '1'},
@@ -112,6 +113,9 @@ bool Options::ParseSingle(int option, std::string optVal)
             break;
         case 'c':
             doCompile = true;
+            break;
+        case 'C':
+            doClient = true;
             break;
         case '1':
             SetLanguage("c");
@@ -682,6 +686,7 @@ void Options::ShowUsage() const
            "      --gen-ts                    Generate Ts codes, only support 'intf-type sa'\n"
            "      --log-domainid <domainid>   Place the service domain in <domainid>, Enable log(Pair with -log-tag), "
            "only support 'intf-type sa'\n"
+           "      --client-enable             Generate client codes, only support 'intf-type sa'\n"
            "      --log-tag <tag>             Place the subsystem name in <tag>, Enable log(Pair with -log-domainid), "
            "only support 'intf-type sa'\n"
            "  -t <hitrace tag>                Place the constant name from hitrace_meter.h file in <hitrace tag>, "
