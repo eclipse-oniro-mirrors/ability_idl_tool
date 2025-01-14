@@ -96,6 +96,9 @@ bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDire
 
         stubName_ = baseName_ + "Stub";
         stubFullName_ = interface_->GetNamespace()->ToString() + stubName_;
+
+        clientName_ = baseName_ + "Client";
+        clientFullName_ = interface_->GetNamespace()->ToString() + clientName_;
         deathRecipientName_ = StringHelper::StartWith(interfaceName_, "I") ? interfaceName_.substr(1) + "Recipient" :
             interfaceName_ + "Recipient";
     } else if (ast_->GetASTFileType() == ASTFileType::AST_TYPES) {
@@ -129,6 +132,8 @@ void SACodeEmitter::CleanData()
     proxyFullName_ = "";
     stubName_ = "";
     stubFullName_ = "";
+    clientName_ = "";
+    clientFullName_ = "";
 }
 
 bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)

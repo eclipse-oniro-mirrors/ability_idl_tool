@@ -1,0 +1,626 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+#include <chrono>
+#include "foo_client.h"
+#include "hilog/log.h"
+
+using OHOS::HiviewDFX::HiLog;
+
+namespace test {
+
+FooClient::FooClient(int32_t systemAbilityId, const std::string &deviceId) :
+    systemAbilityId_(systemAbilityId), deviceId_(deviceId)
+{
+    deathRecipient_ = new (std::nothrow) FooRecipient(*this);
+    if (!deathRecipient_) {
+        HiLog::Error(LABEL, "idl init deathRecipient_ failed");
+    }
+
+    localLoadCallback_ = new (std::nothrow) LocalLoadCallback(*this);
+    if (!localLoadCallback_) {
+        HiLog::Error(LABEL, "idl init localLoadCallback_ failed");
+    }
+}
+
+FooClient::~FooClient()
+{
+    RemoveDeathRecipient();
+    remoteDiedCallback_ = nullptr;
+    loadCallback_ = nullptr;
+    localLoadCallback_ = nullptr;
+    deathRecipient_ = nullptr;
+}
+
+// Sync load sa with timeout
+ErrCode FooClient::LoadSystemAbility(int32_t timeout)
+{
+    auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
+    if (!samgr) {
+        HiLog::Error(LABEL, "idl samgr is nullptr");
+        return ERR_NULL_OBJECT;
+    }
+
+    sptr<IRemoteObject> remote = samgr->LoadSystemAbility(systemAbilityId_, timeout);
+    ErrCode ret = SetFooProxy(remote);
+    SetFooStatus();
+    return ret;
+}
+
+// Async load sa with a callback
+ErrCode FooClient::LoadSystemAbility(const FooOnLocalCallback &cb)
+{
+    {
+        std::shared_lock<std::shared_mutex> lock(mutexLoadSA_);
+        if (!loadCallback_) {
+            loadCallback_ = new LoadCallback(cb, *this);
+        } else {
+            HiLog::Warn(LABEL, "idl load callback is already exist");
+        }
+    }
+
+    auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
+    if (!samgr) {
+        HiLog::Error(LABEL, "idl samgr is nullptr");
+        return ERR_NULL_OBJECT;
+    }
+
+    if (deviceId_.empty()) {
+        return samgr->LoadSystemAbility(systemAbilityId_, loadCallback_);
+    } else {
+        return samgr->LoadSystemAbility(systemAbilityId_, deviceId_, loadCallback_);
+    }
+}
+
+// Check sa
+ErrCode FooClient::CheckSystemAbility()
+{
+    auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
+    if (!samgr) {
+        HiLog::Error(LABEL, "idl samgr is nullptr");
+        return ERR_NULL_OBJECT;
+    }
+
+    sptr<IRemoteObject> remote = samgr->CheckSystemAbility(systemAbilityId_, deviceId_);
+    ErrCode ret = SetFooProxy(remote);
+    SetFooStatus();
+    return ret;
+}
+
+// Get proxy status
+bool FooClient::GetFooProxyStatus()
+{
+    std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+    return proxy_ != nullptr;
+}
+
+// Register remote death callback function
+void FooClient::RegisterOnRemoteDiedCallback(const FooOnRemoteDiedCallback &cb)
+{
+    std::unique_lock<std::shared_mutex> lock(mutexRemoteDied_);
+    remoteDiedCallback_ = cb;
+}
+
+ErrCode FooClient::void_test_func1(int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->void_test_func1();
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->void_test_func1();
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::void_test_func2()
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->void_test_func2();
+        }
+    }
+    ErrCode ret = PreventJitter(false, LOAD_SA_TIMEOUT);
+    if (ret != ERR_OK) {
+        return ret;
+    }
+    return ERR_INVALID_VALUE;
+}
+
+ErrCode FooClient::bool_test_func(
+    bool inParam,
+    bool& outParam,
+    bool inoutParam,
+    bool& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->bool_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->bool_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::byte_test_func(
+    int8_t inParam,
+    int8_t& outParam,
+    int8_t inoutParam,
+    int8_t& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->byte_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->byte_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::short_test_func(
+    short inParam,
+    short& outParam,
+    short inoutParam,
+    short& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->short_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->short_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::int_test_func(
+    int32_t inParam,
+    int32_t& outParam,
+    int32_t inoutParam,
+    int32_t& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->int_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->int_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::long_test_func(
+    int64_t inParam,
+    int64_t& outParam,
+    int64_t inoutParam,
+    int64_t& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->long_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->long_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::string_test_func(
+    const std::string& inParam,
+    std::string& outParam,
+    const std::string& inoutParam,
+    std::string& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->string_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->string_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::float_test_func(
+    float inParam,
+    float& outParam,
+    float inoutParam,
+    float& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->float_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->float_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::double_test_func(
+    double inParam,
+    double& outParam,
+    double inoutParam,
+    double& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->double_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->double_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::char_test_func(
+    zchar inParam,
+    zchar& outParam,
+    zchar inoutParam,
+    zchar& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->char_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->char_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::seq_test_func(
+    const myseq& inParam,
+    myseq& outParam,
+    myseq* inoutParam,
+    myseq& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->seq_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->seq_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+ErrCode FooClient::interface_test_func(
+    const sptr<myinterface>& inParam,
+    sptr<myinterface>& outParam,
+    sptr<myinterface>& inoutParam,
+    sptr<myinterface>& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->interface_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->interface_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
+void FooClient::RemoveDeathRecipient()
+{
+    std::unique_lock<std::shared_mutex> writeLock(mutexRemote_);
+    proxy_ = nullptr;
+    if (remote_ && deathRecipient_) {
+        remote_->RemoveDeathRecipient(deathRecipient_);
+    }
+    remote_ = nullptr;
+}
+
+void FooClient::OnRemoteDied(const wptr<IRemoteObject> &remote)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (remote != remote_) {
+            return;
+        }
+    }
+    {
+        std::unique_lock<std::shared_mutex> lock(mutexRemoteDied_);
+        if (remoteDiedCallback_) {
+            remoteDiedCallback_();
+        }
+    }
+    RemoveDeathRecipient();
+}
+
+void FooClient::LoadCallback::OnLoadSystemAbilitySuccess(int32_t systemAbilityId, const sptr<IRemoteObject> &remote)
+{
+    client_.SetFooProxy(remote);
+    client_.SetFooStatus();
+    if (localCallback_) {
+        localCallback_(remote != nullptr);
+    }
+}
+
+void FooClient::LoadCallback::OnLoadSystemAbilityFail(int32_t systemAbilityId)
+{
+    HiLog::Error(LABEL, "idl LoadSystemAbility failed, %{public}d", systemAbilityId);
+    client_.SetFooStatus();
+    if (localCallback_) {
+        localCallback_(false);
+    }
+}
+
+void FooClient::LocalLoadCallback::OnLoadSystemAbilitySuccess(int32_t systemAbilityId,
+    const sptr<IRemoteObject> &remote)
+{
+    client_.SetFooProxy(remote);
+    client_.SetFooStatus();
+}
+
+void FooClient::LocalLoadCallback::OnLoadSystemAbilityFail(int32_t systemAbilityId)
+{
+    HiLog::Error(LABEL, "idl local LoadSystemAbility failed, %{public}d", systemAbilityId);
+    client_.SetFooStatus();
+}
+
+void FooClient::SetFooStatus()
+{
+    saLoading_ = false;
+    loadStart_ = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+ErrCode FooClient::SetFooProxy(const sptr<IRemoteObject> &remote)
+{
+    std::unique_lock<std::shared_mutex> writeLock(mutexRemote_);
+
+    // prevent re-entry
+    if (!remote) {
+        HiLog::Error(LABEL, "idl remote is nullptr, said:%{public}d", systemAbilityId_);
+        return ERR_NULL_OBJECT;
+    }
+    if (remote_ && remote == remote_) {
+        return ERR_OK;
+    }
+    remote_ = remote;
+
+    if (deathRecipient_ && !remote_->AddDeathRecipient(deathRecipient_)) {
+        HiLog::Error(LABEL, "idl AddDeathRecipient failed");
+    }
+
+    proxy_ = iface_cast<IFoo>(remote_);
+    if (!proxy_) {
+        HiLog::Error(LABEL, "idl init proxy failed");
+        return ERR_NULL_OBJECT;
+    }
+
+    return ERR_OK;
+}
+
+// Prevent jitter, avoid multiple calls at the same time. The unit of timeout is second.
+ErrCode FooClient::PreventJitter(bool isSync, int32_t timeout)
+{
+    // Load once every TIMEOUT seconds, default is 4 seconds
+    double loadDiff = 0;
+    if (saLoading_) {
+        auto loadEnd = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        loadDiff = static_cast<double>(loadEnd - loadStart_.load()) / MICROSECOND_TO_SECOND;
+    }
+
+    if (!saLoading_ || loadDiff >= static_cast<double>(timeout)) {
+        saLoading_ = true;
+        if (isSync) {
+            return LoadSystemAbility(timeout);
+        }
+        return LoadSystemAbility();
+    } else {
+        HiLog::Error(LABEL, "idl sa is loading or not timeout");
+        return ERR_INVALID_VALUE;
+    }
+}
+
+// Async callback function
+ErrCode FooClient::LoadSystemAbility() const
+{
+    if (!localLoadCallback_) {
+        HiLog::Error(LABEL, "idl localLoadCallback_ is nullptr");
+        return ERR_NULL_OBJECT;
+    }
+
+    auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
+    if (!samgr) {
+        HiLog::Error(LABEL, "idl samgr is nullptr");
+        return ERR_NULL_OBJECT;
+    }
+
+    if (deviceId_.empty()) {
+        return samgr->LoadSystemAbility(systemAbilityId_, localLoadCallback_);
+    } else {
+        return samgr->LoadSystemAbility(systemAbilityId_, deviceId_, localLoadCallback_);
+    }
+}
+} // namespace test

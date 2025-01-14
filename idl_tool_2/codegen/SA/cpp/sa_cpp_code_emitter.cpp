@@ -124,20 +124,57 @@ void SACppCodeEmitter::EmitReadMethodParameter(const AutoPtr<ASTParameter> &para
 void SACppCodeEmitter::EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    EmitParamsWithReturnType(method, sb, prefix, true);
+}
+
+void SACppCodeEmitter::EmitInterfaceClientMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix, bool includeValue) const
+{
+    EmitParamsWithReturnType(method, sb, prefix, true);
+    if (!method->IsOneWay()) {
+        int paramNumber = static_cast<int>(method->GetParameterNumber());
+        if (paramNumber == 0) {
+            sb.Append("int32_t timeout");
+        } else {
+            sb.Append(",\n").Append(prefix).Append("int32_t timeout");
+        }
+        if (includeValue) {
+            sb.Append(" = LOAD_SA_TIMEOUT");
+        }
+    }
+}
+
+void SACppCodeEmitter::EmitInterfaceClientMethodParamsWithoutType(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix) const
+{
+    EmitParamsWithReturnType(method, sb, prefix, false);
+}
+
+void SACppCodeEmitter::EmitParamsWithReturnType(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix, bool includeType) const
+{
     AutoPtr<ASTType> returnType = method->GetReturnType();
     TypeKind retTypeKind = returnType->GetTypeKind();
     int paramNumber = static_cast<int>(method->GetParameterNumber());
 
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
-        sb.Append("\n").Append(prefix).AppendFormat(EmitCppParameter(param).c_str());
+        if (param == nullptr) {
+            return;
+        }
+        sb.Append("\n").Append(prefix);
+        if (includeType) {
+            sb.AppendFormat(EmitCppParameter(param).c_str());
+        } else {
+            sb.AppendFormat(param->GetName().c_str());
+        }
         if ((i != paramNumber - 1) || (retTypeKind != TypeKind::TYPE_VOID)) {
             sb.Append(",");
         }
     }
     if (retTypeKind != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        sb.Append("\n").Append(prefix).AppendFormat("%s funcResult",
+        sb.Append("\n").Append(prefix).AppendFormat(includeType ? "%s funcResult" : "funcResult",
             typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
     }
 }
