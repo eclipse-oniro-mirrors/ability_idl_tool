@@ -64,19 +64,32 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     GetStdlibInclusions(headerFiles);
     GetImportInclusions(headerFiles);
 
+    bool needLogh = false;
+    bool needSecurec = false;
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
+            if (!type->IsPod() && logOn_) {
+                needLogh = true;
+            }
             if (EmitCustomTypeNeedSecurec(structType)) {
-                headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "securec");
+                needSecurec = true;
+            }
+            if (needLogh && needSecurec) {
                 break;
             }
         }
     }
 
+    if (needSecurec) {
+        headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "securec");
+    }
     for (const auto &file : headerFiles) {
         sb.AppendFormat("%s\n", file.ToString().c_str());
+    }
+    if (needLogh) {
+        sb.Append("#include \"hilog/log.h\"\n");
     }
 }
 

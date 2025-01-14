@@ -58,6 +58,7 @@ public:
 
 protected:
     std::string typeName_;
+    static int circleCount_;
 };
 } // namespace Idl
 } // namespace OHOS

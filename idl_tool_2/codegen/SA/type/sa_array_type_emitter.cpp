@@ -19,8 +19,6 @@
 
 namespace OHOS {
 namespace Idl {
-int SaArrayTypeEmitter::circleCount_ = 0;
-
 TypeKind SaArrayTypeEmitter::GetTypeKind()
 {
     return TypeKind::TYPE_ARRAY;
@@ -68,8 +66,14 @@ void SaArrayTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
-    sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n", name.c_str(), name.c_str());
-    elementEmitter_->EmitCppWriteVar(parcelName, "(*it)", sb, prefix + TAB);
+    
+    circleCount_++;
+    std::stringstream circleCountStr;
+    circleCountStr << circleCount_;
+    std::string itStr = "it" + circleCountStr.str();
+    sb.Append(prefix).AppendFormat("for (auto %s = %s.begin(); %s != %s.end(); ++%s) {\n", itStr.c_str(),
+        name.c_str(), itStr.c_str(), name.c_str(), itStr.c_str());
+    elementEmitter_->EmitCppWriteVar(parcelName, "(*" + itStr +")", sb, prefix + TAB);
     sb.Append(prefix).Append("}\n");
 }
 
@@ -192,8 +196,14 @@ void SaListTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
-    sb.Append(prefix).AppendFormat("for (auto it = %s.begin(); it != %s.end(); ++it) {\n", name.c_str(), name.c_str());
-    elementEmitter_->EmitCppWriteVar(parcelName, "(*it)", sb, prefix + TAB);
+
+    circleCount_++;
+    std::stringstream circleCountStr;
+    circleCountStr << circleCount_;
+    std::string itStr = "it" + circleCountStr.str();
+    sb.Append(prefix).AppendFormat("for (auto %s = %s.begin(); %s != %s.end(); ++%s) {\n", itStr.c_str(),
+        name.c_str(), itStr.c_str(), name.c_str(), itStr.c_str());
+    elementEmitter_->EmitCppWriteVar(parcelName, "(*" + itStr +")", sb, prefix + TAB);
     sb.Append(prefix).Append("}\n");
 }
 } // namespace Idl

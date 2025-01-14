@@ -15,7 +15,7 @@
 
 #include "util/options.h"
 
-#include <climits>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
@@ -69,7 +69,7 @@ bool Options::Parse(int argc, char *argv[])
     int op = 0;
     int optIndex = 0;
 
-    if (argc < INT_MIN || argc > INT_MAX) {
+    if (argc < 0 || argc > UINT16_MAX) {
         Logger::E(TAG, "argc out of range");
         return false;
     }

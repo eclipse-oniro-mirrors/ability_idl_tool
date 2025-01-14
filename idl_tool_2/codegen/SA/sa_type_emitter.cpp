@@ -18,6 +18,8 @@
 namespace OHOS {
 namespace Idl {
 bool SaTypeEmitter::logOn_ = false;
+int SaTypeEmitter::circleCount_ = 0;
+
 TypeKind SaTypeEmitter::GetTypeKind()
 {
     return TypeKind::TYPE_UNKNOWN;
