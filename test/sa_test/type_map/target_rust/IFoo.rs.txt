@@ -44,6 +44,8 @@ pub enum IFooCode {
     CodeCharTestFunc,
     CodeSeqTestFunc,
     CodeInterfaceTestFunc,
+    CodeInt2TestFunc,
+    CodeMapTestFunc,
 }
 
 define_remote_object!(
@@ -66,6 +68,8 @@ pub trait IFoo: IRemoteBroker {
     fn char_test_func(&self, in_param: &HashMap<char, char>, out_param: &HashMap<char, char>, inout_param: &HashMap<char, char>) -> Result<HashMap<char, char>>;
     fn seq_test_func(&self, in_param: &HashMap<myseq, myseq>, out_param: &HashMap<myseq, myseq>, inout_param: &HashMap<myseq, myseq>) -> Result<HashMap<myseq, myseq>>;
     fn interface_test_func(&self, in_param: &HashMap<myinterface, myinterface>, out_param: &HashMap<myinterface, myinterface>, inout_param: &HashMap<myinterface, myinterface>) -> Result<HashMap<myinterface, myinterface>>;
+    fn int_2_test_func(&self, in_param: &HashMap<i32, Vec<i32>>, out_param: &HashMap<i32, Vec<i32>>, inout_param: &HashMap<i32, Vec<i32>>) -> Result<HashMap<i32, Vec<i32>>>;
+    fn map_test_func(&self, in_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, out_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, inout_param: &HashMap<i32, HashMap<i32, Vec<i32>>>) -> Result<HashMap<i32, HashMap<i32, Vec<i32>>>>;
 }
 
 fn on_remote_request(stub: &dyn IFoo, code: u32, data: &BorrowedMsgParcel,
@@ -405,6 +409,88 @@ fn on_remote_request(stub: &dyn IFoo, code: u32, data: &BorrowedMsgParcel,
             }
             Ok(())
         }
+        13 => {
+            let mut in_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let in_paramk : i32 = data.read()?;
+                let in_paramv : Vec<i32> = data.read()?;
+                in_param.insert(in_paramk, in_paramv);
+            }
+            let mut out_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let out_paramk : i32 = data.read()?;
+                let out_paramv : Vec<i32> = data.read()?;
+                out_param.insert(out_paramk, out_paramv);
+            }
+            let mut inout_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let inout_paramk : i32 = data.read()?;
+                let inout_paramv : Vec<i32> = data.read()?;
+                inout_param.insert(inout_paramk, inout_paramv);
+            }
+            let result = stub.int_2_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&(result.len() as u32))?;
+            for (key, value) in result.iter() {
+                reply.write(&key)?;
+                reply.write(&value)?;
+            }
+            Ok(())
+        }
+        14 => {
+            let mut in_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let in_paramk : i32 = data.read()?;
+                let mut in_paramv = HashMap::new();
+                let len = data.read()?;
+                for i in 0..len {
+                    let in_paramvk : i32 = data.read()?;
+                    let in_paramvv : Vec<i32> = data.read()?;
+                    in_paramv.insert(in_paramvk, in_paramvv);
+                }
+                in_param.insert(in_paramk, in_paramv);
+            }
+            let mut out_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let out_paramk : i32 = data.read()?;
+                let mut out_paramv = HashMap::new();
+                let len = data.read()?;
+                for i in 0..len {
+                    let out_paramvk : i32 = data.read()?;
+                    let out_paramvv : Vec<i32> = data.read()?;
+                    out_paramv.insert(out_paramvk, out_paramvv);
+                }
+                out_param.insert(out_paramk, out_paramv);
+            }
+            let mut inout_param = HashMap::new();
+            let len = data.read()?;
+            for i in 0..len {
+                let inout_paramk : i32 = data.read()?;
+                let mut inout_paramv = HashMap::new();
+                let len = data.read()?;
+                for i in 0..len {
+                    let inout_paramvk : i32 = data.read()?;
+                    let inout_paramvv : Vec<i32> = data.read()?;
+                    inout_paramv.insert(inout_paramvk, inout_paramvv);
+                }
+                inout_param.insert(inout_paramk, inout_paramv);
+            }
+            let result = stub.map_test_func(&in_param, &out_param, &inout_param)?;
+            reply.write(&(result.len() as u32))?;
+            for (key, value) in result.iter() {
+                reply.write(&key)?;
+                reply.write(&(value.len() as u32))?;
+                for (key, value) in value.iter() {
+                    reply.write(&key)?;
+                    reply.write(&value)?;
+                }
+            }
+            Ok(())
+        }
         _ => Err(-1)
     }
 }
@@ -456,6 +542,14 @@ impl IFoo for RemoteStub<FooStub> {
 
     fn interface_test_func(&self, in_param: &HashMap<myinterface, myinterface>, out_param: &HashMap<myinterface, myinterface>, inout_param: &HashMap<myinterface, myinterface>) -> Result<HashMap<myinterface, myinterface>> {
         self.0.interface_test_func(in_param, out_param, inout_param)
+    }
+
+    fn int_2_test_func(&self, in_param: &HashMap<i32, Vec<i32>>, out_param: &HashMap<i32, Vec<i32>>, inout_param: &HashMap<i32, Vec<i32>>) -> Result<HashMap<i32, Vec<i32>>> {
+        self.0.int_2_test_func(in_param, out_param, inout_param)
+    }
+
+    fn map_test_func(&self, in_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, out_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, inout_param: &HashMap<i32, HashMap<i32, Vec<i32>>>) -> Result<HashMap<i32, HashMap<i32, Vec<i32>>>> {
+        self.0.map_test_func(in_param, out_param, inout_param)
     }
 }
 
@@ -769,6 +863,80 @@ impl IFoo for FooProxy {
         for i in 0..len {
             let resultk : myinterface = reply.read()?;
             let resultv : myinterface = reply.read()?;
+            result.insert(resultk, resultv);
+        }
+        Ok(result)
+    }
+
+    fn int_2_test_func(&self, in_param: &HashMap<i32, Vec<i32>>, out_param: &HashMap<i32, Vec<i32>>, inout_param: &HashMap<i32, Vec<i32>>) -> Result<HashMap<i32, Vec<i32>>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&(in_param.len() as u32))?;
+        for (key, value) in in_param.iter() {
+            data.write(&key)?;
+            data.write(&value)?;
+        }
+        data.write(&(out_param.len() as u32))?;
+        for (key, value) in out_param.iter() {
+            data.write(&key)?;
+            data.write(&value)?;
+        }
+        data.write(&(inout_param.len() as u32))?;
+        for (key, value) in inout_param.iter() {
+            data.write(&key)?;
+            data.write(&value)?;
+        }
+        let reply = self.remote.send_request(IFooCode::CodeInt2TestFunc as u32, &data, false)?;
+        let mut result = HashMap::new();
+        let len = reply.read()?;
+        for i in 0..len {
+            let resultk : i32 = reply.read()?;
+            let resultv : Vec<i32> = reply.read()?;
+            result.insert(resultk, resultv);
+        }
+        Ok(result)
+    }
+
+    fn map_test_func(&self, in_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, out_param: &HashMap<i32, HashMap<i32, Vec<i32>>>, inout_param: &HashMap<i32, HashMap<i32, Vec<i32>>>) -> Result<HashMap<i32, HashMap<i32, Vec<i32>>>> {
+        let mut data = MsgParcel::new().expect("MsgParcel should success");
+        data.write(&(in_param.len() as u32))?;
+        for (key, value) in in_param.iter() {
+            data.write(&key)?;
+            data.write(&(value.len() as u32))?;
+            for (key, value) in value.iter() {
+                data.write(&key)?;
+                data.write(&value)?;
+            }
+        }
+        data.write(&(out_param.len() as u32))?;
+        for (key, value) in out_param.iter() {
+            data.write(&key)?;
+            data.write(&(value.len() as u32))?;
+            for (key, value) in value.iter() {
+                data.write(&key)?;
+                data.write(&value)?;
+            }
+        }
+        data.write(&(inout_param.len() as u32))?;
+        for (key, value) in inout_param.iter() {
+            data.write(&key)?;
+            data.write(&(value.len() as u32))?;
+            for (key, value) in value.iter() {
+                data.write(&key)?;
+                data.write(&value)?;
+            }
+        }
+        let reply = self.remote.send_request(IFooCode::CodeMapTestFunc as u32, &data, false)?;
+        let mut result = HashMap::new();
+        let len = reply.read()?;
+        for i in 0..len {
+            let resultk : i32 = reply.read()?;
+            let mut resultv = HashMap::new();
+            let len = reply.read()?;
+            for i in 0..len {
+                let resultvk : i32 = reply.read()?;
+                let resultvv : Vec<i32> = reply.read()?;
+                resultv.insert(resultvk, resultvv);
+            }
             result.insert(resultk, resultv);
         }
         Ok(result)
