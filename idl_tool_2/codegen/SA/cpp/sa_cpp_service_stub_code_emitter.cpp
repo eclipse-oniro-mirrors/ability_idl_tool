@@ -77,13 +77,23 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuil
     }
 }
 
-void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix)
+void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix) const
 {
     sb.Append(prefix).Append("int32_t OnRemoteRequest(\n");
     sb.Append(prefix + TAB).Append("uint32_t code,\n");
     sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
     sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
     sb.Append(prefix + TAB).Append("MessageOption& option) override;\n");
+    if (ast_ != nullptr && ast_->GetOptionStubHooksOn()) {
+        sb.Append(prefix).Append("virtual int32_t CallbackEnter([[maybe_unused]] uint32_t code) = 0;\n");
+        sb.Append(prefix).Append(
+            "virtual int32_t CallbackExit([[maybe_unused]] uint32_t code, [[maybe_unused]] int32_t result) = 0;\n");
+        sb.Append(prefix).Append("int32_t OnRemoteRequestInner(\n");
+        sb.Append(prefix + TAB).Append("uint32_t code,\n");
+        sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
+        sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
+        sb.Append(prefix + TAB).Append("MessageOption& option);\n");
+    }
 }
 
 void SaCppServiceStubCodeEmitter::EmitStubSourceFile()
@@ -124,6 +134,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
     sb.Append(prefix + TAB).Append("MessageOption& option)\n");
     sb.Append(prefix).Append("{\n");
+    if (ast_ != nullptr && ast_->GetOptionStubHooksOn()) {
+        EmitInterfaceStubUseHooks(sb, prefix);
+    }
     if (hitraceOn_) {
     sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n",
         hitraceTag_.c_str());
@@ -145,6 +158,33 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append("}\n\n");
     sb.Append(prefix + TAB).Append("return ERR_TRANSACTION_FAILED;\n");
     sb.Append(prefix).Append("}\n");
+}
+
+void SaCppServiceStubCodeEmitter::EmitInterfaceStubUseHooks(StringBuilder &sb, const std::string &prefix) const
+{
+    sb.Append(prefix + TAB).Append("int32_t enterRet = CallbackEnter(code);\n");
+    sb.Append(prefix + TAB).Append("if (enterRet != ERR_NONE) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackEnter failed\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return enterRet;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("int32_t ret = OnRemoteRequestInner(code, data, reply, option);\n\n");
+    sb.Append(prefix + TAB).Append("int32_t exitRet = CallbackExit(code, ret);\n");
+    sb.Append(prefix + TAB).Append("if (exitRet != ERR_NONE) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackExit failed\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return exitRet;\n");
+    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("return ret;\n");
+    sb.Append(prefix).Append("}\n\n");
+    sb.Append(prefix).AppendFormat("int32_t %s::OnRemoteRequestInner(\n", stubName_.c_str());
+    sb.Append(prefix + TAB).Append("uint32_t code,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
+    sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
+    sb.Append(prefix + TAB).Append("MessageOption& option)\n");
+    sb.Append(prefix).Append("{\n");
 }
 
 void SaCppServiceStubCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,

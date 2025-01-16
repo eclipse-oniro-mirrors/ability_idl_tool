@@ -46,6 +46,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"package",        TokenType::PACKAGE      },
     {"interface_token",     TokenType::INTERFACE_TOKEN    },
     {"support_delegator",   TokenType::SUPPORT_DELEGATOR  },
+    {"option_stub_hooks",  TokenType::OPTION_STUB_HOOKS  },
     {"sequenceable",   TokenType::SEQ          },
     {"import",         TokenType::IMPORT       },
     {"interface",      TokenType::INTERFACE    },

@@ -23,6 +23,25 @@ int32_t FooStub::OnRemoteRequest(
     MessageParcel& reply,
     MessageOption& option)
 {
+    int32_t enterRet = CallbackEnter(code);
+    if (enterRet != ERR_NONE) {
+        return enterRet;
+    }
+    int32_t ret = OnRemoteRequestInner(code, data, reply, option);
+
+    int32_t exitRet = CallbackExit(code, ret);
+    if (exitRet != ERR_NONE) {
+        return exitRet;
+    }
+    return ret;
+}
+
+int32_t FooStub::OnRemoteRequestInner(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
     std::u16string localDescriptor = GetDescriptor();
     std::u16string remoteDescriptor = data.ReadInterfaceToken();
     if (localDescriptor != remoteDescriptor) {

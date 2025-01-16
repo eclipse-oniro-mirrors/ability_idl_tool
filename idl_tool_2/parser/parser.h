@@ -96,7 +96,11 @@ private:
 
     bool ParseInterfaceToken();
 
+    bool ParseKeywordWithId(TokenType expectedKeyword, const std::string& context);
+
     bool ParseSupportDelegator();
+
+    bool ParseOptionStubHooks();
 
     bool ParserPackageInfo(const std::string &packageName);
 

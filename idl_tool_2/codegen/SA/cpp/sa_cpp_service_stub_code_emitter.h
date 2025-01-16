@@ -34,11 +34,13 @@ private:
 
     void EmitInterfaceStubInHeaderFile(StringBuilder &sb);
 
-    static void EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix);
+    void EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitStubSourceFile();
 
     void EmitInterfaceStubMethodImpls(StringBuilder &sb, const std::string &prefix) const;
+
+    void EmitInterfaceStubUseHooks(StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 

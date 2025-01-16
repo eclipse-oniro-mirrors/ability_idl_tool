@@ -113,6 +113,9 @@ bool Parser::ParseFile()
             case TokenType::SUPPORT_DELEGATOR:
                 ret = ParseSupportDelegator() && ret;
                 continue;
+            case TokenType::OPTION_STUB_HOOKS:
+                ret = ParseOptionStubHooks() && ret;
+                continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
                 ret = ParseImports() && ret;
@@ -246,23 +249,23 @@ bool Parser::ParseInterfaceToken()
     return true;
 }
 
-bool Parser::ParseSupportDelegator()
+bool Parser::ParseKeywordWithId(TokenType expectedKeyword, const std::string& context)
 {
     Token token = lexer_.PeekToken();
-    if (token.kind != TokenType::SUPPORT_DELEGATOR) {
-        LogError(__func__, __LINE__, token, StringHelper::Format("expected 'support_delegator'"));
+    if (token.kind != expectedKeyword) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("expected '%s'", context.c_str()));
         return false;
     }
     lexer_.GetToken();
 
     token = lexer_.PeekToken();
     if (token.kind != TokenType::ID) {
-        LogError(__func__, __LINE__, token, StringHelper::Format("expected name of suport_delegator before '%s' token",
-        token.value.c_str()));
+        LogError(__func__, __LINE__, token, StringHelper::Format(
+            "expected name of %s before '%s' token", context.c_str(), token.value.c_str()));
         lexer_.SkipToken(TokenType::SEMICOLON);
         return false;
     }
-    std::string supportDelegator = token.value;
+    std::string value = token.value;
     lexer_.GetToken();
 
     token = lexer_.PeekToken();
@@ -273,13 +276,27 @@ bool Parser::ParseSupportDelegator()
     }
     lexer_.GetToken();
 
-    if (supportDelegator.empty()) {
-        LogError(__func__, __LINE__, token, StringHelper::Format("support_delegator name is not expected."));
+    if (value.empty()) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("%s name is not expected.", context.c_str()));
         return false;
     }
 
-    ast_->SetSupportDelegator(supportDelegator);
+    if (context == "support_delegator") {
+        ast_->SetSupportDelegator(value);
+    } else if (context == "option_stub_hooks") {
+        ast_->SetOptionStubHooks(value);
+    }
     return true;
+}
+
+bool Parser::ParseSupportDelegator()
+{
+    return ParseKeywordWithId(TokenType::SUPPORT_DELEGATOR, "support_delegator");
+}
+
+bool Parser::ParseOptionStubHooks()
+{
+    return ParseKeywordWithId(TokenType::OPTION_STUB_HOOKS, "option_stub_hooks");
 }
 
 bool Parser::ParseImports()
