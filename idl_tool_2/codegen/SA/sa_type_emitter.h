@@ -55,10 +55,10 @@ public:
         const std::string &prefix, TypeMode mode = TypeMode::NO_MODE) const;
 
     static bool logOn_;
+    static int circleCount_;
 
 protected:
     std::string typeName_;
-    static int circleCount_;
 };
 } // namespace Idl
 } // namespace OHOS

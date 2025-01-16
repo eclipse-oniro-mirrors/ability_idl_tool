@@ -66,7 +66,7 @@ void SaArrayTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
-    
+
     circleCount_++;
     std::stringstream circleCountStr;
     circleCountStr << circleCount_;
@@ -90,7 +90,7 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
-    
+
     circleCount_++;
     std::stringstream circleCountStr;
     circleCountStr << circleCount_;

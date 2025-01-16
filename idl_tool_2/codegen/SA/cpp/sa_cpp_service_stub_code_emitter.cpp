@@ -20,6 +20,7 @@ namespace OHOS {
 namespace Idl {
 void SaCppServiceStubCodeEmitter::EmitCode()
 {
+    SaTypeEmitter::circleCount_ = 0;
     EmitStubHeaderFile();
     EmitStubSourceFile();
 }

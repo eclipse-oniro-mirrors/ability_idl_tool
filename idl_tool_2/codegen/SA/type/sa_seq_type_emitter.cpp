@@ -40,11 +40,11 @@ std::string SaSeqTypeEmitter::EmitCppType(TypeMode mode) const
         }
     } else {
         switch (mode) {
-            case TypeMode::NO_MODE:
             case TypeMode::PARAM_IN:
                 return StringHelper::Format("const %s&", typeName_.c_str());
             case TypeMode::PARAM_INOUT:
                 return StringHelper::Format("%s*", typeName_.c_str());
+            case TypeMode::NO_MODE:
             case TypeMode::PARAM_OUT:
                 return StringHelper::Format("%s&", typeName_.c_str());
             case TypeMode::LOCAL_VAR:
