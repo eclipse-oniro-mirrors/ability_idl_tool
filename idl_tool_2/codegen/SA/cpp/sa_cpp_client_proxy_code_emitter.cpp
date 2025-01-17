@@ -291,7 +291,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr
             interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
         sb.Append("\n");
         sb.Append(prefix).Append("if (hitCache) {\n");
-        EmitInterfaceProxyMethodErrCode(sb, prefix);
+        EmitInterfaceProxyMethodErrCode(method, sb, prefix);
         EmitInterfaceProxyMethodReply(method, sb, prefix);
         sb.Append(prefix + TAB).Append("return ERR_OK;\n");
         sb.Append(prefix).Append("}\n\n");
@@ -377,12 +377,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     EmitInterfaceProxyMethodRetValue(method, sb, prefix);
 }
 
-void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(StringBuilder &sb, const std::string &prefix) const
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix) const
 {
     sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
     sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read Int32 failed!\");\n");
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read result failed, code is: %{public}d.\",\n")
+            .Append(prefix + TAB + TAB + TAB)
+            .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
+            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
     }
     sb.Append(prefix + TAB).Append("    return errCode;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -410,7 +414,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodRetValue(AutoPtr<ASTMe
 {
     if (!method->IsOneWay()) {
         sb.Append("\n");
-        EmitInterfaceProxyMethodErrCode(sb, prefix);
+        EmitInterfaceProxyMethodErrCode(method, sb, prefix);
         sb.Append("\n");
         if (method->GetCacheable()) {
             EmitInterfaceProxyMethodPostSendRequest(method, sb, prefix);

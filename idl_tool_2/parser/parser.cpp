@@ -652,10 +652,13 @@ void Parser::ParseInterface(const AttrSet &attrs)
     Options &options = Options::GetInstance();
     lexer_.GetToken();
     Token token = lexer_.PeekToken();
+    size_t index = token.value.rfind('.');
     if (options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP) {
-        size_t index = token.value.rfind('.');
-        if (std::count(token.value.begin(), token.value.end(), '.') > 1) {
-            ParserPackageInfo(token.value.substr(0, index));
+        for (const auto &attr : attrs) {
+            if (attr.kind == TokenType::CALLBACK && index != std::string::npos && index != 0) {
+                ParserPackageInfo(token.value.substr(0, index));
+                break;
+            }
         }
     }
 
@@ -666,7 +669,6 @@ void Parser::ParseInterface(const AttrSet &attrs)
     if (token.kind != TokenType::ID) {
         LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected interface name"));
     } else {
-        size_t index = token.value.rfind('.');
         if (index != std::string::npos) {
             interfaceType->SetName(StringHelper::SubStr(token.value, index + 1));
             interfaceType->SetNamespace(ast_->ParseNamespace(token.value));

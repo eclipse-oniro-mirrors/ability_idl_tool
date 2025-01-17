@@ -84,7 +84,7 @@ ErrCode FooProxy::enum_test_func(
 ErrCode FooProxy::struct_test_func(
     const FooStruct& inParam,
     FooStruct& outParam,
-    FooStruct& inoutParam,
+    RequestInfo& inoutParam,
     FooStruct& funcResult)
 {
     MessageParcel data;
@@ -95,10 +95,10 @@ ErrCode FooProxy::struct_test_func(
         return ERR_INVALID_VALUE;
     }
 
-    if (FooStructBlockMarshalling(reply, inParam) != ERR_NONE) {
+    if (FooStructBlockMarshalling(data, inParam) != ERR_NONE) {
         return ERR_INVALID_DATA;
     }
-    if (FooStructBlockMarshalling(reply, inoutParam) != ERR_NONE) {
+    if (RequestInfoBlockMarshalling(data, inoutParam) != ERR_NONE) {
         return ERR_INVALID_DATA;
     }
 
@@ -117,13 +117,13 @@ ErrCode FooProxy::struct_test_func(
         return errCode;
     }
 
-    if (FooStructBlockUnmarshalling(data, outParam) != ERR_NONE) {
+    if (FooStructBlockUnmarshalling(reply, outParam) != ERR_NONE) {
         return ERR_INVALID_DATA;
     }
-    if (FooStructBlockUnmarshalling(data, inoutParam) != ERR_NONE) {
+    if (RequestInfoBlockUnmarshalling(reply, inoutParam) != ERR_NONE) {
         return ERR_INVALID_DATA;
     }
-    if (FooStructBlockUnmarshalling(data, funcResult) != ERR_NONE) {
+    if (FooStructBlockUnmarshalling(reply, funcResult) != ERR_NONE) {
         return ERR_INVALID_DATA;
     }
     return ERR_OK;
@@ -285,6 +285,102 @@ ErrCode FooProxy::callback_test_func2(
     outParam = iface_cast<ICallback>(reply.ReadRemoteObject());
     inoutParam = iface_cast<ICallback>(reply.ReadRemoteObject());
     funcResult = iface_cast<ICallback>(reply.ReadRemoteObject());
+    return ERR_OK;
+}
+
+ErrCode FooProxy::ApplyQuickFix(
+    const std::vector<std::string>& quickFixFiles,
+    bool isDebug)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (quickFixFiles.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(quickFixFiles.size());
+    for (auto it1 = quickFixFiles.begin(); it1 != quickFixFiles.end(); ++it1) {
+        if (!data.WriteString16(Str8ToStr16((*it1)))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (!data.WriteInt32(isDebug ? 1 : 0)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_APPLY_QUICK_FIX), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::GetAllAppSuspendState(
+    const std::unordered_map<int32_t, FooStruct>& inApp,
+    std::unordered_map<int32_t, FooStruct>& outApp)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inApp.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inApp.size());
+    for (auto it2 = inApp.begin(); it2 != inApp.end(); ++it2) {
+        if (!data.WriteInt32((it2->first))) {
+            return ERR_INVALID_DATA;
+        }
+        if (FooStructBlockMarshalling(data, (it2->second)) != ERR_NONE) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_GET_ALL_APP_SUSPEND_STATE), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outAppSize = reply.ReadInt32();
+    for (int32_t i3 = 0; i3 < outAppSize; ++i3) {
+        int32_t key3 = reply.ReadInt32();
+        FooStruct value3;
+        if (FooStructBlockUnmarshalling(reply, value3) != ERR_NONE) {
+            return ERR_INVALID_DATA;
+        }
+        outApp[key3] = value3;
+    }
     return ERR_OK;
 }
 } // namespace test

@@ -72,7 +72,7 @@ void SaMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
     sb.Append(prefix).Append("}\n");
     sb.Append("\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
-    
+
     circleCount_++;
     std::stringstream circleCountStr;
     circleCountStr << circleCount_;
@@ -87,6 +87,12 @@ void SaMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
 void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
+    std::string useName = name;
+    size_t dotPos = useName.find('.');
+    if (dotPos != std::string::npos) {
+        useName = useName.substr(dotPos + 1);
+    }
+
     if (emitType) {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
@@ -96,9 +102,9 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
     circleCountStr << circleCount_;
     std::string keyStr = "key" + circleCountStr.str();
     std::string valueStr = "value" + circleCountStr.str();
-    sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.c_str());
+    sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
     sb.Append(prefix).AppendFormat("for (int32_t i%d = 0; i%d < %sSize; ++i%d) {\n", circleCount_,
-        circleCount_, name.c_str(), circleCount_);
+        circleCount_, useName.c_str(), circleCount_);
     keyEmitter_->EmitCppReadVar(parcelName, keyStr.c_str(), sb, prefix + TAB);
     valueEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
     sb.Append(prefix + TAB).AppendFormat("%s[%s] = %s;\n", name.c_str(), keyStr.c_str(), valueStr.c_str());
@@ -145,9 +151,14 @@ void SaMapTypeEmitter::EmitTsWriteVar(const std::string &parcelName, const std::
 void SaMapTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std::string &name,
     StringBuilder &sb, const std::string &prefix, TypeMode mode) const
 {
+    std::string useName = name;
+    size_t dotPos = useName.find('.');
+    if (dotPos != std::string::npos) {
+        useName = useName.substr(dotPos + 1);
+    }
     sb.Append(prefix).AppendFormat("let %s = new Map();\n", name.c_str());
-    sb.Append(prefix).AppendFormat("let %sSize = %s.readInt();\n", name.c_str(), parcelName.c_str());
-    sb.Append(prefix).AppendFormat("for (let i = 0; i < %sSize; ++i) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("let %sSize = %s.readInt();\n", useName.c_str(), parcelName.c_str());
+    sb.Append(prefix).AppendFormat("for (let i = 0; i < %sSize; ++i) {\n", useName.c_str());
     keyEmitter_->EmitTsReadVar(parcelName, "key", sb, prefix + TAB, TypeMode::PARAM_IN);
     valueEmitter_->EmitTsReadVar(parcelName, "value", sb, prefix + TAB, TypeMode::PARAM_IN);
     sb.Append(prefix).Append(TAB).AppendFormat("%s.set(key, value);\n", name.c_str());

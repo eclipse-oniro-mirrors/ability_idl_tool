@@ -40,6 +40,8 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
     sb.Append("\n");
     EmitBeginNamespace(sb);
     sb.Append("\n");
+    EmitDefineConstant(sb);
+    sb.Append("\n");
     EmitCustomTypeDecls(sb);
     sb.Append("\n");
     EmitCustomTypeFuncDecl(sb);
@@ -85,11 +87,16 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     if (needSecurec) {
         headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "securec");
     }
+    if (needLogh) {
+        headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, "hilog/log");
+    }
     for (const auto &file : headerFiles) {
         sb.AppendFormat("%s\n", file.ToString().c_str());
     }
-    if (needLogh) {
-        sb.Append("#include \"hilog/log.h\"\n");
+    if (needLogh && !domainId_.empty() && !logTag_.empty()) {
+        sb.AppendFormat(
+            "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
+            domainId_.c_str(), logTag_.c_str());
     }
 }
 
@@ -106,6 +113,14 @@ bool SaCppCustomTypesCodeEmitter::EmitCustomTypeNeedSecurec(const AutoPtr<ASTStr
         }
     }
     return false;
+}
+
+void SaCppCustomTypesCodeEmitter::EmitDefineConstant(StringBuilder &sb) const
+{
+    sb.Append(
+        "const int VECTOR_MAX_SIZE = 102400;\n"
+        "const int LIST_MAX_SIZE = 102400;\n"
+        "const int MAP_MAX_SIZE = 102400;\n");
 }
 
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
@@ -152,6 +167,14 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
     EmitLicense(sb);
     EmitSourceFileInclusions(sb);
     sb.Append("\n");
+    if (hitraceOn_) {
+        sb.Append("#include \"hitrace_meter.h\"\n");
+    }
+    if (logOn_) {
+        sb.Append(
+            "#include \"hilog/log.h\"\n"
+            "using OHOS::HiviewDFX::HiLog;\n\n");
+    }
     EmitBeginNamespace(sb);
     sb.Append("\n");
     EmitCustomTypeDataProcess(sb);
@@ -302,5 +325,6 @@ void SaCppCustomTypesCodeEmitter::EmitEndNamespace(StringBuilder &sb)
         sb.AppendFormat("} // namespace %s\n", nspaceIter->c_str());
     }
 }
+
 } // namespace Idl
 } // namespace OHOS

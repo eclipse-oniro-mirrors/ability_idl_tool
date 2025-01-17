@@ -17,6 +17,8 @@
 #define OHOS_TEST_IFOO_H
 
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
 #include <iremote_broker.h>
 #include <string_ex.h>
 #include "../fcallback/icallback.h"
@@ -35,6 +37,8 @@ enum class IFooIpcCode {
     COMMAND_UNION_TEST_FUNC,
     COMMAND_CALLBACK_TEST_FUNC,
     COMMAND_CALLBACK_TEST_FUNC2,
+    COMMAND_APPLY_QUICK_FIX,
+    COMMAND_GET_ALL_APP_SUSPEND_STATE,
 };
 
 class IFoo : public IRemoteBroker {
@@ -50,7 +54,7 @@ public:
     virtual ErrCode struct_test_func(
         const FooStruct& inParam,
         FooStruct& outParam,
-        FooStruct& inoutParam,
+        RequestInfo& inoutParam,
         FooStruct& funcResult) = 0;
 
     virtual ErrCode union_test_func(
@@ -70,6 +74,14 @@ public:
         sptr<ICallback>& outParam,
         sptr<ICallback>& inoutParam,
         sptr<ICallback>& funcResult) = 0;
+
+    virtual ErrCode ApplyQuickFix(
+        const std::vector<std::string>& quickFixFiles,
+        bool isDebug) = 0;
+
+    virtual ErrCode GetAllAppSuspendState(
+        const std::unordered_map<int32_t, FooStruct>& inApp,
+        std::unordered_map<int32_t, FooStruct>& outApp) = 0;
 protected:
     const int VECTOR_MAX_SIZE = 102400;
     const int LIST_MAX_SIZE = 102400;

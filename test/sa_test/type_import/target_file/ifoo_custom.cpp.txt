@@ -32,6 +32,10 @@ ErrCode FooStructBlockMarshalling(OHOS::MessageParcel& data, const FooStruct& da
     if (!data.WriteUint64(static_cast<uint64_t>(dataBlock.type))) {
         return ERR_INVALID_DATA;
     }
+
+    if (!data.WriteRemoteObject(dataBlock.caption)) {
+        return ERR_INVALID_DATA;
+    }
     return ERR_NONE;
 }
 
@@ -49,9 +53,59 @@ ErrCode FooStructBlockUnmarshalling(OHOS::MessageParcel& data, FooStruct& dataBl
         }
         dataBlock.type = static_cast<FooEnum>(enumTmp);
     }
+
+    dataBlock.caption = data.ReadRemoteObject();
+
     return ERR_NONE;
 }
 
+ErrCode RequestInfoBlockMarshalling(OHOS::MessageParcel& data, const RequestInfo& dataBlock)
+{
+    if (dataBlock.initData.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(dataBlock.initData.size());
+    for (auto it7 = dataBlock.initData.begin(); it7 != dataBlock.initData.end(); ++it7) {
+        if (!data.WriteUint8((*it7))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    if (dataBlock.optionalData.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(dataBlock.optionalData.size());
+    for (auto it8 = dataBlock.optionalData.begin(); it8 != dataBlock.optionalData.end(); ++it8) {
+        if (!data.WriteString16(Str8ToStr16((it8->first)))) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteString16(Str8ToStr16((it8->second)))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    return ERR_NONE;
+}
+
+ErrCode RequestInfoBlockUnmarshalling(OHOS::MessageParcel& data, RequestInfo& dataBlock)
+{
+    int32_t initDataSize = data.ReadInt32();
+    if (initDataSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i9 = 0; i9 < initDataSize; ++i9) {
+        uint8_t value9 = data.ReadUint8();
+        dataBlock.initData.push_back(value9);
+    }
+
+    int32_t optionalDataSize = data.ReadInt32();
+    for (int32_t i10 = 0; i10 < optionalDataSize; ++i10) {
+        std::string key10 = Str16ToStr8(data.ReadString16());
+        std::string value10 = Str16ToStr8(data.ReadString16());
+        dataBlock.optionalData[key10] = value10;
+    }
+    return ERR_NONE;
+}
 } // namespace idlFile
 } // namespace custom
 } // namespace OHOS
