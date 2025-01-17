@@ -11,8 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build/test.gni")
 import("//build/config/components/idl_tool/idl.gni")
+import("//build/test.gni")
 
 idl_gen_interface("idl_sa_test_interface") {
   src_idl = rebase_path("IListenAbility.idl")
@@ -25,21 +25,21 @@ config("listen_ability_config") {
   visibility = [ ":*" ]
   include_dirs = [
     "include",
-    "${target_gen_dir}"
+    "${target_gen_dir}",
   ]
 }
 
 ohos_source_set("idl_sa_proxy") {
   output_values = get_target_outputs(":idl_sa_test_interface")
-  sources = filter_include(output_values, [ "*_proxy.cpp", "*_client.cpp" ])
+  sources = filter_include(output_values,
+                           [
+                            "*_proxy.cpp",
+                            "*_client.cpp",
+                           ])
 
-  public_configs = [
-    ":listen_ability_config"
-  ]
+  public_configs = [ ":listen_ability_config" ]
 
-  deps = [
-    ":idl_sa_test_interface"
-  ]
+  deps = [ ":idl_sa_test_interface" ]
 
   external_deps = [
     "c_utils:utils",
@@ -56,13 +56,9 @@ ohos_source_set("idl_sa_stub") {
   output_values = get_target_outputs(":idl_sa_test_interface")
   sources = filter_include(output_values, [ "*_stub.cpp" ])
 
-  public_configs = [
-    ":listen_ability_config"
-  ]
+  public_configs = [ ":listen_ability_config" ]
 
-  deps = [
-    ":idl_sa_test_interface"
-  ]
+  deps = [ ":idl_sa_test_interface" ]
 
   external_deps = [
     "c_utils:utils",
@@ -75,13 +71,9 @@ ohos_source_set("idl_sa_stub") {
 }
 
 ohos_shared_library("idl_sa_test") {
-  sources = [
-    "src/listen_ability.cpp"
-  ]
+  sources = [ "src/listen_ability.cpp" ]
 
-  public_configs = [
-    ":listen_ability_config"
-  ]
+  public_configs = [ ":listen_ability_config" ]
 
   deps = [
     ":idl_sa_proxy",
@@ -92,8 +84,8 @@ ohos_shared_library("idl_sa_test") {
     "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_single",
-    "samgr:samgr_proxy",
     "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
   ]
 
   part_name = "idl_tool"
