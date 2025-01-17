@@ -260,6 +260,20 @@ public:
         return supportDelegatorOn_;
     }
 
+    inline void SetOptionStubHooks(std::string &optionStubHooks)
+    {
+        if (optionStubHooks == "on") {
+            optionStubHooksOn_ = true;
+        } else {
+            optionStubHooksOn_ = false;
+        }
+    }
+
+    inline bool GetOptionStubHooksOn() const
+    {
+        return optionStubHooksOn_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -284,6 +298,7 @@ private:
     bool hasCacheableProxyMethods_ = false;
     std::string interfaceToken_;
     bool supportDelegatorOn_ = false;
+    bool optionStubHooksOn_ = false;
 };
 } // namespace Idl
 } // namespace OHOS
