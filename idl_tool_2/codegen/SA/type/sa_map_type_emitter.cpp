@@ -72,7 +72,7 @@ void SaMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
     sb.Append(prefix).Append("}\n");
     sb.Append("\n");
     sb.Append(prefix).AppendFormat("%sWriteInt32(%s.size());\n", parcelName.c_str(), name.c_str());
-    
+
     circleCount_++;
     std::stringstream circleCountStr;
     circleCountStr << circleCount_;
@@ -101,6 +101,9 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
         circleCount_, name.c_str(), circleCount_);
     keyEmitter_->EmitCppReadVar(parcelName, keyStr.c_str(), sb, prefix + TAB);
     valueEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
+    if (valueEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
+        valueStr = "*" + valueStr;
+    }
     sb.Append(prefix + TAB).AppendFormat("%s[%s] = %s;\n", name.c_str(), keyStr.c_str(), valueStr.c_str());
     sb.Append(prefix).Append("}\n");
 }

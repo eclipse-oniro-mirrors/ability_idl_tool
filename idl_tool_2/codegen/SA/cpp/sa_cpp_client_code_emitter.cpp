@@ -21,6 +21,7 @@ namespace Idl {
 
 void SaCppClientCodeEmitter::EmitCode()
 {
+    SaTypeEmitter::circleCount_ = 0;
     EmitClientHeaderFile();
     EmitClientSourceFile();
 }

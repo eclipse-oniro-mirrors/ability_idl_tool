@@ -21,6 +21,7 @@ namespace OHOS {
 namespace Idl {
 void SaCppClientProxyCodeEmitter::EmitCode()
 {
+    SaTypeEmitter::circleCount_ = 0;
     EmitInterfaceProxyHeaderFile();
     EmitInterfaceProxyCppFile();
 }
