@@ -547,6 +547,9 @@ void CppServiceStubCodeEmitter::EmitCppLocalVar(const AutoPtr<ASTParameter> &par
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     sb.Append(prefix).AppendFormat("%s %s", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(),
         param->GetName().c_str());
     switch (type->GetTypeKind()) {
@@ -585,6 +588,9 @@ void CppServiceStubCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
             AutoPtr<ASTParameter> param = method->GetParameter(paramIndex);
             AutoPtr<ASTType> paramType = param->GetType();
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 typeEmitter->EmitCppReadMethods(methods, "", "", isDecl);
             } else {

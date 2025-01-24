@@ -67,6 +67,9 @@ void HDIJavaCodeEmitter::EmitInterfaceMethodParameter(
     std::string name = param->GetName();
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     switch (type->GetTypeKind()) {
         case TypeKind::TYPE_BOOLEAN:
         case TypeKind::TYPE_BYTE:

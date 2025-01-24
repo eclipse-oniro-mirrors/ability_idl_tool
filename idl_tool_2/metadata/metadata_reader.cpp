@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <cstdint>
 
 #include "metadata/metadata_reader.h"
-
 #include "metadata/metadata_serializer.h"
 #include "util/file.h"
 #include "util/logger.h"
@@ -43,7 +43,7 @@ std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const std::s
         return nullptr;
     }
 
-    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ < 0) {
+    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ < 0 || header.size_ > UINT16_MAX) {
         Logger::E(tag_.c_str(), "The metadata in \"%s\" file is bad.", filePath.c_str());
         return nullptr;
     }

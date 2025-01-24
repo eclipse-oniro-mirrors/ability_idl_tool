@@ -157,6 +157,9 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        if (typeEmitter == nullptr) {
+            continue;
+        }
         sb.Append(typeEmitter->EmitCppTypeDecl()).Append("\n");
         if (i + 1 < ast_->GetTypeDefinitionNumber()) {
             sb.Append("\n");
@@ -180,6 +183,9 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 void CppCustomTypesCodeEmitter::EmitCustomTypeMarshallFuncDecl(StringBuilder &sb, const AutoPtr<ASTType> &type) const
 {
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     std::string objName("dataBlock");
     sb.AppendFormat("bool %sBlockMarshalling(OHOS::MessageParcel &data, const %s& %s);\n\n", type->GetName().c_str(),
         typeEmitter->EmitCppType().c_str(), objName.c_str());
@@ -250,7 +256,11 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) con
 void CppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
     StringBuilder &sb, const AutoPtr<ASTStructType> &type) const
 {
-    std::string typeName = GetTypeEmitter(type.Get())->EmitCppType();
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCppType();
     std::string objName("dataBlock");
 
     sb.AppendFormat("bool %sBlockMarshalling(OHOS::MessageParcel& data, const %s& %s)\n", type->GetName().c_str(),
@@ -353,8 +363,10 @@ void CppCustomTypesCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
     UtilMethodMap methods;
     for (const auto &typePair : ast_->GetTypes()) {
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(typePair.second);
-        typeEmitter->EmitCppWriteMethods(methods, "", "", isDecl);
-        typeEmitter->EmitCppReadMethods(methods, "", "", isDecl);
+        if (typeEmitter != nullptr) {
+            typeEmitter->EmitCppWriteMethods(methods, "", "", isDecl);
+            typeEmitter->EmitCppReadMethods(methods, "", "", isDecl);
+        }
     }
     EmitUtilMethodMap(sb, methods);
 }

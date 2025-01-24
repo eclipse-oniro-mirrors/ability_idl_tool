@@ -111,14 +111,18 @@ void SACppCodeEmitter::EmitWriteMethodParameter(const AutoPtr<ASTParameter> &par
     StringBuilder &sb, const std::string &prefix) const
 {
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-    typeEmitter->EmitCppWriteVar(parcelName, param->GetName(), sb, prefix);
+    if (typeEmitter != nullptr) {
+        typeEmitter->EmitCppWriteVar(parcelName, param->GetName(), sb, prefix);
+    }
 }
 
 void SACppCodeEmitter::EmitReadMethodParameter(const AutoPtr<ASTParameter> &param, const std::string &parcelName,
     bool emitType, StringBuilder &sb, const std::string &prefix) const
 {
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-    typeEmitter->EmitCppReadVar(parcelName, param->GetName(), sb, prefix, emitType);
+    if (typeEmitter != nullptr) {
+        typeEmitter->EmitCppReadVar(parcelName, param->GetName(), sb, prefix, emitType);
+    }
 }
 
 void SACppCodeEmitter::EmitInterfaceMethodParams(AutoPtr<ASTMethod> &method, StringBuilder &sb,
@@ -174,8 +178,10 @@ void SACppCodeEmitter::EmitParamsWithReturnType(AutoPtr<ASTMethod> &method, Stri
     }
     if (retTypeKind != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        sb.Append("\n").Append(prefix).AppendFormat(includeType ? "%s funcResult" : "funcResult",
-            typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
+        if (typeEmitter != nullptr) {
+            sb.Append("\n").Append(prefix).AppendFormat(includeType ? "%s funcResult" : "funcResult",
+                typeEmitter->EmitCppType(TypeMode::PARAM_OUT).c_str());
+        }
     }
 }
 
@@ -183,6 +189,9 @@ std::string SACppCodeEmitter::EmitCppParameter(AutoPtr<ASTParameter> &param) con
 {
     std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+    if (typeEmitter == nullptr) {
+        return StringHelper::Format("unknow param attr %s", name.c_str());
+    }
     ASTParamAttr::ParamAttr attrAttr = param->GetAttribute();
     if (attrAttr == ASTParamAttr::PARAM_INOUT) {
         return StringHelper::Format("%s %s", typeEmitter->EmitCppType(TypeMode::PARAM_INOUT).c_str(), name.c_str());

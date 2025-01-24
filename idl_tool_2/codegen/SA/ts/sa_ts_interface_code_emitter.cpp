@@ -87,7 +87,9 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceMethod(AutoPtr<ASTMethod> &method, S
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-            sb.AppendFormat("%s: %s, ", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            if (typeEmitter != nullptr) {
+                sb.AppendFormat("%s: %s, ", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            }
         }
     }
     sb.AppendFormat("callback: %sCallback): void;\n", MethodName(method->GetName()).c_str());
@@ -100,14 +102,18 @@ void SaTsInterfaceCodeEmitter::EmitInterfaceMethodCallback(AutoPtr<ASTMethod> &m
     AutoPtr<ASTType> returnType = method->GetReturnType();
     if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        sb.AppendFormat(", %s: %s", RETURN_VALUE, typeEmitter->EmitTsType().c_str());
+        if (typeEmitter != nullptr) {
+            sb.AppendFormat(", %s: %s", RETURN_VALUE, typeEmitter->EmitTsType().c_str());
+        }
     }
 
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-            sb.AppendFormat(", %s: %s", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            if (typeEmitter != nullptr) {
+                sb.AppendFormat(", %s: %s", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            }
         }
     }
     sb.Append(") => void;\n");

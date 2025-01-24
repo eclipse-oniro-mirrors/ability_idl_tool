@@ -176,7 +176,11 @@ void CppInterfaceCodeEmitter::EmitCastFromDecl(StringBuilder &sb, const std::str
 
 void CppInterfaceCodeEmitter::EmitGetMethodDecl(StringBuilder &sb, const std::string &prefix) const
 {
-    std::string typeName = GetTypeEmitter(interface_.Get())->EmitCppType();
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(interface_.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCppType();
     sb.Append(prefix).AppendFormat("static %s Get(bool isStub = false);\n", typeName.c_str());
     sb.Append(prefix).AppendFormat("static %s Get(const std::string &serviceName, bool isStub = false);\n",
         typeName.c_str());

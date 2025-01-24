@@ -191,7 +191,10 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodCallbackInner(AutoPtr<ASTMet
     AutoPtr<ASTType> returnType = method->GetReturnType();
     if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        typeEmitter->EmitTsReadVar("result.reply", SuffixAdded(RETURN_VALUE), sb, prefix + TAB, TypeMode::PARAM_OUT);
+        if (typeEmitter != nullptr) {
+            typeEmitter->EmitTsReadVar("result.reply",
+                SuffixAdded(RETURN_VALUE), sb, prefix + TAB, TypeMode::PARAM_OUT);
+        }
     }
     sb.Append(prefix + TAB).AppendFormat("callback(%s", SuffixAdded(ERR_CODE).c_str());
     if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {

@@ -412,6 +412,9 @@ void CClientProxyCodeEmitter::EmitReadProxyMethodParameter(const AutoPtr<ASTPara
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     std::string name = param->GetName();
     if (type->GetTypeKind() == TypeKind::TYPE_STRING) {
         std::string cloneName = StringHelper::Format("%sCopy", name.c_str());
@@ -837,6 +840,9 @@ void CClientProxyCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
         for (size_t paramIndex = 0; paramIndex < method->GetParameterNumber(); paramIndex++) {
             AutoPtr<ASTParameter> param = method->GetParameter(paramIndex);
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 typeEmitter->EmitCWriteMethods(methods, "", "", isDecl);
             } else {

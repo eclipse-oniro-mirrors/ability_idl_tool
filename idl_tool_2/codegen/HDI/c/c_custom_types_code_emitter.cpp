@@ -144,6 +144,9 @@ void CCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        if (typeEmitter == nullptr) {
+            continue;
+        }
         sb.Append(typeEmitter->EmitCTypeDecl()).Append("\n");
         if (i + 1 < ast_->GetTypeDefinitionNumber()) {
             sb.Append("\n");
@@ -167,6 +170,9 @@ void CCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 void CCustomTypesCodeEmitter::EmitCustomTypeMarshallFuncDecl(StringBuilder &sb, const AutoPtr<ASTType> &type) const
 {
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     std::string objName("dataBlock");
     sb.AppendFormat("bool %sBlockMarshalling(struct HdfSBuf *data, const %s *%s);\n\n", type->GetName().c_str(),
         typeEmitter->EmitCType().c_str(), objName.c_str());
@@ -318,8 +324,11 @@ void CCustomTypesCodeEmitter::EmitUnmarshallingVarDecl(
     }
 
     if (type->IsPod()) {
-        sb.Append(prefix).AppendFormat("%s *%sPtr = NULL;\n",
-            GetTypeEmitter(type.Get())->EmitCType().c_str(), name.c_str());
+        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+        if (typeEmitter != nullptr) {
+            sb.Append(prefix).AppendFormat("%s *%sPtr = NULL;\n",
+                typeEmitter->EmitCType().c_str(), name.c_str());
+        }
         sb.Append(prefix).AppendFormat("uint32_t %sLen = 0;\n\n", name.c_str());
         return;
     }
@@ -382,6 +391,9 @@ void CCustomTypesCodeEmitter::EmitMemberUnmarshalling(const AutoPtr<ASTType> &ty
 {
     std::string varName = StringHelper::Format("%s->%s", name.c_str(), memberName.c_str());
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     switch (type->GetTypeKind()) {
         case TypeKind::TYPE_STRING: {
             EmitStringMemberUnmarshalling(typeEmitter, memberName, varName, sb, prefix);
@@ -448,6 +460,9 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
 {
     std::string tmpName = StringHelper::Format("%sCp", memberName.c_str());
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     AutoPtr<ASTType> elementType = nullptr;
     if (type->GetTypeKind() == TypeKind::TYPE_ARRAY) {
         AutoPtr<ASTArrayType> arrayType = dynamic_cast<ASTArrayType *>(type.Get());
@@ -528,8 +543,10 @@ void CCustomTypesCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
     UtilMethodMap methods;
     for (const auto &typePair : ast_->GetTypes()) {
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(typePair.second);
-        typeEmitter->EmitCWriteMethods(methods, "", "", isDecl);
-        typeEmitter->EmitCStubReadMethods(methods, "", "", isDecl);
+        if (typeEmitter != nullptr) {
+            typeEmitter->EmitCWriteMethods(methods, "", "", isDecl);
+            typeEmitter->EmitCStubReadMethods(methods, "", "", isDecl);
+        }
     }
     EmitUtilMethodMap(sb, methods);
 }
