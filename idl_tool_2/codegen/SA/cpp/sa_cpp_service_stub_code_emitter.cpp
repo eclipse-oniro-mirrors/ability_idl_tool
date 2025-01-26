@@ -254,6 +254,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod>
     TypeKind retTypeKind = returnType->GetTypeKind();
     if (retTypeKind != TypeKind::TYPE_VOID) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+        if (typeEmitter == nullptr) {
+            return;
+        }
         if ((retTypeKind == TypeKind::TYPE_SEQUENCEABLE) || (retTypeKind == TypeKind::TYPE_INTERFACE)) {
             sb.Append(prefix + TAB).AppendFormat("%s result = nullptr;\n", typeEmitter->EmitCppType().c_str());
         } else {

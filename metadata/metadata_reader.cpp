@@ -14,6 +14,7 @@
  */
 
 #include <climits>
+#include <cstdint>
 
 #include "metadata/metadata_reader.h"
 #include "metadata/metadata_serializer.h"
@@ -44,7 +45,7 @@ std::shared_ptr<MetaComponent> MetadataReader::ReadMetadataFromFile(const String
         return nullptr;
     }
 
-    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ <= 0 || header.size_ > INT_MAX) {
+    if (header.magic_ != METADATA_MAGIC_NUMBER || header.size_ < 0 || header.size_ > UINT16_MAX) {
         Logger::E(tag, "The metadata in \"%s\" file is bad.", filePath.string());
         return nullptr;
     }

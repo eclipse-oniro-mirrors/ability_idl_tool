@@ -30,7 +30,8 @@ bool SATsCodeEmitter::CheckInterfaceType() const
         }
         AutoPtr<ASTType> type = method->GetReturnType();
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
-        if ((type->GetTypeKind() != TypeKind::TYPE_VOID) && (typeEmitter->EmitTsType() == "unknown type")) {
+        if ((type->GetTypeKind() != TypeKind::TYPE_VOID) &&
+            (typeEmitter != nullptr && typeEmitter->EmitTsType() == "unknown type")) {
             Logger::E("SATsCodeEmitter", "unsupported type in .idl file for method '%s'", method->GetName().c_str());
             return false;
         }
@@ -39,7 +40,8 @@ bool SATsCodeEmitter::CheckInterfaceType() const
             AutoPtr<ASTParameter> param = method->GetParameter(j);
             type = param->GetType();
             typeEmitter = GetTypeEmitter(type);
-            if ((type->GetTypeKind() != TypeKind::TYPE_VOID) && (typeEmitter->EmitTsType() == "unknown type")) {
+            if ((type->GetTypeKind() != TypeKind::TYPE_VOID) &&
+                (typeEmitter != nullptr && typeEmitter->EmitTsType() == "unknown type")) {
                 Logger::E("SATsCodeEmitter", "unsupported type in .idl file for method '%s'",
                     method->GetName().c_str());
                 return false;
@@ -145,7 +147,9 @@ void SATsCodeEmitter::EmitInterfaceMethodHead(AutoPtr<ASTMethod> &method, String
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-            sb.AppendFormat("%s: %s, ", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            if (typeEmitter != nullptr) {
+                sb.AppendFormat("%s: %s, ", param->GetName().c_str(), typeEmitter->EmitTsType().c_str());
+            }
         }
     }
     sb.AppendFormat("callback: %sCallback", MethodName(method->GetName()).c_str());

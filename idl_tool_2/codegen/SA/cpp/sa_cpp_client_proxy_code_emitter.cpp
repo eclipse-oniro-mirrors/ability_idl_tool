@@ -399,14 +399,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodReply(AutoPtr<ASTMetho
     size_t paramNumber = method->GetParameterNumber();
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
-        if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
+        if (param != nullptr && (param->GetAttribute() & ASTParamAttr::PARAM_OUT)) {
             EmitReadMethodParameter(param, "reply.", false, sb, prefix + TAB);
         }
     }
     AutoPtr<ASTType> returnType = method->GetReturnType();
-    if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
+    if (returnType != nullptr && (returnType->GetTypeKind() != TypeKind::TYPE_VOID)) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
-        typeEmitter->EmitCppReadVar("reply.", "funcResult", sb, prefix + TAB, false);
+        if (typeEmitter != nullptr) {
+            typeEmitter->EmitCppReadVar("reply.", "funcResult", sb, prefix + TAB, false);
+        }
     }
 }
 

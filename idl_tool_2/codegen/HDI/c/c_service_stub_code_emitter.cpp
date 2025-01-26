@@ -341,7 +341,9 @@ void CServiceStubCodeEmitter::EmitErrorHandle(const AutoPtr<ASTMethod> &method,
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-        typeEmitter->EmitMemoryRecycle(param->GetName(), true, sb, prefix + TAB);
+        if (typeEmitter != nullptr) {
+            typeEmitter->EmitMemoryRecycle(param->GetName(), true, sb, prefix + TAB);
+        }
     }
 }
 
@@ -375,6 +377,9 @@ void CServiceStubCodeEmitter::EmitParamLocalVar(const AutoPtr<ASTParameter> &par
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     sb.Append(prefix).AppendFormat("%s %s", typeEmitter->EmitCType(TypeMode::LOCAL_VAR).c_str(),
         param->GetName().c_str());
     switch (type->GetTypeKind()) {
@@ -416,7 +421,9 @@ void CServiceStubCodeEmitter::EmitReadStubMethodParameter(const AutoPtr<ASTParam
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
-
+    if (typeEmitter == nullptr) {
+        return;
+    }
     if (type->GetTypeKind() == TypeKind::TYPE_STRING) {
         EmitReadCStringStubMethodParameter(param, gotoLabel, sb, prefix, typeEmitter);
     } else if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
@@ -491,6 +498,9 @@ void CServiceStubCodeEmitter::EmitOutVarMemInitialize(const AutoPtr<ASTParameter
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     if (type->IsStructType() || type->IsUnionType()) {
         sb.Append(prefix).AppendFormat("%s = (%s*)OsalMemCalloc(sizeof(%s));\n", param->GetName().c_str(),
             typeEmitter->EmitCType().c_str(), typeEmitter->EmitCType().c_str());
@@ -798,6 +808,9 @@ void CServiceStubCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
         for (size_t paramIndex = 0; paramIndex < method->GetParameterNumber(); paramIndex++) {
             AutoPtr<ASTParameter> param = method->GetParameter(paramIndex);
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 typeEmitter->EmitCStubReadMethods(methods, "", "", isDecl);
             } else {

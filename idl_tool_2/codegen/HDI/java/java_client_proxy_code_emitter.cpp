@@ -229,6 +229,9 @@ void JavaClientProxyCodeEmitter::EmitParamWriteVar(const AutoPtr<ASTParameter> &
     AutoPtr<ASTType> type = param->GetType();
     std::string name = param->GetName();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     if (attrAttr == ASTParamAttr::PARAM_IN) {
         typeEmitter->EmitJavaWriteVar(parcelName, name, sb, prefix);
     }
@@ -244,6 +247,9 @@ void JavaClientProxyCodeEmitter::EmitLocalVariable(
 {
     AutoPtr<ASTType> type = param->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     if (type->IsSequenceableType()) {
         sb.Append(prefix).AppendFormat("%s %s = new %s();\n", typeEmitter->EmitJavaType(TypeMode::NO_MODE).c_str(),
             param->GetName().c_str(), typeEmitter->EmitJavaType(TypeMode::NO_MODE).c_str());

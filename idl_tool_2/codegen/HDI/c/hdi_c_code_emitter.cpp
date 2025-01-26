@@ -44,6 +44,9 @@ void HDICCodeEmitter::EmitInterfaceMethodParameter(
     std::string name = parameter->GetName();
     AutoPtr<ASTType> type = parameter->GetType();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     ASTParamAttr::ParamAttr attrAttr = parameter->GetAttribute();
     std::string typeName = (attrAttr == ASTParamAttr::PARAM_IN) ?
         typeEmitter->EmitCType(TypeMode::PARAM_IN) : typeEmitter->EmitCType(TypeMode::PARAM_OUT);

@@ -232,7 +232,9 @@ void SaRustInterfaceCodeEmitter::EmitBrokers(StringBuilder &sb) const
         sb.AppendFormat("    fn %s(&self", method->GetName().c_str());
         AppendBrokerParameters(sb, method);
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(method->GetReturnType());
-        sb.AppendFormat(") -> Result<%s>;\n", typeEmitter->EmitRustType().c_str());
+        if (typeEmitter != nullptr) {
+            sb.AppendFormat(") -> Result<%s>;\n", typeEmitter->EmitRustType().c_str());
+        }
     }
     sb.Append("}\n");
 }
@@ -244,8 +246,10 @@ void SaRustInterfaceCodeEmitter::AppendBrokerParameters(StringBuilder &sb, AutoP
         WrapLine(sb, i, "        ");
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-        sb.AppendFormat("%s: &%s", GetNameFromParameter(param->GetName()).c_str(),
-            typeEmitter->EmitRustType(true).c_str());
+        if (typeEmitter != nullptr) {
+            sb.AppendFormat("%s: &%s", GetNameFromParameter(param->GetName()).c_str(),
+                typeEmitter->EmitRustType(true).c_str());
+        }
     }
 }
 
@@ -303,7 +307,9 @@ void SaRustInterfaceCodeEmitter::AddRemoteRequestMethods(StringBuilder &sb) cons
         for (int j = 0; j < paramNumber; j++) {
             AutoPtr<ASTParameter> param = method->GetParameter(j);
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-            typeEmitter->EmitRustReadVar("data", GetNameFromParameter(param->GetName()), sb, "            ");
+            if (typeEmitter != nullptr) {
+                typeEmitter->EmitRustReadVar("data", GetNameFromParameter(param->GetName()), sb, "            ");
+            }
         }
         AutoPtr<ASTType> returnType = method->GetReturnType();
         TypeKind retTypeKind = returnType->GetTypeKind();
@@ -345,6 +351,9 @@ void SaRustInterfaceCodeEmitter::EmitStub(StringBuilder &sb) const
         AppendBrokerParameters(sb, method);
         AutoPtr<ASTType> returnType = method->GetReturnType();
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+        if (typeEmitter == nullptr) {
+            return;
+        }
         sb.AppendFormat(") -> Result<%s> {\n", typeEmitter->EmitRustType().c_str());
         sb.AppendFormat("        self.0.%s(", method->GetName().c_str());
         AppendStubParameters(sb, method);

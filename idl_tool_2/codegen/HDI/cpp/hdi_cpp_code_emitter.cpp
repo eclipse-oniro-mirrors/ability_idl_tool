@@ -40,6 +40,9 @@ void HDICppCodeEmitter::EmitInterfaceMethodParameter(
 {
     std::string name = param->GetName();
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
         sb.Append(prefix).AppendFormat("%s %s", typeEmitter->EmitCppType(TypeMode::PARAM_IN).c_str(), name.c_str());
     } else {
@@ -206,14 +209,18 @@ void HDICppCodeEmitter::EmitWriteMethodParameter(const AutoPtr<ASTParameter> &pa
     const std::string &parcelName, StringBuilder &sb, const std::string &prefix) const
 {
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-    typeEmitter->EmitCppWriteVar(parcelName, param->GetName(), sb, prefix);
+    if (typeEmitter != nullptr) {
+        typeEmitter->EmitCppWriteVar(parcelName, param->GetName(), sb, prefix);
+    }
 }
 
 void HDICppCodeEmitter::EmitReadMethodParameter(const AutoPtr<ASTParameter> &param, TypeMode mode,
     StringBuilder &sb, const std::string &prefix) const
 {
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
-    typeEmitter->EmitCppReadVar(param->GetName(), sb, prefix, mode);
+    if (typeEmitter != nullptr) {
+        typeEmitter->EmitCppReadVar(param->GetName(), sb, prefix, mode);
+    }
 }
 
 std::string HDICppCodeEmitter::SpecificationParam(StringBuilder &paramSb, const std::string &prefix) const

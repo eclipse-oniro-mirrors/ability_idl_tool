@@ -455,7 +455,11 @@ void CppClientProxyCodeEmitter::GetSourceOtherFileInclusions(HeaderFile::HeaderF
 
 void CppClientProxyCodeEmitter::EmitGetMethodImpl(StringBuilder &sb, const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("%s %s::Get(bool isStub)\n", GetTypeEmitter(interface_.Get())->EmitCppType().c_str(),
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(interface_.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    sb.Append(prefix).AppendFormat("%s %s::Get(bool isStub)\n", typeEmitter->EmitCppType().c_str(),
         EmitDefinitionByInterface(interface_, interfaceName_).c_str());
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB)
@@ -873,6 +877,9 @@ void CppClientProxyCodeEmitter::EmitUtilMethods(StringBuilder &sb, bool isDecl)
         for (size_t paramIndex = 0; paramIndex < method->GetParameterNumber(); paramIndex++) {
             AutoPtr<ASTParameter> param = method->GetParameter(paramIndex);
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
                 typeEmitter->EmitCppWriteMethods(methods, "", "", isDecl);
             } else {
