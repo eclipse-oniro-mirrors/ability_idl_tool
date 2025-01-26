@@ -63,7 +63,8 @@ private:
     void EmitInterfaceProxyMethodPostSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 
-    void EmitInterfaceProxyMethodErrCode(StringBuilder &sb, const std::string &prefix) const;
+    void EmitInterfaceProxyMethodErrCode(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
 
     void EmitInterfaceProxyMethodReply(AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;

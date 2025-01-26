@@ -36,6 +36,8 @@ private:
 
     void EmitUsingNamespace(StringBuilder &sb);
 
+    void EmitDefineConstant(StringBuilder &sb) const;
+
     void EmitCustomTypeDecls(StringBuilder &sb) const;
 
     void EmitCustomTypeFuncDecl(StringBuilder &sb) const;

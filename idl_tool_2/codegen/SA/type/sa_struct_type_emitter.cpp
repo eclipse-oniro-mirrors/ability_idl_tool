@@ -56,8 +56,14 @@ std::string SaStructTypeEmitter::EmitCppTypeDecl() const
 void SaStructTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name,
     StringBuilder &sb, const std::string &prefix) const
 {
+    std::string useName;
+    if (parcelName == "data.") {
+        useName = "data";
+    } else if (parcelName == "reply.") {
+        useName = "reply";
+    }
     sb.Append(prefix).AppendFormat(
-        "if (%sBlockMarshalling(reply, %s) != ERR_NONE) {\n", EmitCppType().c_str(), name.c_str());
+        "if (%sBlockMarshalling(%s, %s) != ERR_NONE) {\n", EmitCppType().c_str(), useName.c_str(), name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
     }
@@ -68,11 +74,17 @@ void SaStructTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const s
 void SaStructTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
+    std::string useName;
+    if (parcelName == "data.") {
+        useName = "data";
+    } else if (parcelName == "reply.") {
+        useName = "reply";
+    }
     if (emitType) {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
     sb.Append(prefix).AppendFormat(
-        "if (%sBlockUnmarshalling(data, %s) != ERR_NONE) {\n", typeName_.c_str(), name.c_str());
+        "if (%sBlockUnmarshalling(%s, %s) != ERR_NONE) {\n", typeName_.c_str(), useName.c_str(), name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
     }

@@ -80,11 +80,18 @@ void SaArrayTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
 void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
+    std::string useName = name;
+    size_t dotPos = useName.find('.');
+    if (dotPos != std::string::npos) {
+        // Prevent undefined behavior when combining structs and maps
+        useName = useName.substr(dotPos + 1);
+    }
+
     if (emitType) {
         sb.Append(prefix).AppendFormat("%s %s;\n", EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
-    sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", name.c_str(), parcelName.c_str());
-    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n", name.c_str());
+    sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
+    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n", useName.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).Append("HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
     }
@@ -97,7 +104,7 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     std::string iStr = "i" + circleCountStr.str();
     std::string valueStr = "value" + circleCountStr.str();
     sb.Append(prefix).AppendFormat("for (int32_t %s = 0; %s < %sSize; ++%s) {\n",
-        iStr.c_str(), iStr.c_str(), name.c_str(), iStr.c_str());
+        iStr.c_str(), iStr.c_str(), useName.c_str(), iStr.c_str());
     elementEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
     if (elementEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
         sb.Append(prefix + TAB).AppendFormat("%s.push_back(*%s);\n", name.c_str(), valueStr.c_str());
@@ -143,6 +150,11 @@ void SaArrayTypeEmitter::EmitTsWriteVar(const std::string &parcelName, const std
 void SaArrayTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std::string &name,
     StringBuilder &sb, const std::string &prefix, TypeMode mode) const
 {
+    std::string useName = name;
+    size_t dotPos = useName.find('.');
+    if (dotPos != std::string::npos) {
+        useName = useName.substr(dotPos + 1);
+    }
     switch (elementEmitter_->GetTypeKind()) {
         case TypeKind::TYPE_BOOLEAN:
         case TypeKind::TYPE_CHAR:
@@ -159,10 +171,10 @@ void SaArrayTypeEmitter::EmitTsReadVar(const std::string &parcelName, const std:
             sb.Append(prefix).AppendFormat("let %s = %s.readStringArray();\n", name.c_str(), parcelName.c_str());
             break;
         case TypeKind::TYPE_SEQUENCEABLE:
-            sb.Append(prefix).AppendFormat("let %sSize = %s.readInt();\n", name.c_str(), parcelName.c_str());
+            sb.Append(prefix).AppendFormat("let %sSize = %s.readInt();\n", useName.c_str(), parcelName.c_str());
             sb.Append(prefix).AppendFormat("let %s:Array<%s> = [];\n", name.c_str(),
                 elementEmitter_->GetTypeName().c_str());
-            sb.Append(prefix).AppendFormat("for (let index = 0; index < %sSize; index++) {\n", name.c_str());
+            sb.Append(prefix).AppendFormat("for (let index = 0; index < %sSize; index++) {\n", useName.c_str());
             sb.Append(prefix).Append(TAB).AppendFormat("let %sValue = new %s();\n", name.c_str(),
                 elementEmitter_->GetTypeName().c_str());
             sb.Append(prefix).Append(TAB).AppendFormat(

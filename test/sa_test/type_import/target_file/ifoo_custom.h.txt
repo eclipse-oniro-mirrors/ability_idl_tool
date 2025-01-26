@@ -18,6 +18,8 @@
 
 #include <cstdbool>
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
 #include <iremote_proxy.h>
 #include <message_parcel.h>
 #include <string_ex.h>
@@ -25,6 +27,10 @@
 namespace OHOS {
 namespace custom {
 namespace idlFile {
+
+const int VECTOR_MAX_SIZE = 102400;
+const int LIST_MAX_SIZE = 102400;
+const int MAP_MAX_SIZE = 102400;
 
 enum class FooEnum : int32_t {
     ENUM_ONE = 1,
@@ -36,6 +42,7 @@ struct FooStruct {
     int32_t id;
     std::string name;
     FooEnum type;
+    sptr<IRemoteObject> caption;
 };
 
 union FooUnion {
@@ -43,10 +50,18 @@ union FooUnion {
     int32_t unionInfo;
 } __attribute__ ((aligned(8)));
 
+struct RequestInfo {
+    std::vector<uint8_t> initData;
+    std::unordered_map<std::string, std::string> optionalData;
+};
+
 ErrCode FooStructBlockMarshalling(OHOS::MessageParcel &data, const FooStruct& dataBlock);
 
 ErrCode FooStructBlockUnmarshalling(OHOS::MessageParcel &data, FooStruct& dataBlock);
 
+ErrCode RequestInfoBlockMarshalling(OHOS::MessageParcel &data, const RequestInfo& dataBlock);
+
+ErrCode RequestInfoBlockUnmarshalling(OHOS::MessageParcel &data, RequestInfo& dataBlock);
 
 } // namespace idlFile
 } // namespace custom
