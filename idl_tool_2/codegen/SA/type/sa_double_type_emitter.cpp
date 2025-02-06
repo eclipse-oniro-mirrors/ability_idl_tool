@@ -26,14 +26,12 @@ std::string SaDoubleTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "double";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "double";
-        case TypeMode::PARAM_OUT:
-            return "double&";
         case TypeMode::LOCAL_VAR:
             return "double";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "double&";
         default:
             return "unknown type";
     }

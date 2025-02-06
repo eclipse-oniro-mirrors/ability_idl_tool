@@ -26,14 +26,12 @@ std::string SaByteTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "int8_t";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "int8_t";
-        case TypeMode::PARAM_OUT:
-            return "int8_t&";
         case TypeMode::LOCAL_VAR:
             return "int8_t";
+        case TypeMode::PARAM_OUT:
+        case TypeMode::PARAM_INOUT:
+            return "int8_t&";
         default:
             return "unknown type";
     }

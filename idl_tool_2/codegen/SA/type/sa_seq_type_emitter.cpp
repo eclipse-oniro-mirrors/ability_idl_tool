@@ -43,12 +43,11 @@ std::string SaSeqTypeEmitter::EmitCppType(TypeMode mode) const
             case TypeMode::PARAM_IN:
                 return StringHelper::Format("const %s&", typeName_.c_str());
             case TypeMode::PARAM_INOUT:
-                return StringHelper::Format("%s*", typeName_.c_str());
-            case TypeMode::NO_MODE:
             case TypeMode::PARAM_OUT:
                 return StringHelper::Format("%s&", typeName_.c_str());
+            case TypeMode::NO_MODE:
             case TypeMode::LOCAL_VAR:
-                return StringHelper::Format("%s", typeName_.c_str());
+                return typeName_;
             default:
                 return "unknown type";
         }
@@ -71,7 +70,11 @@ void SaSeqTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
     if (typeName_ == "IRemoteObject") {
         sb.Append(prefix).AppendFormat("if (!%sWriteRemoteObject(%s)) {\n", parcelName.c_str(), name.c_str());
     } else {
-        sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.c_str(), name.c_str());
+        if (isParamInout && !isProxy) {
+            sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(%s.get())) {\n", parcelName.c_str(), name.c_str());
+        } else {
+            sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(&%s)) {\n", parcelName.c_str(), name.c_str());
+        }
     }
     if (logOn_) {
         sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());

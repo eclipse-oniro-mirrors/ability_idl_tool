@@ -26,14 +26,12 @@ std::string SaShortTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "short";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "short";
-        case TypeMode::PARAM_OUT:
-            return "short&";
         case TypeMode::LOCAL_VAR:
             return "short";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "short&";
         default:
             return "unknown type";
     }

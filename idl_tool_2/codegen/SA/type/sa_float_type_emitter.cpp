@@ -26,14 +26,12 @@ std::string SaFloatTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "float";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "float";
-        case TypeMode::PARAM_OUT:
-            return "float&";
         case TypeMode::LOCAL_VAR:
             return "float";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "float&";
         default:
             return "unknown type";
     }

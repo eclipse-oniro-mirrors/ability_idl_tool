@@ -56,6 +56,7 @@ protected:
 
     void EmitSecurecInclusion(StringBuilder &sb) const;
 
+    bool isProxy = false;
 private:
     std::string EmitCppParameter(AutoPtr<ASTParameter> &param) const;
 };

@@ -26,14 +26,12 @@ std::string SaCharTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "char";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "char";
-        case TypeMode::PARAM_OUT:
-            return "char&";
         case TypeMode::LOCAL_VAR:
             return "char";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "char&";
         default:
             return "unknown type";
     }

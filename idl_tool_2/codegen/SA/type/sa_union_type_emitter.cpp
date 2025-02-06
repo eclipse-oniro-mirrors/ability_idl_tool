@@ -27,7 +27,7 @@ std::string SaUnionTypeEmitter::EmitCppType(TypeMode mode) const
     switch (mode) {
         case TypeMode::NO_MODE:
         case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("%s", typeName_.c_str());
+            return typeName_;
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const %s&", typeName_.c_str());
         case TypeMode::PARAM_INOUT:

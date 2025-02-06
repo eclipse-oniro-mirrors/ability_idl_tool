@@ -26,14 +26,12 @@ std::string SaIntTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "int32_t";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "int32_t";
-        case TypeMode::PARAM_OUT:
-            return "int32_t&";
         case TypeMode::LOCAL_VAR:
             return "int32_t";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "int32_t&";
         default:
             return "unknown type";
     }
