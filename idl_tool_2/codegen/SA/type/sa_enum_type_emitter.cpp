@@ -33,7 +33,7 @@ std::string SaEnumTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::NO_MODE:
         case TypeMode::PARAM_IN:
         case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("%s", typeName_.c_str());
+            return typeName_;
         case TypeMode::PARAM_INOUT:
         case TypeMode::PARAM_OUT:
             return StringHelper::Format("%s&", typeName_.c_str());

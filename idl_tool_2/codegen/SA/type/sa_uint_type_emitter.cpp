@@ -27,9 +27,9 @@ std::string SaUintTypeEmitter::EmitCppType(TypeMode mode) const
     switch (mode) {
         case TypeMode::NO_MODE:
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
         case TypeMode::LOCAL_VAR:
             return "uint32_t";
+        case TypeMode::PARAM_INOUT:
         case TypeMode::PARAM_OUT:
             return "uint32_t&";
         default:

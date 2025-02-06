@@ -26,16 +26,14 @@ std::string SaBooleanTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return "bool";
         case TypeMode::PARAM_IN:
-        case TypeMode::PARAM_INOUT:
-            return "bool";
-        case TypeMode::PARAM_OUT:
-            return "bool&";
         case TypeMode::LOCAL_VAR:
             return "bool";
+        case TypeMode::PARAM_INOUT:
+        case TypeMode::PARAM_OUT:
+            return "bool&";
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

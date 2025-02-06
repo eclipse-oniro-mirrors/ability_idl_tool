@@ -112,6 +112,8 @@ void SACppCodeEmitter::EmitWriteMethodParameter(const AutoPtr<ASTParameter> &par
 {
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
     if (typeEmitter != nullptr) {
+        typeEmitter->isParamInout = param->GetAttribute() == ASTParamAttr::PARAM_INOUT;
+        typeEmitter->isProxy = isProxy;
         typeEmitter->EmitCppWriteVar(parcelName, param->GetName(), sb, prefix);
     }
 }

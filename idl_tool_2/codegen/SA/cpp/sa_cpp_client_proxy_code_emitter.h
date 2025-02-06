@@ -22,7 +22,10 @@ namespace OHOS {
 namespace Idl {
 class SaCppClientProxyCodeEmitter : public SACppCodeEmitter {
 public:
-    SaCppClientProxyCodeEmitter() : SACppCodeEmitter() {}
+    SaCppClientProxyCodeEmitter() : SACppCodeEmitter()
+    {
+        isProxy = true;
+    }
 
     ~SaCppClientProxyCodeEmitter() override = default;
 

@@ -56,6 +56,8 @@ public:
 
     static bool logOn_;
     static int circleCount_;
+    bool isParamInout = false;
+    bool isProxy = false;
 
 protected:
     std::string typeName_;

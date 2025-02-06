@@ -28,6 +28,7 @@ std::string SaArrayTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
+        case TypeMode::LOCAL_VAR:
             return StringHelper::Format("std::vector<%s>", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const std::vector<%s>&",
@@ -35,10 +36,8 @@ std::string SaArrayTypeEmitter::EmitCppType(TypeMode mode) const
         case TypeMode::PARAM_OUT:
         case TypeMode::PARAM_INOUT:
             return StringHelper::Format("std::vector<%s>&", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
-        case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("std::vector<%s>", elementEmitter_->EmitCppType(TypeMode::LOCAL_VAR).c_str());
         default:
-            return "unknow type";
+            return "unknown type";
     }
 }
 

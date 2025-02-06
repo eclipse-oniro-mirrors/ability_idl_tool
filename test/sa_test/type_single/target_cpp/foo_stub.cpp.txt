@@ -265,7 +265,7 @@ int32_t FooStub::OnRemoteRequestInner(
                 return ERR_INVALID_DATA;
             }
 
-            myseq& result = nullptr;
+            myseq result;
             ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 return ERR_INVALID_VALUE;
@@ -274,7 +274,7 @@ int32_t FooStub::OnRemoteRequestInner(
                 if (!reply.WriteParcelable(&outParam)) {
                     return ERR_INVALID_DATA;
                 }
-                if (!reply.WriteParcelable(&inoutParam)) {
+                if (!reply.WriteParcelable(inoutParam.get())) {
                     return ERR_INVALID_DATA;
                 }
                 if (!reply.WriteParcelable(&result)) {

@@ -296,7 +296,7 @@ int32_t FooStub::OnRemoteRequest(
                 return ERR_INVALID_DATA;
             }
 
-            myseq& result = nullptr;
+            myseq result;
             ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam, result);
             if (!reply.WriteInt32(errCode)) {
                 HiLog::Error(LABEL, "Write Int32 failed!");
@@ -307,7 +307,7 @@ int32_t FooStub::OnRemoteRequest(
                     HiLog::Error(LABEL, "Write [outParam] failed!");
                     return ERR_INVALID_DATA;
                 }
-                if (!reply.WriteParcelable(&inoutParam)) {
+                if (!reply.WriteParcelable(inoutParam.get())) {
                     HiLog::Error(LABEL, "Write [inoutParam] failed!");
                     return ERR_INVALID_DATA;
                 }

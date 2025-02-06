@@ -28,17 +28,15 @@ std::string SaMapTypeEmitter::EmitCppType(TypeMode mode) const
 {
     switch (mode) {
         case TypeMode::NO_MODE:
-            return StringHelper::Format(
-                "std::unordered_map<%s, %s>", keyEmitter_->EmitCppType().c_str(), valueEmitter_->EmitCppType().c_str());
+        case TypeMode::LOCAL_VAR:
+            return StringHelper::Format("std::unordered_map<%s, %s>", keyEmitter_->EmitCppType().c_str(),
+                valueEmitter_->EmitCppType().c_str());
         case TypeMode::PARAM_IN:
             return StringHelper::Format("const std::unordered_map<%s, %s>&", keyEmitter_->EmitCppType().c_str(),
                 valueEmitter_->EmitCppType().c_str());
         case TypeMode::PARAM_OUT:
         case TypeMode::PARAM_INOUT:
             return StringHelper::Format("std::unordered_map<%s, %s>&", keyEmitter_->EmitCppType().c_str(),
-                valueEmitter_->EmitCppType().c_str());
-        case TypeMode::LOCAL_VAR:
-            return StringHelper::Format("std::unordered_map<%s, %s>", keyEmitter_->EmitCppType().c_str(),
                 valueEmitter_->EmitCppType().c_str());
         default:
             return "unknown type";
@@ -105,8 +103,8 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
     sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
     sb.Append(prefix).AppendFormat("for (int32_t i%d = 0; i%d < %sSize; ++i%d) {\n", circleCount_,
         circleCount_, useName.c_str(), circleCount_);
-    keyEmitter_->EmitCppReadVar(parcelName, keyStr.c_str(), sb, prefix + TAB);
-    valueEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
+    keyEmitter_->EmitCppReadVar(parcelName, keyStr, sb, prefix + TAB);
+    valueEmitter_->EmitCppReadVar(parcelName, valueStr, sb, prefix + TAB);
     if (valueEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
         valueStr = "*" + valueStr;
     }

@@ -257,7 +257,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod>
         if (typeEmitter == nullptr) {
             return;
         }
-        if ((retTypeKind == TypeKind::TYPE_SEQUENCEABLE) || (retTypeKind == TypeKind::TYPE_INTERFACE)) {
+        if (retTypeKind == TypeKind::TYPE_INTERFACE ||
+                ((retTypeKind == TypeKind::TYPE_SEQUENCEABLE) &&
+                (typeEmitter->EmitCppType() == "sptr<IRemoteObject>"))) {
             sb.Append(prefix + TAB).AppendFormat("%s result = nullptr;\n", typeEmitter->EmitCppType().c_str());
         } else {
             sb.Append(prefix + TAB).AppendFormat("%s result;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str());
