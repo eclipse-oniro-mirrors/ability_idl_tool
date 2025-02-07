@@ -184,6 +184,9 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodCallbackInner(AutoPtr<ASTMet
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                return;
+            }
             typeEmitter->EmitTsReadVar("result.reply", SuffixAdded(param->GetName()), sb, prefix + TAB,
                 TypeMode::PARAM_OUT);
         }

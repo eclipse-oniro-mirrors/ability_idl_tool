@@ -193,7 +193,8 @@ void SaTsServiceStubCodeEmitter::EmitMethodPromiseOutParamImpl(AutoPtr<ASTMethod
     int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
-        if (param != nullptr && (param->GetAttribute() & ASTParamAttr::PARAM_OUT)) {
+        if (param != nullptr && (param->GetAttribute() & ASTParamAttr::PARAM_OUT) &&
+            GetTypeEmitter(param->GetType()) != nullptr) {
             GetTypeEmitter(param->GetType())->EmitTsWriteVar("reply", param->GetName(), sb, prefix + TAB + TAB);
         }
     }

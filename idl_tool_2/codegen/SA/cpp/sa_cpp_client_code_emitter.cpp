@@ -170,7 +170,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientDeathRecipient(StringBuilder &sb
     sb.Append(prefix).Append("public:\n");
     sb.Append(prefix + TAB).AppendFormat(
         "LoadCallback(%sOnLocalCallback cb, %s &client): localCallback_(std::move(cb)), client_(client) {}\n",
-            baseName_.c_str(), clientName_.c_str());
+        baseName_.c_str(), clientName_.c_str());
     sb.Append(prefix + TAB).Append(
         "void OnLoadSystemAbilitySuccess(int32_t systemAbilityId, const sptr<IRemoteObject> &remote) override;\n");
     sb.Append(prefix + TAB).Append("void OnLoadSystemAbilityFail(int32_t systemAbilityId) override;\n");

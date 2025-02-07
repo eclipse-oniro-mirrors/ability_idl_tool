@@ -96,8 +96,8 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     }
     if (needLogh && !domainId_.empty() && !logTag_.empty()) {
         sb.AppendFormat(
-            "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
-            domainId_.c_str(), logTag_.c_str());
+            "static constexpr OHOS::HiviewDFX::HiLogLabel %s_LABEL = {LOG_CORE, %s, \"%s\"};\n",
+            StringHelper::StrToUpper(baseName_).c_str(), domainId_.c_str(), logTag_.c_str());
     }
 }
 
@@ -128,6 +128,9 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        if (typeEmitter == nullptr) {
+            return;
+        }
         sb.Append(typeEmitter->EmitCppTypeDecl()).Append("\n");
         if (i + 1 < ast_->GetTypeDefinitionNumber()) {
             sb.Append("\n");
@@ -151,6 +154,9 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) cons
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeMarshallFuncDecl(StringBuilder &sb, const AutoPtr<ASTType> &type) const
 {
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     std::string objName("dataBlock");
     sb.AppendFormat("ErrCode %sBlockMarshalling(OHOS::MessageParcel &data, const %s& %s);\n\n", type->GetName().c_str(),
         typeEmitter->EmitCppType().c_str(), objName.c_str());
@@ -182,6 +188,16 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
     EmitEndNamespace(sb);
 
     std::string data = sb.ToString();
+
+    std::string customLabel = "(" + StringHelper::StrToUpper(baseName_) + "_LABEL,";
+    std::string oldLabel = "(LABEL,";
+
+    size_t pos = 0;
+    while ((pos = data.find(oldLabel, pos)) != std::string::npos) {
+        data.replace(pos, oldLabel.size(), customLabel);
+        pos += customLabel.length();
+    }
+
     file.WriteData(data.c_str(), data.size());
     file.Flush();
     file.Close();
@@ -284,6 +300,9 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImplNoPod(
         }
 
         AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(memberType);
+        if (typeEmitter == nullptr) {
+            return;
+        }
         if (memberType->GetTypeKind() == TypeKind::TYPE_UNION) {
             std::string cpName = StringHelper::Format("%sCp", memberName.c_str());
             typeEmitter->EmitCppReadVar("data.", cpName, sb, TAB);

@@ -305,6 +305,9 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
     AutoPtr<ASTType> type = param->GetType();
     const std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
 }
 
