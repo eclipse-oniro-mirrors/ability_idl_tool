@@ -62,7 +62,7 @@ void MetadataSerializer::SerializeMetaComponent(MetaComponent* mc)
 
 void MetadataSerializer::SerializeMetaNamespace(MetaNamespace* mn)
 {
-    if (mn == nullptr) {
+    if (mn == nullptr || mn->namespaceNumber_ < 0 || mn->namespaceNumber_ > UINT16_MAX) {
         return;
     }
     mn->name_ = reinterpret_cast<char*>(SerializeAdjust(mn->name_));
@@ -185,7 +185,7 @@ void MetadataSerializer::DeserializeMetaComponent(MetaComponent* mc)
 
 void MetadataSerializer::DeserializeMetaNamespace(MetaNamespace* mn)
 {
-    if (mn == nullptr) {
+    if (mn == nullptr || mn->namespaceNumber_ < 0 || mn->namespaceNumber_ > UINT16_MAX) {
         return;
     }
     mn->name_ = reinterpret_cast<char*>(DeserializeAdjust(mn->name_));
