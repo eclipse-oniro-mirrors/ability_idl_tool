@@ -136,6 +136,9 @@ void SaTsClientProxyCodeEmitter::EmitInterfaceMethodCallback(AutoPtr<ASTMethod> 
     sb.Append(prefix).Append("if (result.errCode === 0) {\n");
     // emit errCode
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(new ASTIntegerType());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     typeEmitter->EmitTsReadVar("result.reply", SuffixAdded(ERR_CODE).c_str(), sb, prefix + TAB);
     EmitInterfaceMethodErrorCallback(method, sb, prefix + TAB, haveOutPara);
     EmitInterfaceMethodCallbackInner(method, sb, prefix);

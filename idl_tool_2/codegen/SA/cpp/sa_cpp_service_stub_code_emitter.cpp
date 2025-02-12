@@ -239,6 +239,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
         }
         if (retTypeKind != TypeKind::TYPE_VOID) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+            if (typeEmitter == nullptr) {
+                return;
+            }
             typeEmitter->EmitCppWriteVar("reply.", "result", sb, prefix + TAB + TAB);
         }
         sb.Append(prefix + TAB).Append("}\n");
