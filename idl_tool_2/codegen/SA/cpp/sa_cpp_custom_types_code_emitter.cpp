@@ -41,8 +41,6 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesHeaderFile()
     sb.Append("\n");
     EmitBeginNamespace(sb);
     sb.Append("\n");
-    EmitDefineConstant(sb);
-    sb.Append("\n");
     EmitCustomTypeDecls(sb);
     sb.Append("\n");
     EmitCustomTypeFuncDecl(sb);
@@ -119,9 +117,9 @@ bool SaCppCustomTypesCodeEmitter::EmitCustomTypeNeedSecurec(const AutoPtr<ASTStr
 void SaCppCustomTypesCodeEmitter::EmitDefineConstant(StringBuilder &sb) const
 {
     sb.Append(
-        "const int VECTOR_MAX_SIZE = 102400;\n"
-        "const int LIST_MAX_SIZE = 102400;\n"
-        "const int MAP_MAX_SIZE = 102400;\n");
+        "[[maybe_unused]] static constexpr int VECTOR_MAX_SIZE = 102400;\n"
+        "[[maybe_unused]] static constexpr int LIST_MAX_SIZE = 102400;\n"
+        "[[maybe_unused]] static constexpr int MAP_MAX_SIZE = 102400;\n");
 }
 
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
@@ -183,6 +181,8 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
             "using OHOS::HiviewDFX::HiLog;\n\n");
     }
     EmitBeginNamespace(sb);
+    sb.Append("\n");
+    EmitDefineConstant(sb);
     sb.Append("\n");
     EmitCustomTypeDataProcess(sb);
     EmitEndNamespace(sb);

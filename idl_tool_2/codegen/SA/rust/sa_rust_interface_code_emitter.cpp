@@ -399,12 +399,18 @@ void SaRustInterfaceCodeEmitter::EmitProxyMethodImpl(AutoPtr<ASTMethod> &method,
 
     AutoPtr<ASTType> returnType = method->GetReturnType();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+    if (typeEmitter == nullptr) {
+        return;
+    }
     sb.AppendFormat(") -> Result<%s> {\n", typeEmitter->EmitRustType().c_str());
     sb.Append("        let mut data = MsgParcel::new().expect(\"MsgParcel should success\");\n");
     int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int j = 0; j < paramNumber; j++) {
         AutoPtr<ASTParameter> param = method->GetParameter(j);
         typeEmitter = GetTypeEmitter(param->GetType());
+        if (typeEmitter == nullptr) {
+            return;
+        }
         typeEmitter->EmitRustWriteVar("data", GetNameFromParameter(param->GetName()), sb, "        ");
     }
     TypeKind retTypeKind = returnType->GetTypeKind();
@@ -425,6 +431,9 @@ void SaRustInterfaceCodeEmitter::EmitProxyMethodImpl(AutoPtr<ASTMethod> &method,
         sb.Append("        ").Append("Ok(())\n");
     } else {
         typeEmitter = GetTypeEmitter(returnType);
+        if (typeEmitter == nullptr) {
+            return;
+        }
         typeEmitter->EmitRustReadVar("reply", "result", sb, "        ");
         sb.Append("        ").Append("Ok(result)\n");
     }
