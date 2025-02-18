@@ -77,6 +77,7 @@ void File::OpenByRead(const std::string &path)
         return;
     }
 
+    Close();
     fd_ = fopen(realPath.c_str(), "r");
     if (fd_ == nullptr) {
         Logger::E(TAG, "can't open '%s'", realPath.c_str());

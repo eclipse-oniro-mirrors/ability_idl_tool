@@ -29,8 +29,6 @@ public:
 
     ~File();
 
-    void OpenByRead(const std::string &path);
-
     inline bool IsValid() const
     {
         return fd_ != nullptr;
@@ -101,6 +99,8 @@ public:
 
 private:
     size_t Read();
+
+    void OpenByRead(const std::string &path);
 
     static constexpr int BUFFER_SIZE = 1024;
 
