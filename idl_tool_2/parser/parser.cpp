@@ -584,7 +584,7 @@ void Parser::ParseAttrUnitCustomMsgOption(AttrSet &attrs, Token &token)
     messageOption_ = "";
     while (token.kind != TokenType::BRACKETS_RIGHT && token.kind != TokenType::COMMA &&
            token.kind != TokenType::SEMICOLON && token.kind != TokenType::END_OF_FILE) {
-        if (token.kind == TokenType::AND || token.kind == TokenType::OR) {
+        if (token.value == "and" || token.kind == TokenType::AND || token.kind == TokenType::OR) {
             messageOption_ += " " + token.value + " ";
         } else {
             messageOption_ += token.value;
@@ -905,7 +905,7 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     if (!freezecontrolAttr_.empty()) {
         method->SetFreezeControlReason(freezecontrolAttr_);
     }
-    if (!messageOption_.empty() && IntfTyepChecker::CheckMessageOption(messageOption_)) {
+    if (!messageOption_.empty() && IntfTypeChecker::CheckMessageOption(messageOption_)) {
         method->SetMessageOption(messageOption_);
     }
     return method;

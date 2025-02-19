@@ -413,8 +413,8 @@ bool IntfTypeChecker::CheckMessageOption(std::string &messageOption)
 
         if (StringHelper::StartWith(msgOpts[1], flags_replace) && !waitTime.empty()) {
             flags = StringHelper::Replace(msgOpts[1], flags_replace, "");
-        } else if (StringHelper::StartWith(msgOpts[0], waitTime_replace) && !flags.empty()) {
-            waitTime = StringHelper::Replace(msgOpts[0], waitTime_replace, "");
+        } else if (StringHelper::StartWith(msgOpts[1], waitTime_replace) && !flags.empty()) {
+            waitTime = StringHelper::Replace(msgOpts[1], waitTime_replace, "");
         } else {
             Logger::E(TAG, StringHelper::Format(
                 "[%s:%d] error: customMsgOption 'flags=' or 'waitTime=' should not empty.",
