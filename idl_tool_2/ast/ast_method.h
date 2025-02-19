@@ -151,6 +151,24 @@ public:
         return attr_->HasValue(ASTAttr::FREEZECONTROL);
     }
 
+    inline void SetMessageOption(const std::string &messageOption)
+    {
+        messageOption_ = messageOption;
+        if (StringHelper::Split(messageOption, "TF_ASYNC").size() > 1) {
+            attr_->SetValue(ASTAttr::ONEWAY);
+        }
+    }
+
+    inline std::string GetMessageOption()
+    {
+        return messageOption_;
+    }
+
+    inline bool IsMessageOption() const
+    {
+        return attr_->HasValue(ASTAttr::CUSTOM_MSG_OPTION);
+    }
+
     bool HasIpcCode()
     {
         return attr_->HasValue(ASTAttr::IPCCODE);
@@ -224,6 +242,7 @@ private:
     size_t cmdId_ = 0;        // used to identify same name method
     int32_t ipcCode_ = 0;
     std::string freezeControlReason;
+    std::string messageOption_;
 };
 } // namespace Idl
 } // namespace OHOS

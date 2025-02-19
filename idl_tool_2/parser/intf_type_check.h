@@ -35,6 +35,8 @@ public:
 
     static bool CheckUserDefType(Token token);
 
+    static bool CheckMessageOption(std::string &messageOption);
+
 private:
     bool CheckIntfSaAst();
 

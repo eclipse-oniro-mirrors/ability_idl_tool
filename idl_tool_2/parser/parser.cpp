@@ -544,6 +544,10 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             ParseAttrUnitIpcCapacity(attrs, token);
             return true;
         }
+        case TokenType::CUSTOM_MSG_OPTION: {
+            ParseAttrUnitCustomMsgOption(attrs, token);
+            return true;
+        }
         default:
             LogError(__func__, __LINE__, token, StringHelper::Format("'%s' is a illegal attribute",
                 token.value.c_str()));
@@ -563,6 +567,31 @@ void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
         freezecontrolAttr_ = token.value;
     }
     lexer_.GetToken();
+}
+
+void Parser::ParseAttrUnitCustomMsgOption(AttrSet &attrs, Token &token)
+{
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Not support customMsgOption"));
+        lexer_.GetToken();
+        return;
+    }
+
+    attrs.insert(token);
+    lexer_.GetToken();
+    token = lexer_.PeekToken();
+    messageOption_ = "";
+    while (token.kind != TokenType::BRACKETS_RIGHT && token.kind != TokenType::COMMA &&
+           token.kind != TokenType::SEMICOLON && token.kind != TokenType::END_OF_FILE) {
+        if (token.kind == TokenType::AND || token.kind == TokenType::OR) {
+            messageOption_ += " " + token.value + " ";
+        } else {
+            messageOption_ += token.value;
+        }
+        lexer_.GetToken();
+        token = lexer_.PeekToken();
+    }
 }
 
 void Parser::ParseAttrUnitIpccode(AttrSet &attrs, Token &token)
@@ -833,6 +862,7 @@ void Parser::ParseInterfaceBody(const AutoPtr<ASTInterfaceType> &interface)
 AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interface)
 {
     freezecontrolAttr_ = "";
+    messageOption_ = "";
     AutoPtr<ASTMethod> method = new ASTMethod();
     AutoPtr<ASTAttr> methodAttr = ParseMethodAttr();
     method->SetAttribute(methodAttr);
@@ -875,7 +905,9 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     if (!freezecontrolAttr_.empty()) {
         method->SetFreezeControlReason(freezecontrolAttr_);
     }
-
+    if (!messageOption_.empty() && IntfTyepChecker::CheckMessageOption(messageOption_)) {
+        method->SetMessageOption(messageOption_);
+    }
     return method;
 }
 
@@ -937,6 +969,9 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
             case TokenType::IPC_OUT_CAPACITY:
                 methodAttr->SetValue(ASTAttr::IPC_OUT_CAPACITY);
                 methodAttr->SetIpcOutCapacity(attr.value);
+                break;
+            case TokenType::CUSTOM_MSG_OPTION:
+                methodAttr->SetValue(ASTAttr::CUSTOM_MSG_OPTION);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));

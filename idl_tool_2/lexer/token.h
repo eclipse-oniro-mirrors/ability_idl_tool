@@ -57,6 +57,7 @@ enum class TokenType {
     INTERFACE,            // "interface"
     EXTENDS,              // "extends"
     ONEWAY,               // "oneway"
+    CUSTOM_MSG_OPTION,    // "customMsgOption"
     CALLBACK,             // "callback"
     FREEZECONTROL,        // "freezecontrol"
     FULL,                 // "full"

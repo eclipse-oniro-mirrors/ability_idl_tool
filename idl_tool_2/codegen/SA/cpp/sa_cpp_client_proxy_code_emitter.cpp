@@ -332,8 +332,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
-    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n",
-        method->IsOneWay() ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
+    // sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n",
+    //     method->IsOneWay() ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
+
+    std::string option = "MessageOption::TF_SYNC";
+    if (method->IsMessageOption()) {
+        option = method->GetMessageOption();
+    } else if (method->IsOneWay()) {
+        option = "MessageOption::TF_ASYNC";
+    }
+    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n", option.c_str());
 
     if (method->HasIpcInCapacity()) {
         EmitInterfaceSetIpcCapacity(method, sb, prefix + TAB);

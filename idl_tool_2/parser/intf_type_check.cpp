@@ -89,7 +89,7 @@ bool IntfTypeChecker::CheckIntfSaAstMethods()
     for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
         AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
         if (((method->GetAttribute()->GetValue()) &
-            (~(ASTAttr::ONEWAY | ASTAttr::CACHEABLE | ASTAttr::IPCCODE |
+            (~(ASTAttr::ONEWAY | ASTAttr::CUSTOM_MSG_OPTION | ASTAttr::CACHEABLE | ASTAttr::IPCCODE |
                 ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY | ASTAttr::CALLBACK))) != 0) {
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr support oneway, cacheable, "
                 "ipccode, ipcincapacity, ipcoutcapacity", __func__, __LINE__).c_str());
@@ -380,6 +380,56 @@ bool IntfTypeChecker::CheckUserDefType(Token token)
         default:
             return false;
     }
+}
+
+bool IntfTypeChecker::CheckMessageOption(std::string &messageOption)
+{
+    std::string flags = "";
+    std::string waitTime = "";
+    std::string flags_replace = "flags=";
+    std::string waitTime_replace = "waitTime=";
+    std::vector<std::string> msgOpts = StringHelper::Split(messageOption, " and ");
+    if (msgOpts.size() == 1) {
+        if (StringHelper::StartWith(msgOpts[0], waitTime_replace)) {
+            Logger::E(TAG, StringHelper::Format("[%s:%d] error: customMsgOption should start with 'flags='.",
+                __func__, __LINE__).c_str());
+            return false;
+        }
+        flags = StringHelper::Replace(msgOpts[0], flags_replace, "");
+        messageOption = flags;
+        return true;
+    }
+    if (msgOpts.size() > 1) {
+        if (StringHelper::StartWith(msgOpts[0], flags_replace)) {
+            flags = StringHelper::Replace(msgOpts[0], flags_replace, "");
+        } else if (StringHelper::StartWith(msgOpts[0], waitTime_replace)) {
+            waitTime = StringHelper::Replace(msgOpts[0], waitTime_replace, "");
+        } else {
+            Logger::E(TAG, StringHelper::Format(
+                "[%s:%d] error: customMsgOption should start with 'flags=' or 'waitTime='.",
+                __func__, __LINE__).c_str());
+            return false;
+        }
+
+        if (StringHelper::StartWith(msgOpts[1], flags_replace) && !waitTime.empty()) {
+            flags = StringHelper::Replace(msgOpts[1], flags_replace, "");
+        } else if (StringHelper::StartWith(msgOpts[0], waitTime_replace) && !flags.empty()) {
+            waitTime = StringHelper::Replace(msgOpts[0], waitTime_replace, "");
+        } else {
+            Logger::E(TAG, StringHelper::Format(
+                "[%s:%d] error: customMsgOption 'flags=' or 'waitTime=' should not empty.",
+                __func__, __LINE__).c_str());
+            return false;
+        }
+        if (flags.empty() || waitTime.empty()) {
+            Logger::E(TAG, StringHelper::Format(
+                "[%s:%d] error: customMsgOption 'flags=' or 'waitTime=' should not empty.",
+                __func__, __LINE__).c_str());
+            return false;
+        }
+        messageOption = flags + ", " + waitTime;
+    }
+    return true;
 }
 } // namespace Idl
 } // namespace OHOS
