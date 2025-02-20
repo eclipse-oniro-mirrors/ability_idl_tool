@@ -346,8 +346,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");
     }
-    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n");
-    sb.Append(prefix + TAB).Append("}\n\n");
+    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n").Append(prefix + TAB).Append("}\n\n");
     size_t paramNumber = method->GetParameterNumber();
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
