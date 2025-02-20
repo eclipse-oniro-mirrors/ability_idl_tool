@@ -332,7 +332,6 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
-
     std::string option = "MessageOption::TF_SYNC";
     if (method->IsMessageOption()) {
         option = method->GetMessageOption();
@@ -340,18 +339,15 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
         option = "MessageOption::TF_ASYNC";
     }
     sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n", option.c_str());
-
     if (method->HasIpcInCapacity()) {
         EmitInterfaceSetIpcCapacity(method, sb, prefix + TAB);
     }
-
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n\n");
-
     size_t paramNumber = method->GetParameterNumber();
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -362,7 +358,6 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     if (paramNumber > 0) {
         sb.Append('\n');
     }
-
     EmitInterfaceProxyMethodPreSendRequest(method, sb, prefix + TAB);
     sb.Append(prefix + TAB).Append("sptr<IRemoteObject> remote = Remote();\n");
     sb.Append(prefix + TAB).Append("if (!remote) {\n");
