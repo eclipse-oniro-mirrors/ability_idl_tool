@@ -332,20 +332,21 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
-    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n",
-        method->IsOneWay() ? "MessageOption::TF_ASYNC" : "MessageOption::TF_SYNC");
-
+    std::string option = "MessageOption::TF_SYNC";
+    if (method->IsMessageOption()) {
+        option = method->GetMessageOption();
+    } else if (method->IsOneWay()) {
+        option = "MessageOption::TF_ASYNC";
+    }
+    sb.Append(prefix + TAB).AppendFormat("MessageOption option(%s);\n\n", option.c_str());
     if (method->HasIpcInCapacity()) {
         EmitInterfaceSetIpcCapacity(method, sb, prefix + TAB);
     }
-
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");
     }
-    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n");
-    sb.Append(prefix + TAB).Append("}\n\n");
-
+    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n").Append(prefix + TAB).Append("}\n\n");
     size_t paramNumber = method->GetParameterNumber();
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -356,25 +357,21 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     if (paramNumber > 0) {
         sb.Append('\n');
     }
-
     EmitInterfaceProxyMethodPreSendRequest(method, sb, prefix + TAB);
     sb.Append(prefix + TAB).Append("sptr<IRemoteObject> remote = Remote();\n");
     sb.Append(prefix + TAB).Append("if (!remote) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Remote is nullptr!\");\n");
     }
-    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_DATA;\n");
-    sb.Append(prefix + TAB).Append("}\n");
-    sb.Append(prefix + TAB).Append("int32_t result = remote->SendRequest(\n")
-        .Append(prefix + TAB + TAB)
+    sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_DATA;\n").Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("int32_t result = remote->SendRequest(\n").Append(prefix + TAB + TAB)
         .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply, option);\n",
         interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");
     }
-    sb.Append(prefix + TAB).Append("    return result;\n");
-    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).Append("    return result;\n").Append(prefix + TAB).Append("}\n");
     EmitInterfaceProxyMethodRetValue(method, sb, prefix);
 }
 

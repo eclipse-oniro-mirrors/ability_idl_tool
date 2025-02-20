@@ -1,0 +1,117 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace test {
+
+ErrCode FooProxy::void_test_func1()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC_WAKEUP_LATER | MessageOption::TF_ASYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC1), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::void_test_func2()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC2), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::void_test_func3()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC3), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::void_test_func4()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC | MessageOption::TF_ASYNC_WAKEUP_LATER, MessageOption::TF_WAIT_TIME);
+
+    if (!data.SetMaxCapacity(CAPACITY_VOID_TEST_FUNC4_4)) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC4), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+    return ERR_OK;
+}
+} // namespace test

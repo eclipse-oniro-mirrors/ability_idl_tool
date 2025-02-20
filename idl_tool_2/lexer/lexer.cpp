@@ -52,6 +52,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"interface",      TokenType::INTERFACE    },
     {"extends",        TokenType::EXTENDS      },
     {"oneway",         TokenType::ONEWAY       },
+    {"customMsgOption",  TokenType::CUSTOM_MSG_OPTION  },
     {"callback",       TokenType::CALLBACK     },
     {"freezecontrol",  TokenType::FREEZECONTROL},
     {"full",           TokenType::FULL         },
