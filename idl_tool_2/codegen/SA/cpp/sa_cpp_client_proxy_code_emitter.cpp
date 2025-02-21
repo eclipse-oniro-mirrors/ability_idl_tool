@@ -98,6 +98,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(Strin
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &sb, const std::string &prefix) const
 {
+    sb.Append(prefix).Append("{\n");
     size_t methodNumber = interface_->GetMethodNumber();
     for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);

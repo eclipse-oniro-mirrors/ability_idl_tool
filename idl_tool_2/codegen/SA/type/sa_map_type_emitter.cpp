@@ -105,6 +105,9 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
         circleCount_, useName.c_str(), circleCount_);
     keyEmitter_->EmitCppReadVar(parcelName, keyStr, sb, prefix + TAB);
     valueEmitter_->EmitCppReadVar(parcelName, valueStr, sb, prefix + TAB);
+    if (keyEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
+        keyStr = "*" + keyStr;
+    }
     if (valueEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
         valueStr = "*" + valueStr;
     }
