@@ -276,7 +276,11 @@ void CCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(StringBuilder &sb, c
 
 void CCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(StringBuilder &sb, const AutoPtr<ASTStructType> &type)
 {
-    std::string typeName = GetTypeEmitter(type.Get())->EmitCType();
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCType();
     std::string objName("dataBlock");
     freeObjStatements_.clear();
     sb.AppendFormat("bool %sBlockUnmarshalling(struct HdfSBuf *data, %s *%s)\n", type->GetName().c_str(),
@@ -489,9 +493,13 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
 
 void CCustomTypesCodeEmitter::EmitCustomTypeFreeImpl(StringBuilder &sb, const AutoPtr<ASTStructType> &type) const
 {
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     std::string objName("dataBlock");
     sb.AppendFormat("void %sFree(%s *%s, bool freeSelf)\n", type->GetName().c_str(),
-        GetTypeEmitter(type.Get())->EmitCType().c_str(), objName.c_str());
+        typeEmitter->EmitCType().c_str(), objName.c_str());
     sb.Append("{\n");
 
     if (mode_ == GenMode::KERNEL) {

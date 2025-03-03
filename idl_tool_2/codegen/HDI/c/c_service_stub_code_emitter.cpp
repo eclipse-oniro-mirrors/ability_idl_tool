@@ -593,6 +593,9 @@ void CServiceStubCodeEmitter::EmitStubGetVerMethodImpl(
     sb.Append(prefix + TAB).AppendFormat("int32_t %s = HDF_SUCCESS;\n", HdiTypeEmitter::errorCodeName_.c_str());
 
     AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(new ASTUintType());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, majorVerName_, FINISHED_LABEL, sb, prefix + TAB);
     sb.Append("\n");
     typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, minorVerName_, FINISHED_LABEL, sb, prefix + TAB);
