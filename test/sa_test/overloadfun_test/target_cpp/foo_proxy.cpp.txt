@@ -1,0 +1,235 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+
+namespace test {
+
+ErrCode FooProxy::overloadfun(
+    uint8_t inParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteUint8(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    uint32_t& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_UNSIGNED_INT), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadUint32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    std::unordered_map<int32_t, std::string>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_MAP_INT_STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    for (int32_t i1 = 0; i1 < outParamSize; ++i1) {
+        int32_t key1 = reply.ReadInt32();
+        std::string value1 = Str16ToStr8(reply.ReadString16());
+        outParam[key1] = value1;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    const std::vector<uint32_t>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (outParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(outParam.size());
+    for (auto it2 = outParam.begin(); it2 != outParam.end(); ++it2) {
+        if (!data.WriteUint32((*it2))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_UNSIGNED_INT_VECTOR), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    std::vector<std::unordered_map<int32_t, std::string>>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_LIST_MAP_INT_STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i3 = 0; i3 < outParamSize; ++i3) {
+        std::unordered_map<int32_t, std::string> value3;
+        int32_t value3Size = reply.ReadInt32();
+        for (int32_t i4 = 0; i4 < value3Size; ++i4) {
+            int32_t key4 = reply.ReadInt32();
+            std::string value4 = Str16ToStr8(reply.ReadString16());
+            value3[key4] = value4;
+        }
+        outParam.push_back(value3);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    int& outParam,
+    std::string& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_FILEDESCRIPTOR_OUT_STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadFileDescriptor();
+    funcResult = Str16ToStr8(reply.ReadString16());
+    return ERR_OK;
+}
+} // namespace test

@@ -229,13 +229,62 @@ void SACppCodeEmitter::EmitSecurecInclusion(StringBuilder &sb) const
     }
 }
 
+void SACppCodeEmitter::GetOverloadName(AutoPtr<ASTMethod> &method, std::string &overloadname) const
+{
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
+
+    for (size_t i = 0; i < paramNumber; i++) {
+        AutoPtr<ASTParameter> param = method->GetParameter(i);
+        ASTParamAttr::ParamAttr attrAttr = param->GetAttribute();
+        if (attrAttr == ASTParamAttr::PARAM_INOUT) {
+            overloadname += "_inout_";
+        } else if (attrAttr == ASTParamAttr::PARAM_IN) {
+            overloadname += "_in_";
+        } else if (attrAttr == ASTParamAttr::PARAM_OUT) {
+            overloadname += "_out_";
+        }
+        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+        if (typeEmitter == nullptr) {
+            return;
+        }
+        overloadname += typeEmitter->GetTypeName();
+    }
+
+    AutoPtr<ASTType> returnType = method->GetReturnType();
+    TypeKind retTypeKind = returnType->GetTypeKind();
+    if (retTypeKind != TypeKind::TYPE_VOID) {
+        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(returnType);
+        if (typeEmitter == nullptr) {
+            return;
+        }
+        overloadname += "_out_" + typeEmitter->GetTypeName();
+    }
+
+    std::transform(overloadname.begin(), overloadname.end(), overloadname.begin(), ::tolower);
+    overloadname = std::regex_replace(overloadname, std::regex("[ <]"), "_");
+    overloadname = std::regex_replace(overloadname, std::regex("\\[]"), "_vector");
+    overloadname = std::regex_replace(overloadname, std::regex("[,>]"), "");
+}
+
+void SACppCodeEmitter::CheckMethodOverload(AutoPtr<ASTMethod> &method, size_t &index, std::string &overloadname) const
+{
+    for (int i = 0; i < index; i++) {
+        if (interface_->GetMethod(i)->GetName() == method->GetName()) {
+            GetOverloadName(method, overloadname);
+            break;
+        }
+    }
+}
+
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
     sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
-    for (int i = 0; i < methodNumber; i++) {
+    for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
-        std::string commandCode = "COMMAND_" + ConstantName(method->GetName());
+        std::string overloadname = "";
+        CheckMethodOverload(method, i, overloadname);
+        std::string commandCode = "COMMAND_" + ConstantName(method->GetName() + overloadname);
         bool hasIpcCode = method->HasIpcCode();
         if (i == 0 && !hasIpcCode) {
             commandCode += " = MIN_TRANSACTION_ID";
