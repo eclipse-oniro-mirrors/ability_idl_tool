@@ -149,8 +149,11 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).AppendFormat("switch (static_cast<%sIpcCode>(code)) {\n", interface_->GetName().c_str());
     int methodNumber = static_cast<int>(interface_->GetMethodNumber());
-    for (int i = 0; i < methodNumber; i++) {
+    for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        std::string overloadname = "";
+        SACppCodeEmitter::CheckMethodOverload(method, i, overloadname);
+        SACppCodeEmitter::SetOverloadName(overloadname);
         EmitInterfaceStubMethodImpl(method, sb, prefix + TAB + TAB);
     }
     sb.Append(prefix + TAB).Append(TAB).Append("default:\n");
@@ -207,8 +210,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
     const std::string &prefix) const
 {
     bool hasOutParameter = false;
+    std::string overloadname = SACppCodeEmitter::GetOverloadName();
     sb.Append(prefix).AppendFormat("case %sIpcCode::COMMAND_%s: {\n", interface_->GetName().c_str(),
-        ConstantName(method->GetName()).c_str());
+        ConstantName(method->GetName() + overloadname).c_str());
     int paramNumber = static_cast<int>(method->GetParameterNumber());
     for (int i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);

@@ -52,11 +52,27 @@ protected:
     void EmitReadMethodParameter(const AutoPtr<ASTParameter> &param, const std::string &parcelName,
         bool emitType, StringBuilder &sb, const std::string &prefix) const;
 
+    void GetOverloadName(AutoPtr<ASTMethod> &method, std::string &overloadname) const;
+
+    void CheckMethodOverload(AutoPtr<ASTMethod> &method, size_t &index, std::string &overloadname) const;
+
     void EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix) override;
 
     void EmitSecurecInclusion(StringBuilder &sb) const;
 
+    inline void SetOverloadName(const std::string &name) const
+    {
+        overloadname_ = name;
+    }
+
+    inline std::string GetOverloadName() const
+    {
+        return overloadname_;
+    }
+
     bool isProxy = false;
+
+    mutable std::string overloadname_;
 private:
     std::string EmitCppParameter(AutoPtr<ASTParameter> &param) const;
 };

@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_OVERLOADFUN: {
+            uint8_t inParam = data.ReadUint8();
+            ErrCode errCode = overloadfun(inParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_UNSIGNED_INT: {
+            uint32_t outParam;
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint32(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_MAP_INT_STRING: {
+            std::unordered_map<int32_t, std::string> outParam;
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it1 = outParam.begin(); it1 != outParam.end(); ++it1) {
+                    if (!reply.WriteInt32((it1->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteString16(Str8ToStr16((it1->second)))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_UNSIGNED_INT_VECTOR: {
+            std::vector<uint32_t> outParam;
+            int32_t outParamSize = data.ReadInt32();
+            if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i2 = 0; i2 < outParamSize; ++i2) {
+                uint32_t value2 = data.ReadUint32();
+                outParam.push_back(value2);
+            }
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_LIST_MAP_INT_STRING: {
+            std::vector<std::unordered_map<int32_t, std::string>> outParam;
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it3 = outParam.begin(); it3 != outParam.end(); ++it3) {
+                    if ((*it3).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+
+                    reply.WriteInt32((*it3).size());
+                    for (auto it4 = (*it3).begin(); it4 != (*it3).end(); ++it4) {
+                        if (!reply.WriteInt32((it4->first))) {
+                            return ERR_INVALID_DATA;
+                        }
+                        if (!reply.WriteString16(Str8ToStr16((it4->second)))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_FILEDESCRIPTOR_OUT_STRING: {
+            int outParam;
+            std::string result;
+            ErrCode errCode = overloadfun(outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFileDescriptor(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(Str8ToStr16(result))) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

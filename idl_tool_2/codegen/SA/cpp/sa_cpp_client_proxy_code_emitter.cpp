@@ -105,15 +105,17 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &s
         if (!method->GetCacheable() || method->IsOneWay()) {
             continue;
         }
+        std::string overloadname = "";
+        SACppCodeEmitter::CheckMethodOverload(method, i, overloadname);
         int32_t cacheableTime = method->GetCacheableTime();
         if (cacheableTime != 0) {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
                 .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), %d000);\n",
-                interface_->GetName().c_str(), ConstantName(method->GetName()).c_str(), cacheableTime);
+                interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str(), cacheableTime);
         } else {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
                 .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), 0);\n",
-                interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+                interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
         }
     }
     sb.Append("\n");
@@ -138,10 +140,12 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyUnRegisterDeathRecipient(Str
         sb.Append("\n");
         for (size_t i = 0; i < methodNumber; i++) {
             AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+            std::string overloadname = "";
+            SACppCodeEmitter::CheckMethodOverload(method, i, overloadname);
             if (method->GetCacheable() && !method->IsOneWay()) {
                 sb.Append(prefix).Append("ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),\n")
                     .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
-                    interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+                    interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
             }
         }
     }
@@ -268,6 +272,9 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &s
     size_t methodNumber = interface_->GetMethodNumber();
     for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
+        std::string overloadname = "";
+        SACppCodeEmitter::CheckMethodOverload(method, i, overloadname);
+        SACppCodeEmitter::SetOverloadName(overloadname);
         EmitInterfaceProxyMethodImpl(method, sb, prefix);
         if (i != methodNumber - 1) {
             sb.Append("\n");
@@ -288,9 +295,10 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr
     const std::string &prefix) const
 {
     if ((method->GetCacheable()) && (!method->IsOneWay())) {
+        std::string overloadname = SACppCodeEmitter::GetOverloadName();
         sb.Append(prefix).Append("bool hitCache = ApiCacheManager::GetInstance().PreSendRequest(GetDescriptor(),\n")
             .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);",
-            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+            interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
         sb.Append("\n");
         sb.Append(prefix).Append("if (hitCache) {\n");
         EmitInterfaceProxyMethodErrCode(method, sb, prefix);
@@ -303,9 +311,10 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPostSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    std::string overloadname = SACppCodeEmitter::GetOverloadName();
     sb.Append(prefix + TAB).Append("ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),\n")
         .Append(prefix + TAB + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply);\n",
-        interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+        interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,
@@ -328,8 +337,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
 {
     sb.Append(prefix).Append("{\n");
     if (hitraceOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n",
-            hitraceTag_.c_str());
+        sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n", hitraceTag_.c_str());
     }
     sb.Append(prefix + TAB).Append("MessageParcel data;\n");
     sb.Append(prefix + TAB).Append("MessageParcel reply;\n");
@@ -365,9 +373,10 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Remote is nullptr!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_DATA;\n").Append(prefix + TAB).Append("}\n");
+    std::string overloadname = SACppCodeEmitter::GetOverloadName();
     sb.Append(prefix + TAB).Append("int32_t result = remote->SendRequest(\n").Append(prefix + TAB + TAB)
         .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), data, reply, option);\n",
-        interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+        interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");
@@ -382,10 +391,11 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(AutoPtr<ASTMet
     sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
     sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
     if (logOn_) {
+        std::string overloadname = SACppCodeEmitter::GetOverloadName();
         sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read result failed, code is: %{public}d.\",\n")
             .Append(prefix + TAB + TAB + TAB)
             .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
-            interface_->GetName().c_str(), ConstantName(method->GetName()).c_str());
+            interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
     }
     sb.Append(prefix + TAB).Append("    return errCode;\n");
     sb.Append(prefix + TAB).Append("}\n");
