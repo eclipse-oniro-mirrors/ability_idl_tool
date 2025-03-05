@@ -95,6 +95,13 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb
         sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
         sb.Append(prefix + TAB).Append("MessageOption& option);\n");
     }
+    if (ast_ != nullptr && ast_->GetOptionParcelHooksOn()) {
+        sb.Append(prefix).Append("virtual int32_t CallbackParcel(\n");
+        sb.Append(prefix + TAB).Append("[[maybe_unused]] uint32_t code,\n");
+        sb.Append(prefix + TAB).Append("[[maybe_unused]] MessageParcel& data,\n");
+        sb.Append(prefix + TAB).Append("[[maybe_unused]] MessageParcel& reply,\n");
+        sb.Append(prefix + TAB).Append("[[maybe_unused]] MessageOption& option) = 0;\n");
+    }
 }
 
 void SaCppServiceStubCodeEmitter::EmitStubSourceFile()
@@ -137,6 +144,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix).Append("{\n");
     if (ast_ != nullptr && ast_->GetOptionStubHooksOn()) {
         EmitInterfaceStubUseHooks(sb, prefix);
+    }
+    if (ast_ != nullptr && ast_->GetOptionParcelHooksOn()) {
+        EmitInterfaceParcelUseHooks(sb, prefix);
     }
     if (hitraceOn_) {
     sb.Append(prefix + TAB).AppendFormat("HITRACE_METER_NAME(%s, __PRETTY_FUNCTION__);\n",
@@ -189,6 +199,17 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubUseHooks(StringBuilder &sb, c
     sb.Append(prefix + TAB).Append("MessageParcel& reply,\n");
     sb.Append(prefix + TAB).Append("MessageOption& option)\n");
     sb.Append(prefix).Append("{\n");
+}
+
+void SaCppServiceStubCodeEmitter::EmitInterfaceParcelUseHooks(StringBuilder &sb, const std::string &prefix) const
+{
+    sb.Append(prefix + TAB).Append("int32_t parcelRet = CallbackParcel(code, data, reply, option);\n");
+    sb.Append(prefix + TAB).Append("if (parcelRet != ERR_NONE) {\n");
+    if (logOn_) {
+        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackParcel failed\");\n");
+    }
+    sb.Append(prefix + TAB + TAB).Append("return parcelRet;\n");
+    sb.Append(prefix + TAB).Append("}\n");
 }
 
 void SaCppServiceStubCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod> &method, StringBuilder &sb,

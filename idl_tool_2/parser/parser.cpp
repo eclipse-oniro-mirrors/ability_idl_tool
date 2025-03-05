@@ -116,6 +116,9 @@ bool Parser::ParseFile()
             case TokenType::OPTION_STUB_HOOKS:
                 ret = ParseOptionStubHooks() && ret;
                 continue;
+            case TokenType::OPTION_PARCEL_HOOKS:
+                ret = ParseOptionParcelHooks() && ret;
+                continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
                 ret = ParseImports() && ret;
@@ -285,6 +288,8 @@ bool Parser::ParseKeywordWithId(TokenType expectedKeyword, const std::string& co
         ast_->SetSupportDelegator(value);
     } else if (context == "option_stub_hooks") {
         ast_->SetOptionStubHooks(value);
+    } else if (context == "option_parcel_hooks") {
+        ast_->SetOptionParcelHooks(value);
     }
     return true;
 }
@@ -297,6 +302,11 @@ bool Parser::ParseSupportDelegator()
 bool Parser::ParseOptionStubHooks()
 {
     return ParseKeywordWithId(TokenType::OPTION_STUB_HOOKS, "option_stub_hooks");
+}
+
+bool Parser::ParseOptionParcelHooks()
+{
+    return ParseKeywordWithId(TokenType::OPTION_PARCEL_HOOKS, "option_parcel_hooks");
 }
 
 bool Parser::ParseImports()

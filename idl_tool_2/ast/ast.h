@@ -274,6 +274,20 @@ public:
         return optionStubHooksOn_;
     }
 
+    inline void SetOptionParcelHooks(std::string &optionParcelHooks)
+    {
+        if (optionParcelHooks == "on") {
+            optionParcelHooksOn_ = true;
+        } else {
+            optionParcelHooksOn_ = false;
+        }
+    }
+
+    inline bool GetOptionParcelHooksOn() const
+    {
+        return optionParcelHooksOn_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -299,6 +313,7 @@ private:
     std::string interfaceToken_;
     bool supportDelegatorOn_ = false;
     bool optionStubHooksOn_ = false;
+    bool optionParcelHooksOn_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

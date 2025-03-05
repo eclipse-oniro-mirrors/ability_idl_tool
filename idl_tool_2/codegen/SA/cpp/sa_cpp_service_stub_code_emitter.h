@@ -42,6 +42,8 @@ private:
 
     void EmitInterfaceStubUseHooks(StringBuilder &sb, const std::string &prefix) const;
 
+    void EmitInterfaceParcelUseHooks(StringBuilder &sb, const std::string &prefix) const;
+
     void EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitInterfaceStubMethodCall(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
