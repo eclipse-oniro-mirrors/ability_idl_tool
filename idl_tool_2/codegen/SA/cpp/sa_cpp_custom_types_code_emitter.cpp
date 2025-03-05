@@ -248,7 +248,11 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
         for (size_t i = 0; i < type->GetMemberNumber(); i++) {
             std::string memberName = type->GetMemberName(i);
             std::string name = StringHelper::Format("%s.%s", objName.c_str(), memberName.c_str());
-            GetTypeEmitter(type->GetMemberType(i))->EmitCppWriteVar("data.", name, sb, TAB);
+            AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type->GetMemberType(i));
+            if (typeEmitter == nullptr) {
+                continue;
+            }
+            typeEmitter->EmitCppWriteVar("data.", name, sb, TAB);
             if (i + 1 < type->GetMemberNumber()) {
                 sb.Append("\n");
             }
@@ -262,7 +266,11 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
     StringBuilder &sb, const AutoPtr<ASTStructType> &type) const
 {
-    std::string typeName = GetTypeEmitter(type.Get())->EmitCppType();
+    AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCppType();
     std::string objName("dataBlock");
 
     sb.AppendFormat("ErrCode %sBlockUnmarshalling(OHOS::MessageParcel& data, %s& %s)\n", type->GetName().c_str(),

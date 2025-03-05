@@ -339,8 +339,12 @@ void CppClientProxyCodeEmitter::EmitPassthroughProxySourceInclusions(StringBuild
 void CppClientProxyCodeEmitter::EmitPassthroughGetInstanceMethodImpl(StringBuilder &sb,
     const std::string &prefix) const
 {
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(interface_.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     sb.Append(prefix).AppendFormat("%s %s::Get(const std::string &serviceName, bool isStub)\n",
-        GetTypeEmitter(interface_.Get())->EmitCppType().c_str(), interface_->GetName().c_str());
+        typeEmitter->EmitCppType().c_str(), interface_->GetName().c_str());
     sb.Append(prefix).Append("{\n");
     EmitProxyPassthroughtLoadImpl(sb, prefix + TAB);
     sb.Append(prefix + TAB).Append("return nullptr;\n");
