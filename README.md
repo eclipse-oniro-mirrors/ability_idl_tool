@@ -52,7 +52,7 @@ idl工具的获取和TS开发步骤可参考[开发指南](https://gitee.com/ope
 
 #### 创建.idl文件
 
-开发者可以使用C++编程语言构建.idl文件。
+开发者可以使用C++编程语言构建.idl文件，参考[IDL语法](./IDL-CPP.md)和[IDL构建](./IDL-CPP-GN.md)。
 
 例如，此处构建一个名为IIdlTestService.idl的文件，文件内具体内容如下：
 
