@@ -52,6 +52,7 @@ enum class TokenType {
     INTERFACE_TOKEN,      // "interface_token"
     SUPPORT_DELEGATOR,    // "support_delegator"
     OPTION_STUB_HOOKS,    // "option_stub_hooks"
+    OPTION_PARCEL_HOOKS,    // "option_parcel_hooks"
     SEQ,                  // "sequenceable"
     IMPORT,               // "import"
     INTERFACE,            // "interface"

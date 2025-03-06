@@ -102,6 +102,8 @@ private:
 
     bool ParseOptionStubHooks();
 
+    bool ParseOptionParcelHooks();
+
     bool ParserPackageInfo(const std::string &packageName);
 
     bool ParseImports();
