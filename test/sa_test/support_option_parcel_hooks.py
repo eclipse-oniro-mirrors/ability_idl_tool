@@ -19,7 +19,7 @@
 from test_base import Test
 
 
-class SupportOptionParcel_hooks(Test):
+class SupportOptionParcelHooks(Test):
     def get_file_name(self):
         return __file__
 
@@ -32,4 +32,4 @@ class SupportOptionParcel_hooks(Test):
 
 
 if __name__ == "__main__":
-    SupportOptionParcel_hooks().test()
+    SupportOptionParcelHooks().test()
