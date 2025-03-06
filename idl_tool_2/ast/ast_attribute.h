@@ -35,6 +35,7 @@ public:
     static constexpr Attribute IPC_IN_CAPACITY = 0x1U << 8;
     static constexpr Attribute IPC_OUT_CAPACITY = 0x1U << 9;
     static constexpr Attribute CUSTOM_MSG_OPTION = 0x1U << 10;
+    static constexpr Attribute MACRO = 0x1U << 11;
 
     explicit ASTAttr(Attribute value = ASTAttr::NONE) : value_(value) {}
 

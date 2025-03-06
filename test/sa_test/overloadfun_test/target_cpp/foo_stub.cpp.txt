@@ -29,7 +29,17 @@ int32_t FooStub::OnRemoteRequest(
         return ERR_TRANSACTION_FAILED;
     }
     switch (static_cast<IFooIpcCode>(code)) {
+#ifndef WATCHER
         case IFooIpcCode::COMMAND_OVERLOADFUN: {
+            ErrCode errCode = overloadfun();
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+#endif
+#ifdef DEVICE
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_UNSIGNED_CHAR: {
             uint8_t inParam = data.ReadUint8();
             ErrCode errCode = overloadfun(inParam);
             if (!reply.WriteInt32(errCode)) {
@@ -37,6 +47,7 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+#endif
         case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_UNSIGNED_INT: {
             uint32_t outParam;
             ErrCode errCode = overloadfun(outParam);

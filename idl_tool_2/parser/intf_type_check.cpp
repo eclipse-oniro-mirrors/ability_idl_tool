@@ -90,9 +90,9 @@ bool IntfTypeChecker::CheckIntfSaAstMethods()
         AutoPtr<ASTMethod> method = interfaceType->GetMethod(i);
         if (((method->GetAttribute()->GetValue()) &
             (~(ASTAttr::ONEWAY | ASTAttr::CUSTOM_MSG_OPTION | ASTAttr::CACHEABLE | ASTAttr::IPCCODE |
-                ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY | ASTAttr::CALLBACK))) != 0) {
+                ASTAttr::IPC_IN_CAPACITY | ASTAttr::IPC_OUT_CAPACITY | ASTAttr::CALLBACK | ASTAttr::MACRO))) != 0) {
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf sa: method attr support oneway, cacheable, "
-                "ipccode, ipcincapacity, ipcoutcapacity", __func__, __LINE__).c_str());
+                "ipccode, ipcincapacity, ipcoutcapacity, macrodef, macrondef", __func__, __LINE__).c_str());
             return false;
         }
         if (method->GetAttribute()->HasValue(ASTAttr::CACHEABLE) &&

@@ -186,9 +186,15 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecls(StringBuilder &s
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     sb.Append(prefix).AppendFormat("ErrCode %s(", method->GetName().c_str());
     EmitInterfaceMethodParams(method, sb, prefix + TAB);
     sb.Append(") override;\n");
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyDeathRecipient(StringBuilder &sb, const std::string &prefix) const
@@ -285,10 +291,16 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpls(StringBuilder &s
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     sb.Append(prefix).AppendFormat("ErrCode %s::%s(", proxyName_.c_str(), method->GetName().c_str());
     EmitInterfaceMethodParams(method, sb, prefix + TAB);
     sb.Append(")\n");
     EmitInterfaceProxyMethodBody(method, sb, prefix);
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodPreSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,

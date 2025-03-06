@@ -548,12 +548,42 @@ bool Parser::ParseAttrUnit(AttrSet &attrs)
             ParseAttrUnitCustomMsgOption(attrs, token);
             return true;
         }
+        case TokenType::MACRODEF:
+        case TokenType::MACRONDEF: {
+            ParseAttrUnitMarco(attrs, token);
+            return true;
+        }
         default:
             LogError(__func__, __LINE__, token, StringHelper::Format("'%s' is a illegal attribute",
                 token.value.c_str()));
             lexer_.SkipToken(TokenType::BRACKETS_RIGHT);
             return false;
     }
+}
+
+void Parser::ParseAttrUnitMarco(AttrSet &attrs, Token &token)
+{
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Not support macrodef"));
+        lexer_.GetToken();
+        return;
+    }
+
+    macroType_ = "ifdef";
+    if (token.kind == TokenType::MACRONDEF) {
+        macroType_ = "ifndef";
+    }
+    attrs.insert(token);
+    lexer_.GetToken();
+    token = lexer_.PeekToken();
+    macroVal_ = "";
+    if (token.kind == TokenType::BRACKETS_RIGHT) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("macrodef/marcorndef attr cannot be empty"));
+    } else if (token.kind == TokenType::ID) {
+        macroVal_ = token.value;
+    }
+    lexer_.GetToken();
 }
 
 void Parser::ParseAttrUnitFreezecontrol(AttrSet &attrs, Token &token)
@@ -863,6 +893,8 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
 {
     freezecontrolAttr_ = "";
     messageOption_ = "";
+    macroVal_ = "";
+    macroType_ = "";
     AutoPtr<ASTMethod> method = new ASTMethod();
     AutoPtr<ASTAttr> methodAttr = ParseMethodAttr();
     method->SetAttribute(methodAttr);
@@ -907,6 +939,10 @@ AutoPtr<ASTMethod> Parser::ParseMethod(const AutoPtr<ASTInterfaceType> &interfac
     }
     if (!messageOption_.empty() && IntfTypeChecker::CheckMessageOption(messageOption_)) {
         method->SetMessageOption(messageOption_);
+    }
+    if (!macroVal_.empty() && !macroType_.empty()) {
+        method->SetMacroVal(macroVal_);
+        method->SetMacroType(macroType_);
     }
     return method;
 }
@@ -972,6 +1008,10 @@ AutoPtr<ASTAttr> Parser::ParseMethodAttr()
                 break;
             case TokenType::CUSTOM_MSG_OPTION:
                 methodAttr->SetValue(ASTAttr::CUSTOM_MSG_OPTION);
+                break;
+            case TokenType::MACRODEF:
+            case TokenType::MACRONDEF:
+                methodAttr->SetValue(ASTAttr::MACRO);
                 break;
             default:
                 LogError(__func__, __LINE__, attr, std::string("illegal attribute of interface"));

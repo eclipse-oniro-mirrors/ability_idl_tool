@@ -17,6 +17,37 @@
 
 namespace test {
 
+#ifndef WATCHER
+ErrCode FooProxy::overloadfun()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+#endif
+
+#ifdef DEVICE
 ErrCode FooProxy::overloadfun(
     uint8_t inParam)
 {
@@ -37,7 +68,7 @@ ErrCode FooProxy::overloadfun(
         return ERR_INVALID_DATA;
     }
     int32_t result = remote->SendRequest(
-        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN), data, reply, option);
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_UNSIGNED_CHAR), data, reply, option);
     if (FAILED(result)) {
         return result;
     }
@@ -49,6 +80,7 @@ ErrCode FooProxy::overloadfun(
 
     return ERR_OK;
 }
+#endif
 
 ErrCode FooProxy::overloadfun(
     uint32_t& outParam)

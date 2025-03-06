@@ -230,6 +230,31 @@ public:
         return this->ipcCode_;
     }
 
+    inline bool IsMacro()
+    {
+        return attr_->HasValue(ASTAttr::MACRO);
+    }
+
+    inline void SetMacroVal(const std::string& macroVal)
+    {
+        macroVal_ = macroVal;
+    }
+
+    inline std::string GetMacroVal()
+    {
+        return macroVal_;
+    }
+
+    inline void SetMacroType(const std::string& macroType)
+    {
+        macroType_ = macroType;
+    }
+
+    inline std::string GetMacroType()
+    {
+        return macroType_;
+    }
+
 private:
     void BuildSignature();
 
@@ -243,6 +268,8 @@ private:
     int32_t ipcCode_ = 0;
     std::string freezeControlReason;
     std::string messageOption_;
+    std::string macroVal_;
+    std::string macroType_;
 };
 } // namespace Idl
 } // namespace OHOS
