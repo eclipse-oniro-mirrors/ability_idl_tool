@@ -26,6 +26,7 @@ namespace test {
 
 enum class IFooIpcCode {
     COMMAND_OVERLOADFUN = MIN_TRANSACTION_ID,
+    COMMAND_OVERLOADFUN_IN_UNSIGNED_CHAR,
     COMMAND_OVERLOADFUN_OUT_UNSIGNED_INT,
     COMMAND_OVERLOADFUN_OUT_MAP_INT_STRING,
     COMMAND_OVERLOADFUN_IN_UNSIGNED_INT_VECTOR,
@@ -37,8 +38,14 @@ class IFoo : public IRemoteBroker {
 public:
     DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
 
+#ifndef WATCHER
+    virtual ErrCode overloadfun() = 0;
+#endif
+
+#ifdef DEVICE
     virtual ErrCode overloadfun(
         uint8_t inParam) = 0;
+#endif
 
     virtual ErrCode overloadfun(
         uint32_t& outParam) = 0;

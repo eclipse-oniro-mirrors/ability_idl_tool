@@ -196,9 +196,15 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceBody(StringBuilder &sb, const std::
 void SaCppInterfaceCodeEmitter::EmitInterfaceMethod(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     sb.Append(prefix).AppendFormat("virtual ErrCode %s(", method->GetName().c_str());
     EmitInterfaceMethodParams(method, sb, prefix + TAB);
     sb.Append(") = 0;\n");
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppInterfaceCodeEmitter::EmitInterfaceMemberVariables(StringBuilder &sb, const std::string &prefix) const

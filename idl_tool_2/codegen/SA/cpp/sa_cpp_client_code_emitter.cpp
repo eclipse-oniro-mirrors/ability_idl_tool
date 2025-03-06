@@ -143,9 +143,15 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodDecls(StringBuilder &sb, c
 void SaCppClientCodeEmitter::EmitInterfaceClientMethodDecl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     sb.Append(prefix).AppendFormat("ErrCode %s(", method->GetName().c_str());
     EmitInterfaceClientMethodParams(method, sb, prefix + TAB, true);
     sb.Append(");\n");
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppClientCodeEmitter::EmitInterfaceClientDeathRecipient(StringBuilder &sb, const std::string &prefix) const
@@ -402,10 +408,16 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodImpls(StringBuilder &sb, c
 void SaCppClientCodeEmitter::EmitInterfaceClientMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb,
     const std::string &prefix) const
 {
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     sb.Append(prefix).AppendFormat("ErrCode %s::%s(", clientName_.c_str(), method->GetName().c_str());
     EmitInterfaceClientMethodParams(method, sb, prefix + TAB, false);
     sb.Append(")\n");
     EmitInterfaceClientMethodBody(method, sb, prefix);
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppClientCodeEmitter::EmitInterfaceClientMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb,

@@ -123,6 +123,8 @@ private:
 
     void ParseAttrUnitCustomMsgOption(AttrSet &attrs, Token &token);
 
+    void ParseAttrUnitMarco(AttrSet &attrs, Token &token);
+
     void ParseAttrUnitIpccode(AttrSet &attrs, Token &token);
 
     void ParseAttrUnitIpcCapacity(AttrSet &attrs, Token &token);
@@ -315,6 +317,8 @@ private:
     std::string freezecontrolAttr_;
     AutoPtr<ASTEnumType> currentEnum_;
     std::string messageOption_;
+    std::string macroVal_;
+    std::string macroType_;
 };
 } // namespace Idl
 } // namespace OHOS

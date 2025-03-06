@@ -67,6 +67,8 @@ enum class TokenType {
     IPCCODE,              // "ipccode"
     IPC_IN_CAPACITY,      // "ipcincapacity"
     IPC_OUT_CAPACITY,     // "ipcoutcapacity"
+    MACRODEF,             // "macrodef"
+    MACRONDEF,            // "macrondef"
     IN,                   // "in"
     OUT,                  // "out"
     INOUT,                // "inout"

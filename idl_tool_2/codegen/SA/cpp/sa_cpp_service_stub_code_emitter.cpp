@@ -210,6 +210,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
     const std::string &prefix) const
 {
     bool hasOutParameter = false;
+    if (method->IsMacro()) {
+        sb.AppendFormat("#%s %s\n", method->GetMacroType().c_str(), method->GetMacroVal().c_str());
+    }
     std::string overloadname = SACppCodeEmitter::GetOverloadName();
     sb.Append(prefix).AppendFormat("case %sIpcCode::COMMAND_%s: {\n", interface_->GetName().c_str(),
         ConstantName(method->GetName() + overloadname).c_str());
@@ -252,6 +255,9 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
     }
     sb.Append(prefix + TAB).Append("return ERR_NONE;\n");
     sb.Append(prefix).Append("}\n");
+    if (method->IsMacro()) {
+        sb.Append("#endif\n");
+    }
 }
 
 void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod> &method, StringBuilder &sb,

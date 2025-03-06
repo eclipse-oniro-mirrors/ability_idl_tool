@@ -62,6 +62,8 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"ipccode",        TokenType::IPCCODE      },
     {"ipcincapacity",  TokenType::IPC_IN_CAPACITY  },
     {"ipcoutcapacity", TokenType::IPC_OUT_CAPACITY },
+    {"macrodef",       TokenType::MACRODEF     },
+    {"macrondef",      TokenType::MACRONDEF    },
     {"in",             TokenType::IN           },
     {"out",            TokenType::OUT          },
     {"inout",          TokenType::INOUT        },
