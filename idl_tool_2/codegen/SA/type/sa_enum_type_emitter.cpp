@@ -66,7 +66,7 @@ std::string SaEnumTypeEmitter::EmitCppTypeDecl() const
 void SaEnumTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name,
     StringBuilder &sb, const std::string &prefix) const
 {
-    sb.Append(prefix).AppendFormat("if (!%sWriteUint64(static_cast<uint64_t>(%s))) {\n", parcelName.c_str(),
+    sb.Append(prefix).AppendFormat("if (!%sWriteInt32(static_cast<int32_t>(%s))) {\n", parcelName.c_str(),
         name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
@@ -84,8 +84,8 @@ void SaEnumTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std:
             name.c_str(), typeName_.c_str());
     }
     sb.Append(prefix).Append("{\n");
-    sb.Append(prefix + TAB).AppendFormat("uint64_t %s = 0;\n", tmpVarName.c_str());
-    sb.Append(prefix + TAB).AppendFormat("if (!%sReadUint64(%s)) {\n", parcelName.c_str(), tmpVarName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("int32_t %s = 0;\n", tmpVarName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("if (!%sReadInt32(%s)) {\n", parcelName.c_str(), tmpVarName.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
     }
