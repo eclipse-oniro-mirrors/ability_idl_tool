@@ -19,7 +19,6 @@
 #include <unordered_set>
 
 #include "util/options.h"
-
 #include "util/logger.h"
 
 namespace OHOS {
@@ -43,7 +42,8 @@ void SACppCodeEmitter::EmitImportUsingNamespace(StringBuilder &sb) const
     std::unordered_map<std::string, int> usedNamespace;
     for (const auto &importPair : ast_->GetImports()) {
         AutoPtr<AST> importAst = importPair.second;
-        if (importAst->GetASTFileType() == ASTFileType::AST_SEQUENCEABLE) {
+        if (importAst->GetASTFileType() == ASTFileType::AST_SEQUENCEABLE ||
+            importAst->GetASTFileType() == ASTFileType::AST_RAWDATA) {
             continue;
         }
         size_t index = importPair.first.rfind(".");
@@ -261,6 +261,7 @@ void SACppCodeEmitter::GetOverloadName(AutoPtr<ASTMethod> &method, std::string &
     }
 
     std::transform(overloadname.begin(), overloadname.end(), overloadname.begin(), ::tolower);
+    overloadname = std::regex_replace(overloadname, std::regex("\\b[a-zA-Z]+\\."), "");
     overloadname = std::regex_replace(overloadname, std::regex("[ <]"), "_");
     overloadname = std::regex_replace(overloadname, std::regex("\\[]"), "_vector");
     overloadname = std::regex_replace(overloadname, std::regex("[,>]"), "");

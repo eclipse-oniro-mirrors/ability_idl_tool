@@ -18,6 +18,7 @@
 #include <algorithm>
 
 #include "ast/ast_interface_type.h"
+#include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
 
 namespace OHOS {
@@ -90,6 +91,24 @@ AutoPtr<ASTSequenceableType> ASTNamespace::GetSequenceable(size_t index)
     }
 
     return sequenceables_[index];
+}
+
+void ASTNamespace::AddRawData(const AutoPtr<ASTRawDataType> &rawdata)
+{
+    if (rawdata == nullptr) {
+        return;
+    }
+
+    rawdatas_.push_back(rawdata);
+}
+
+AutoPtr<ASTRawDataType> ASTNamespace::GetRawData(size_t index)
+{
+    if (index >= rawdatas_.size()) {
+        return nullptr;
+    }
+
+    return rawdatas_[index];
 }
 
 std::string ASTNamespace::ToString() const

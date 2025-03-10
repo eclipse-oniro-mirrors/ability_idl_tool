@@ -184,6 +184,25 @@ void AST::AddSequenceableDef(const AutoPtr<ASTSequenceableType> &sequenceable)
     AddType(sequenceable.Get());
 }
 
+AutoPtr<ASTRawDataType> AST::GetRawDataDef(size_t index)
+{
+    if (index >= rawdataDefs_.size()) {
+        return nullptr;
+    }
+
+    return rawdataDefs_[index];
+}
+
+void AST::AddRawDataDef(const AutoPtr<ASTRawDataType> &rawdata)
+{
+    if (rawdata == nullptr) {
+        return;
+    }
+
+    rawdataDefs_.push_back(rawdata);
+    AddType(rawdata.Get());
+}
+
 int AST::IndexOf(ASTInterfaceType* interface)
 {
     for (size_t i = 0; i < interfaceDefs_.size(); i++) {
@@ -198,6 +217,16 @@ int AST::IndexOf(ASTSequenceableType* sequenceable)
 {
     for (size_t i = 0; i < sequenceableDefs_.size(); i++) {
         if (sequenceableDefs_[i] == sequenceable) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int AST::IndexOf(ASTRawDataType* rawdata)
+{
+    for (size_t i = 0; i < rawdataDefs_.size(); i++) {
+        if (rawdataDefs_[i] == rawdata) {
             return i;
         }
     }

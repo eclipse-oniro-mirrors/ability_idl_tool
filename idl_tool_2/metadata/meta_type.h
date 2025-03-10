@@ -37,6 +37,7 @@ enum class MetaTypeKind {
     List = 13,
     Map = 14,
     Array = 15,
+    RawData = 16,
 };
 
 struct MetaType {

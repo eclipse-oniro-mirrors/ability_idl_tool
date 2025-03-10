@@ -142,6 +142,11 @@ bool ASTType::IsSequenceableType()
     return false;
 }
 
+bool ASTType::IsRawDataType()
+{
+    return false;
+}
+
 bool ASTType::IsArrayType()
 {
     return false;

@@ -15,7 +15,7 @@
 
 #include "foo_proxy.h"
 
-namespace test {
+namespace overload {
 
 #ifndef WATCHER
 ErrCode FooProxy::overloadfun()
@@ -264,4 +264,315 @@ ErrCode FooProxy::overloadfun(
     funcResult = Str16ToStr8(reply.ReadString16());
     return ERR_OK;
 }
-} // namespace test
+
+ErrCode FooProxy::overloadfun(
+    const myrawdata& inParam,
+    myrawdata& outParam,
+    myrawdata& inoutParam,
+    myrawdata& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteUint32(inParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRawData(inParam.data, inParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteUint32(inoutParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRawData(inoutParam.data, inoutParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_MYRAWDATA_OUT_MYRAWDATA_INOUT_MYRAWDATA_OUT_MYRAWDATA), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    if (!reply.ReadUint32(outParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+    auto readoutParam =  reply.ReadRawData(outParam.size);
+    if (readoutParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    outParam.data = readoutParam;
+    if (!reply.ReadUint32(inoutParam.size)) {
+        return ERR_INVALID_DATA;
+    }
+    auto readinoutParam =  reply.ReadRawData(inoutParam.size);
+    if (readinoutParam == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    inoutParam.data = readinoutParam;
+    if (!reply.ReadUint32(funcResult.size)) {
+        return ERR_INVALID_DATA;
+    }
+    auto readfuncResult =  reply.ReadRawData(funcResult.size);
+    if (readfuncResult == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+    funcResult.data = readfuncResult;
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    const std::vector<myrawdata>& inParam,
+    std::vector<myrawdata>& outParam,
+    std::vector<myrawdata>& inoutParam,
+    std::vector<myrawdata>& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inParam.size());
+    for (auto it5 = inParam.begin(); it5 != inParam.end(); ++it5) {
+        if (!data.WriteUint32((*it5).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((*it5).data, (*it5).size)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    data.WriteInt32(inoutParam.size());
+    for (auto it6 = inoutParam.begin(); it6 != inoutParam.end(); ++it6) {
+        if (!data.WriteUint32((*it6).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((*it6).data, (*it6).size)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA_INOUT_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i7 = 0; i7 < outParamSize; ++i7) {
+        myrawdata value7;
+        if (!reply.ReadUint32(value7.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue7 =  reply.ReadRawData(value7.size);
+        if (readvalue7 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value7.data = readvalue7;
+        outParam.push_back(value7);
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i8 = 0; i8 < inoutParamSize; ++i8) {
+        myrawdata value8;
+        if (!reply.ReadUint32(value8.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue8 =  reply.ReadRawData(value8.size);
+        if (readvalue8 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value8.data = readvalue8;
+        inoutParam.push_back(value8);
+    }
+    int32_t funcResultSize = reply.ReadInt32();
+    if (funcResultSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i9 = 0; i9 < funcResultSize; ++i9) {
+        myrawdata value9;
+        if (!reply.ReadUint32(value9.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue9 =  reply.ReadRawData(value9.size);
+        if (readvalue9 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value9.data = readvalue9;
+        funcResult.push_back(value9);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    const std::unordered_map<myrawdata, myrawdata>& inParam,
+    std::unordered_map<myrawdata, myrawdata>& outParam,
+    std::unordered_map<myrawdata, myrawdata>& inoutParam,
+    std::unordered_map<myrawdata, myrawdata>& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inParam.size());
+    for (auto it10 = inParam.begin(); it10 != inParam.end(); ++it10) {
+        if (!data.WriteUint32((it10->first).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((it10->first).data, (it10->first).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteUint32((it10->second).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((it10->second).data, (it10->second).size)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inoutParam.size());
+    for (auto it11 = inoutParam.begin(); it11 != inoutParam.end(); ++it11) {
+        if (!data.WriteUint32((it11->first).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((it11->first).data, (it11->first).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteUint32((it11->second).size)) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRawData((it11->second).data, (it11->second).size)) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA_INOUT_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    for (int32_t i12 = 0; i12 < outParamSize; ++i12) {
+        myrawdata key12;
+        if (!reply.ReadUint32(key12.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readkey12 =  reply.ReadRawData(key12.size);
+        if (readkey12 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        key12.data = readkey12;
+        myrawdata value12;
+        if (!reply.ReadUint32(value12.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue12 =  reply.ReadRawData(value12.size);
+        if (readvalue12 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value12.data = readvalue12;
+        outParam[key12] = value12;
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    for (int32_t i13 = 0; i13 < inoutParamSize; ++i13) {
+        myrawdata key13;
+        if (!reply.ReadUint32(key13.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readkey13 =  reply.ReadRawData(key13.size);
+        if (readkey13 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        key13.data = readkey13;
+        myrawdata value13;
+        if (!reply.ReadUint32(value13.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue13 =  reply.ReadRawData(value13.size);
+        if (readvalue13 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value13.data = readvalue13;
+        inoutParam[key13] = value13;
+    }
+    int32_t funcResultSize = reply.ReadInt32();
+    for (int32_t i14 = 0; i14 < funcResultSize; ++i14) {
+        myrawdata key14;
+        if (!reply.ReadUint32(key14.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readkey14 =  reply.ReadRawData(key14.size);
+        if (readkey14 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        key14.data = readkey14;
+        myrawdata value14;
+        if (!reply.ReadUint32(value14.size)) {
+            return ERR_INVALID_DATA;
+        }
+        auto readvalue14 =  reply.ReadRawData(value14.size);
+        if (readvalue14 == nullptr) {
+            return ERR_INVALID_DATA;
+        }
+        value14.data = readvalue14;
+        funcResult[key14] = value14;
+    }
+    return ERR_OK;
+}
+} // namespace overload

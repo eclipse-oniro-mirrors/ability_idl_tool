@@ -13,16 +13,19 @@
  * limitations under the License.
  */
 
-#ifndef TEST_IFOO_H
-#define TEST_IFOO_H
+#ifndef OVERLOAD_IFOO_H
+#define OVERLOAD_IFOO_H
 
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
 #include <iremote_broker.h>
 #include <string_ex.h>
+#include "myrawdata.h"
 
-namespace test {
+using test::myrawdata;
+
+namespace overload {
 
 enum class IFooIpcCode {
     COMMAND_OVERLOADFUN = MIN_TRANSACTION_ID,
@@ -32,11 +35,14 @@ enum class IFooIpcCode {
     COMMAND_OVERLOADFUN_IN_UNSIGNED_INT_VECTOR,
     COMMAND_OVERLOADFUN_OUT_LIST_MAP_INT_STRING,
     COMMAND_OVERLOADFUN_OUT_FILEDESCRIPTOR_OUT_STRING,
+    COMMAND_OVERLOADFUN_IN_MYRAWDATA_OUT_MYRAWDATA_INOUT_MYRAWDATA_OUT_MYRAWDATA,
+    COMMAND_OVERLOADFUN_IN_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA_INOUT_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA,
+    COMMAND_OVERLOADFUN_IN_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA_INOUT_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA,
 };
 
 class IFoo : public IRemoteBroker {
 public:
-    DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
+    DECLARE_INTERFACE_DESCRIPTOR(u"overload.IFoo");
 
 #ifndef WATCHER
     virtual ErrCode overloadfun() = 0;
@@ -62,11 +68,29 @@ public:
     virtual ErrCode overloadfun(
         int& outParam,
         std::string& funcResult) = 0;
+
+    virtual ErrCode overloadfun(
+        const myrawdata& inParam,
+        myrawdata& outParam,
+        myrawdata& inoutParam,
+        myrawdata& funcResult) = 0;
+
+    virtual ErrCode overloadfun(
+        const std::vector<myrawdata>& inParam,
+        std::vector<myrawdata>& outParam,
+        std::vector<myrawdata>& inoutParam,
+        std::vector<myrawdata>& funcResult) = 0;
+
+    virtual ErrCode overloadfun(
+        const std::unordered_map<myrawdata, myrawdata>& inParam,
+        std::unordered_map<myrawdata, myrawdata>& outParam,
+        std::unordered_map<myrawdata, myrawdata>& inoutParam,
+        std::unordered_map<myrawdata, myrawdata>& funcResult) = 0;
 protected:
     const int VECTOR_MAX_SIZE = 102400;
     const int LIST_MAX_SIZE = 102400;
     const int MAP_MAX_SIZE = 102400;
 };
-} // namespace test
-#endif // TEST_IFOO_H
+} // namespace overload
+#endif // OVERLOAD_IFOO_H
 

@@ -118,6 +118,7 @@ bool Parser::ParseFile()
                 continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
+            case TokenType::RAWDATA:
                 ret = ParseImports() && ret;
                 continue;
             default:
@@ -316,8 +317,10 @@ bool Parser::ParseImports()
 
     if (kind == TokenType::IMPORT) {
         ParseImportInfo();
-    } else {
+    } else if (kind == TokenType::SEQ) {
         ParseSequenceableInfo();
+    } else if (kind == TokenType::RAWDATA) {
+        ParseRawDataInfo();
     }
     lexer_.GetToken();
 
@@ -411,6 +414,41 @@ void Parser::ParseSequenceableInfo()
     ast_->AddImport(seqAst);
     ast_->AddSequenceableDef(seqType);
     AddAst(seqAst);
+}
+
+void Parser::ParseRawDataInfo()
+{
+    Token token = lexer_.PeekToken();
+    Options &options = Options::GetInstance();
+    if (options.GetInterfaceType() != InterfaceType::SA || options.GetLanguage() != Language::CPP) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("Not support rawdata"));
+        lexer_.GetToken();
+        return;
+    }
+
+    std::string rawdataName = token.value;
+    if (rawdataName.empty()) {
+        LogError(__func__, __LINE__, token, std::string("rawdata name is empty"));
+        return;
+    }
+
+    AutoPtr<ASTRawDataType> rawdataType = new ASTRawDataType();
+    size_t index = rawdataName.rfind('.');
+    if (index != std::string::npos) {
+        rawdataType->SetName(rawdataName.substr(index + 1));
+        rawdataType->SetNamespace(ast_->ParseNamespace(rawdataName));
+    } else {
+        rawdataType->SetName(rawdataName);
+        rawdataType->SetNamespace(ast_->ParseNamespace(""));
+    }
+
+    AutoPtr<AST> rawdataAst = new AST();
+    rawdataAst->SetFullName(rawdataName);
+    rawdataAst->AddRawDataDef(rawdataType);
+    rawdataAst->SetAStFileType(ASTFileType::AST_RAWDATA);
+    ast_->AddImport(rawdataAst);
+    ast_->AddRawDataDef(rawdataType);
+    AddAst(rawdataAst);
 }
 
 bool Parser::ParseTypeDecls()
@@ -2001,7 +2039,7 @@ bool Parser::CheckType(const Token &token, const AutoPtr<ASTType> &type)
     }
 
     if (Options::GetInstance().GetLanguage() == Language::C) {
-        if (type->IsSequenceableType() || type->IsSmqType() || type->IsAshmemType()) {
+        if (type->IsSequenceableType() || type->IsSmqType() || type->IsAshmemType() || type->IsRawDataType()) {
             LogError(__func__, __LINE__, token, StringHelper::Format("The %s type is not supported by c language.",
                 type->ToString().c_str()));
             return false;
@@ -2287,6 +2325,7 @@ void Parser::MergeAst(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
     MergeTypeDefinitions(targetAst, sourceAst);
     MergeTypes(targetAst, sourceAst);
     MergeSequenceableDef(targetAst, sourceAst);
+    MergeRawDataDef(targetAst, sourceAst);
 }
 
 void Parser::MergeImport(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
@@ -2326,6 +2365,13 @@ void Parser::MergeSequenceableDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAs
 {
     if (sourceAst->GetSequenceableDef() != nullptr) {
         targetAst->AddSequenceableDef(sourceAst->GetSequenceableDef());
+    }
+}
+
+void Parser::MergeRawDataDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
+{
+    if (sourceAst->GetRawDataDef() != nullptr) {
+        targetAst->AddRawDataDef(sourceAst->GetRawDataDef());
     }
 }
 

@@ -53,6 +53,7 @@ enum class TokenType {
     SUPPORT_DELEGATOR,    // "support_delegator"
     OPTION_STUB_HOOKS,    // "option_stub_hooks"
     SEQ,                  // "sequenceable"
+    RAWDATA,              // "rawdata"
     IMPORT,               // "import"
     INTERFACE,            // "interface"
     EXTENDS,              // "extends"
