@@ -231,7 +231,7 @@ void SACppCodeEmitter::EmitSecurecInclusion(StringBuilder &sb) const
 
 void SACppCodeEmitter::GetOverloadName(AutoPtr<ASTMethod> &method, std::string &overloadname) const
 {
-    int paramNumber = static_cast<int>(method->GetParameterNumber());
+    size_t paramNumber = method->GetParameterNumber();
 
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -268,7 +268,7 @@ void SACppCodeEmitter::GetOverloadName(AutoPtr<ASTMethod> &method, std::string &
 
 void SACppCodeEmitter::CheckMethodOverload(AutoPtr<ASTMethod> &method, size_t &index, std::string &overloadname) const
 {
-    for (int i = 0; i < index; i++) {
+    for (size_t i = 0; i < index; i++) {
         if (interface_->GetMethod(i)->GetName() == method->GetName()) {
             GetOverloadName(method, overloadname);
             break;
@@ -278,7 +278,7 @@ void SACppCodeEmitter::CheckMethodOverload(AutoPtr<ASTMethod> &method, size_t &i
 
 void SACppCodeEmitter::EmitInterfaceMethodCommands(StringBuilder &sb, const std::string &prefix)
 {
-    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    size_t methodNumber = interface_->GetMethodNumber();
     sb.AppendFormat("enum class %sIpcCode {\n", interface_->GetName().c_str());
     for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);

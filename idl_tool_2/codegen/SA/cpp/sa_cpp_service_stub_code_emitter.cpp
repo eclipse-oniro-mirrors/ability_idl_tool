@@ -158,7 +158,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpls(StringBuilder &sb
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_TRANSACTION_FAILED;\n");
     sb.Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).AppendFormat("switch (static_cast<%sIpcCode>(code)) {\n", interface_->GetName().c_str());
-    int methodNumber = static_cast<int>(interface_->GetMethodNumber());
+    size_t methodNumber = interface_->GetMethodNumber();
     for (size_t i = 0; i < methodNumber; i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
         std::string overloadname = "";
