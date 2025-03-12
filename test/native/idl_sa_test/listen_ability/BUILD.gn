@@ -15,7 +15,10 @@ import("//build/config/components/idl_tool/idl.gni")
 import("//build/test.gni")
 
 idl_gen_interface("idl_sa_test_interface") {
-  src_idl = rebase_path("IListenAbility.idl")
+  sources = [ "IListenAbility.idl" ]
+
+  sources_common = [ "IFooCustom.idl" ]
+
   client_enable = true
   log_domainid = "0xD001718"
   log_tag = "idlTest"
@@ -35,9 +38,12 @@ ohos_source_set("idl_sa_proxy") {
                            [
                              "*_proxy.cpp",
                              "*_client.cpp",
+                             "*_custom.cpp",
                            ])
 
   public_configs = [ ":listen_ability_config" ]
+
+  defines = [ "DEVICE" ]
 
   deps = [ ":idl_sa_test_interface" ]
 
@@ -58,6 +64,8 @@ ohos_source_set("idl_sa_stub") {
 
   public_configs = [ ":listen_ability_config" ]
 
+  defines = [ "DEVICE" ]
+
   deps = [ ":idl_sa_test_interface" ]
 
   external_deps = [
@@ -74,6 +82,8 @@ ohos_shared_library("idl_sa_test") {
   sources = [ "src/listen_ability.cpp" ]
 
   public_configs = [ ":listen_ability_config" ]
+
+  defines = [ "DEVICE" ]
 
   deps = [
     ":idl_sa_proxy",

@@ -20,6 +20,7 @@
 
 #include "listen_ability_stub.h"
 #include "system_ability.h"
+#include "ifoo_custom.h"
 
 namespace OHOS {
 class ListenAbility : public SystemAbility, public ListenAbilityStub {
@@ -31,6 +32,41 @@ public:
     ErrCode AddVolume(int32_t volume) override;
     ErrCode TestSaCallSa(int32_t input, double &output) override;
     ErrCode TestGetIpcSendRequestTimes(int32_t &times) override;
+    ErrCode overloadfun(
+        int32_t& outParam) override;
+
+#ifdef DEVICE
+    ErrCode overloadfun(
+        std::unordered_map<int32_t, int32_t>& outParam) override;
+#endif
+
+    ErrCode enum_test_func(
+        FooEnum inParam,
+        FooEnum& outParam,
+        FooEnum& inoutParam,
+        FooEnum& funcResult) override;
+    ErrCode struct_test_func(
+        const FooStruct& inParam,
+        RequestInfo& outParam,
+        FooStruct& inoutParam,
+        FooStruct& funcResult) override;
+    ErrCode union_test_func(
+        const FooUnion& inParam,
+        FooUnion& outParam,
+        FooUnion& inoutParam,
+        FooUnion& funcResult) override;
+
+    ErrCode ApplyQuickFix(const std::vector<std::string>& quickFixFiles, bool isDebug) override;
+    ErrCode GetAllAppSuspendState(
+        const std::unordered_map<int32_t,
+        FooStruct>& inApp,
+        std::unordered_map<int32_t, FooStruct>& outApp) override;
+
+    ErrCode rawdata_test_func(
+        const MyRawdata& inParam,
+        MyRawdata& outParam,
+        MyRawdata& inoutParam,
+        MyRawdata& funcResult) override;
 
 protected:
     void OnStart() override;
