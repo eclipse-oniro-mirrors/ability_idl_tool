@@ -35,6 +35,7 @@
 #include "ast/ast_namespace.h"
 #include "ast/ast_node.h"
 #include "ast/ast_pointer_type.h"
+#include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
 #include "ast/base/ast_short_type.h"
 #include "ast/ast_smq_type.h"
@@ -57,6 +58,7 @@ enum class ASTFileType {
     AST_ICALLBACK,    // this idl file contains class of callback interface
     AST_TYPES,        // this idl file contains custom types
     AST_SEQUENCEABLE, // this is not an idl file, but a c++/java file
+    AST_RAWDATA, // this is not an idl file, but a c++/java file
 };
 
 class AST : public ASTNode {
@@ -148,9 +150,20 @@ public:
         return sequenceableDefs_.size();
     }
 
+    void AddRawDataDef(const AutoPtr<ASTRawDataType> &rawdata);
+
+    AutoPtr<ASTRawDataType> GetRawDataDef(size_t index = 0);
+
+    inline size_t GetRawDataDefNumber() const
+    {
+        return rawdataDefs_.size();
+    }
+
     int IndexOf(ASTInterfaceType* interface);
 
     int IndexOf(ASTSequenceableType* sequenceable);
+
+    int IndexOf(ASTRawDataType* rawdata);
 
     int IndexOf(ASTType* type);
 
@@ -300,6 +313,7 @@ private:
     std::vector<AutoPtr<ASTNamespace>> namespaces_;
     std::vector<AutoPtr<ASTType>> typeDefinitions_; // enum, struct, union
     std::vector<AutoPtr<ASTSequenceableType>> sequenceableDefs_;
+    std::vector<AutoPtr<ASTRawDataType>> rawdataDefs_;
     std::vector<AutoPtr<ASTInterfaceType>> interfaceDefs_;
     std::vector<std::string> importNames_;
 

@@ -43,6 +43,13 @@ void MetadataSerializer::SerializeMetaComponent(MetaComponent* mc)
     }
     mc->sequenceables_ = reinterpret_cast<MetaSequenceable**>(SerializeAdjust(mc->sequenceables_));
 
+    for (int i = 0; i < mc->rawdataNumber_; i++) {
+        MetaRawData* mp = mc->rawdatas_[i];
+        SerializeMetaRawData(mp);
+        mc->rawdatas_[i] = reinterpret_cast<MetaRawData*>(SerializeAdjust(mp));
+    }
+    mc->rawdatas_ = reinterpret_cast<MetaRawData**>(SerializeAdjust(mc->rawdatas_));
+
     for (int i = 0; i < mc->interfaceNumber_; i++) {
         MetaInterface* mi = mc->interfaces_[i];
         SerializeMetaInterface(mi);
@@ -67,6 +74,7 @@ void MetadataSerializer::SerializeMetaNamespace(MetaNamespace* mn)
     }
     mn->name_ = reinterpret_cast<char*>(SerializeAdjust(mn->name_));
     mn->sequenceableIndexes_ = reinterpret_cast<int*>(SerializeAdjust(mn->sequenceableIndexes_));
+    mn->rawdataIndexes_ = reinterpret_cast<int*>(SerializeAdjust(mn->rawdataIndexes_));
     mn->interfaceIndexes_ = reinterpret_cast<int*>(SerializeAdjust(mn->interfaceIndexes_));
 
     for (int i = 0; i < mn->namespaceNumber_; i++) {
@@ -84,6 +92,15 @@ void MetadataSerializer::SerializeMetaSequenceable(MetaSequenceable* mp)
     }
     mp->name_ = reinterpret_cast<char*>(SerializeAdjust(mp->name_));
     mp->namespace_ = reinterpret_cast<char*>(SerializeAdjust(mp->namespace_));
+}
+
+void MetadataSerializer::SerializeMetaRawData(MetaRawData* mr)
+{
+    if (mr == nullptr) {
+        return;
+    }
+    mr->name_ = reinterpret_cast<char*>(SerializeAdjust(mr->name_));
+    mr->namespace_ = reinterpret_cast<char*>(SerializeAdjust(mr->namespace_));
 }
 
 void MetadataSerializer::SerializeMetaInterface(MetaInterface* mi)
@@ -166,6 +183,13 @@ void MetadataSerializer::DeserializeMetaComponent(MetaComponent* mc)
         DeserializeMetaSequenceable(mp);
     }
 
+    mc->rawdatas_ = reinterpret_cast<MetaRawData**>(DeserializeAdjust(mc->rawdatas_));
+    for (int i = 0; i < mc->rawdataNumber_; i++) {
+        mc->rawdatas_[i] = reinterpret_cast<MetaRawData*>(DeserializeAdjust(mc->rawdatas_[i]));
+        MetaRawData* mp = mc->rawdatas_[i];
+        DeserializeMetaRawData(mp);
+    }
+
     mc->interfaces_ = reinterpret_cast<MetaInterface**>(DeserializeAdjust(mc->interfaces_));
     for (int i = 0; i < mc->interfaceNumber_; i++) {
         mc->interfaces_[i] = reinterpret_cast<MetaInterface*>(DeserializeAdjust(mc->interfaces_[i]));
@@ -190,6 +214,7 @@ void MetadataSerializer::DeserializeMetaNamespace(MetaNamespace* mn)
     }
     mn->name_ = reinterpret_cast<char*>(DeserializeAdjust(mn->name_));
     mn->sequenceableIndexes_ = reinterpret_cast<int*>(DeserializeAdjust(mn->sequenceableIndexes_));
+    mn->rawdataIndexes_ = reinterpret_cast<int*>(DeserializeAdjust(mn->rawdataIndexes_));
     mn->interfaceIndexes_ = reinterpret_cast<int*>(DeserializeAdjust(mn->interfaceIndexes_));
 
     mn->namespaces_ = reinterpret_cast<MetaNamespace**>(DeserializeAdjust(mn->namespaces_));
@@ -207,6 +232,15 @@ void MetadataSerializer::DeserializeMetaSequenceable(MetaSequenceable* mp)
     }
     mp->name_ = reinterpret_cast<char*>(DeserializeAdjust(mp->name_));
     mp->namespace_ = reinterpret_cast<char*>(DeserializeAdjust(mp->namespace_));
+}
+
+void MetadataSerializer::DeserializeMetaRawData(MetaRawData* mr)
+{
+    if (mr == nullptr) {
+        return;
+    }
+    mr->name_ = reinterpret_cast<char*>(DeserializeAdjust(mr->name_));
+    mr->namespace_ = reinterpret_cast<char*>(DeserializeAdjust(mr->namespace_));
 }
 
 void MetadataSerializer::DeserializeMetaInterface(MetaInterface* mi)

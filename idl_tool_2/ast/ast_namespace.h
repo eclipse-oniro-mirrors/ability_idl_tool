@@ -25,6 +25,7 @@ namespace OHOS {
 namespace Idl {
 class ASTInterfaceType;
 class ASTSequenceableType;
+class ASTRawDataType;
 
 class ASTNamespace : public ASTNode {
 public:
@@ -66,6 +67,15 @@ public:
         return sequenceables_.size();
     }
 
+    void AddRawData(const AutoPtr<ASTRawDataType> &rawdata);
+
+    AutoPtr<ASTRawDataType> GetRawData(size_t index);
+
+    inline size_t GetRawDataNumber()
+    {
+        return rawdatas_.size();
+    }
+
     inline std::string ToShortString()
     {
         return name_;
@@ -78,6 +88,7 @@ private:
     ASTNamespace *outerNamespace_;
     std::vector<AutoPtr<ASTNamespace>> innerNamespaces_;
     std::vector<AutoPtr<ASTSequenceableType>> sequenceables_;
+    std::vector<AutoPtr<ASTRawDataType>> rawdatas_;
     std::vector<AutoPtr<ASTInterfaceType>> interfaces_;
 };
 } // namespace Idl

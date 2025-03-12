@@ -43,6 +43,8 @@ private:
 
     void CalculateMetaSequenceable(ASTSequenceableType* sequenceable);
 
+    void CalculateMetaRawData(ASTRawDataType* rawdata);
+
     void CalculateMetaInterface(ASTInterfaceType* interface);
 
     void CalculateMetaMethod(ASTMethod* method);
@@ -60,6 +62,8 @@ private:
     MetaNamespace* WriteMetaNamespace(ASTNamespace* nspace);
 
     MetaSequenceable* WriteMetaSequenceable(ASTSequenceableType* parcelabe);
+
+    MetaRawData* WriteMetaRawData(ASTRawDataType* parcelabe);
 
     MetaInterface* WriteMetaInterface(ASTInterfaceType* interface);
 

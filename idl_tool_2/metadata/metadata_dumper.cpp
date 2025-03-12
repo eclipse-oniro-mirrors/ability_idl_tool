@@ -39,11 +39,13 @@ std::string MetadataDumper::DumpMetaComponent(MetaComponent* mc, const std::stri
     sb.Append(prefix + tab_).AppendFormat("\"name_\" : \"%s\",\n", mc->name_);
     sb.Append(prefix + tab_).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mc->namespaceNumber_);
     sb.Append(prefix + tab_).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mc->sequenceableNumber_);
+    sb.Append(prefix + tab_).AppendFormat("\"rawdataNumber_\" : \"%d\",\n", mc->rawdataNumber_);
     sb.Append(prefix + tab_).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mc->interfaceNumber_);
     sb.Append(prefix + tab_).AppendFormat("\"typeNumber_\" : \"%d\",\n", mc->typeNumber_);
 
     DumpMetaNamespaces(sb, mc, prefix);
     DumpMetaSequenceables(sb, mc, prefix);
+    DumpMetaRawDatas(sb, mc, prefix);
     DumpMetaInterfaces(sb, mc, prefix);
 
     sb.Append(prefix + tab_).AppendFormat("\"stringPoolSize_\" : \"%d\"\n", mc->stringPoolSize_);
@@ -74,22 +76,11 @@ void MetadataDumper::DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, con
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + tab_).AppendFormat("\"name_\" : \"%s\",\n", mn->name_);
     sb.Append(prefix + tab_).AppendFormat("\"sequenceableNumber_\" : \"%d\",\n", mn->sequenceableNumber_);
+    sb.Append(prefix + tab_).AppendFormat("\"rawdataNumber_\" : \"%d\",\n", mn->rawdataNumber_);
     sb.Append(prefix + tab_).AppendFormat("\"interfaceNumber_\" : \"%d\",\n", mn->interfaceNumber_);
     sb.Append(prefix + tab_).AppendFormat("\"namespaceNumber_\" : \"%d\",\n", mn->namespaceNumber_);
 
-    if (mn->sequenceableNumber_ == 0) {
-        sb.Append(prefix + tab_).Append("\"sequenceableIndexes_\" : [],\n");
-    } else {
-        sb.Append(prefix + tab_).Append("\"sequenceableIndexes_\" : [\n");
-        for (int i = 0; i < mn->sequenceableNumber_; i++) {
-            MetaSequenceable* mp = metaComponent_->sequenceables_[i];
-            sb.Append(prefix + tab_ + tab_).AppendFormat("{ \"name\" : \"%s\" }", mp->name_);
-            if (i != mn->sequenceableNumber_ - 1) {
-                sb.Append(",\n");
-            }
-        }
-        sb.Append("\n" + prefix + tab_).Append("],\n");
-    }
+    GetDumpMetaNamespace(sb, mn, prefix);
 
     if (mn->interfaceNumber_ == 0) {
         sb.Append(prefix + tab_).Append("\"interfaceIndexes_\" : [],\n");
@@ -122,6 +113,37 @@ void MetadataDumper::DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, con
     sb.Append(prefix).Append("}");
 }
 
+void MetadataDumper::GetDumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, const std::string& prefix)
+{
+    if (mn->sequenceableNumber_ == 0) {
+        sb.Append(prefix + tab_).Append("\"sequenceableIndexes_\" : [],\n");
+    } else {
+        sb.Append(prefix + tab_).Append("\"sequenceableIndexes_\" : [\n");
+        for (int i = 0; i < mn->sequenceableNumber_; i++) {
+            MetaSequenceable* mp = metaComponent_->sequenceables_[i];
+            sb.Append(prefix + tab_ + tab_).AppendFormat("{ \"name\" : \"%s\" }", mp->name_);
+            if (i != mn->sequenceableNumber_ - 1) {
+                sb.Append(",\n");
+            }
+        }
+        sb.Append("\n" + prefix + tab_).Append("],\n");
+    }
+
+    if (mn->rawdataNumber_ == 0) {
+        sb.Append(prefix + tab_).Append("\"rawdataIndexes_\" : [],\n");
+    } else {
+        sb.Append(prefix + tab_).Append("\"rawdataIndexes_\" : [\n");
+        for (int i = 0; i < mn->rawdataNumber_; i++) {
+            MetaRawData* mp = metaComponent_->rawdatas_[i];
+            sb.Append(prefix + tab_ + tab_).AppendFormat("{ \"name\" : \"%s\" }", mp->name_);
+            if (i != mn->rawdataNumber_ - 1) {
+                sb.Append(",\n");
+            }
+        }
+        sb.Append("\n" + prefix + tab_).Append("],\n");
+    }
+}
+
 void MetadataDumper::DumpMetaSequenceables(StringBuilder& sb, MetaComponent* mc, const std::string& prefix)
 {
     if (mc->sequenceableNumber_ == 0) {
@@ -139,6 +161,30 @@ void MetadataDumper::DumpMetaSequenceables(StringBuilder& sb, MetaComponent* mc,
 }
 
 void MetadataDumper::DumpMetaSequenceable(StringBuilder& sb, MetaSequenceable* mp, const std::string& prefix)
+{
+    sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + tab_).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
+    sb.Append(prefix + tab_).AppendFormat("\"namespace_\" : \"%s\"\n", mp->namespace_);
+    sb.Append(prefix).Append("}");
+}
+
+void MetadataDumper::DumpMetaRawDatas(StringBuilder& sb, MetaComponent* mc, const std::string& prefix)
+{
+    if (mc->rawdataNumber_ == 0) {
+        sb.Append(prefix + tab_).Append("\"rawdatas_\" : [],\n");
+    } else {
+        sb.Append(prefix + tab_).Append("\"rawdatas_\" : [\n");
+        for (int i = 0; i < mc->rawdataNumber_; i++) {
+            DumpMetaRawData(sb, mc->rawdatas_[i], prefix + tab_ + tab_);
+            if (i != mc->rawdataNumber_ - 1) {
+                sb.Append(",\n");
+            }
+        }
+        sb.Append("\n" + prefix + tab_).Append("],\n");
+    }
+}
+
+void MetadataDumper::DumpMetaRawData(StringBuilder& sb, MetaRawData* mp, const std::string& prefix)
 {
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + tab_).AppendFormat("\"name_\" : \"%s\",\n", mp->name_);
@@ -258,14 +304,10 @@ std::string MetadataDumper::DumpMetaType(MetaType* mt)
             return "String";
         case MetaTypeKind::Void:
             return "void";
-        case MetaTypeKind::Sequenceable: {
-            MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
-            return reinterpret_cast<char*>(mp->name_);
-        }
-        case MetaTypeKind::Interface: {
-            MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
-            return reinterpret_cast<char*>(mi->name_);
-        }
+        case MetaTypeKind::Sequenceable:
+        case MetaTypeKind::RawData:
+        case MetaTypeKind::Interface:
+            return GetDumpMetaType(mt);
         case MetaTypeKind::List: {
             MetaType* elementMt = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             return "List<" + DumpMetaType(elementMt) + ">";
@@ -282,6 +324,26 @@ std::string MetadataDumper::DumpMetaType(MetaType* mt)
         case MetaTypeKind::Unknown:
         default:
             printf("Unknown %d\n", mt->index_);
+            return "unknown";
+    }
+}
+
+std::string MetadataDumper::GetDumpMetaType(MetaType* mt)
+{
+    switch (mt->kind_) {
+        case MetaTypeKind::Sequenceable: {
+            MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
+            return reinterpret_cast<char*>(mp->name_);
+        }
+        case MetaTypeKind::RawData: {
+            MetaRawData* mr = metaComponent_->rawdatas_[mt->index_];
+            return reinterpret_cast<char*>(mr->name_);
+        }
+        case MetaTypeKind::Interface: {
+            MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
+            return reinterpret_cast<char*>(mi->name_);
+        }
+        default:
             return "unknown";
     }
 }

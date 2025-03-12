@@ -21,6 +21,7 @@
 #include "metadata/meta_method.h"
 #include "metadata/meta_namespace.h"
 #include "metadata/meta_patameter.h"
+#include "metadata/meta_rawdata.h"
 #include "metadata/meta_sequenceable.h"
 #include "metadata/meta_type.h"
 #include "util/string_builder.h"
@@ -44,9 +45,15 @@ private:
 
     void DumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, const std::string& prefix);
 
+    void GetDumpMetaNamespace(StringBuilder& sb, MetaNamespace* mn, const std::string& prefix);
+
     void DumpMetaSequenceables(StringBuilder& sb, MetaComponent* mc, const std::string& prefix);
 
     void DumpMetaSequenceable(StringBuilder& sb, MetaSequenceable* mp, const std::string& prefix);
+
+    void DumpMetaRawDatas(StringBuilder& sb, MetaComponent* mc, const std::string& prefix);
+
+    void DumpMetaRawData(StringBuilder& sb, MetaRawData* mp, const std::string& prefix);
 
     void DumpMetaInterfaces(StringBuilder& sb, MetaComponent* mc, const std::string& prefix);
 
@@ -57,6 +64,8 @@ private:
     void DumpMetaParameter(StringBuilder& sb, MetaParameter* mp, const std::string& prefix);
 
     std::string DumpMetaType(MetaType* mt);
+
+    std::string GetDumpMetaType(MetaType* mt);
 
     static std::string tab_;
     MetaComponent* metaComponent_;

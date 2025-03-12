@@ -31,6 +31,7 @@
 #include "ast/ast_enum_type.h"
 #include "ast/ast_map_type.h"
 #include "ast/ast_parameter.h"
+#include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
 #include "ast/ast_smq_type.h"
 #include "ast/ast_struct_type.h"
@@ -111,6 +112,8 @@ private:
     void ParseImportInfo();
 
     void ParseSequenceableInfo();
+
+    void ParseRawDataInfo();
 
     bool ParseTypeDecls();
 
@@ -303,6 +306,8 @@ private:
     void MergeTypes(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
 
     void MergeSequenceableDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
+
+    void MergeRawDataDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
 
     void MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst);
 

@@ -15,7 +15,7 @@
 
 #include "foo_stub.h"
 
-namespace test {
+namespace overload {
 
 int32_t FooStub::OnRemoteRequest(
     uint32_t code,
@@ -146,10 +146,252 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_MYRAWDATA_OUT_MYRAWDATA_INOUT_MYRAWDATA_OUT_MYRAWDATA: {
+            myrawdata inParam;
+            if (!data.ReadUint32(inParam.size)) {
+                return ERR_INVALID_DATA;
+            }
+            auto readinParam =  data.ReadRawData(inParam.size);
+            if (readinParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+            inParam.data = readinParam;
+            myrawdata outParam;
+            myrawdata inoutParam;
+            if (!data.ReadUint32(inoutParam.size)) {
+                return ERR_INVALID_DATA;
+            }
+            auto readinoutParam =  data.ReadRawData(inoutParam.size);
+            if (readinoutParam == nullptr) {
+                return ERR_INVALID_DATA;
+            }
+            inoutParam.data = readinoutParam;
+            myrawdata result;
+            ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteUint32(outParam.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRawData(outParam.data, outParam.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint32(inoutParam.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRawData(inoutParam.data, inoutParam.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteUint32(result.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRawData(result.data, result.size)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA_INOUT_LIST_MYRAWDATA_OUT_LIST_MYRAWDATA: {
+            std::vector<myrawdata> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i5 = 0; i5 < inParamSize; ++i5) {
+                myrawdata value5;
+                if (!data.ReadUint32(value5.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readvalue5 =  data.ReadRawData(value5.size);
+                if (readvalue5 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                value5.data = readvalue5;
+                inParam.push_back(value5);
+            }
+            std::vector<myrawdata> outParam;
+            std::vector<myrawdata> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                return ERR_INVALID_DATA;
+            }
+            for (int32_t i6 = 0; i6 < inoutParamSize; ++i6) {
+                myrawdata value6;
+                if (!data.ReadUint32(value6.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readvalue6 =  data.ReadRawData(value6.size);
+                if (readvalue6 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                value6.data = readvalue6;
+                inoutParam.push_back(value6);
+            }
+            std::vector<myrawdata> result;
+            ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it7 = outParam.begin(); it7 != outParam.end(); ++it7) {
+                    if (!reply.WriteUint32((*it7).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((*it7).data, (*it7).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(inoutParam.size());
+                for (auto it8 = inoutParam.begin(); it8 != inoutParam.end(); ++it8) {
+                    if (!reply.WriteUint32((*it8).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((*it8).data, (*it8).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(result.size());
+                for (auto it9 = result.begin(); it9 != result.end(); ++it9) {
+                    if (!reply.WriteUint32((*it9).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((*it9).data, (*it9).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA_INOUT_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA: {
+            std::unordered_map<myrawdata, myrawdata> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            for (int32_t i10 = 0; i10 < inParamSize; ++i10) {
+                myrawdata key10;
+                if (!data.ReadUint32(key10.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readkey10 =  data.ReadRawData(key10.size);
+                if (readkey10 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                key10.data = readkey10;
+                myrawdata value10;
+                if (!data.ReadUint32(value10.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readvalue10 =  data.ReadRawData(value10.size);
+                if (readvalue10 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                value10.data = readvalue10;
+                inParam[key10] = value10;
+            }
+            std::unordered_map<myrawdata, myrawdata> outParam;
+            std::unordered_map<myrawdata, myrawdata> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            for (int32_t i11 = 0; i11 < inoutParamSize; ++i11) {
+                myrawdata key11;
+                if (!data.ReadUint32(key11.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readkey11 =  data.ReadRawData(key11.size);
+                if (readkey11 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                key11.data = readkey11;
+                myrawdata value11;
+                if (!data.ReadUint32(value11.size)) {
+                    return ERR_INVALID_DATA;
+                }
+                auto readvalue11 =  data.ReadRawData(value11.size);
+                if (readvalue11 == nullptr) {
+                    return ERR_INVALID_DATA;
+                }
+                value11.data = readvalue11;
+                inoutParam[key11] = value11;
+            }
+            std::unordered_map<myrawdata, myrawdata> result;
+            ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it12 = outParam.begin(); it12 != outParam.end(); ++it12) {
+                    if (!reply.WriteUint32((it12->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it12->first).data, (it12->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteUint32((it12->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it12->second).data, (it12->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(inoutParam.size());
+                for (auto it13 = inoutParam.begin(); it13 != inoutParam.end(); ++it13) {
+                    if (!reply.WriteUint32((it13->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it13->first).data, (it13->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteUint32((it13->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it13->second).data, (it13->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(result.size());
+                for (auto it14 = result.begin(); it14 != result.end(); ++it14) {
+                    if (!reply.WriteUint32((it14->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it14->first).data, (it14->first).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteUint32((it14->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRawData((it14->second).data, (it14->second).size)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
         default:
             return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
     }
 
     return ERR_TRANSACTION_FAILED;
 }
-} // namespace test
+} // namespace overload

@@ -47,6 +47,7 @@ enum class TypeKind {
     TYPE_STRING16,
     TYPE_FILEDESCRIPTOR,
     TYPE_SEQUENCEABLE,
+    TYPE_RAWDATA,
     TYPE_INTERFACE,
     TYPE_LIST,
     TYPE_MAP,
@@ -132,6 +133,8 @@ public:
     virtual bool IsInterfaceType();
 
     virtual bool IsSequenceableType();
+
+    virtual bool IsRawDataType();
 
     virtual bool IsArrayType();
 

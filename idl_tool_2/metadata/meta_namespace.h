@@ -21,9 +21,11 @@ namespace Idl {
 struct MetaNamespace {
     char* name_;
     int sequenceableNumber_;
+    int rawdataNumber_;
     int interfaceNumber_;
     int namespaceNumber_;
     int* sequenceableIndexes_;
+    int* rawdataIndexes_;
     int* interfaceIndexes_;
     MetaNamespace** namespaces_;
 };

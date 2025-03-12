@@ -21,6 +21,7 @@
 #include "meta_interface.h"
 #include "meta_namespace.h"
 #include "meta_sequenceable.h"
+#include "meta_rawdata.h"
 #include "meta_type.h"
 
 namespace OHOS {
@@ -33,10 +34,12 @@ struct MetaComponent {
     char* name_;
     int namespaceNumber_;
     int sequenceableNumber_;
+    int rawdataNumber_;
     int interfaceNumber_;
     int typeNumber_;
     MetaNamespace** namespaces_;
     MetaSequenceable** sequenceables_;
+    MetaRawData** rawdatas_;
     MetaInterface** interfaces_;
     MetaType** types_;
     int stringPoolSize_;

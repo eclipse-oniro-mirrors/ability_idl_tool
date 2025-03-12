@@ -38,10 +38,12 @@ public:
 private:
     AutoPtr<ASTType> ReadMetaType(MetaType* type);
     void ReadMetaSequenceable(MetaSequenceable* mp);
+    void ReadMetaRawData(MetaRawData* mp);
     void ReadMetaInterface(MetaInterface* mi);
     void ReadMetaMethod(AutoPtr<ASTInterfaceType>& interface, MetaMethod* mm);
     void ReadMetaParam(AutoPtr<ASTMethod>& interface, MetaParameter* mp);
     std::string MetaTypeName(MetaType* mt);
+    std::string GetMetaTypeName(MetaType* mt);
     static std::string tag_;
     MetaComponent* metaComponent_;
     AutoPtr<AST> ast_;

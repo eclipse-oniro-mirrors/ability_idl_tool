@@ -27,6 +27,7 @@
 #include "type/sa_char_type_emitter.h"
 #include "type/sa_string_type_emitter.h"
 #include "type/sa_seq_type_emitter.h"
+#include "type/sa_rawdata_type_emitter.h"
 #include "type/sa_interface_type_emitter.h"
 #include "type/sa_map_type_emitter.h"
 #include "type/sa_array_type_emitter.h"
@@ -181,7 +182,7 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) c
         typeEmitter = NewTypeEmitter(astType);
     }
 
-    if (astType->IsSequenceableType() || astType->IsInterfaceType()) {
+    if (astType->IsSequenceableType() || astType->IsInterfaceType() || astType->IsRawDataType()) {
         typeEmitter->SetTypeName(astType->ToShortString());
     } else if (astType->IsEnumType() || astType->IsStructType() || astType->IsUnionType()) {
         typeEmitter->SetTypeName(astType->GetName());
@@ -234,6 +235,8 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) c
             return NewUnionTypeEmitter(astType);
         case TypeKind::TYPE_SEQUENCEABLE:
             return new SaSeqTypeEmitter();
+        case TypeKind::TYPE_RAWDATA:
+            return new SaRawDataTypeEmitter();
         case TypeKind::TYPE_INTERFACE:
             return new SaInterfaceTypeEmitter();
         default: {

@@ -24,6 +24,7 @@
 #include "metadata/meta_method.h"
 #include "metadata/meta_namespace.h"
 #include "metadata/meta_patameter.h"
+#include "metadata/meta_rawdata.h"
 #include "metadata/meta_sequenceable.h"
 #include "metadata/meta_type.h"
 
@@ -65,6 +66,8 @@ private:
 
     void SerializeMetaSequenceable(MetaSequenceable* mp);
 
+    void SerializeMetaRawData(MetaRawData* mp);
+
     void SerializeMetaInterface(MetaInterface* mi);
 
     void SerializeMetaMethod(MetaMethod* mm);
@@ -80,6 +83,8 @@ private:
     void DeserializeMetaNamespace(MetaNamespace* mn);
 
     void DeserializeMetaSequenceable(MetaSequenceable* mp);
+
+    void DeserializeMetaRawData(MetaRawData* mp);
 
     void DeserializeMetaInterface(MetaInterface* mi);
 

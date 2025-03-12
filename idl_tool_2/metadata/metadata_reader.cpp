@@ -82,6 +82,10 @@ std::unordered_map<std::string, AutoPtr<AST>> MetadataReader::ReadMetadataToAst(
         ReadMetaSequenceable(metaComponent_->sequenceables_[i]);
     }
 
+    for (int i = 0; i < metaComponent_->rawdataNumber_; i++) {
+        ReadMetaRawData(metaComponent_->rawdatas_[i]);
+    }
+
     for (int i = 0; i < metaComponent_->interfaceNumber_; i++) {
         ReadMetaInterface(metaComponent_->interfaces_[i]);
     }
@@ -105,6 +109,20 @@ void MetadataReader::ReadMetaSequenceable(MetaSequenceable* mp)
     seqAst->SetAStFileType(ASTFileType::AST_SEQUENCEABLE);
     ast_->AddImport(seqAst);
     ast_->AddSequenceableDef(seqType);
+}
+
+void MetadataReader::ReadMetaRawData(MetaRawData* mp)
+{
+    AutoPtr<ASTRawDataType> rawdataType = new ASTRawDataType();
+
+    rawdataType->SetName(std::string(reinterpret_cast<char*>(mp->name_)));
+    rawdataType->SetNamespace(ast_->ParseNamespace(std::string(reinterpret_cast<char*>(mp->namespace_))));
+    AutoPtr<AST> rawdataAst = new AST();
+    rawdataAst->SetFullName(rawdataType->GetFullName());
+    rawdataAst->AddRawDataDef(rawdataType);
+    rawdataAst->SetAStFileType(ASTFileType::AST_RAWDATA);
+    ast_->AddImport(rawdataAst);
+    ast_->AddRawDataDef(rawdataType);
 }
 
 void MetadataReader::ReadMetaInterface(MetaInterface* mi)
@@ -226,14 +244,10 @@ std::string MetadataReader::MetaTypeName(MetaType* mt)
             return "String";
         case MetaTypeKind::Void:
             return "void";
-        case MetaTypeKind::Sequenceable: {
-            MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
-            return reinterpret_cast<char*>(mp->name_);
-        }
-        case MetaTypeKind::Interface: {
-            MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
-            return reinterpret_cast<char*>(mi->name_);
-        }
+        case MetaTypeKind::Sequenceable:
+        case MetaTypeKind::RawData:
+        case MetaTypeKind::Interface:
+            return GetMetaTypeName(mt);
         case MetaTypeKind::List: {
             MetaType* elementMt = metaComponent_->types_[mt->nestedTypeIndexes_[0]];
             return "List<" + MetaTypeName(elementMt) + ">";
@@ -250,6 +264,26 @@ std::string MetadataReader::MetaTypeName(MetaType* mt)
         case MetaTypeKind::Unknown:
         default:
             printf("Unknown %d\n", mt->index_);
+            return "unknown";
+    }
+}
+
+std::string MetadataReader::GetMetaTypeName(MetaType* mt)
+{
+    switch (mt->kind_) {
+        case MetaTypeKind::Sequenceable: {
+            MetaSequenceable* mp = metaComponent_->sequenceables_[mt->index_];
+            return reinterpret_cast<char*>(mp->name_);
+        }
+        case MetaTypeKind::RawData: {
+            MetaRawData* mr = metaComponent_->rawdatas_[mt->index_];
+            return reinterpret_cast<char*>(mr->name_);
+        }
+        case MetaTypeKind::Interface: {
+            MetaInterface* mi = metaComponent_->interfaces_[mt->index_];
+            return reinterpret_cast<char*>(mi->name_);
+        }
+        default:
             return "unknown";
     }
 }

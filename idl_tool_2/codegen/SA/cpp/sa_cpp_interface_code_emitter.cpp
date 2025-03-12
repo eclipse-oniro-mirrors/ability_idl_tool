@@ -116,6 +116,14 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceSelfDefinedTypeInclusions(HeaderFil
         headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, fileName);
     }
 
+    int rawdataNumber = static_cast<int>(ast_->GetRawDataDefNumber());
+    for (int i = 0; i < rawdataNumber; i++) {
+        AutoPtr<ASTRawDataType> rawdataType = ast_->GetRawDataDef(i);
+        filePath = GetFilePathNoPoint(rawdataType->GetNamespace()->ToString());
+        fileName = filePath.empty() ? FileName(rawdataType->GetName()) : FileName(filePath);
+        headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, fileName);
+    }
+
     for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == false) {
             continue;
@@ -144,6 +152,18 @@ bool SaCppInterfaceCodeEmitter::EmitInterfaceUsings(StringBuilder &sb) const
             continue;
         }
         fullName = CppFullName(np + seqType->GetName());
+        sb.Append("using ").AppendFormat("%s;\n", fullName.c_str());
+        ret = true;
+    }
+
+    int rawdataNumber = static_cast<int>(ast_->GetRawDataDefNumber());
+    for (int i = 0; i < rawdataNumber; i++) {
+        AutoPtr<ASTRawDataType> rawdataType = ast_->GetRawDataDef(i);
+        np = GetNamespace(rawdataType->GetNamespace()->ToString());
+        if (np.empty()) {
+            continue;
+        }
+        fullName = CppFullName(np + rawdataType->GetName());
         sb.Append("using ").AppendFormat("%s;\n", fullName.c_str());
         ret = true;
     }
