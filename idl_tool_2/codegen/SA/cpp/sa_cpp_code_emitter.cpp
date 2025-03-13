@@ -80,6 +80,10 @@ void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFile
                 headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "unordered_map");
                 break;
             }
+            case TypeKind::TYPE_ORDEREDMAP: {
+                headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "map");
+                break;
+            }
             default:
                 break;
         }

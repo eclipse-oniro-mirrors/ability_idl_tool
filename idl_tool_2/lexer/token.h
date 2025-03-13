@@ -39,6 +39,7 @@ enum class TokenType {
     POINTER, // "Pointer"
     LIST,    // "List"
     MAP,     // "Map"
+    ORDEREDMAP,     // "OrderedMap"
     SMQ,     // "SharedMemQueue"
     CHAR,    // "char"
     // qualifier

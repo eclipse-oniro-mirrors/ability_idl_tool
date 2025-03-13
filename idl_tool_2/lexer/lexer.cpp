@@ -37,6 +37,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"Pointer",        TokenType::POINTER      },
     {"List",           TokenType::LIST         },
     {"Map",            TokenType::MAP          },
+    {"OrderedMap",     TokenType::ORDEREDMAP   },
     {"SharedMemQueue", TokenType::SMQ          },
     {"char",           TokenType::CHAR         },
     {"unsigned",       TokenType::UNSIGNED     },

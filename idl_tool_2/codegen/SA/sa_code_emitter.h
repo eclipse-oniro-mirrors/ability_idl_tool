@@ -51,6 +51,8 @@ private:
 
     AutoPtr<SaTypeEmitter> NewMapTypeEmitter(AutoPtr<ASTType> astType) const;
 
+    AutoPtr<SaTypeEmitter> NewOrderedMapTypeEmitter(AutoPtr<ASTType> astType) const;
+
     AutoPtr<SaTypeEmitter> NewArrayTypeEmitter(AutoPtr<ASTType> astType) const;
 
     AutoPtr<SaTypeEmitter> NewListTypeEmitter(AutoPtr<ASTType> astType) const;

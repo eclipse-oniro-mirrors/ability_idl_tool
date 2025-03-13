@@ -51,6 +51,7 @@ enum class TypeKind {
     TYPE_INTERFACE,
     TYPE_LIST,
     TYPE_MAP,
+    TYPE_ORDEREDMAP,
     TYPE_ARRAY,
     TYPE_ENUM,
     TYPE_STRUCT,
@@ -123,6 +124,8 @@ public:
     virtual bool IsListType();
 
     virtual bool IsMapType();
+
+    virtual bool IsOrderedMapType();
 
     virtual bool IsEnumType();
 

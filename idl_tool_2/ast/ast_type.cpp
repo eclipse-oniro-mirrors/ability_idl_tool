@@ -117,6 +117,11 @@ bool ASTType::IsMapType()
     return false;
 }
 
+bool ASTType::IsOrderedMapType()
+{
+    return false;
+}
+
 bool ASTType::IsEnumType()
 {
     return false;
