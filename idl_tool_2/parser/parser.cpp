@@ -1006,7 +1006,8 @@ AutoPtr<ASTType> Parser::ParseMethodReturnType()
     }
     // parse method return type, maybe not exist
     if (IntfTypeChecker::CheckBasicType(token) || IntfTypeChecker::CheckUserDefType(token) ||
-        token.kind == TokenType::LIST || token.kind == TokenType::MAP || token.kind == TokenType::SMQ) {
+        token.kind == TokenType::LIST || token.kind == TokenType::MAP || token.kind == TokenType::ORDEREDMAP ||
+        token.kind == TokenType::SMQ) {
         return ParseType();
     }
     return nullptr;
@@ -1278,6 +1279,9 @@ AutoPtr<ASTType> Parser::ParseType()
             case TokenType::MAP:
                 type = ParseMapType();
                 break;
+            case TokenType::ORDEREDMAP:
+                type = ParseOrderedMapType();
+                break;
             case TokenType::SMQ:
                 type = ParseSmqType();
                 break;
@@ -1441,6 +1445,56 @@ AutoPtr<ASTType> Parser::ParseMapType()
     AutoPtr<ASTType> retType = ast_->FindType(mapType->ToString(), false);
     if (retType == nullptr) {
         retType = mapType.Get();
+        ast_->AddType(retType);
+    }
+    return retType;
+}
+
+AutoPtr<ASTType> Parser::ParseOrderedMapType()
+{
+    lexer_.GetToken(); // 'OrderedMap'
+
+    Token token = lexer_.PeekToken();
+    if (token.kind != TokenType::ANGLE_BRACKETS_LEFT) {
+        LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '<'"));
+    } else {
+        lexer_.GetToken(); // '<'
+    }
+
+    AutoPtr<ASTType> keyType = ParseType(); // key type
+    if (keyType == nullptr) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("key type '%s' is illegal", token.value.c_str()));
+        lexer_.SkipToken(TokenType::ANGLE_BRACKETS_RIGHT);
+        return nullptr;
+    }
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::COMMA) {
+        LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected ','"));
+    } else {
+        lexer_.GetToken(); // ','
+    }
+
+    AutoPtr<ASTType> valueType = ParseType();
+    if (valueType == nullptr) {
+        LogError(__func__, __LINE__, token, StringHelper::Format("value type '%s' is illegal", token.value.c_str()));
+        lexer_.SkipToken(TokenType::ANGLE_BRACKETS_RIGHT);
+        return nullptr;
+    }
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::ANGLE_BRACKETS_RIGHT) {
+        LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '>'"));
+    } else {
+        lexer_.GetToken();
+    }
+
+    AutoPtr<ASTOrderedMapType> orderedmapType = new ASTOrderedMapType();
+    orderedmapType->SetKeyType(keyType);
+    orderedmapType->SetValueType(valueType);
+    AutoPtr<ASTType> retType = ast_->FindType(orderedmapType->ToString(), false);
+    if (retType == nullptr) {
+        retType = orderedmapType.Get();
         ast_->AddType(retType);
     }
     return retType;

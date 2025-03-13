@@ -30,6 +30,7 @@
 #include "ast/ast_type.h"
 #include "ast/ast_enum_type.h"
 #include "ast/ast_map_type.h"
+#include "ast/ast_orderedmap_type.h"
 #include "ast/ast_parameter.h"
 #include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
@@ -180,6 +181,8 @@ private:
     AutoPtr<ASTType> ParseListType();
 
     AutoPtr<ASTType> ParseMapType();
+
+    AutoPtr<ASTType> ParseOrderedMapType();
 
     AutoPtr<ASTType> ParseSmqType();
 

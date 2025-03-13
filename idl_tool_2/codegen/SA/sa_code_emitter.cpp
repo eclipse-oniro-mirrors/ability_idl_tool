@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include "sa_code_emitter.h"
 #include "ast/ast_map_type.h"
+#include "ast/ast_orderedmap_type.h"
 #include "type/sa_boolean_type_emitter.h"
 #include "type/sa_byte_type_emitter.h"
 #include "type/sa_short_type_emitter.h"
@@ -30,6 +31,7 @@
 #include "type/sa_rawdata_type_emitter.h"
 #include "type/sa_interface_type_emitter.h"
 #include "type/sa_map_type_emitter.h"
+#include "type/sa_orderedmap_type_emitter.h"
 #include "type/sa_array_type_emitter.h"
 #include "type/sa_uchar_type_emitter.h"
 #include "type/sa_uint_type_emitter.h"
@@ -223,6 +225,8 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) c
     switch (astType->GetTypeKind()) {
         case TypeKind::TYPE_MAP:
             return NewMapTypeEmitter(astType);
+        case TypeKind::TYPE_ORDEREDMAP:
+            return NewOrderedMapTypeEmitter(astType);
         case TypeKind::TYPE_ARRAY:
             return NewArrayTypeEmitter(astType);
         case TypeKind::TYPE_LIST:
@@ -257,6 +261,18 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewMapTypeEmitter(AutoPtr<ASTType> astType
     mapTypeEmitter->SetKeyEmitter(keyEmitter);
     mapTypeEmitter->SetValueEmitter(valueEmitter);
     return mapTypeEmitter.Get();
+}
+
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewOrderedMapTypeEmitter(AutoPtr<ASTType> astType) const
+{
+    AutoPtr<SaOrderedMapTypeEmitter> orderedmapTypeEmitter = new SaOrderedMapTypeEmitter();
+    AutoPtr<ASTType> keyType = (static_cast<ASTOrderedMapType*>(astType.Get()))->GetKeyType();
+    AutoPtr<ASTType> valueType = (static_cast<ASTOrderedMapType*>(astType.Get()))->GetValueType();
+    AutoPtr<SaTypeEmitter> keyEmitter = GetTypeEmitter(keyType);
+    AutoPtr<SaTypeEmitter> valueEmitter = GetTypeEmitter(valueType);
+    orderedmapTypeEmitter->SetKeyEmitter(keyEmitter);
+    orderedmapTypeEmitter->SetValueEmitter(valueEmitter);
+    return orderedmapTypeEmitter.Get();
 }
 
 AutoPtr<SaTypeEmitter> SACodeEmitter::NewArrayTypeEmitter(AutoPtr<ASTType> astType) const

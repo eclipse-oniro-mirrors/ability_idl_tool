@@ -363,6 +363,7 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_INTERFACE:
         case TypeKind::TYPE_LIST:
         case TypeKind::TYPE_MAP:
+        case TypeKind::TYPE_ORDEREDMAP:
         case TypeKind::TYPE_ARRAY:
         case TypeKind::TYPE_UCHAR:
         case TypeKind::TYPE_UINT:
