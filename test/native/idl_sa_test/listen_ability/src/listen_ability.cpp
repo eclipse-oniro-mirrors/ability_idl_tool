@@ -24,6 +24,12 @@ using namespace OHOS::HiviewDFX;
 
 namespace OHOS {
 
+static const int TEST_THREE = 3;
+static const int TEST_FOUR = 4;
+static const int TEST_SEVEN = 7;
+static const int TEST_TEN = 10;
+static const int TEST_NNN = 999;
+
 REGISTER_SYSTEM_ABILITY_BY_ID(ListenAbility, 1494, true);
 
 ListenAbility::ListenAbility(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
@@ -52,6 +58,94 @@ ErrCode ListenAbility::TestGetIpcSendRequestTimes(int32_t &times)
 {
     times = 1;
     HiLog::Info(LABEL, "[idlTest] TestGetIpcSendRequestTimes service");
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::overloadfun(int32_t& outParam)
+{
+    outParam = TEST_TEN;
+    HiLog::Info(LABEL, "[idlTest] overloadfunone service");
+    return ERR_OK;
+}
+
+#ifdef DEVICE
+ErrCode ListenAbility::overloadfun(std::unordered_map<int32_t, int32_t>& outParam)
+{
+    outParam[TEST_FOUR] = TEST_SEVEN;
+    HiLog::Info(LABEL, "[idlTest] overloadfuntwo service");
+    return ERR_OK;
+}
+#endif
+
+ErrCode ListenAbility::enum_test_func(FooEnum inParam, FooEnum& outParam, FooEnum& inoutParam, FooEnum& funcResult)
+{
+    outParam = FooEnum::ENUM_TWO;
+    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] enum_test_func service said: %{public}d", static_cast<int>(inParam));
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::struct_test_func(
+    const FooStruct& inParam,
+    RequestInfo& outParam,
+    FooStruct& inoutParam,
+    FooStruct& funcResult)
+{
+    outParam.initData.push_back(TEST_THREE);
+    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] struct_test_func service, said: %{public}s", inParam.name.c_str());
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::union_test_func(
+    const FooUnion& inParam,
+    FooUnion& outParam,
+    FooUnion& inoutParam,
+    FooUnion& funcResult)
+{
+    outParam.enumType = FooEnum::ENUM_TWO;
+    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] union_test_func service, said: %{public}d",
+        static_cast<int>(inParam.enumType));
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::ApplyQuickFix(const std::vector<std::string>& quickFixFiles, bool isDebug)
+{
+    std::string debugTrue;
+    if (isDebug) {
+        debugTrue = "true";
+    }
+    HiLog::Info(LABEL, "[idlTest] ApplyQuickFix service, said: %{public}s", debugTrue.c_str());
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::GetAllAppSuspendState(
+    const std::unordered_map<int32_t, FooStruct>& inApp,
+    std::unordered_map<int32_t, FooStruct>& outApp)
+{
+    outApp[1].id = TEST_NNN;
+    outApp[1].name = "MapTest";
+    HiLog::Info(LABEL, "[idlTest] GetAllAppSuspendState service,said: %{public}d, %{public}s",
+        inApp.at(0).id, inApp.at(0).name.c_str());
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::rawdata_test_func(
+    const MyRawdata& inParam,
+    MyRawdata& outParam,
+    MyRawdata& inoutParam,
+    MyRawdata& funcResult)
+{
+    const char sampleData[] = "Hello, world!";
+    const char sampleData2[] = "world!";
+    outParam.data = sampleData;
+    outParam.size = sizeof(sampleData);
+    HiLog::Info(LABEL, "[idlTest] inout rawdata service, said: %{public}u, %{public}s",
+        inoutParam.size, static_cast<const char*>(inoutParam.data));
+    inoutParam.data = sampleData2;
+    inoutParam.size = sizeof(sampleData2);
+    funcResult.data = sampleData2;
+    funcResult.size = sizeof(sampleData2);
+    HiLog::Info(LABEL, "[idlTest] in rawdata service, said: %{public}u, %{public}s",
+        inParam.size, static_cast<const char*>(inParam.data));
     return ERR_OK;
 }
 
