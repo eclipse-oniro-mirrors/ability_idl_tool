@@ -30,7 +30,7 @@ std::string ASTRawDataType::GetSignature()
 {
     std::string fullName = namespace_ != nullptr ?
             namespace_->ToString() + name_ : name_;
-    return "L" + StringHelper::Replace(fullName, '.', '/') + ";";
+    return "R" + StringHelper::Replace(fullName, '.', '/') + ";";
 }
 
 bool ASTRawDataType::IsRawDataType()

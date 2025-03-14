@@ -150,6 +150,42 @@ ErrCode FooProxy::overloadfun(
 }
 
 ErrCode FooProxy::overloadfun(
+    std::unordered_map<int32_t, std::u16string>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_MAP_INT_U16STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    for (int32_t i2 = 0; i2 < outParamSize; ++i2) {
+        int32_t key2 = reply.ReadInt32();
+        std::u16string value2 = reply.ReadString16();
+        outParam[key2] = value2;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
     const std::vector<uint32_t>& outParam)
 {
     MessageParcel data;
@@ -164,8 +200,8 @@ ErrCode FooProxy::overloadfun(
         return ERR_INVALID_DATA;
     }
     data.WriteInt32(outParam.size());
-    for (auto it2 = outParam.begin(); it2 != outParam.end(); ++it2) {
-        if (!data.WriteUint32((*it2))) {
+    for (auto it3 = outParam.begin(); it3 != outParam.end(); ++it3) {
+        if (!data.WriteUint32((*it3))) {
             return ERR_INVALID_DATA;
         }
     }
@@ -219,15 +255,15 @@ ErrCode FooProxy::overloadfun(
     if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
-    for (int32_t i3 = 0; i3 < outParamSize; ++i3) {
-        std::unordered_map<int32_t, std::string> value3;
-        int32_t value3Size = reply.ReadInt32();
-        for (int32_t i4 = 0; i4 < value3Size; ++i4) {
-            int32_t key4 = reply.ReadInt32();
-            std::string value4 = Str16ToStr8(reply.ReadString16());
-            value3[key4] = value4;
+    for (int32_t i4 = 0; i4 < outParamSize; ++i4) {
+        std::unordered_map<int32_t, std::string> value4;
+        int32_t value4Size = reply.ReadInt32();
+        for (int32_t i5 = 0; i5 < value4Size; ++i5) {
+            int32_t key5 = reply.ReadInt32();
+            std::string value5 = Str16ToStr8(reply.ReadString16());
+            value4[key5] = value5;
         }
-        outParam.push_back(value3);
+        outParam.push_back(value4);
     }
     return ERR_OK;
 }
@@ -262,6 +298,125 @@ ErrCode FooProxy::overloadfun(
 
     outParam = reply.ReadFileDescriptor();
     funcResult = Str16ToStr8(reply.ReadString16());
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    std::vector<std::unordered_map<int32_t, std::u16string>>& outParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_LIST_MAP_INT_U16STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+    for (int32_t i6 = 0; i6 < outParamSize; ++i6) {
+        std::unordered_map<int32_t, std::u16string> value6;
+        int32_t value6Size = reply.ReadInt32();
+        for (int32_t i7 = 0; i7 < value6Size; ++i7) {
+            int32_t key7 = reply.ReadInt32();
+            std::u16string value7 = reply.ReadString16();
+            value6[key7] = value7;
+        }
+        outParam.push_back(value6);
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    int& outParam,
+    std::u16string& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_OUT_FILEDESCRIPTOR_OUT_U16STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadFileDescriptor();
+    funcResult = reply.ReadString16();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::overloadfun(
+    const std::u16string& inParam,
+    std::u16string& outParam,
+    std::u16string& inoutParam,
+    std::u16string& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteString16(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(inoutParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_U16STRING_OUT_U16STRING_INOUT_U16STRING_OUT_U16STRING), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    outParam = reply.ReadString16();
+    inoutParam = reply.ReadString16();
+    funcResult = reply.ReadString16();
     return ERR_OK;
 }
 
@@ -352,11 +507,11 @@ ErrCode FooProxy::overloadfun(
         return ERR_INVALID_DATA;
     }
     data.WriteInt32(inParam.size());
-    for (auto it5 = inParam.begin(); it5 != inParam.end(); ++it5) {
-        if (!data.WriteUint32((*it5).size)) {
+    for (auto it8 = inParam.begin(); it8 != inParam.end(); ++it8) {
+        if (!data.WriteUint32((*it8).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((*it5).data, (*it5).size)) {
+        if (!data.WriteRawData((*it8).data, (*it8).size)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -364,11 +519,11 @@ ErrCode FooProxy::overloadfun(
         return ERR_INVALID_DATA;
     }
     data.WriteInt32(inoutParam.size());
-    for (auto it6 = inoutParam.begin(); it6 != inoutParam.end(); ++it6) {
-        if (!data.WriteUint32((*it6).size)) {
+    for (auto it9 = inoutParam.begin(); it9 != inoutParam.end(); ++it9) {
+        if (!data.WriteUint32((*it9).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((*it6).data, (*it6).size)) {
+        if (!data.WriteRawData((*it9).data, (*it9).size)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -392,49 +547,49 @@ ErrCode FooProxy::overloadfun(
     if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
-    for (int32_t i7 = 0; i7 < outParamSize; ++i7) {
-        myrawdata value7;
-        if (!reply.ReadUint32(value7.size)) {
+    for (int32_t i10 = 0; i10 < outParamSize; ++i10) {
+        myrawdata value10;
+        if (!reply.ReadUint32(value10.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue7 =  reply.ReadRawData(value7.size);
-        if (readvalue7 == nullptr) {
+        auto readvalue10 =  reply.ReadRawData(value10.size);
+        if (readvalue10 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value7.data = readvalue7;
-        outParam.push_back(value7);
+        value10.data = readvalue10;
+        outParam.push_back(value10);
     }
     int32_t inoutParamSize = reply.ReadInt32();
     if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
-    for (int32_t i8 = 0; i8 < inoutParamSize; ++i8) {
-        myrawdata value8;
-        if (!reply.ReadUint32(value8.size)) {
+    for (int32_t i11 = 0; i11 < inoutParamSize; ++i11) {
+        myrawdata value11;
+        if (!reply.ReadUint32(value11.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue8 =  reply.ReadRawData(value8.size);
-        if (readvalue8 == nullptr) {
+        auto readvalue11 =  reply.ReadRawData(value11.size);
+        if (readvalue11 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value8.data = readvalue8;
-        inoutParam.push_back(value8);
+        value11.data = readvalue11;
+        inoutParam.push_back(value11);
     }
     int32_t funcResultSize = reply.ReadInt32();
     if (funcResultSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
         return ERR_INVALID_DATA;
     }
-    for (int32_t i9 = 0; i9 < funcResultSize; ++i9) {
-        myrawdata value9;
-        if (!reply.ReadUint32(value9.size)) {
+    for (int32_t i12 = 0; i12 < funcResultSize; ++i12) {
+        myrawdata value12;
+        if (!reply.ReadUint32(value12.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue9 =  reply.ReadRawData(value9.size);
-        if (readvalue9 == nullptr) {
+        auto readvalue12 =  reply.ReadRawData(value12.size);
+        if (readvalue12 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value9.data = readvalue9;
-        funcResult.push_back(value9);
+        value12.data = readvalue12;
+        funcResult.push_back(value12);
     }
     return ERR_OK;
 }
@@ -458,17 +613,17 @@ ErrCode FooProxy::overloadfun(
     }
 
     data.WriteInt32(inParam.size());
-    for (auto it10 = inParam.begin(); it10 != inParam.end(); ++it10) {
-        if (!data.WriteUint32((it10->first).size)) {
+    for (auto it13 = inParam.begin(); it13 != inParam.end(); ++it13) {
+        if (!data.WriteUint32((it13->first).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((it10->first).data, (it10->first).size)) {
+        if (!data.WriteRawData((it13->first).data, (it13->first).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteUint32((it10->second).size)) {
+        if (!data.WriteUint32((it13->second).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((it10->second).data, (it10->second).size)) {
+        if (!data.WriteRawData((it13->second).data, (it13->second).size)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -477,17 +632,17 @@ ErrCode FooProxy::overloadfun(
     }
 
     data.WriteInt32(inoutParam.size());
-    for (auto it11 = inoutParam.begin(); it11 != inoutParam.end(); ++it11) {
-        if (!data.WriteUint32((it11->first).size)) {
+    for (auto it14 = inoutParam.begin(); it14 != inoutParam.end(); ++it14) {
+        if (!data.WriteUint32((it14->first).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((it11->first).data, (it11->first).size)) {
+        if (!data.WriteRawData((it14->first).data, (it14->first).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteUint32((it11->second).size)) {
+        if (!data.WriteUint32((it14->second).size)) {
             return ERR_INVALID_DATA;
         }
-        if (!data.WriteRawData((it11->second).data, (it11->second).size)) {
+        if (!data.WriteRawData((it14->second).data, (it14->second).size)) {
             return ERR_INVALID_DATA;
         }
     }
@@ -508,70 +663,70 @@ ErrCode FooProxy::overloadfun(
     }
 
     int32_t outParamSize = reply.ReadInt32();
-    for (int32_t i12 = 0; i12 < outParamSize; ++i12) {
-        myrawdata key12;
-        if (!reply.ReadUint32(key12.size)) {
+    for (int32_t i15 = 0; i15 < outParamSize; ++i15) {
+        myrawdata key15;
+        if (!reply.ReadUint32(key15.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readkey12 =  reply.ReadRawData(key12.size);
-        if (readkey12 == nullptr) {
+        auto readkey15 =  reply.ReadRawData(key15.size);
+        if (readkey15 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        key12.data = readkey12;
-        myrawdata value12;
-        if (!reply.ReadUint32(value12.size)) {
+        key15.data = readkey15;
+        myrawdata value15;
+        if (!reply.ReadUint32(value15.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue12 =  reply.ReadRawData(value12.size);
-        if (readvalue12 == nullptr) {
+        auto readvalue15 =  reply.ReadRawData(value15.size);
+        if (readvalue15 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value12.data = readvalue12;
-        outParam[key12] = value12;
+        value15.data = readvalue15;
+        outParam[key15] = value15;
     }
     int32_t inoutParamSize = reply.ReadInt32();
-    for (int32_t i13 = 0; i13 < inoutParamSize; ++i13) {
-        myrawdata key13;
-        if (!reply.ReadUint32(key13.size)) {
+    for (int32_t i16 = 0; i16 < inoutParamSize; ++i16) {
+        myrawdata key16;
+        if (!reply.ReadUint32(key16.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readkey13 =  reply.ReadRawData(key13.size);
-        if (readkey13 == nullptr) {
+        auto readkey16 =  reply.ReadRawData(key16.size);
+        if (readkey16 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        key13.data = readkey13;
-        myrawdata value13;
-        if (!reply.ReadUint32(value13.size)) {
+        key16.data = readkey16;
+        myrawdata value16;
+        if (!reply.ReadUint32(value16.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue13 =  reply.ReadRawData(value13.size);
-        if (readvalue13 == nullptr) {
+        auto readvalue16 =  reply.ReadRawData(value16.size);
+        if (readvalue16 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value13.data = readvalue13;
-        inoutParam[key13] = value13;
+        value16.data = readvalue16;
+        inoutParam[key16] = value16;
     }
     int32_t funcResultSize = reply.ReadInt32();
-    for (int32_t i14 = 0; i14 < funcResultSize; ++i14) {
-        myrawdata key14;
-        if (!reply.ReadUint32(key14.size)) {
+    for (int32_t i17 = 0; i17 < funcResultSize; ++i17) {
+        myrawdata key17;
+        if (!reply.ReadUint32(key17.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readkey14 =  reply.ReadRawData(key14.size);
-        if (readkey14 == nullptr) {
+        auto readkey17 =  reply.ReadRawData(key17.size);
+        if (readkey17 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        key14.data = readkey14;
-        myrawdata value14;
-        if (!reply.ReadUint32(value14.size)) {
+        key17.data = readkey17;
+        myrawdata value17;
+        if (!reply.ReadUint32(value17.size)) {
             return ERR_INVALID_DATA;
         }
-        auto readvalue14 =  reply.ReadRawData(value14.size);
-        if (readvalue14 == nullptr) {
+        auto readvalue17 =  reply.ReadRawData(value17.size);
+        if (readvalue17 == nullptr) {
             return ERR_INVALID_DATA;
         }
-        value14.data = readvalue14;
-        funcResult[key14] = value14;
+        value17.data = readvalue17;
+        funcResult[key17] = value17;
     }
     return ERR_OK;
 }

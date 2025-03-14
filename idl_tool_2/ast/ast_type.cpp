@@ -107,6 +107,11 @@ bool ASTType::IsStringType()
     return false;
 }
 
+bool ASTType::IsU16stringType()
+{
+    return false;
+}
+
 bool ASTType::IsListType()
 {
     return false;
