@@ -20,9 +20,9 @@ namespace Idl {
 std::string ASTOrderedMapType::GetSignature()
 {
     if (keyType_ == nullptr || valueType_ == nullptr) {
-        return StringHelper::Format("LMap[];");
+        return StringHelper::Format("OMap[];");
     }
-    return StringHelper::Format("LMap[%s%s];", keyType_->GetSignature().c_str(), valueType_->GetSignature().c_str());
+    return StringHelper::Format("OMap[%s%s];", keyType_->GetSignature().c_str(), valueType_->GetSignature().c_str());
 }
 
 bool ASTOrderedMapType::IsOrderedMapType()

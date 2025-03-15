@@ -84,15 +84,38 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_MAP_INT_U16STRING: {
+            std::unordered_map<int32_t, std::u16string> outParam;
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it2 = outParam.begin(); it2 != outParam.end(); ++it2) {
+                    if (!reply.WriteInt32((it2->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteString16((it2->second))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
         case IFooIpcCode::COMMAND_OVERLOADFUN_IN_UNSIGNED_INT_VECTOR: {
             std::vector<uint32_t> outParam;
             int32_t outParamSize = data.ReadInt32();
             if (outParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
-            for (int32_t i2 = 0; i2 < outParamSize; ++i2) {
-                uint32_t value2 = data.ReadUint32();
-                outParam.push_back(value2);
+            for (int32_t i3 = 0; i3 < outParamSize; ++i3) {
+                uint32_t value3 = data.ReadUint32();
+                outParam.push_back(value3);
             }
             ErrCode errCode = overloadfun(outParam);
             if (!reply.WriteInt32(errCode)) {
@@ -111,17 +134,17 @@ int32_t FooStub::OnRemoteRequest(
                     return ERR_INVALID_DATA;
                 }
                 reply.WriteInt32(outParam.size());
-                for (auto it3 = outParam.begin(); it3 != outParam.end(); ++it3) {
-                    if ((*it3).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                for (auto it4 = outParam.begin(); it4 != outParam.end(); ++it4) {
+                    if ((*it4).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
                         return ERR_INVALID_DATA;
                     }
 
-                    reply.WriteInt32((*it3).size());
-                    for (auto it4 = (*it3).begin(); it4 != (*it3).end(); ++it4) {
-                        if (!reply.WriteInt32((it4->first))) {
+                    reply.WriteInt32((*it4).size());
+                    for (auto it5 = (*it4).begin(); it5 != (*it4).end(); ++it5) {
+                        if (!reply.WriteInt32((it5->first))) {
                             return ERR_INVALID_DATA;
                         }
-                        if (!reply.WriteString16(Str8ToStr16((it4->second)))) {
+                        if (!reply.WriteString16(Str8ToStr16((it5->second)))) {
                             return ERR_INVALID_DATA;
                         }
                     }
@@ -141,6 +164,74 @@ int32_t FooStub::OnRemoteRequest(
                     return ERR_INVALID_DATA;
                 }
                 if (!reply.WriteString16(Str8ToStr16(result))) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_LIST_MAP_INT_U16STRING: {
+            std::vector<std::unordered_map<int32_t, std::u16string>> outParam;
+            ErrCode errCode = overloadfun(outParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                reply.WriteInt32(outParam.size());
+                for (auto it6 = outParam.begin(); it6 != outParam.end(); ++it6) {
+                    if ((*it6).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+
+                    reply.WriteInt32((*it6).size());
+                    for (auto it7 = (*it6).begin(); it7 != (*it6).end(); ++it7) {
+                        if (!reply.WriteInt32((it7->first))) {
+                            return ERR_INVALID_DATA;
+                        }
+                        if (!reply.WriteString16((it7->second))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_OUT_FILEDESCRIPTOR_OUT_U16STRING: {
+            int outParam;
+            std::u16string result;
+            ErrCode errCode = overloadfun(outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFileDescriptor(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_U16STRING_OUT_U16STRING_INOUT_U16STRING_OUT_U16STRING: {
+            std::u16string inParam = data.ReadString16();
+            std::u16string outParam;
+            std::u16string inoutParam = data.ReadString16();
+            std::u16string result;
+            ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteString16(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(result)) {
                     return ERR_INVALID_DATA;
                 }
             }
@@ -199,17 +290,17 @@ int32_t FooStub::OnRemoteRequest(
             if (inParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
-            for (int32_t i5 = 0; i5 < inParamSize; ++i5) {
-                myrawdata value5;
-                if (!data.ReadUint32(value5.size)) {
+            for (int32_t i8 = 0; i8 < inParamSize; ++i8) {
+                myrawdata value8;
+                if (!data.ReadUint32(value8.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readvalue5 =  data.ReadRawData(value5.size);
-                if (readvalue5 == nullptr) {
+                auto readvalue8 =  data.ReadRawData(value8.size);
+                if (readvalue8 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                value5.data = readvalue5;
-                inParam.push_back(value5);
+                value8.data = readvalue8;
+                inParam.push_back(value8);
             }
             std::vector<myrawdata> outParam;
             std::vector<myrawdata> inoutParam;
@@ -217,17 +308,17 @@ int32_t FooStub::OnRemoteRequest(
             if (inoutParamSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
                 return ERR_INVALID_DATA;
             }
-            for (int32_t i6 = 0; i6 < inoutParamSize; ++i6) {
-                myrawdata value6;
-                if (!data.ReadUint32(value6.size)) {
+            for (int32_t i9 = 0; i9 < inoutParamSize; ++i9) {
+                myrawdata value9;
+                if (!data.ReadUint32(value9.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readvalue6 =  data.ReadRawData(value6.size);
-                if (readvalue6 == nullptr) {
+                auto readvalue9 =  data.ReadRawData(value9.size);
+                if (readvalue9 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                value6.data = readvalue6;
-                inoutParam.push_back(value6);
+                value9.data = readvalue9;
+                inoutParam.push_back(value9);
             }
             std::vector<myrawdata> result;
             ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
@@ -239,11 +330,11 @@ int32_t FooStub::OnRemoteRequest(
                     return ERR_INVALID_DATA;
                 }
                 reply.WriteInt32(outParam.size());
-                for (auto it7 = outParam.begin(); it7 != outParam.end(); ++it7) {
-                    if (!reply.WriteUint32((*it7).size)) {
+                for (auto it10 = outParam.begin(); it10 != outParam.end(); ++it10) {
+                    if (!reply.WriteUint32((*it10).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((*it7).data, (*it7).size)) {
+                    if (!reply.WriteRawData((*it10).data, (*it10).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -251,11 +342,11 @@ int32_t FooStub::OnRemoteRequest(
                     return ERR_INVALID_DATA;
                 }
                 reply.WriteInt32(inoutParam.size());
-                for (auto it8 = inoutParam.begin(); it8 != inoutParam.end(); ++it8) {
-                    if (!reply.WriteUint32((*it8).size)) {
+                for (auto it11 = inoutParam.begin(); it11 != inoutParam.end(); ++it11) {
+                    if (!reply.WriteUint32((*it11).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((*it8).data, (*it8).size)) {
+                    if (!reply.WriteRawData((*it11).data, (*it11).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -263,11 +354,11 @@ int32_t FooStub::OnRemoteRequest(
                     return ERR_INVALID_DATA;
                 }
                 reply.WriteInt32(result.size());
-                for (auto it9 = result.begin(); it9 != result.end(); ++it9) {
-                    if (!reply.WriteUint32((*it9).size)) {
+                for (auto it12 = result.begin(); it12 != result.end(); ++it12) {
+                    if (!reply.WriteUint32((*it12).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((*it9).data, (*it9).size)) {
+                    if (!reply.WriteRawData((*it12).data, (*it12).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -277,50 +368,50 @@ int32_t FooStub::OnRemoteRequest(
         case IFooIpcCode::COMMAND_OVERLOADFUN_IN_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA_INOUT_MAP_MYRAWDATA_MYRAWDATA_OUT_MAP_MYRAWDATA_MYRAWDATA: {
             std::unordered_map<myrawdata, myrawdata> inParam;
             int32_t inParamSize = data.ReadInt32();
-            for (int32_t i10 = 0; i10 < inParamSize; ++i10) {
-                myrawdata key10;
-                if (!data.ReadUint32(key10.size)) {
+            for (int32_t i13 = 0; i13 < inParamSize; ++i13) {
+                myrawdata key13;
+                if (!data.ReadUint32(key13.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readkey10 =  data.ReadRawData(key10.size);
-                if (readkey10 == nullptr) {
+                auto readkey13 =  data.ReadRawData(key13.size);
+                if (readkey13 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                key10.data = readkey10;
-                myrawdata value10;
-                if (!data.ReadUint32(value10.size)) {
+                key13.data = readkey13;
+                myrawdata value13;
+                if (!data.ReadUint32(value13.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readvalue10 =  data.ReadRawData(value10.size);
-                if (readvalue10 == nullptr) {
+                auto readvalue13 =  data.ReadRawData(value13.size);
+                if (readvalue13 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                value10.data = readvalue10;
-                inParam[key10] = value10;
+                value13.data = readvalue13;
+                inParam[key13] = value13;
             }
             std::unordered_map<myrawdata, myrawdata> outParam;
             std::unordered_map<myrawdata, myrawdata> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
-            for (int32_t i11 = 0; i11 < inoutParamSize; ++i11) {
-                myrawdata key11;
-                if (!data.ReadUint32(key11.size)) {
+            for (int32_t i14 = 0; i14 < inoutParamSize; ++i14) {
+                myrawdata key14;
+                if (!data.ReadUint32(key14.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readkey11 =  data.ReadRawData(key11.size);
-                if (readkey11 == nullptr) {
+                auto readkey14 =  data.ReadRawData(key14.size);
+                if (readkey14 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                key11.data = readkey11;
-                myrawdata value11;
-                if (!data.ReadUint32(value11.size)) {
+                key14.data = readkey14;
+                myrawdata value14;
+                if (!data.ReadUint32(value14.size)) {
                     return ERR_INVALID_DATA;
                 }
-                auto readvalue11 =  data.ReadRawData(value11.size);
-                if (readvalue11 == nullptr) {
+                auto readvalue14 =  data.ReadRawData(value14.size);
+                if (readvalue14 == nullptr) {
                     return ERR_INVALID_DATA;
                 }
-                value11.data = readvalue11;
-                inoutParam[key11] = value11;
+                value14.data = readvalue14;
+                inoutParam[key14] = value14;
             }
             std::unordered_map<myrawdata, myrawdata> result;
             ErrCode errCode = overloadfun(inParam, outParam, inoutParam, result);
@@ -333,17 +424,17 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(outParam.size());
-                for (auto it12 = outParam.begin(); it12 != outParam.end(); ++it12) {
-                    if (!reply.WriteUint32((it12->first).size)) {
+                for (auto it15 = outParam.begin(); it15 != outParam.end(); ++it15) {
+                    if (!reply.WriteUint32((it15->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it12->first).data, (it12->first).size)) {
+                    if (!reply.WriteRawData((it15->first).data, (it15->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteUint32((it12->second).size)) {
+                    if (!reply.WriteUint32((it15->second).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it12->second).data, (it12->second).size)) {
+                    if (!reply.WriteRawData((it15->second).data, (it15->second).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -352,17 +443,17 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(inoutParam.size());
-                for (auto it13 = inoutParam.begin(); it13 != inoutParam.end(); ++it13) {
-                    if (!reply.WriteUint32((it13->first).size)) {
+                for (auto it16 = inoutParam.begin(); it16 != inoutParam.end(); ++it16) {
+                    if (!reply.WriteUint32((it16->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it13->first).data, (it13->first).size)) {
+                    if (!reply.WriteRawData((it16->first).data, (it16->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteUint32((it13->second).size)) {
+                    if (!reply.WriteUint32((it16->second).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it13->second).data, (it13->second).size)) {
+                    if (!reply.WriteRawData((it16->second).data, (it16->second).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -371,17 +462,17 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(result.size());
-                for (auto it14 = result.begin(); it14 != result.end(); ++it14) {
-                    if (!reply.WriteUint32((it14->first).size)) {
+                for (auto it17 = result.begin(); it17 != result.end(); ++it17) {
+                    if (!reply.WriteUint32((it17->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it14->first).data, (it14->first).size)) {
+                    if (!reply.WriteRawData((it17->first).data, (it17->first).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteUint32((it14->second).size)) {
+                    if (!reply.WriteUint32((it17->second).size)) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRawData((it14->second).data, (it14->second).size)) {
+                    if (!reply.WriteRawData((it17->second).data, (it17->second).size)) {
                         return ERR_INVALID_DATA;
                     }
                 }

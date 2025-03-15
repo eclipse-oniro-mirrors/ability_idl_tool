@@ -27,6 +27,7 @@
 #include "type/sa_double_type_emitter.h"
 #include "type/sa_char_type_emitter.h"
 #include "type/sa_string_type_emitter.h"
+#include "type/sa_u16string_type_emitter.h"
 #include "type/sa_seq_type_emitter.h"
 #include "type/sa_rawdata_type_emitter.h"
 #include "type/sa_interface_type_emitter.h"
@@ -58,6 +59,7 @@ SACodeEmitter::TypeEmitterMap SACodeEmitter::basicEmitters_ = {
     {TypeKind::TYPE_DOUBLE,            new SaDoubleTypeEmitter()      },
     {TypeKind::TYPE_CHAR,              new SaCharTypeEmitter()        },
     {TypeKind::TYPE_STRING,            new SaStringTypeEmitter()      },
+    {TypeKind::TYPE_U16STRING,         new SaU16stringTypeEmitter()   },
     {TypeKind::TYPE_UCHAR,             new SaUcharTypeEmitter()       },
     {TypeKind::TYPE_UINT,              new SaUintTypeEmitter()        },
     {TypeKind::TYPE_ULONG,             new SaUlongTypeEmitter()       },

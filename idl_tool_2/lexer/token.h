@@ -31,6 +31,7 @@ enum class TokenType {
     LONG,    // "long"
     STRING,  // "std::string"
     STRING16, // "std::string16"
+    U16STRING, // "std::u16string"
     FLOAT,   // "float"
     DOUBLE,  // "double"
     FD,      // "FileDescriptor"

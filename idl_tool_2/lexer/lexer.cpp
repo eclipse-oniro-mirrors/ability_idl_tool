@@ -29,6 +29,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"long",           TokenType::LONG         },
     {"String",         TokenType::STRING       },
     {"String16",       TokenType::STRING16     },
+    {"U16string",      TokenType::U16STRING    },
     {"float",          TokenType::FLOAT        },
     {"double",         TokenType::DOUBLE       },
     {"FileDescriptor", TokenType::FD           },

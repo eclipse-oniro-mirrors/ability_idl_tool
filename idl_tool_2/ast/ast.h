@@ -41,6 +41,7 @@
 #include "ast/ast_smq_type.h"
 #include "ast/base/ast_string_type.h"
 #include "ast/base/ast_string16_type.h"
+#include "ast/base/ast_u16string_type.h"
 #include "ast/ast_struct_type.h"
 #include "ast/base/ast_char_type.h"
 #include "ast/base/ast_uchar_type.h"

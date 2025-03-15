@@ -32,6 +32,7 @@ AST::TypeStringMap AST::basicTypes_ = {
     {"double",         new ASTDoubleType()      },
     {"String",         new ASTStringType()      },
     {"String16",       new ASTString16Type()    },
+    {"U16string",      new ASTU16stringType()   },
     {"char",           new ASTCharType()        },
     {"unsigned char",  new ASTUcharType()       },
     {"unsigned short", new ASTUshortType()      },

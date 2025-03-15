@@ -45,6 +45,7 @@ enum class TypeKind {
     TYPE_ULONG,
     TYPE_STRING,
     TYPE_STRING16,
+    TYPE_U16STRING,
     TYPE_FILEDESCRIPTOR,
     TYPE_SEQUENCEABLE,
     TYPE_RAWDATA,
@@ -120,6 +121,8 @@ public:
     virtual bool IsDoubleType();
 
     virtual bool IsStringType();
+
+    virtual bool IsU16stringType();
 
     virtual bool IsListType();
 
