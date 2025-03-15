@@ -178,6 +178,9 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodPromiseImpl(AutoPtr<ASTM
 
         if (returnType->GetTypeKind() != TypeKind::TYPE_VOID) {
             typeEmitter = GetTypeEmitter(returnType);
+            if (typeEmitter == nullptr) {
+                return;
+            }
             typeEmitter->EmitTsWriteVar("reply", RETURN_VALUE, sb, prefix + TAB + TAB);
         }
         sb.Append(prefix).Append(TAB).Append("}\n");
