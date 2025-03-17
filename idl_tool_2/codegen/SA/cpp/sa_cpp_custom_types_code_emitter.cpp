@@ -119,6 +119,7 @@ void SaCppCustomTypesCodeEmitter::EmitDefineConstant(StringBuilder &sb) const
     sb.Append(
         "[[maybe_unused]] static constexpr int VECTOR_MAX_SIZE = 102400;\n"
         "[[maybe_unused]] static constexpr int LIST_MAX_SIZE = 102400;\n"
+        "[[maybe_unused]] static constexpr int SET_MAX_SIZE = 102400;\n"
         "[[maybe_unused]] static constexpr int MAP_MAX_SIZE = 102400;\n");
 }
 

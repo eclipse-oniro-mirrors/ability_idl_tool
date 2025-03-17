@@ -37,6 +37,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"NativeBuffer",   TokenType::NATIVE_BUFFER},
     {"Pointer",        TokenType::POINTER      },
     {"List",           TokenType::LIST         },
+    {"Set",            TokenType::SET          },
     {"Map",            TokenType::MAP          },
     {"OrderedMap",     TokenType::ORDEREDMAP   },
     {"SharedMemQueue", TokenType::SMQ          },

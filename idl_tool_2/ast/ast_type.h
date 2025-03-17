@@ -54,6 +54,7 @@ enum class TypeKind {
     TYPE_MAP,
     TYPE_ORDEREDMAP,
     TYPE_ARRAY,
+    TYPE_SET,
     TYPE_ENUM,
     TYPE_STRUCT,
     TYPE_UNION,
@@ -143,6 +144,8 @@ public:
     virtual bool IsRawDataType();
 
     virtual bool IsArrayType();
+
+    virtual bool IsSetType();
 
     virtual bool IsFdType();
 

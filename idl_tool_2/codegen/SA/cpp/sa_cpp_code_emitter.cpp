@@ -76,6 +76,10 @@ void SACppCodeEmitter::GetStdlibInclusions(HeaderFile::HeaderFileSet &headerFile
                 headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "vector");
                 break;
             }
+            case TypeKind::TYPE_SET: {
+                headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "set");
+                break;
+            }
             case TypeKind::TYPE_MAP: {
                 headerFiles.emplace(HeaderFileType::CPP_STD_HEADER_FILE, "unordered_map");
                 break;

@@ -39,6 +39,7 @@ enum class TokenType {
     NATIVE_BUFFER, // "NativeBuffer"
     POINTER, // "Pointer"
     LIST,    // "List"
+    SET,    // "Set"
     MAP,     // "Map"
     ORDEREDMAP,     // "OrderedMap"
     SMQ,     // "SharedMemQueue"

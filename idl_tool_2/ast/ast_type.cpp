@@ -162,6 +162,11 @@ bool ASTType::IsArrayType()
     return false;
 }
 
+bool ASTType::IsSetType()
+{
+    return false;
+}
+
 bool ASTType::IsFdType()
 {
     return false;
