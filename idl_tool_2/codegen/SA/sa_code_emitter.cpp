@@ -18,6 +18,7 @@
 #include "sa_code_emitter.h"
 #include "ast/ast_map_type.h"
 #include "ast/ast_orderedmap_type.h"
+#include "ast/ast_set_type.h"
 #include "type/sa_boolean_type_emitter.h"
 #include "type/sa_byte_type_emitter.h"
 #include "type/sa_short_type_emitter.h"
@@ -29,6 +30,7 @@
 #include "type/sa_string_type_emitter.h"
 #include "type/sa_u16string_type_emitter.h"
 #include "type/sa_seq_type_emitter.h"
+#include "type/sa_set_type_emitter.h"
 #include "type/sa_rawdata_type_emitter.h"
 #include "type/sa_interface_type_emitter.h"
 #include "type/sa_map_type_emitter.h"
@@ -233,6 +235,8 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) c
             return NewArrayTypeEmitter(astType);
         case TypeKind::TYPE_LIST:
             return NewListTypeEmitter(astType);
+        case TypeKind::TYPE_SET:
+            return NewSetTypeEmitter(astType);
         case TypeKind::TYPE_ENUM:
             return NewEnumTypeEmitter(astType);
         case TypeKind::TYPE_STRUCT:
@@ -293,6 +297,15 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewListTypeEmitter(AutoPtr<ASTType> astTyp
     AutoPtr<SaTypeEmitter> elemEmitter = GetTypeEmitter(elemType);
     listTypeEmitter->SetElementEmitter(elemEmitter);
     return listTypeEmitter.Get();
+}
+
+AutoPtr<SaTypeEmitter> SACodeEmitter::NewSetTypeEmitter(AutoPtr<ASTType> astType) const
+{
+    AutoPtr<SaSetTypeEmitter> setTypeEmitter = new SaSetTypeEmitter();
+    AutoPtr<ASTType> elemType = (static_cast<ASTSetType*>(astType.Get()))->GetElementType();
+    AutoPtr<SaTypeEmitter> elemEmitter = GetTypeEmitter(elemType);
+    setTypeEmitter->SetElementEmitter(elemEmitter);
+    return setTypeEmitter.Get();
 }
 
 AutoPtr<SaTypeEmitter> SACodeEmitter::NewEnumTypeEmitter(AutoPtr<ASTType> astType) const

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include "ast/ast.h"
 #include "ast/ast_array_type.h"
+#include "ast/ast_set_type.h"
 #include "ast/ast_attribute.h"
 #include "ast/ast_interface_type.h"
 #include "ast/ast_method.h"
@@ -179,6 +180,8 @@ private:
     AutoPtr<ASTType> ParseArrayType(const AutoPtr<ASTType> &elementType);
 
     AutoPtr<ASTType> ParseListType();
+
+    AutoPtr<ASTType> ParseSetType();
 
     AutoPtr<ASTType> ParseMapType();
 

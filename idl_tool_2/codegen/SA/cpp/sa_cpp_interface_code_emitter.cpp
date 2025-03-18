@@ -237,6 +237,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceMemberVariables(StringBuilder &sb, 
     }
     sb.Append(prefix).Append("const int VECTOR_MAX_SIZE = 102400;\n");
     sb.Append(prefix).Append("const int LIST_MAX_SIZE = 102400;\n");
+    sb.Append(prefix).Append("const int SET_MAX_SIZE = 102400;\n");
     sb.Append(prefix).Append("const int MAP_MAX_SIZE = 102400;\n");
 }
 
