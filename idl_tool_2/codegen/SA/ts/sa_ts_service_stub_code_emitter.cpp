@@ -126,6 +126,9 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> 
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() & ASTParamAttr::PARAM_IN) {
             AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             typeEmitter->EmitTsReadVar("data", SuffixAdded(param->GetName()), sb, prefix + TAB, TypeMode::PARAM_IN);
         }
         if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
@@ -167,6 +170,9 @@ void SaTsServiceStubCodeEmitter::EmitInterfaceStubMethodPromiseImpl(AutoPtr<ASTM
     sb.Append(") => {\n");
 
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(new ASTIntegerType());
+    if (typeEmitter == nullptr) {
+        return;
+    }
     typeEmitter->EmitTsWriteVar("reply", ERR_CODE, sb, prefix + TAB);
 
     AutoPtr<ASTType> returnType = method->GetReturnType();
