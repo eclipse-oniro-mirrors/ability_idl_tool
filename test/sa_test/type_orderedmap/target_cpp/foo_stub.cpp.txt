@@ -1028,6 +1028,86 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_IREMOTE_OBJECT_TEST_FUNC: {
+            std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            for (int32_t i81 = 0; i81 < inParamSize; ++i81) {
+                sptr<IRemoteObject> key81 = data.ReadRemoteObject();
+                if (!key81) {
+                    return ERR_INVALID_DATA;
+                }
+
+                sptr<IRemoteObject> value81 = data.ReadRemoteObject();
+                if (!value81) {
+                    return ERR_INVALID_DATA;
+                }
+
+                inParam[key81] = value81;
+            }
+            std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> outParam;
+            std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            for (int32_t i82 = 0; i82 < inoutParamSize; ++i82) {
+                sptr<IRemoteObject> key82 = data.ReadRemoteObject();
+                if (!key82) {
+                    return ERR_INVALID_DATA;
+                }
+
+                sptr<IRemoteObject> value82 = data.ReadRemoteObject();
+                if (!value82) {
+                    return ERR_INVALID_DATA;
+                }
+
+                inoutParam[key82] = value82;
+            }
+            std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> result;
+            ErrCode errCode = IRemoteObject_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it83 = outParam.begin(); it83 != outParam.end(); ++it83) {
+                    if (!reply.WriteRemoteObject((it83->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((it83->second))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(inoutParam.size());
+                for (auto it84 = inoutParam.begin(); it84 != inoutParam.end(); ++it84) {
+                    if (!reply.WriteRemoteObject((it84->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((it84->second))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                if (result.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(result.size());
+                for (auto it85 = result.begin(); it85 != result.end(); ++it85) {
+                    if (!reply.WriteRemoteObject((it85->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if (!reply.WriteRemoteObject((it85->second))) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
         default:
             return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
     }

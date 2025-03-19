@@ -1215,4 +1215,105 @@ ErrCode FooProxy::OrderedMap_test_func(
     }
     return ERR_OK;
 }
+
+ErrCode FooProxy::IRemoteObject_test_func(
+    const std::map<sptr<IRemoteObject>, sptr<IRemoteObject>>& inParam,
+    std::map<sptr<IRemoteObject>, sptr<IRemoteObject>>& outParam,
+    std::map<sptr<IRemoteObject>, sptr<IRemoteObject>>& inoutParam,
+    std::map<sptr<IRemoteObject>, sptr<IRemoteObject>>& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inParam.size());
+    for (auto it81 = inParam.begin(); it81 != inParam.end(); ++it81) {
+        if (!data.WriteRemoteObject((it81->first))) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRemoteObject((it81->second))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+    if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
+
+    data.WriteInt32(inoutParam.size());
+    for (auto it82 = inoutParam.begin(); it82 != inoutParam.end(); ++it82) {
+        if (!data.WriteRemoteObject((it82->first))) {
+            return ERR_INVALID_DATA;
+        }
+        if (!data.WriteRemoteObject((it82->second))) {
+            return ERR_INVALID_DATA;
+        }
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_IREMOTE_OBJECT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    int32_t outParamSize = reply.ReadInt32();
+    for (int32_t i83 = 0; i83 < outParamSize; ++i83) {
+        sptr<IRemoteObject> key83 = reply.ReadRemoteObject();
+        if (!key83) {
+            return ERR_INVALID_DATA;
+        }
+
+        sptr<IRemoteObject> value83 = reply.ReadRemoteObject();
+        if (!value83) {
+            return ERR_INVALID_DATA;
+        }
+
+        outParam[key83] = value83;
+    }
+    int32_t inoutParamSize = reply.ReadInt32();
+    for (int32_t i84 = 0; i84 < inoutParamSize; ++i84) {
+        sptr<IRemoteObject> key84 = reply.ReadRemoteObject();
+        if (!key84) {
+            return ERR_INVALID_DATA;
+        }
+
+        sptr<IRemoteObject> value84 = reply.ReadRemoteObject();
+        if (!value84) {
+            return ERR_INVALID_DATA;
+        }
+
+        inoutParam[key84] = value84;
+    }
+    int32_t funcResultSize = reply.ReadInt32();
+    for (int32_t i85 = 0; i85 < funcResultSize; ++i85) {
+        sptr<IRemoteObject> key85 = reply.ReadRemoteObject();
+        if (!key85) {
+            return ERR_INVALID_DATA;
+        }
+
+        sptr<IRemoteObject> value85 = reply.ReadRemoteObject();
+        if (!value85) {
+            return ERR_INVALID_DATA;
+        }
+
+        funcResult[key85] = value85;
+    }
+    return ERR_OK;
+}
 } // namespace test

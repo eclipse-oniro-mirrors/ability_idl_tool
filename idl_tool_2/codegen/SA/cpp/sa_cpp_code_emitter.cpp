@@ -268,10 +268,15 @@ void SACppCodeEmitter::GetOverloadName(AutoPtr<ASTMethod> &method, std::string &
         overloadname += "_out_" + typeEmitter->GetTypeName();
     }
 
+    // Convert all characters in 'overloadname' to lowercase
     std::transform(overloadname.begin(), overloadname.end(), overloadname.begin(), ::tolower);
-    overloadname = std::regex_replace(overloadname, std::regex("\\b[a-zA-Z]+\\."), "");
-    overloadname = std::regex_replace(overloadname, std::regex("[ <]"), "_");
+    // Remove any alphabetical characters followed by a dot (e.g., "OHOS." -> "")
+    overloadname = std::regex_replace(overloadname, std::regex("[a-zA-Z]+\\."), "");
+    // Replace "[]" (array notation) with "_vector" (e.g., "int[]" -> "int_vector")
     overloadname = std::regex_replace(overloadname, std::regex("\\[]"), "_vector");
+    // Replace spaces and '<' characters with underscores (e.g., "func <int>" -> "func_int")
+    overloadname = std::regex_replace(overloadname, std::regex("[ <]"), "_");
+    // Remove commas and '>' characters (e.g., "int, float>" -> "int_float")
     overloadname = std::regex_replace(overloadname, std::regex("[,>]"), "");
 }
 

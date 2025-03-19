@@ -324,6 +324,9 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
             sb.Append("\n");
         }
