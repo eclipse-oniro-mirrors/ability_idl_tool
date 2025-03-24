@@ -105,10 +105,12 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
         circleCount_, useName.c_str(), circleCount_);
     keyEmitter_->EmitCppReadVar(parcelName, keyStr, sb, prefix + TAB);
     valueEmitter_->EmitCppReadVar(parcelName, valueStr, sb, prefix + TAB);
-    if (keyEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
+    if (keyEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE &&
+        keyEmitter_->GetTypeName() != "IRemoteObject") {
         keyStr = "*" + keyStr;
     }
-    if (valueEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
+    if (valueEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE &&
+        valueEmitter_->GetTypeName() != "IRemoteObject") {
         valueStr = "*" + valueStr;
     }
     sb.Append(prefix + TAB).AppendFormat("%s[%s] = %s;\n", name.c_str(), keyStr.c_str(), valueStr.c_str());

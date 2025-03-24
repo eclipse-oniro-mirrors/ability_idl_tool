@@ -317,6 +317,9 @@ void CClientProxyCodeEmitter::EmitProxyMethodBody(
     for (size_t i = 0; i < method->GetParameterNumber(); i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+        if (typeEmitter == nullptr) {
+            continue;
+        }
         if (param->GetAttribute() == ASTParamAttr::PARAM_IN) {
             typeEmitter->EmitCWriteVar(TypeMode::PARAM_IN, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
             sb.Append("\n");

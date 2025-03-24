@@ -73,14 +73,22 @@ void SaRawDataTypeEmitter::EmitCppReadVar(const std::string &parcelName, const s
     sb.Append(prefix).Append("}\n");
 
     sb.Append(prefix).AppendFormat(
-        "auto read%s =  %sReadRawData(%s.size);\n", name.c_str(), parcelName.c_str(), name.c_str());
+        "auto read%s = %sReadRawData(%s.size);\n", name.c_str(), parcelName.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("if (read%s == nullptr) {\n", name.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s RawData] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
-    sb.Append(prefix).AppendFormat("%s.data = read%s;\n", name.c_str(), name.c_str());
+
+    sb.Append(prefix).AppendFormat("ErrCode %soutError = %s.RawDataCpy(read%s);\n",
+        name.c_str(), name.c_str(), name.c_str());
+    sb.Append(prefix).AppendFormat("if (%soutError) {\n", name.c_str());
+    if (logOn_) {
+        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"RawDataCpy [%s] failed!\");\n", name.c_str());
+    }
+    sb.Append(prefix + TAB).AppendFormat("return %soutError;\n", name.c_str());
+    sb.Append(prefix).Append("}\n");
 }
 } // namespace Idl
 } // namespace OHOS

@@ -105,7 +105,8 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     sb.Append(prefix).AppendFormat("for (int32_t %s = 0; %s < %sSize; ++%s) {\n",
         iStr.c_str(), iStr.c_str(), useName.c_str(), iStr.c_str());
     elementEmitter_->EmitCppReadVar(parcelName, valueStr.c_str(), sb, prefix + TAB);
-    if (elementEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE) {
+    if (elementEmitter_->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE &&
+        elementEmitter_->GetTypeName() != "IRemoteObject") {
         sb.Append(prefix + TAB).AppendFormat("%s.push_back(*%s);\n", name.c_str(), valueStr.c_str());
     } else {
         sb.Append(prefix + TAB).AppendFormat("%s.push_back(%s);\n", name.c_str(), valueStr.c_str());
