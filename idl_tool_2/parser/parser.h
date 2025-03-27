@@ -33,6 +33,7 @@
 #include "ast/ast_map_type.h"
 #include "ast/ast_orderedmap_type.h"
 #include "ast/ast_parameter.h"
+#include "ast/ast_ptr_type.h"
 #include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
 #include "ast/ast_smq_type.h"
@@ -182,6 +183,8 @@ private:
     AutoPtr<ASTType> ParseListType();
 
     AutoPtr<ASTType> ParseSetType();
+
+    AutoPtr<ASTType> ParsePtrType(TokenType ptrKind);
 
     AutoPtr<ASTType> ParseMapType();
 

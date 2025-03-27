@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TEST_IFOO_H
+#define TEST_IFOO_H
+
+#include <cstdint>
+#include <iremote_broker.h>
+#include <string_ex.h>
+#include "myseq.h"
+
+using OHOS::myseq;
+
+namespace test {
+
+enum class IFooIpcCode {
+    COMMAND_SHAREDPTR_SEQ_FUNC = MIN_TRANSACTION_ID,
+    COMMAND_UNIQUEPTR_SEQ_FUNC,
+    COMMAND_SPTR_SEQ_FUNC,
+};
+
+class IFoo : public IRemoteBroker {
+public:
+    DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
+
+    virtual ErrCode sharedptr_seq_func(
+        const std::shared_ptr<myseq>& inParam,
+        std::shared_ptr<myseq>& inoutParam,
+        std::shared_ptr<myseq>& outParam,
+        std::shared_ptr<myseq>& funcResult) = 0;
+
+    virtual ErrCode uniqueptr_seq_func(
+        const std::unique_ptr<myseq>& inParam,
+        std::unique_ptr<myseq>& inoutParam,
+        std::unique_ptr<myseq>& outParam,
+        std::unique_ptr<myseq>& funcResult) = 0;
+
+    virtual ErrCode sptr_seq_func(
+        const sptr<myseq>& inParam,
+        sptr<myseq>& inoutParam,
+        sptr<myseq>& outParam,
+        sptr<myseq>& funcResult) = 0;
+protected:
+    const int VECTOR_MAX_SIZE = 102400;
+    const int LIST_MAX_SIZE = 102400;
+    const int SET_MAX_SIZE = 102400;
+    const int MAP_MAX_SIZE = 102400;
+};
+} // namespace test
+#endif // TEST_IFOO_H
+

@@ -432,5 +432,22 @@ bool IntfTypeChecker::CheckMessageOption(std::string &messageOption)
     }
     return true;
 }
+
+bool IntfTypeChecker::CheckSAPtrType(AutoPtr<ASTType> type)
+{
+    Options &options = Options::GetInstance();
+    if (!(options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP)) {
+        Logger::E(TAG, StringHelper::Format("[%s:%d] error: only --intf-type 'sa' and language 'cpp' support ptr",
+            __func__, __LINE__).c_str());
+        return false;
+    }
+    if ((type->GetTypeKind() == TypeKind::TYPE_SEQUENCEABLE && type->ToShortString() == "IRemoteObject") ||
+        type->GetTypeKind() == TypeKind::TYPE_INTERFACE) {
+        Logger::E(TAG, StringHelper::Format("[%s:%d] error: ptr not support 'IRemoteObject' and 'interface'",
+            __func__, __LINE__).c_str());
+        return false;
+    }
+    return true;
+}
 } // namespace Idl
 } // namespace OHOS

@@ -242,7 +242,11 @@ void CCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb)
 
 void CCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(StringBuilder &sb, const AutoPtr<ASTStructType> &type)
 {
-    std::string typeName = GetTypeEmitter(type.Get())->EmitCType();
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCType();
     std::string objName("dataBlock");
     sb.AppendFormat("bool %sBlockMarshalling(struct HdfSBuf *data, const %s *%s)\n", type->GetName().c_str(),
         typeName.c_str(), objName.c_str());
@@ -265,7 +269,11 @@ void CCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(StringBuilder &sb, c
         for (size_t i = 0; i < type->GetMemberNumber(); i++) {
             std::string memberName = type->GetMemberName(i);
             std::string name = StringHelper::Format("%s->%s", objName.c_str(), memberName.c_str());
-            GetTypeEmitter(type->GetMemberType(i))->EmitCMarshalling(name, sb, TAB);
+            AutoPtr<HdiTypeEmitter> typeEmitterTmp = GetTypeEmitter(type->GetMemberType(i));
+            if (typeEmitterTmp == nullptr) {
+                continue;
+            }
+            typeEmitterTmp->EmitCMarshalling(name, sb, TAB);
             sb.Append("\n");
         }
     }
@@ -482,8 +490,12 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
     }
 
     sb.Append(prefix).Append("{\n");
+    AutoPtr<HdiTypeEmitter> elementTypeEmitter = GetTypeEmitter(elementType);
+    if (elementTypeEmitter == nullptr) {
+        return;
+    }
     sb.Append(prefix + TAB).AppendFormat("%s* %s = NULL;\n",
-        GetTypeEmitter(elementType)->EmitCType().c_str(), tmpName.c_str());
+        elementTypeEmitter->EmitCType().c_str(), tmpName.c_str());
     sb.Append(prefix + TAB).AppendFormat("uint32_t %sLen = 0;\n", tmpName.c_str());
     typeEmitter->EmitCUnMarshalling(tmpName, ERRORS_LABEL, sb, prefix + TAB, freeObjStatements_);
     sb.Append(prefix + TAB).AppendFormat("%s = %s;\n", varName.c_str(), tmpName.c_str());
@@ -532,12 +544,16 @@ void CCustomTypesCodeEmitter::EmitCustomTypeMemoryRecycle(
         AutoPtr<ASTType> memberType = type->GetMemberType(i);
         std::string memberName = type->GetMemberName(i);
         std::string varName = StringHelper::Format("%s->%s", name.c_str(), memberName.c_str());
+        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(memberType);
+        if (typeEmitter == nullptr) {
+            continue;
+        }
         switch (memberType->GetTypeKind()) {
             case TypeKind::TYPE_STRING:
             case TypeKind::TYPE_STRUCT:
             case TypeKind::TYPE_ARRAY:
             case TypeKind::TYPE_LIST:
-                GetTypeEmitter(memberType)->EmitMemoryRecycle(varName, false, sb, prefix);
+                typeEmitter->EmitMemoryRecycle(varName, false, sb, prefix);
                 sb.Append("\n");
                 break;
             default:

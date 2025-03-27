@@ -1006,8 +1006,9 @@ AutoPtr<ASTType> Parser::ParseMethodReturnType()
     }
     // parse method return type, maybe not exist
     if (IntfTypeChecker::CheckBasicType(token) || IntfTypeChecker::CheckUserDefType(token) ||
-        token.kind == TokenType::LIST || token.kind == TokenType::SET ||
-        token.kind == TokenType::MAP || token.kind == TokenType::ORDEREDMAP || token.kind == TokenType::SMQ) {
+        token.kind == TokenType::LIST || token.kind == TokenType::SET || token.kind == TokenType::MAP ||
+        token.kind == TokenType::ORDEREDMAP || token.kind == TokenType::SMQ ||
+        token.kind == TokenType::SHAREDPTR || token.kind == TokenType::UNIQUEPTR || token.kind == TokenType::SPTR) {
         return ParseType();
     }
     return nullptr;
@@ -1288,6 +1289,11 @@ AutoPtr<ASTType> Parser::ParseType()
             case TokenType::SMQ:
                 type = ParseSmqType();
                 break;
+            case TokenType::SHAREDPTR:
+            case TokenType::UNIQUEPTR:
+            case TokenType::SPTR:
+                type = ParsePtrType(token.kind);
+                break;
             default:
                 LogError(__func__, __LINE__, token, StringHelper::Format("'%s' of type is illegal",
                     token.value.c_str()));
@@ -1432,6 +1438,40 @@ AutoPtr<ASTType> Parser::ParseSetType()
     AutoPtr<ASTType> retType = ast_->FindType(setType->ToString(), false);
     if (retType == nullptr) {
         retType = setType.Get();
+        ast_->AddType(retType);
+    }
+    return retType;
+}
+
+AutoPtr<ASTType> Parser::ParsePtrType(TokenType ptrKind)
+{
+    lexer_.GetToken(); // shared_ptr unique_ptr sptr
+
+    Token token = lexer_.PeekToken();
+    if (token.kind != TokenType::ANGLE_BRACKETS_LEFT) {
+        LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '<'"));
+    } else {
+        lexer_.GetToken(); // '<'
+    }
+
+    AutoPtr<ASTType> type = ParseType(); // element type
+    if (type == nullptr || !IntfTypeChecker::CheckSAPtrType(type)) {
+        lexer_.SkipToken(TokenType::ANGLE_BRACKETS_RIGHT);
+        return nullptr;
+    }
+
+    token = lexer_.PeekToken();
+    if (token.kind != TokenType::ANGLE_BRACKETS_RIGHT) {
+        LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '>'"));
+    } else {
+        lexer_.GetToken(); // '>'
+    }
+
+    AutoPtr<ASTPtrType> ptrType = new ASTPtrType(ptrKind);
+    ptrType->SetElementType(type);
+    AutoPtr<ASTType> retType = ast_->FindType(ptrType->ToString(), false);
+    if (retType == nullptr) {
+        retType = ptrType.Get();
         ast_->AddType(retType);
     }
     return retType;

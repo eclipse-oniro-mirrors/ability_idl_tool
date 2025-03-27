@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+
+namespace test {
+
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_SHAREDPTR_SEQ_FUNC: {
+            std::shared_ptr<myseq> inParam = std::shared_ptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            std::shared_ptr<myseq> inoutParam = std::shared_ptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            std::shared_ptr<myseq> outParam;
+            std::shared_ptr<myseq> result;
+            ErrCode errCode = sharedptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(inoutParam.get())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(outParam.get())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(result.get())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_UNIQUEPTR_SEQ_FUNC: {
+            std::unique_ptr<myseq> inParam = std::unique_ptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            std::unique_ptr<myseq> inoutParam = std::unique_ptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            std::unique_ptr<myseq> outParam;
+            std::unique_ptr<myseq> result;
+            ErrCode errCode = uniqueptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(inoutParam.get())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(outParam.get())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(result.get())) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_SPTR_SEQ_FUNC: {
+            sptr<myseq> inParam = sptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myseq> inoutParam = sptr<myseq>(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myseq> outParam;
+            sptr<myseq> result;
+            ErrCode errCode = sptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(inoutParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(outParam)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(result)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test
