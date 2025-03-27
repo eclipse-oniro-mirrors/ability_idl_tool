@@ -57,6 +57,8 @@ private:
 
     AutoPtr<SaTypeEmitter> NewListTypeEmitter(AutoPtr<ASTType> astType) const;
 
+    AutoPtr<SaTypeEmitter> NewPtrTypeEmitter(AutoPtr<ASTType> astType, TypeKind kind) const;
+
     AutoPtr<SaTypeEmitter> NewSetTypeEmitter(AutoPtr<ASTType> astType) const;
 
     AutoPtr<SaTypeEmitter> NewEnumTypeEmitter(AutoPtr<ASTType> astType) const;

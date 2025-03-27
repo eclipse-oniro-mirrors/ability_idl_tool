@@ -20,6 +20,14 @@
 
 namespace OHOS {
 namespace Idl {
+
+struct EmitCppPtrVar {
+    const std::string &parcelName;
+    const std::string &name;
+    const std::string &prefix;
+    const std::string &ptrTypeName;
+};
+
 class SaTypeEmitter : public LightRefCountBase {
 public:
     void SetTypeName(const std::string &name);
@@ -41,6 +49,11 @@ public:
 
     virtual void EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix, bool emitType = true) const;
+
+    virtual void EmitCppPtrWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
+        const std::string &prefix, const std::string &ptrTypeName) const;
+
+    virtual void EmitCppPtrReadVar(const EmitCppPtrVar &emitCppPtrVar, StringBuilder &sb, bool emitType = true) const;
 
     virtual void EmitRustReadVar(const std::string &result, const std::string &name, StringBuilder &sb,
         const std::string &prefix) const;

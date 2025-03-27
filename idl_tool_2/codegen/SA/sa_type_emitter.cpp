@@ -75,6 +75,23 @@ void SaTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::str
     (void)emitType;
 }
 
+void SaTypeEmitter::EmitCppPtrWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
+    const std::string &prefix, const std::string &ptrTypeName) const
+{
+    (void)parcelName;
+    (void)name;
+    (void)sb;
+    (void)prefix;
+    (void)ptrTypeName;
+}
+
+void SaTypeEmitter::EmitCppPtrReadVar(const EmitCppPtrVar &emitCppPtrVar, StringBuilder &sb, bool emitType) const
+{
+    (void)emitCppPtrVar;
+    (void)sb;
+    (void)emitType;
+}
+
 void SaTypeEmitter::EmitRustReadVar(const std::string &result, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {

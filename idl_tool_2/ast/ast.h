@@ -35,6 +35,7 @@
 #include "ast/ast_namespace.h"
 #include "ast/ast_node.h"
 #include "ast/ast_pointer_type.h"
+#include "ast/ast_ptr_type.h"
 #include "ast/ast_rawdata_type.h"
 #include "ast/ast_sequenceable_type.h"
 #include "ast/base/ast_short_type.h"

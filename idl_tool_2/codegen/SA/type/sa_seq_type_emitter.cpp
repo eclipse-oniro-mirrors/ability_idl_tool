@@ -122,6 +122,42 @@ void SaSeqTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
     }
 }
 
+void SaSeqTypeEmitter::EmitCppPtrWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
+    const std::string &prefix, const std::string &ptrTypeName) const
+{
+    if (ptrTypeName == "sptr") {
+        sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(%s)) {\n", parcelName.c_str(), name.c_str());
+    } else {
+        sb.Append(prefix).AppendFormat("if (!%sWriteParcelable(%s.get())) {\n", parcelName.c_str(), name.c_str());
+    }
+    if (logOn_) {
+        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+    }
+    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix).Append("}\n");
+}
+
+void SaSeqTypeEmitter::EmitCppPtrReadVar(const EmitCppPtrVar &emitCppPtrVar, StringBuilder &sb, bool emitType) const
+{
+    std::string parcelName = emitCppPtrVar.parcelName;
+    std::string name = emitCppPtrVar.name;
+    std::string prefix = emitCppPtrVar.prefix;
+    std::string ptrTypeName = emitCppPtrVar.ptrTypeName;
+    sb.Append(prefix);
+    if (emitType) {
+        sb.AppendFormat("%s<%s> ", ptrTypeName.c_str(), typeName_.c_str());
+    }
+    sb.AppendFormat("%s = %s<%s>(%sReadParcelable<%s>());\n",
+        name.c_str(), ptrTypeName.c_str(), typeName_.c_str(), parcelName.c_str(), typeName_.c_str());
+    sb.Append(prefix).AppendFormat("if (!%s) {\n", name.c_str());
+    if (logOn_) {
+        sb.Append(prefix).Append(TAB).AppendFormat(
+            "HiLog::Error(LABEL, \"Read [%s] failed!\");\n", typeName_.c_str());
+    }
+    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix).Append("}\n\n");
+}
+
 void SaSeqTypeEmitter::EmitTsWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {

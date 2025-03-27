@@ -44,8 +44,11 @@ enum class TokenType {
     ORDEREDMAP,     // "OrderedMap"
     SMQ,     // "SharedMemQueue"
     CHAR,    // "char"
-    // qualifier
     UNSIGNED, // "unsigned"
+    SHAREDPTR,    // "sharedptr"
+    UNIQUEPTR,    // "uniqueptr"
+    SPTR,         // "sptr"
+    // qualifier
     // custom types
     ENUM,   // "enum"
     STRUCT, // "struct"

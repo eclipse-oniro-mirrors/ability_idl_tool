@@ -37,6 +37,8 @@ public:
 
     static bool CheckMessageOption(std::string &messageOption);
 
+    static bool CheckSAPtrType(AutoPtr<ASTType> type);
+
 private:
     bool CheckIntfSaAst();
 
