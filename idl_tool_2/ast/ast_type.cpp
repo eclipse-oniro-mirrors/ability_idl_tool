@@ -102,6 +102,11 @@ bool ASTType::IsDoubleType()
     return false;
 }
 
+bool ASTType::IsCStringType()
+{
+    return false;
+}
+
 bool ASTType::IsStringType()
 {
     return false;

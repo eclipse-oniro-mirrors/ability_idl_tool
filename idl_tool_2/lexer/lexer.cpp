@@ -27,6 +27,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"short",          TokenType::SHORT        },
     {"int",            TokenType::INT          },
     {"long",           TokenType::LONG         },
+    {"CString",        TokenType::CSTRING      },
     {"String",         TokenType::STRING       },
     {"String16",       TokenType::STRING16     },
     {"U16string",      TokenType::U16STRING    },

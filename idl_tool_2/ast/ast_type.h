@@ -43,6 +43,7 @@ enum class TypeKind {
     TYPE_USHORT,
     TYPE_UINT,
     TYPE_ULONG,
+    TYPE_CSTRING,
     TYPE_STRING,
     TYPE_STRING16,
     TYPE_U16STRING,
@@ -123,6 +124,8 @@ public:
     virtual bool IsFloatType();
 
     virtual bool IsDoubleType();
+
+    virtual bool IsCStringType();
 
     virtual bool IsStringType();
 

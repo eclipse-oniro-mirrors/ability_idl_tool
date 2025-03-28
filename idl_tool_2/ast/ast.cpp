@@ -30,6 +30,7 @@ AST::TypeStringMap AST::basicTypes_ = {
     {"long",           new ASTLongType()        },
     {"float",          new ASTFloatType()       },
     {"double",         new ASTDoubleType()      },
+    {"CString",        new ASTCStringType()     },
     {"String",         new ASTStringType()      },
     {"String16",       new ASTString16Type()    },
     {"U16string",      new ASTU16stringType()   },
