@@ -271,4 +271,37 @@ ErrCode FooProxy::remote_object_test_func(
 
     return ERR_OK;
 }
+
+ErrCode FooProxy::cstring_test_func(
+    const char * inParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteCString(inParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_CSTRING_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    return ERR_OK;
+}
 } // namespace test

@@ -29,6 +29,7 @@ enum class TokenType {
     SHORT,   // "short"
     INT,     // "int"
     LONG,    // "long"
+    CSTRING,  // "const char *"
     STRING,  // "std::string"
     STRING16, // "std::string16"
     U16STRING, // "std::u16string"

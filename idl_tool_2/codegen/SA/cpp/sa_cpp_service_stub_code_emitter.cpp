@@ -357,6 +357,7 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_LONG:
         case TypeKind::TYPE_FLOAT:
         case TypeKind::TYPE_DOUBLE:
+        case TypeKind::TYPE_CSTRING:
         case TypeKind::TYPE_STRING:
         case TypeKind::TYPE_U16STRING:
         case TypeKind::TYPE_SEQUENCEABLE:

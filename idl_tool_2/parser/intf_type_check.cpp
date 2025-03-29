@@ -352,6 +352,7 @@ bool IntfTypeChecker::CheckBasicType(Token token)
         case TokenType::SHORT:
         case TokenType::INT:
         case TokenType::LONG:
+        case TokenType::CSTRING:
         case TokenType::STRING:
         case TokenType::STRING16:
         case TokenType::U16STRING:

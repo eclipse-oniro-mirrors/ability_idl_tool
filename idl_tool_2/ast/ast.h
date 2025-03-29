@@ -40,6 +40,7 @@
 #include "ast/ast_sequenceable_type.h"
 #include "ast/base/ast_short_type.h"
 #include "ast/ast_smq_type.h"
+#include "ast/base/ast_cstring_type.h"
 #include "ast/base/ast_string_type.h"
 #include "ast/base/ast_string16_type.h"
 #include "ast/base/ast_u16string_type.h"
