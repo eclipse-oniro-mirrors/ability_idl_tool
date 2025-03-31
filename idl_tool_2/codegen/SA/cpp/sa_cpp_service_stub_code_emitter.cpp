@@ -80,6 +80,8 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceProxyIpcCapacityValues(StringBuil
 
 void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodDecls(StringBuilder &sb, const std::string &prefix) const
 {
+    sb.Append(prefix).AppendFormat("%s(bool serialInvokeFlag = false): IRemoteStub(serialInvokeFlag){};\n",
+        stubName_.c_str());
     sb.Append(prefix).Append("int32_t OnRemoteRequest(\n");
     sb.Append(prefix + TAB).Append("uint32_t code,\n");
     sb.Append(prefix + TAB).Append("MessageParcel& data,\n");
