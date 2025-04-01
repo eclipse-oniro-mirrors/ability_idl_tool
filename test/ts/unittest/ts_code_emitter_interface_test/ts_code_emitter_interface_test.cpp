@@ -50,7 +50,7 @@ void TsCodeEmitterInterfaceTest::TearDown()
  * EnvConditions: NA
  * CaseDescription: char type exists in .idl(value type).
  */
-HWTEST_F(TsCodeEmitterInterfaceTest, CheckInterfaceType_001, TestSize.Level1)
+HWTEST_F(TsCodeEmitterInterfaceTest, CheckInterfaceType_001, TestSize.Level0)
 {
     EXPECT_EQ(PrepareIdlFile(UNKNOW_TYPE_IDL_NAME.c_str(), UNKNOW_TYPE_CASE1_IDL_CONTENT.c_str()), ERR_OK);
     int argc = 6;
