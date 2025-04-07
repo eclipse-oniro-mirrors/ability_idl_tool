@@ -252,7 +252,13 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
             EmitLocalVariable(param, sb, prefix + TAB);
         }
     }
+    EmitInterfaceStubMethodService(method, sb, prefix, hasOutParameter);
+}
 
+void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodService(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix, bool hasOutParameter) const
+{
+    int paramNumber = static_cast<int>(method->GetParameterNumber());
     EmitInterfaceStubMethodCall(method, sb, prefix);
     AutoPtr<ASTType> returnType = method->GetReturnType();
     TypeKind retTypeKind = returnType->GetTypeKind();
@@ -263,8 +269,10 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
         }
         for (int i = 0; i < paramNumber; i++) {
             AutoPtr<ASTParameter> param = method->GetParameter(i);
+            const std::string name = param->GetName();
             if (param->GetAttribute() & ASTParamAttr::PARAM_OUT) {
                 EmitWriteMethodParameter(param, "reply.", sb, prefix + TAB + TAB);
+                EmitInterfaceStubFdClose(param->GetType()->GetTypeKind(), name, sb, prefix);
             }
         }
         if (retTypeKind != TypeKind::TYPE_VOID) {
@@ -274,12 +282,23 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod>
             }
             typeEmitter->EmitCppWriteVar("reply.", "result", sb, prefix + TAB + TAB);
         }
+        EmitInterfaceStubFdClose(retTypeKind, "result", sb, prefix);
         sb.Append(prefix + TAB).Append("}\n");
     }
     sb.Append(prefix + TAB).Append("return ERR_NONE;\n");
     sb.Append(prefix).Append("}\n");
     if (method->IsMacro()) {
         sb.Append("#endif\n");
+    }
+}
+
+void SaCppServiceStubCodeEmitter::EmitInterfaceStubFdClose(TypeKind kind, const std::string &name, StringBuilder &sb,
+    const std::string &prefix) const
+{
+    if (kind == TypeKind::TYPE_FILEDESCRIPTOR) {
+        sb.Append(prefix + TAB + TAB).AppendFormat("if (%s >= 0) {\n", name.c_str());
+        sb.Append(prefix + TAB + TAB).Append(TAB).AppendFormat("close(%s);\n", name.c_str());
+        sb.Append(prefix + TAB + TAB).Append("}\n");
     }
 }
 

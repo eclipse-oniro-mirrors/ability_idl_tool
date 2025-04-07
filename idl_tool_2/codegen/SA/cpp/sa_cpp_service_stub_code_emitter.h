@@ -46,6 +46,12 @@ private:
 
     void EmitInterfaceStubMethodImpl(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
+    void EmitInterfaceStubMethodService(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix,
+        bool hasOutParameter) const;
+
+    void EmitInterfaceStubFdClose(TypeKind kind, const std::string &name, StringBuilder &sb,
+        const std::string &prefix) const;
+
     void EmitInterfaceStubMethodCall(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
     void EmitLocalVariable(const AutoPtr<ASTParameter> &param, StringBuilder &sb, const std::string &prefix) const;
