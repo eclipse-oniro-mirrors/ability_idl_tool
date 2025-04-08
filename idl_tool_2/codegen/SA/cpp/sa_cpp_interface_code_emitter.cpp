@@ -199,7 +199,10 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
 
 void SaCppInterfaceCodeEmitter::EmitInterfaceBody(StringBuilder &sb, const std::string &prefix) const
 {
-    std::string nameWithoutPath = GetNamespace(interfaceFullName_);
+    std::string nameWithoutPath = ast_->GetInterfaceToken();
+    if (nameWithoutPath.empty()) {
+        nameWithoutPath = GetNamespace(interfaceFullName_);
+    }
     sb.Append(prefix).AppendFormat("DECLARE_INTERFACE_DESCRIPTOR(u\"%s\");\n", nameWithoutPath.c_str());
     sb.Append("\n");
 
