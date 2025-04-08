@@ -49,6 +49,9 @@ enum class TokenType {
     SHAREDPTR,    // "sharedptr"
     UNIQUEPTR,    // "uniqueptr"
     SPTR,         // "sptr"
+    NULL_SHAREDPTR,    // "null_sharedptr"
+    NULL_UNIQUEPTR,    // "null_uniqueptr"
+    NULL_SPTR,         // "null_sptr"
     // qualifier
     // custom types
     ENUM,   // "enum"

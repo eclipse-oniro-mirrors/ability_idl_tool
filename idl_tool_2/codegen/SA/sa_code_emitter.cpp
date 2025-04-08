@@ -243,6 +243,9 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::NewTypeEmitter(AutoPtr<ASTType> astType) c
         case TypeKind::TYPE_SHAREDPTR:
         case TypeKind::TYPE_UNIQUEPTR:
         case TypeKind::TYPE_SPTR:
+        case TypeKind::TYPE_NULL_SHAREDPTR:
+        case TypeKind::TYPE_NULL_UNIQUEPTR:
+        case TypeKind::TYPE_NULL_SPTR:
             return NewPtrTypeEmitter(astType, astType->GetTypeKind());
         case TypeKind::TYPE_ENUM:
             return NewEnumTypeEmitter(astType);

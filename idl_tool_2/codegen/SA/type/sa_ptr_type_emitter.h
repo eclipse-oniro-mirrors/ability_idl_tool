@@ -24,12 +24,27 @@ class SaPtrTypeEmitter : public SaTypeEmitter {
 public:
     explicit SaPtrTypeEmitter(TypeKind kind) : typeKind_(kind)
     {
-        if (kind == TypeKind::TYPE_SHAREDPTR) {
-            ptrTypeName_ = "std::shared_ptr";
-        } else if (kind == TypeKind::TYPE_UNIQUEPTR) {
-            ptrTypeName_ = "std::unique_ptr";
-        } else if (kind == TypeKind::TYPE_SPTR) {
-            ptrTypeName_ = "sptr";
+        if (kind == TypeKind::TYPE_NULL_SHAREDPTR || kind == TypeKind::TYPE_NULL_UNIQUEPTR ||
+            kind == TypeKind::TYPE_NULL_SPTR) {
+            supportNullPtr_ = true;
+        } else {
+            supportNullPtr_ = false;
+        }
+        switch (kind) {
+            case TypeKind::TYPE_SHAREDPTR:
+            case TypeKind::TYPE_NULL_SHAREDPTR:
+                ptrTypeName_ = "std::shared_ptr";
+                return;
+            case TypeKind::TYPE_UNIQUEPTR:
+            case TypeKind::TYPE_NULL_UNIQUEPTR:
+                ptrTypeName_ = "std::unique_ptr";
+                return;
+            case TypeKind::TYPE_SPTR:
+            case TypeKind::TYPE_NULL_SPTR:
+                ptrTypeName_ = "sptr";
+                return;
+            default:
+                return;
         }
     }
 
@@ -54,6 +69,7 @@ protected:
 private:
     TypeKind typeKind_;
     std::string ptrTypeName_;
+    bool supportNullPtr_;
 };
 } // namespace Idl
 } // namespace OHOS

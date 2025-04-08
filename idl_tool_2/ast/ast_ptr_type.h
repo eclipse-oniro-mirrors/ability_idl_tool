@@ -25,15 +25,33 @@ class ASTPtrType : public ASTType {
 public:
     ASTPtrType(TokenType type) : ASTType(false), elementType_()
     {
-        if (type == TokenType::SHAREDPTR) {
-            typeKind_ = TypeKind::TYPE_SHAREDPTR;
-            ptrTypeName_ = "std::shared_ptr";
-        } else if (type == TokenType::UNIQUEPTR) {
-            typeKind_ = TypeKind::TYPE_UNIQUEPTR;
-            ptrTypeName_ = "std::unique_ptr";
-        } else if (type == TokenType::SPTR) {
-            typeKind_ = TypeKind::TYPE_SPTR;
-            ptrTypeName_ = "sptr";
+        switch (type) {
+            case TokenType::SHAREDPTR:
+                typeKind_ = TypeKind::TYPE_SHAREDPTR;
+                ptrTypeName_ = "std::shared_ptr";
+                return;
+            case TokenType::UNIQUEPTR:
+                typeKind_ = TypeKind::TYPE_UNIQUEPTR;
+                ptrTypeName_ = "std::unique_ptr";
+                return;
+            case TokenType::SPTR:
+                typeKind_ = TypeKind::TYPE_SPTR;
+                ptrTypeName_ = "sptr";
+                return;
+            case TokenType::NULL_SHAREDPTR:
+                typeKind_ = TypeKind::TYPE_NULL_SHAREDPTR;
+                ptrTypeName_ = "std::nullshared_ptr";
+                return;
+            case TokenType::NULL_UNIQUEPTR:
+                typeKind_ = TypeKind::TYPE_NULL_UNIQUEPTR;
+                ptrTypeName_ = "std::nullunique_ptr";
+                return;
+            case TokenType::NULL_SPTR:
+                typeKind_ = TypeKind::TYPE_NULL_SPTR;
+                ptrTypeName_ = "nullsptr";
+                return;
+            default:
+                return;
         }
     }
 

@@ -1008,7 +1008,9 @@ AutoPtr<ASTType> Parser::ParseMethodReturnType()
     if (IntfTypeChecker::CheckBasicType(token) || IntfTypeChecker::CheckUserDefType(token) ||
         token.kind == TokenType::LIST || token.kind == TokenType::SET || token.kind == TokenType::MAP ||
         token.kind == TokenType::ORDEREDMAP || token.kind == TokenType::SMQ ||
-        token.kind == TokenType::SHAREDPTR || token.kind == TokenType::UNIQUEPTR || token.kind == TokenType::SPTR) {
+        token.kind == TokenType::SHAREDPTR || token.kind == TokenType::UNIQUEPTR || token.kind == TokenType::SPTR ||
+        token.kind == TokenType::NULL_SHAREDPTR || token.kind == TokenType::NULL_UNIQUEPTR ||
+        token.kind == TokenType::NULL_SPTR) {
         return ParseType();
     }
     return nullptr;
@@ -1292,6 +1294,9 @@ AutoPtr<ASTType> Parser::ParseType()
             case TokenType::SHAREDPTR:
             case TokenType::UNIQUEPTR:
             case TokenType::SPTR:
+            case TokenType::NULL_SHAREDPTR:
+            case TokenType::NULL_UNIQUEPTR:
+            case TokenType::NULL_SPTR:
                 type = ParsePtrType(token.kind);
                 break;
             default:
