@@ -393,6 +393,9 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_SHAREDPTR:
         case TypeKind::TYPE_UNIQUEPTR:
         case TypeKind::TYPE_SPTR:
+        case TypeKind::TYPE_NULL_SHAREDPTR:
+        case TypeKind::TYPE_NULL_UNIQUEPTR:
+        case TypeKind::TYPE_NULL_SPTR:
         case TypeKind::TYPE_UINT:
         case TypeKind::TYPE_ULONG:
         case TypeKind::TYPE_USHORT:

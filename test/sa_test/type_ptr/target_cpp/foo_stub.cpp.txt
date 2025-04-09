@@ -34,12 +34,10 @@ int32_t FooStub::OnRemoteRequest(
             if (!inParam) {
                 return ERR_INVALID_DATA;
             }
-
             std::shared_ptr<myseq> inoutParam = std::shared_ptr<myseq>(data.ReadParcelable<myseq>());
             if (!inoutParam) {
                 return ERR_INVALID_DATA;
             }
-
             std::shared_ptr<myseq> outParam;
             std::shared_ptr<myseq> result;
             ErrCode errCode = sharedptr_seq_func(inParam, inoutParam, outParam, result);
@@ -64,12 +62,10 @@ int32_t FooStub::OnRemoteRequest(
             if (!inParam) {
                 return ERR_INVALID_DATA;
             }
-
             std::unique_ptr<myseq> inoutParam = std::unique_ptr<myseq>(data.ReadParcelable<myseq>());
             if (!inoutParam) {
                 return ERR_INVALID_DATA;
             }
-
             std::unique_ptr<myseq> outParam;
             std::unique_ptr<myseq> result;
             ErrCode errCode = uniqueptr_seq_func(inParam, inoutParam, outParam, result);
@@ -94,12 +90,10 @@ int32_t FooStub::OnRemoteRequest(
             if (!inParam) {
                 return ERR_INVALID_DATA;
             }
-
             sptr<myseq> inoutParam = sptr<myseq>(data.ReadParcelable<myseq>());
             if (!inoutParam) {
                 return ERR_INVALID_DATA;
             }
-
             sptr<myseq> outParam;
             sptr<myseq> result;
             ErrCode errCode = sptr_seq_func(inParam, inoutParam, outParam, result);
@@ -115,6 +109,168 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 if (!reply.WriteParcelable(result)) {
                     return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_NULLSHAREDPTR_SEQ_FUNC: {
+            std::shared_ptr<myseq> inParam;
+            if (data.ReadBool()) {
+                inParam = std::shared_ptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            std::shared_ptr<myseq> inoutParam;
+            if (data.ReadBool()) {
+                inoutParam = std::shared_ptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inoutParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            std::shared_ptr<myseq> outParam;
+            std::shared_ptr<myseq> result;
+            ErrCode errCode = nullsharedptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                bool inoutParamValid = inoutParam != nullptr;
+                if (!reply.WriteBool(inoutParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParamValid) {
+                    if (!reply.WriteParcelable(inoutParam.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool outParamValid = outParam != nullptr;
+                if (!reply.WriteBool(outParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (outParamValid) {
+                    if (!reply.WriteParcelable(outParam.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool resultValid = result != nullptr;
+                if (!reply.WriteBool(resultValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (resultValid) {
+                    if (!reply.WriteParcelable(result.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_NULLUNIQUEPTR_SEQ_FUNC: {
+            std::unique_ptr<myseq> inParam;
+            if (data.ReadBool()) {
+                inParam = std::unique_ptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            std::unique_ptr<myseq> inoutParam;
+            if (data.ReadBool()) {
+                inoutParam = std::unique_ptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inoutParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            std::unique_ptr<myseq> outParam;
+            std::unique_ptr<myseq> result;
+            ErrCode errCode = nulluniqueptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                bool inoutParamValid = inoutParam != nullptr;
+                if (!reply.WriteBool(inoutParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParamValid) {
+                    if (!reply.WriteParcelable(inoutParam.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool outParamValid = outParam != nullptr;
+                if (!reply.WriteBool(outParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (outParamValid) {
+                    if (!reply.WriteParcelable(outParam.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool resultValid = result != nullptr;
+                if (!reply.WriteBool(resultValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (resultValid) {
+                    if (!reply.WriteParcelable(result.get())) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_NULLSPTR_SEQ_FUNC: {
+            sptr<myseq> inParam;
+            if (data.ReadBool()) {
+                inParam = sptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            sptr<myseq> inoutParam;
+            if (data.ReadBool()) {
+                inoutParam = sptr<myseq>(data.ReadParcelable<myseq>());
+                if (!inoutParam) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+
+            sptr<myseq> outParam;
+            sptr<myseq> result;
+            ErrCode errCode = nullsptr_seq_func(inParam, inoutParam, outParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                bool inoutParamValid = inoutParam != nullptr;
+                if (!reply.WriteBool(inoutParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParamValid) {
+                    if (!reply.WriteParcelable(inoutParam)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool outParamValid = outParam != nullptr;
+                if (!reply.WriteBool(outParamValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (outParamValid) {
+                    if (!reply.WriteParcelable(outParam)) {
+                        return ERR_INVALID_DATA;
+                    }
+                }
+                bool resultValid = result != nullptr;
+                if (!reply.WriteBool(resultValid)) {
+                    return ERR_INVALID_DATA;
+                }
+                if (resultValid) {
+                    if (!reply.WriteParcelable(result)) {
+                        return ERR_INVALID_DATA;
+                    }
                 }
             }
             return ERR_NONE;

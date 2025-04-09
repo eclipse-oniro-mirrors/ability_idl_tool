@@ -36,8 +36,7 @@ public:
     void EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix, bool emitType) const override;
 
-    void EmitCppPtrWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
-        const std::string &prefix, const std::string &ptrTypeName) const override;
+    void EmitCppPtrWriteVar(const EmitCppPtrVar &emitCppPtrVar, StringBuilder &sb) const override;
 
     void EmitCppPtrReadVar(const EmitCppPtrVar &emitCppPtrVar, StringBuilder &sb, bool emitType) const override;
 

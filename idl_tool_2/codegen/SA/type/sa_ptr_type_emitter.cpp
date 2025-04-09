@@ -44,13 +44,14 @@ std::string SaPtrTypeEmitter::EmitCppType(TypeMode mode) const
 void SaPtrTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix) const
 {
-    elementEmitter_->EmitCppPtrWriteVar(parcelName, name, sb, prefix, ptrTypeName_);
+    EmitCppPtrVar emitCppPtrVar = { parcelName, name, prefix, ptrTypeName_, supportNullPtr_ };
+    elementEmitter_->EmitCppPtrWriteVar(emitCppPtrVar, sb);
 }
 
 void SaPtrTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
     const std::string &prefix, bool emitType) const
 {
-    EmitCppPtrVar emitCppPtrVar = { parcelName, name, prefix, ptrTypeName_ };
+    EmitCppPtrVar emitCppPtrVar = { parcelName, name, prefix, ptrTypeName_, supportNullPtr_ };
     elementEmitter_->EmitCppPtrReadVar(emitCppPtrVar, sb, emitType);
 }
 } // namespace Idl
