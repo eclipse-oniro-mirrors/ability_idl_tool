@@ -703,7 +703,7 @@ void Parser::ParseAttrUnitIpccode(AttrSet &attrs, Token &token)
     if (end != token.value.size()) {
         LogError(__func__, __LINE__, token, StringHelper::Format("%s is illegal ipccode value", token.value.c_str()));
     } else {
-        if (ipcCodeValue < MIN_TRANSACTION_ID || ipcCodeValue > MAX_TRANSACTION_ID) {
+        if (ipcCodeValue < 0 || ipcCodeValue > MAX_TRANSACTION_ID) {
             LogError(__func__, __LINE__, token, StringHelper::Format("ipccode %d is out of range [%d, %d]",
                 ipcCodeValue, MIN_TRANSACTION_ID, MAX_TRANSACTION_ID));
         } else {
