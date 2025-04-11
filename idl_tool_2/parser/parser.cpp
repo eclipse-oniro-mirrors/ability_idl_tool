@@ -194,26 +194,33 @@ bool Parser::ParsePackage()
 bool Parser::ParserPackageInfo(const std::string &packageName)
 {
     std::cmatch result;
-    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
-        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE) || (result.size() < RE_PACKAGE_NUM)) {
-            return false;
-        }
+    try {
+        if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
+            if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE) || (result.size() < RE_PACKAGE_NUM)) {
+                return false;
+            }
 
-        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
-        size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
-        size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
-        ast_->SetVersion(majorVersion, minorVersion);
-    } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
-        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SA)) {
-            return false;
+            ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
+            size_t majorVersion = std::stoul(result.str(RE_PACKAGE_MAJOR_VER_INDEX));
+            size_t minorVersion = std::stoul(result.str(RE_PACKAGE_MINOR_VER_INDEX));
+            ast_->SetVersion(majorVersion, minorVersion);
+        } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
+            if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SA)) {
+                return false;
+            }
+            ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
+        } else {
+            if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SM)) {
+                return false;
+            }
+            ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
         }
-        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
-    } else {
-        if (!std::regex_match(packageName.c_str(), result, RE_PACKAGE_OR_IMPORT_SM)) {
-            return false;
-        }
-        ast_->SetPackageName(result.str(RE_PACKAGE_INDEX));
+    } catch (...) {
+        LogError(__func__, __LINE__, StringHelper::Format(
+            "Unknown error while parsing package '%s'", packageName.c_str()));
+        return false;
     }
+
     return true;
 }
 
@@ -661,7 +668,7 @@ void Parser::ParseAttrUnitCustomMsgOption(AttrSet &attrs, Token &token)
     token = lexer_.PeekToken();
     messageOption_ = "";
     while (token.kind != TokenType::BRACKETS_RIGHT && token.kind != TokenType::COMMA &&
-           token.kind != TokenType::SEMICOLON && token.kind != TokenType::END_OF_FILE) {
+        token.kind != TokenType::SEMICOLON && token.kind != TokenType::END_OF_FILE) {
         if (token.value == "and" || token.kind == TokenType::AND || token.kind == TokenType::OR) {
             messageOption_ += " " + token.value + " ";
         } else {
@@ -874,7 +881,13 @@ void Parser::CheckIpcCodeValue(
         return;
     }
     if (method->HasIpcCode()) {
-        ipcCodeValue = std::stoi(method->GetIpcCodeStr());
+        try {
+            ipcCodeValue = std::stoi(method->GetIpcCodeStr());
+        } catch (...) {
+            LogError(__func__, __LINE__, StringHelper::Format(
+                "Unknown error while converting ipccode string '%s'", method->GetIpcCodeStr().c_str()));
+            return;
+        }
     }
     if (ipcCodeValue > MAX_TRANSACTION_ID) {
         LogError(__func__, __LINE__, StringHelper::Format("the ipccode %d is out of range [%d, %d]",
@@ -2129,8 +2142,12 @@ AutoPtr<ASTExpr> Parser::ParseEnumExpr()
 
 bool Parser::CheckNumber(const std::string& integerVal) const
 {
-    return std::regex_match(integerVal, RE_BIN_NUM) || std::regex_match(integerVal, RE_OCT_NUM)||
-        std::regex_match(integerVal, RE_DEC_NUM) || std::regex_match(integerVal, RE_HEX_NUM);
+    try {
+        return std::regex_match(integerVal, RE_BIN_NUM) || std::regex_match(integerVal, RE_OCT_NUM) ||
+            std::regex_match(integerVal, RE_DEC_NUM) || std::regex_match(integerVal, RE_HEX_NUM);
+    } catch (...) {
+        return false;
+    }
 }
 
 bool Parser::CheckType(const Token &token, const AutoPtr<ASTType> &type)
@@ -2228,22 +2245,29 @@ bool Parser::CheckPackageName(const std::string &filePath, const std::string &pa
 bool Parser::CheckImport(const Token &token)
 {
     std::string importName = token.value;
-    if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
-        if (!std::regex_match(importName.c_str(), RE_IMPORT)) {
-            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
-            return false;
+    try {
+        if (Options::GetInstance().GetInterfaceType() == InterfaceType::HDI) {
+            if (!std::regex_match(importName.c_str(), RE_IMPORT)) {
+                LogError(__func__, __LINE__, StringHelper::Format("invalid import name '%s'", importName.c_str()));
+                return false;
+            }
+        } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
+            if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SA)) {
+                LogError(__func__, __LINE__, StringHelper::Format("invalid import name '%s'", importName.c_str()));
+                return false;
+            }
+        } else {
+            if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SM)) {
+                LogError(__func__, __LINE__, StringHelper::Format("invalid import name '%s'", importName.c_str()));
+                return false;
+            }
         }
-    } else if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
-        if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SA)) {
-            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
-            return false;
-        }
-    } else {
-        if (!std::regex_match(importName.c_str(), RE_PACKAGE_OR_IMPORT_SM)) {
-            LogError(__func__, __LINE__, StringHelper::Format("invalid impirt name '%s'", importName.c_str()));
-            return false;
-        }
+    } catch (...) {
+        LogError(__func__, __LINE__, StringHelper::Format(
+            "Unknown error when matching import name '%s'", importName.c_str()));
+        return false;
     }
+
     std::string idlFilePath = File::CanonicalPath(
         Options::GetInstance().GetImportFilePath(importName, token.location.filePath));
     if (!File::CheckValid(idlFilePath)) {
