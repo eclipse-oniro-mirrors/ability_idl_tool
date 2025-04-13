@@ -31,7 +31,7 @@ public:
 
     virtual void SetNamespace(ASTNamespace* nspace);
 
-    virtual AutoPtr<ASTNamespace> GetNamespace();
+    virtual ASTNamespace* GetNamespace();
 
     virtual String GetSignature() = 0;
 
@@ -71,7 +71,7 @@ public:
 
 protected:
     String name_;
-    AutoPtr<ASTNamespace> namespace_;
+    ASTNamespace* namespace_;
 };
 } // namespace Idl
 } // namespace OHOS

@@ -32,7 +32,7 @@ void ASTType::SetNamespace(ASTNamespace* nspace)
     namespace_ = nspace;
 }
 
-AutoPtr<ASTNamespace> ASTType::GetNamespace()
+ASTNamespace* ASTType::GetNamespace()
 {
     return namespace_;
 }
