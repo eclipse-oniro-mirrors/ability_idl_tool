@@ -290,7 +290,11 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
 void CppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
     StringBuilder &sb, const AutoPtr<ASTStructType> &type) const
 {
-    std::string typeName = GetTypeEmitter(type.Get())->EmitCppType();
+    AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(type.Get());
+    if (typeEmitter == nullptr) {
+        return;
+    }
+    std::string typeName = typeEmitter->EmitCppType();
     std::string objName("dataBlock");
 
     sb.AppendFormat("bool %sBlockUnmarshalling(OHOS::MessageParcel& data, %s& %s)\n", type->GetName().c_str(),
@@ -317,7 +321,10 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
                 sb.Append("\n");
             }
 
-            AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(memberType);
+            typeEmitter = GetTypeEmitter(memberType);
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             if (memberType->GetTypeKind() == TypeKind::TYPE_UNION) {
                 std::string cpName = StringHelper::Format("%sCp", memberName.c_str());
                 typeEmitter->EmitCppUnMarshalling("data", cpName, sb, TAB);
