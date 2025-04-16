@@ -535,6 +535,16 @@ void CppClientProxyCodeEmitter::EmitGetInstanceMethodInitProxyImpl(StringBuilder
     sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
     sb.Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
+    sb.Append(prefix + TAB + TAB + TAB);
+    sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%u).", \
+        ast_->GetMinorVer());
+    sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
+    sb.Append(prefix + TAB).Append("}\n\n");
+
     sb.Append(prefix + TAB).AppendFormat("return %s;\n", objName.c_str());
     sb.Append(prefix).Append("}\n");
 }
@@ -601,22 +611,42 @@ void CppClientProxyCodeEmitter::EmitProxyPassthroughtLoadImpl(StringBuilder &sb,
         sb.Append(prefix + TAB).AppendFormat("std::string desc = Str16ToStr8(%s::GetDescriptor());\n",
             EmitDefinitionByInterface(interface_, interfaceName_).c_str());
     }
-    sb.Append(prefix + TAB).Append("void *impl = LoadHdiImpl(desc.c_str(), ");
-    sb.AppendFormat("serviceName == \"%s\" ? \"service\" : serviceName.c_str());\n", FileName(implName_).c_str());
-    sb.Append(prefix + TAB).Append("if (impl == nullptr) {\n");
-    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"failed to load hdi impl %{public}s\", desc.data());\n");
-    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
-    sb.Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).AppendFormat("std::string svrName = (serviceName == \"%s\") ? \"service\" : "
+        "serviceName;\n", FileName(implName_).c_str());
 
     if (Options::GetInstance().GetSystemLevel() == SystemLevel::LITE) {
-        sb.Append(prefix + TAB).AppendFormat("return std::shared_ptr<%s>(reinterpret_cast<%s *>(impl));\n",
-            EmitDefinitionByInterface(interface_, interfaceName_).c_str(),
+        sb.Append(prefix + TAB).AppendFormat("std::shared_ptr<%s> impl = \\\n", \
             EmitDefinitionByInterface(interface_, interfaceName_).c_str());
     } else {
-        sb.Append(prefix + TAB).AppendFormat("return reinterpret_cast<%s *>(impl);\n",
+        sb.Append(prefix + TAB).AppendFormat("sptr<%s> impl = \\\n", \
             EmitDefinitionByInterface(interface_, interfaceName_).c_str());
     }
-    sb.Append(prefix).Append("}\n\n");
+    sb.Append(prefix + TAB + TAB).AppendFormat("reinterpret_cast<%s *>(LoadHdiImpl(desc.c_str(), svrName.c_str()));\n",
+        EmitDefinitionByInterface(interface_, interfaceName_).c_str());
+    sb.Append(prefix + TAB).Append("if (impl == nullptr) {\n");
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"failed to load hdi impl %{public}s\", desc.data());\n");
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n");
+    std::string serMajorName = "serMajorVer";
+    std::string serMinorName = "serMinorVer";
+    sb.Append(prefix + TAB).AppendFormat("uint32_t %s = 0;\n", serMajorName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("uint32_t %s = 0;\n", serMinorName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("int32_t %s = impl->GetVersion(%s, %s);\n",
+        HdiTypeEmitter::errorCodeName_.c_str(), serMajorName.c_str(), serMinorName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s: get version failed!\", __func__);\n");
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+    sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! version of service:%u.%u");
+    sb.AppendFormat(", version of client:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
+    sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n");
+    sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
+    sb.Append(prefix + TAB + TAB + TAB).AppendFormat("\"client minor version(%u) should be less or equal to "
+        "implementation minor version(%%u).", ast_->GetMinorVer());
+    sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+    sb.Append(prefix + TAB).Append("return impl;\n").Append(prefix).Append("}\n\n");
 }
 
 void CppClientProxyCodeEmitter::EmitProxyMethodImpls(StringBuilder &sb, const std::string &prefix)
@@ -713,8 +743,7 @@ void CppClientProxyCodeEmitter::EmitProxyCastFromMethodImplTemplate(StringBuilde
         HdiTypeEmitter::errorCodeName_.c_str(), serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:get version failed!\", __func__);\n");
-    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
-    sb.Append(prefix + TAB).Append("}\n\n");
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
 
     sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
@@ -724,8 +753,15 @@ void CppClientProxyCodeEmitter::EmitProxyCastFromMethodImplTemplate(StringBuilde
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
     sb.Append(prefix + TAB).Append("}\n\n");
 
-    sb.Append(prefix + TAB).Append("return proxy;\n");
-    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
+    sb.Append(prefix + TAB + TAB + TAB);
+    sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%u).", \
+        ast_->GetMinorVer());
+    sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).Append("return proxy;\n").Append(prefix).Append("}\n");
 }
 
 void CppClientProxyCodeEmitter::EmitProxyMethodImpl(const AutoPtr<ASTInterfaceType> interface,

@@ -84,6 +84,7 @@ void CClientProxyCodeEmitter::EmitPassthroughProxyInclusions(StringBuilder &sb)
     HeaderFile::HeaderFileSet headerFiles;
     headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, EmitVersionHeaderName(interfaceName_));
     headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "hdi_support");
+    headerFiles.emplace(HeaderFileType::OTHER_MODULES_HEADER_FILE, "hdf_core_log");
 
     for (const auto &file : headerFiles) {
         sb.AppendFormat("%s\n", file.ToString().c_str());
@@ -757,34 +758,45 @@ void CClientProxyCodeEmitter::EmitProxyCheckVersion(const std::string &clientObj
     sb.Append(prefix).AppendFormat("uint32_t %s = 0;\n", serMajorName.c_str());
     sb.Append(prefix).AppendFormat("uint32_t %s = 0;\n", serMinorName.c_str());
     sb.Append(prefix).AppendFormat("int32_t %s = %s->GetVersion(%s, &%s, &%s);\n",
-        HdiTypeEmitter::errorCodeName_.c_str(), clientObjName.c_str(), clientObjName.c_str(), serMajorName.c_str(),
-        serMinorName.c_str());
+        HdiTypeEmitter::errorCodeName_.c_str(), clientObjName.c_str(),
+        clientObjName.c_str(), serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s: get version failed!\", __func__);\n");
-    if (mode_ == GenMode::KERNEL) {
+    if (mode_ == GenMode::KERNEL || interface_->IsCallback()) {
         sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
-    } else if (interface_->IsCallback()) {
-        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
+    } else if (mode_ == GenMode::PASSTHROUGH || loadVersionCheck_) {
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, true);\n", interfaceName_.c_str(), clientObjName.c_str());
     } else {
-        sb.Append(prefix + TAB).AppendFormat("%sRelease(false, %s);\n", interfaceName_.c_str(), clientObjName.c_str());
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, false);\n", interfaceName_.c_str(), clientObjName.c_str());
     }
 
-    sb.Append(prefix + TAB).Append("return NULL;\n");
-    sb.Append(prefix).Append("}\n\n");
+    sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n\n");
     sb.Append(prefix).AppendFormat("if (%s != %s) {\n", serMajorName.c_str(), majorVerName_.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
     sb.Append("version of service:%u.%u, version of client:%u.%u\", __func__,\n");
     sb.Append(prefix + TAB + TAB).AppendFormat("%s, %s, %s, %s);\n", serMajorName.c_str(), serMinorName.c_str(),
         majorVerName_.c_str(), minorVerName_.c_str());
-    if (mode_ == GenMode::KERNEL) {
+    if (mode_ == GenMode::KERNEL || interface_->IsCallback()) {
         sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
-    } else if (interface_->IsCallback()) {
-        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
+    } else if (mode_ == GenMode::PASSTHROUGH || loadVersionCheck_) {
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, true);\n", interfaceName_.c_str(), clientObjName.c_str());
     } else {
-        sb.Append(prefix + TAB).AppendFormat("%sRelease(false, %s);\n", interfaceName_.c_str(), clientObjName.c_str());
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, false);\n", interfaceName_.c_str(), clientObjName.c_str());
     }
-    sb.Append(prefix + TAB).Append("return NULL;\n");
-    sb.Append(prefix).Append("}\n");
+    sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n\n");
+    sb.Append(prefix).AppendFormat("if (%s < %s) {\n", serMinorName.c_str(), minorVerName_.c_str());
+    sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
+    sb.Append("client minor version(%u) should be less \"\n");
+    sb.Append(prefix + TAB + TAB).Append("\"or equal to server minor version(%u).");
+    sb.AppendFormat("\", __func__, %s, %s);\n", minorVerName_.c_str(), serMinorName.c_str());
+    if (mode_ == GenMode::KERNEL || interface_->IsCallback()) {
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
+    } else if (mode_ == GenMode::PASSTHROUGH || loadVersionCheck_) {
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, true);\n", interfaceName_.c_str(), clientObjName.c_str());
+    } else {
+        sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, false);\n", interfaceName_.c_str(), clientObjName.c_str());
+    }
+    sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n");
 }
 
 void CClientProxyCodeEmitter::EmitProxyReleaseMethodImpl(StringBuilder &sb) const
@@ -826,8 +838,39 @@ void CClientProxyCodeEmitter::EmitProxyLoadOrUnLoadHdiImpl(const std::string &se
     sb.Append(prefix + TAB + TAB).AppendFormat("%s = \"service\";\n", instName.c_str());
     sb.Append(prefix + TAB).Append("}\n");
     if (isLoad) {
-        sb.Append(prefix + TAB).AppendFormat("return LoadHdiImpl(%s, %s);\n",
-            EmitDescMacroName().c_str(), instName.c_str());
+        std::string objName = "inst";
+        std::string serMajorName = "serMajorVer";
+        std::string serMinorName = "serMinorVer";
+
+        sb.Append(prefix + TAB).AppendFormat("struct %s *inst = LoadHdiImpl(%s, %s);\n",
+            interfaceName_.c_str(), EmitDescMacroName().c_str(), instName.c_str());
+        sb.Append(prefix + TAB).Append("if (inst == NULL) {\n");
+        sb.Append(prefix + TAB + TAB).AppendFormat("HDF_LOGE(\"%%{public}s, failed to load hdi "
+            "impl %%{public}s!\", __func__, %s);\n", EmitDescMacroName().c_str());
+
+        sb.Append(prefix + TAB + TAB).Append("return NULL;\n").Append(prefix + TAB).Append("}\n");
+        sb.Append(prefix + TAB).Append("if (inst->GetVersion == NULL) {\n");
+
+        sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s: "
+            "GetVersion is not implemented!\", __func__);\n");
+        if (mode_ == GenMode::KERNEL) {
+            sb.Append(prefix + TAB + TAB).AppendFormat("%sRelease(%s);\n", \
+                interfaceName_.c_str(), objName.c_str());
+        } else if (interface_->IsCallback()) {
+            sb.Append(prefix + TAB + TAB).AppendFormat("%sRelease(%s);\n", \
+                interfaceName_.c_str(), objName.c_str());
+        } else if (mode_ == GenMode::PASSTHROUGH || isLoad) {
+            sb.Append(prefix + TAB + TAB).AppendFormat("%sRelease(%s, true);\n", \
+                interfaceName_.c_str(), objName.c_str());
+        } else {
+            sb.Append(prefix + TAB + TAB).AppendFormat("%sRelease(%s, false);\n", \
+                interfaceName_.c_str(), objName.c_str());
+        }
+        sb.Append(prefix + TAB + TAB).Append("return NULL;\n").Append(prefix + TAB).Append("}\n");
+        loadVersionCheck_ = true;
+        EmitProxyCheckVersion(objName, serMajorName, serMinorName, sb, prefix + TAB);
+        loadVersionCheck_ = false;
+        sb.Append(prefix + TAB).Append("return inst;\n");
     } else {
         sb.Append(prefix + TAB).AppendFormat("UnloadHdiImpl(%s, %s, instance);\n",
             EmitDescMacroName().c_str(), instName.c_str());
