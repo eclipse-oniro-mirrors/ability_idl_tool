@@ -22,7 +22,7 @@ namespace OHOS {
 namespace Idl {
 class CClientProxyCodeEmitter : public HDICCodeEmitter {
 public:
-    CClientProxyCodeEmitter() : HDICCodeEmitter() {}
+    CClientProxyCodeEmitter() : HDICCodeEmitter(), loadVersionCheck_(false) {}
 
     ~CClientProxyCodeEmitter() override = default;
 
@@ -137,6 +137,8 @@ private:
     void EmitUtilMethods(StringBuilder &sb, bool isDecl) override;
 
     std::vector<std::string> freeObjStatements_;
+
+    mutable bool loadVersionCheck_;
 };
 } // namespace Idl
 } // namespace OHOS
