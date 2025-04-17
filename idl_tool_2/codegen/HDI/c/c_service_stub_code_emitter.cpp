@@ -324,6 +324,9 @@ void CServiceStubCodeEmitter::EmitServiceStubMethodImpl(
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             typeEmitter->EmitCWriteVar(TypeMode::PARAM_OUT, param->GetName(), FINISHED_LABEL, sb, prefix + TAB);
             sb.Append("\n");
         }
@@ -455,9 +458,9 @@ void CServiceStubCodeEmitter::EmitReadStubMethodParameter(const AutoPtr<ASTParam
         sb.Append(prefix + TAB).Append("return HDF_ERR_INVALID_PARAM;\n");
         sb.Append(prefix).Append("}\n");
     } else if (type->GetTypeKind() == TypeKind::TYPE_ARRAY || type->GetTypeKind() == TypeKind::TYPE_LIST ||
-               type->GetTypeKind() == TypeKind::TYPE_FILEDESCRIPTOR ||
-               type->GetTypeKind() == TypeKind::TYPE_NATIVE_BUFFER || type->GetTypeKind() == TypeKind::TYPE_ENUM ||
-               type->GetTypeKind() == TypeKind::TYPE_INTERFACE) {
+            type->GetTypeKind() == TypeKind::TYPE_FILEDESCRIPTOR ||
+            type->GetTypeKind() == TypeKind::TYPE_NATIVE_BUFFER || type->GetTypeKind() == TypeKind::TYPE_ENUM ||
+            type->GetTypeKind() == TypeKind::TYPE_INTERFACE) {
         typeEmitter->EmitCStubReadVar(param->GetName(), gotoLabel, sb, prefix);
     } else {
         std::string name = StringHelper::Format("&%s", param->GetName().c_str());
