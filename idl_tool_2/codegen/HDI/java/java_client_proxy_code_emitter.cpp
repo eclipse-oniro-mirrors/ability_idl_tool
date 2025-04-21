@@ -210,6 +210,9 @@ void JavaClientProxyCodeEmitter::EmitProxyMethodBody(
         AutoPtr<ASTParameter> param = method->GetParameter(i);
         if (param->GetAttribute() == ASTParamAttr::PARAM_OUT) {
             AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(param->GetType());
+            if (typeEmitter == nullptr) {
+                continue;
+            }
             typeEmitter->EmitJavaReadVar("reply", param->GetName(), sb, prefix + TAB + TAB);
         }
     }
