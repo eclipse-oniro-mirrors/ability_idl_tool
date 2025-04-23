@@ -1028,37 +1028,343 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_INT_2_TEST_FUNC_IN_ORDEREDMAP_INT_VECTOR_INT_VECTOR_OUT_ORDEREDMAP_INT_VECTOR_INT_VECTOR_INOUT_ORDEREDMAP_INT_VECTOR_INT_VECTOR_OUT_ORDEREDMAP_INT_VECTOR_INT_VECTOR: {
+            std::map<std::vector<int32_t>, std::vector<int32_t>> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            for (int32_t i81 = 0; i81 < inParamSize; ++i81) {
+                std::vector<int32_t> key81;
+                int32_t key81Size = data.ReadInt32();
+                if (key81Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                for (int32_t i82 = 0; i82 < key81Size; ++i82) {
+                    int32_t value82 = data.ReadInt32();
+                    key81.push_back(value82);
+                }
+                std::vector<int32_t> value81;
+                int32_t value81Size = data.ReadInt32();
+                if (value81Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                for (int32_t i83 = 0; i83 < value81Size; ++i83) {
+                    int32_t value83 = data.ReadInt32();
+                    value81.push_back(value83);
+                }
+                inParam[key81] = value81;
+            }
+            std::map<std::vector<int32_t>, std::vector<int32_t>> outParam;
+            std::map<std::vector<int32_t>, std::vector<int32_t>> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            for (int32_t i84 = 0; i84 < inoutParamSize; ++i84) {
+                std::vector<int32_t> key84;
+                int32_t key84Size = data.ReadInt32();
+                if (key84Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                for (int32_t i85 = 0; i85 < key84Size; ++i85) {
+                    int32_t value85 = data.ReadInt32();
+                    key84.push_back(value85);
+                }
+                std::vector<int32_t> value84;
+                int32_t value84Size = data.ReadInt32();
+                if (value84Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+                for (int32_t i86 = 0; i86 < value84Size; ++i86) {
+                    int32_t value86 = data.ReadInt32();
+                    value84.push_back(value86);
+                }
+                inoutParam[key84] = value84;
+            }
+            std::map<std::vector<int32_t>, std::vector<int32_t>> result;
+            ErrCode errCode = int_2_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it87 = outParam.begin(); it87 != outParam.end(); ++it87) {
+                    if ((it87->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it87->first).size());
+                    for (auto it88 = (it87->first).begin(); it88 != (it87->first).end(); ++it88) {
+                        if (!reply.WriteInt32((*it88))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                    if ((it87->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it87->second).size());
+                    for (auto it89 = (it87->second).begin(); it89 != (it87->second).end(); ++it89) {
+                        if (!reply.WriteInt32((*it89))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                }
+                if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(inoutParam.size());
+                for (auto it90 = inoutParam.begin(); it90 != inoutParam.end(); ++it90) {
+                    if ((it90->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it90->first).size());
+                    for (auto it91 = (it90->first).begin(); it91 != (it90->first).end(); ++it91) {
+                        if (!reply.WriteInt32((*it91))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                    if ((it90->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it90->second).size());
+                    for (auto it92 = (it90->second).begin(); it92 != (it90->second).end(); ++it92) {
+                        if (!reply.WriteInt32((*it92))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                }
+                if (result.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(result.size());
+                for (auto it93 = result.begin(); it93 != result.end(); ++it93) {
+                    if ((it93->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it93->first).size());
+                    for (auto it94 = (it93->first).begin(); it94 != (it93->first).end(); ++it94) {
+                        if (!reply.WriteInt32((*it94))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                    if ((it93->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    reply.WriteInt32((it93->second).size());
+                    for (auto it95 = (it93->second).begin(); it95 != (it93->second).end(); ++it95) {
+                        if (!reply.WriteInt32((*it95))) {
+                            return ERR_INVALID_DATA;
+                        }
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_ORDERED_MAP_TEST_FUNC_IN_ORDEREDMAP_INT_ORDEREDMAP_INT_VECTOR_INT_VECTOR_OUT_ORDEREDMAP_INT_ORDEREDMAP_INT_VECTOR_INT_VECTOR_INOUT_ORDEREDMAP_INT_ORDEREDMAP_INT_VECTOR_INT_VECTOR_OUT_ORDEREDMAP_INT_ORDEREDMAP_INT_VECTOR_INT_VECTOR: {
+            std::map<int32_t, std::map<std::vector<int32_t>, std::vector<int32_t>>> inParam;
+            int32_t inParamSize = data.ReadInt32();
+            for (int32_t i96 = 0; i96 < inParamSize; ++i96) {
+                int32_t key96 = data.ReadInt32();
+                std::map<std::vector<int32_t>, std::vector<int32_t>> value96;
+                int32_t value96Size = data.ReadInt32();
+                for (int32_t i97 = 0; i97 < value96Size; ++i97) {
+                    std::vector<int32_t> key97;
+                    int32_t key97Size = data.ReadInt32();
+                    if (key97Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    for (int32_t i98 = 0; i98 < key97Size; ++i98) {
+                        int32_t value98 = data.ReadInt32();
+                        key97.push_back(value98);
+                    }
+                    std::vector<int32_t> value97;
+                    int32_t value97Size = data.ReadInt32();
+                    if (value97Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    for (int32_t i99 = 0; i99 < value97Size; ++i99) {
+                        int32_t value99 = data.ReadInt32();
+                        value97.push_back(value99);
+                    }
+                    value96[key97] = value97;
+                }
+                inParam[key96] = value96;
+            }
+            std::map<int32_t, std::map<std::vector<int32_t>, std::vector<int32_t>>> outParam;
+            std::map<int32_t, std::map<std::vector<int32_t>, std::vector<int32_t>>> inoutParam;
+            int32_t inoutParamSize = data.ReadInt32();
+            for (int32_t i100 = 0; i100 < inoutParamSize; ++i100) {
+                int32_t key100 = data.ReadInt32();
+                std::map<std::vector<int32_t>, std::vector<int32_t>> value100;
+                int32_t value100Size = data.ReadInt32();
+                for (int32_t i101 = 0; i101 < value100Size; ++i101) {
+                    std::vector<int32_t> key101;
+                    int32_t key101Size = data.ReadInt32();
+                    if (key101Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    for (int32_t i102 = 0; i102 < key101Size; ++i102) {
+                        int32_t value102 = data.ReadInt32();
+                        key101.push_back(value102);
+                    }
+                    std::vector<int32_t> value101;
+                    int32_t value101Size = data.ReadInt32();
+                    if (value101Size > static_cast<int32_t>(VECTOR_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+                    for (int32_t i103 = 0; i103 < value101Size; ++i103) {
+                        int32_t value103 = data.ReadInt32();
+                        value101.push_back(value103);
+                    }
+                    value100[key101] = value101;
+                }
+                inoutParam[key100] = value100;
+            }
+            std::map<int32_t, std::map<std::vector<int32_t>, std::vector<int32_t>>> result;
+            ErrCode errCode = OrderedMap_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(outParam.size());
+                for (auto it104 = outParam.begin(); it104 != outParam.end(); ++it104) {
+                    if (!reply.WriteInt32((it104->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if ((it104->second).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+
+                    reply.WriteInt32((it104->second).size());
+                    for (auto it105 = (it104->second).begin(); it105 != (it104->second).end(); ++it105) {
+                        if ((it105->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it105->first).size());
+                        for (auto it106 = (it105->first).begin(); it106 != (it105->first).end(); ++it106) {
+                            if (!reply.WriteInt32((*it106))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                        if ((it105->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it105->second).size());
+                        for (auto it107 = (it105->second).begin(); it107 != (it105->second).end(); ++it107) {
+                            if (!reply.WriteInt32((*it107))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                    }
+                }
+                if (inoutParam.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(inoutParam.size());
+                for (auto it108 = inoutParam.begin(); it108 != inoutParam.end(); ++it108) {
+                    if (!reply.WriteInt32((it108->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if ((it108->second).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+
+                    reply.WriteInt32((it108->second).size());
+                    for (auto it109 = (it108->second).begin(); it109 != (it108->second).end(); ++it109) {
+                        if ((it109->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it109->first).size());
+                        for (auto it110 = (it109->first).begin(); it110 != (it109->first).end(); ++it110) {
+                            if (!reply.WriteInt32((*it110))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                        if ((it109->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it109->second).size());
+                        for (auto it111 = (it109->second).begin(); it111 != (it109->second).end(); ++it111) {
+                            if (!reply.WriteInt32((*it111))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                    }
+                }
+                if (result.size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                    return ERR_INVALID_DATA;
+                }
+
+                reply.WriteInt32(result.size());
+                for (auto it112 = result.begin(); it112 != result.end(); ++it112) {
+                    if (!reply.WriteInt32((it112->first))) {
+                        return ERR_INVALID_DATA;
+                    }
+                    if ((it112->second).size() > static_cast<size_t>(MAP_MAX_SIZE)) {
+                        return ERR_INVALID_DATA;
+                    }
+
+                    reply.WriteInt32((it112->second).size());
+                    for (auto it113 = (it112->second).begin(); it113 != (it112->second).end(); ++it113) {
+                        if ((it113->first).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it113->first).size());
+                        for (auto it114 = (it113->first).begin(); it114 != (it113->first).end(); ++it114) {
+                            if (!reply.WriteInt32((*it114))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                        if ((it113->second).size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {
+                            return ERR_INVALID_DATA;
+                        }
+                        reply.WriteInt32((it113->second).size());
+                        for (auto it115 = (it113->second).begin(); it115 != (it113->second).end(); ++it115) {
+                            if (!reply.WriteInt32((*it115))) {
+                                return ERR_INVALID_DATA;
+                            }
+                        }
+                    }
+                }
+            }
+            return ERR_NONE;
+        }
         case IFooIpcCode::COMMAND_IREMOTE_OBJECT_TEST_FUNC: {
             std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> inParam;
             int32_t inParamSize = data.ReadInt32();
-            for (int32_t i81 = 0; i81 < inParamSize; ++i81) {
-                sptr<IRemoteObject> key81 = data.ReadRemoteObject();
-                if (!key81) {
+            for (int32_t i116 = 0; i116 < inParamSize; ++i116) {
+                sptr<IRemoteObject> key116 = data.ReadRemoteObject();
+                if (!key116) {
                     return ERR_INVALID_DATA;
                 }
 
-                sptr<IRemoteObject> value81 = data.ReadRemoteObject();
-                if (!value81) {
+                sptr<IRemoteObject> value116 = data.ReadRemoteObject();
+                if (!value116) {
                     return ERR_INVALID_DATA;
                 }
 
-                inParam[key81] = value81;
+                inParam[key116] = value116;
             }
             std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> outParam;
             std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> inoutParam;
             int32_t inoutParamSize = data.ReadInt32();
-            for (int32_t i82 = 0; i82 < inoutParamSize; ++i82) {
-                sptr<IRemoteObject> key82 = data.ReadRemoteObject();
-                if (!key82) {
+            for (int32_t i117 = 0; i117 < inoutParamSize; ++i117) {
+                sptr<IRemoteObject> key117 = data.ReadRemoteObject();
+                if (!key117) {
                     return ERR_INVALID_DATA;
                 }
 
-                sptr<IRemoteObject> value82 = data.ReadRemoteObject();
-                if (!value82) {
+                sptr<IRemoteObject> value117 = data.ReadRemoteObject();
+                if (!value117) {
                     return ERR_INVALID_DATA;
                 }
 
-                inoutParam[key82] = value82;
+                inoutParam[key117] = value117;
             }
             std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> result;
             ErrCode errCode = IRemoteObject_test_func(inParam, outParam, inoutParam, result);
@@ -1071,11 +1377,11 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(outParam.size());
-                for (auto it83 = outParam.begin(); it83 != outParam.end(); ++it83) {
-                    if (!reply.WriteRemoteObject((it83->first))) {
+                for (auto it118 = outParam.begin(); it118 != outParam.end(); ++it118) {
+                    if (!reply.WriteRemoteObject((it118->first))) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRemoteObject((it83->second))) {
+                    if (!reply.WriteRemoteObject((it118->second))) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -1084,11 +1390,11 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(inoutParam.size());
-                for (auto it84 = inoutParam.begin(); it84 != inoutParam.end(); ++it84) {
-                    if (!reply.WriteRemoteObject((it84->first))) {
+                for (auto it119 = inoutParam.begin(); it119 != inoutParam.end(); ++it119) {
+                    if (!reply.WriteRemoteObject((it119->first))) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRemoteObject((it84->second))) {
+                    if (!reply.WriteRemoteObject((it119->second))) {
                         return ERR_INVALID_DATA;
                     }
                 }
@@ -1097,11 +1403,11 @@ int32_t FooStub::OnRemoteRequest(
                 }
 
                 reply.WriteInt32(result.size());
-                for (auto it85 = result.begin(); it85 != result.end(); ++it85) {
-                    if (!reply.WriteRemoteObject((it85->first))) {
+                for (auto it120 = result.begin(); it120 != result.end(); ++it120) {
+                    if (!reply.WriteRemoteObject((it120->first))) {
                         return ERR_INVALID_DATA;
                     }
-                    if (!reply.WriteRemoteObject((it85->second))) {
+                    if (!reply.WriteRemoteObject((it120->second))) {
                         return ERR_INVALID_DATA;
                     }
                 }
