@@ -136,14 +136,14 @@ ErrCode ListenAbility::rawdata_test_func(
 {
     const char sampleData[] = "Hello, world!";
     const char sampleData2[] = "world!";
-    outParam.data = sampleData;
     outParam.size = sizeof(sampleData);
+    outParam.RawDataCpy(sampleData);
     HiLog::Info(LABEL, "[idlTest] inout rawdata service, said: %{public}u, %{public}s",
         inoutParam.size, static_cast<const char*>(inoutParam.data));
-    inoutParam.data = sampleData2;
     inoutParam.size = sizeof(sampleData2);
-    funcResult.data = sampleData2;
+    inoutParam.RawDataCpy(sampleData2);
     funcResult.size = sizeof(sampleData2);
+    funcResult.RawDataCpy(sampleData2);
     HiLog::Info(LABEL, "[idlTest] in rawdata service, said: %{public}u, %{public}s",
         inParam.size, static_cast<const char*>(inParam.data));
     return ERR_OK;

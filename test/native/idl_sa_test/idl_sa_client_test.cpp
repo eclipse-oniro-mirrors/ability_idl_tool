@@ -63,10 +63,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaProxyTest001, TestSize.Level1)
     std::cout << "IdlSaProxyTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     // sync func
     double retDouble;
@@ -94,10 +91,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaProxyTest002, TestSize.Level1)
     std::cout << "IdlSaProxyTest002 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     // async func
     int32_t ret = client_->LoadSystemAbility(3);
@@ -119,10 +113,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaRemoveDeathTest001, TestSize.Level1)
     std::cout << "IdlSaRemoveDeathTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     auto cb = [](bool status) {
         std::cout << "LoadSystemAbility cb status: " << status << std::endl;
@@ -149,10 +140,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaLoadTest001, TestSize.Level1)
     std::cout << "IdlSaLoadTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     int32_t ret = client_->LoadSystemAbility(3);
     EXPECT_EQ(ret, ERR_OK);
@@ -171,10 +159,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaLoadTest002, TestSize.Level1)
     std::cout << "IdlSaLoadTest002 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     auto cb = [](bool status) {
         std::cout << "LoadSystemAbility cb status: " << status << std::endl;
@@ -197,10 +182,7 @@ HWTEST_F(IdlSaUnitTest, IdlOverLoadTest001, TestSize.Level1)
     std::cout << "IdlOverLoadTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     std::unordered_map<int32_t, int32_t> outApp;
     int32_t outParam = 9;
@@ -228,10 +210,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaCustomTest001, TestSize.Level1)
     std::cout << "IdlSaCustomTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     FooEnum in1 = FooEnum::ENUM_ONE, out1 = FooEnum::ENUM_ONE, inout1 = FooEnum::ENUM_ONE, result1 = FooEnum::ENUM_ONE;
     int32_t ret = client_->enum_test_func(in1, out1, inout1, result1);
@@ -288,21 +267,20 @@ HWTEST_F(IdlSaUnitTest, IdlRawDataTest001, TestSize.Level1)
     std::cout << "IdlRawDataTest001 start" << std::endl;
 
     ListenAbilityClient* client_ = new ListenAbilityClient(1494);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     MyRawdata in, out, inout, result;
     const char sampleData[] = "Hello!";
-    out.data = sampleData;
-    out.size = sizeof(sampleData);
-    in.data = sampleData;
+
     in.size = sizeof(sampleData);
-    inout.data = sampleData;
+    in.RawDataCpy(sampleData);
+    out.size = sizeof(sampleData);
+    out.RawDataCpy(sampleData);
     inout.size = sizeof(sampleData);
+    inout.RawDataCpy(sampleData);
     int32_t ret = client_->rawdata_test_func(in, out, inout, result);
     std::cout << "TestRawData" << std::endl;
+
     EXPECT_STREQ(static_cast<const char*>(out.data), "Hello, world!");
     EXPECT_EQ(out.size, 14);
     EXPECT_STREQ(static_cast<const char*>(inout.data), "world!");
