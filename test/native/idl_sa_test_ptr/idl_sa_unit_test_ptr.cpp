@@ -63,10 +63,7 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest001, TestSize.Level1)
     std::cout << "IdlSaProxyPtrTest001 start" << std::endl;
 
     FooPtrClient* client_ = new FooPtrClient(TEST_SAID);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     // sync func
     MySeq* inParamTmp = new MySeq();
@@ -79,10 +76,8 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest001, TestSize.Level1)
     std::shared_ptr<MySeq> funcResult;
     int32_t ret = client_->sharedptr_seq_func(inParam, inoutParam, outParam, funcResult);
     std::cout << "sharedptr_seq_func client" << std::endl;
-    if (outParam == nullptr || funcResult == nullptr) {
-        std::cout << "outParam or funcResult is null" << std::endl;
-        return;
-    }
+    ASSERT_NE(outParam, nullptr);
+    ASSERT_NE(funcResult, nullptr);
     EXPECT_EQ(TEST_IN_SIZE_TWENTY, outParam->size);
     EXPECT_EQ(TEST_IN_SIZE_FIFTY, funcResult->size);
     EXPECT_EQ(ret, ERR_OK);
@@ -99,10 +94,7 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest002, TestSize.Level1)
     std::cout << "IdlSaProxyPtrTest002 start" << std::endl;
 
     FooPtrClient* client_ = new FooPtrClient(TEST_SAID);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     // sync func
     MySeq* inParamTmp = new MySeq();
@@ -115,10 +107,8 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest002, TestSize.Level1)
     std::unique_ptr<MySeq> funcResult;
     int32_t ret = client_->uniqueptr_seq_func(inParam, inoutParam, outParam, funcResult);
     std::cout << "sharedptr_seq_func client" << std::endl;
-    if (outParam == nullptr || funcResult == nullptr) {
-        std::cout << "outParam or funcResult is null" << std::endl;
-        return;
-    }
+    ASSERT_NE(outParam, nullptr);
+    ASSERT_NE(funcResult, nullptr);
     EXPECT_EQ(TEST_IN_SIZE_TWENTY, outParam->size);
     EXPECT_EQ(TEST_IN_SIZE_FIFTY, funcResult->size);
     EXPECT_EQ(ret, ERR_OK);
@@ -135,10 +125,7 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest003, TestSize.Level1)
     std::cout << "IdlSaProxyPtrTest003 start" << std::endl;
 
     FooPtrClient* client_ = new FooPtrClient(TEST_SAID);
-    if (client_ == nullptr) {
-        std::cout << "client is nullptr" << std::endl;
-        return;
-    }
+    ASSERT_NE(client_, nullptr);
 
     // sync func
     MySeq* inParamTmp = new MySeq();
@@ -151,10 +138,8 @@ HWTEST_F(IdlSaUnitTestPtr, IdlSaProxyPtrTest003, TestSize.Level1)
     sptr<MySeq> funcResult;
     int32_t ret = client_->sptr_seq_func(inParam, inoutParam, outParam, funcResult);
     std::cout << "sharedptr_seq_func client" << std::endl;
-    if (outParam == nullptr || funcResult == nullptr) {
-        std::cout << "outParam or funcResult is null" << std::endl;
-        return;
-    }
+    ASSERT_NE(outParam, nullptr);
+    ASSERT_NE(funcResult, nullptr);
     EXPECT_EQ(TEST_IN_SIZE_TWENTY, outParam->size);
     EXPECT_EQ(TEST_IN_SIZE_FIFTY, funcResult->size);
     EXPECT_EQ(ret, ERR_OK);

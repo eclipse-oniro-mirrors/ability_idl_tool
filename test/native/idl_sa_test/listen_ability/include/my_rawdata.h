@@ -13,15 +13,52 @@
  * limitations under the License.
  */
 
-#ifndef MY_RAWDATA
-#define MY_RAWDATA
+#ifndef MY_RAWDATA_H
+#define MY_RAWDATA_H
+
+#include <cstdlib>
+#include <securec.h>
 
 namespace OHOS {
 class MyRawdata {
 public:
     uint32_t size;
     const void* data;
+
+    MyRawdata() : size(0), data(nullptr) {}
+
+    ~MyRawdata()
+    {
+        if (data != nullptr) {
+            free(const_cast<void*>(data));
+            data = nullptr;
+        }
+    }
+
+    int32_t RawDataCpy(const void* readdata)
+    {
+        if (readdata == nullptr || size == 0) {
+            return -1;
+        }
+
+        void* newData = malloc(size);
+        if (newData == nullptr) {
+            return -1;
+        }
+
+        if (memcpy_s(newData, size, readdata, size) != EOK) {
+            free(newData);
+            return -1;
+        }
+
+        if (data != nullptr) {
+            free(const_cast<void*>(data));
+        }
+
+        data = newData;
+        return 0;
+    }
 };
 } // namespace OHOS
 
-#endif // MY_RAWDATA
+#endif // MY_RAWDATA_H
