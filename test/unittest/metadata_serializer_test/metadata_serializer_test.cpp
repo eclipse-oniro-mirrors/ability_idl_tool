@@ -262,5 +262,22 @@ HWTEST_F(MetadataSerializerUnitTest, MetadataSerializerUnitTest_1500, Function |
 
     metadataSerializer->DeserializeMetaType(nullptr);
 }
+
+/*
+ * @tc.name: MetadataSerializerUnitTest_1600
+ * @tc.desc: test DeserializeMetaType in MetadataSerializerUnitTest.
+ * @tc.type: FUNC
+ * @tc.require: issue
+ */
+HWTEST_F(MetadataSerializerUnitTest, MetadataSerializerUnitTest_1600, Function | MediumTest | Level1)
+{
+    uintptr_t baseAddr = 0;
+    std::shared_ptr<MetadataSerializer> metadataSerializer = std::make_shared<MetadataSerializer>(baseAddr);
+    ASSERT_NE(nullptr, metadataSerializer);
+
+    int32_t value = 0;
+    const void* addr = &value;
+    metadataSerializer->DeserializeAdjust(addr);
+}
 } // namespace idl
 } // namespace OHOS
