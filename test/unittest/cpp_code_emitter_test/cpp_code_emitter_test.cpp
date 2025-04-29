@@ -17,6 +17,7 @@
 #define private public
 #define protected public
 #include "codegen/cpp_code_emitter.h"
+#include "codegen/rust_code_emitter.h"
 #include "metadata/meta_component.h"
 #include "metadata/meta_type.h"
 #include "util/string_builder.h"
@@ -1452,6 +1453,85 @@ HWTEST_F(CppCodeEmitterUnitTest, GetFilePath_test_0010, TestSize.Level1)
     EXPECT_STREQ(result, "/fpnp");
 
     delete [] codeEmitter.metaInterface_;
+}
+
+/**
+ * @tc.name: RustCodeEmitter_test_0010
+ * @tc.desc: Verify the RustCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, RustCodeEmitter_test_0010, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    RustCodeEmitter* codeEmitter = new RustCodeEmitter(&mc);
+
+    MetaType *mt = new MetaType;
+    int32_t indexes = 0;
+    mt->nestedTypeIndexes_ = &indexes;
+    mt->index_ = 0;
+
+    mc.types_ = new MetaType *[1];
+    mc.types_[0] = mt;
+    mc.sequenceables_ = new MetaSequenceable*[1];
+    char mseqName[] = "MetaSequenceable";
+    MetaSequenceable mp;
+    mp.name_ = mseqName;
+    mc.sequenceables_[0] = &mp;
+    mc.interfaces_ = new MetaInterface*[1];
+    char miName[] = "MetaInterface";
+    MetaInterface mi;
+    mi.name_ = miName;
+    mc.interfaces_[0] = &mi;
+
+    mt->kind_ = TypeKind::Boolean;
+    String result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "bool");
+
+    mt->kind_ = TypeKind::Byte;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "i8");
+
+    mt->kind_ = TypeKind::Short;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "i16");
+
+    mt->kind_ = TypeKind::Integer;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "i32");
+
+    mt->kind_ = TypeKind::Long;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "i64");
+
+    mt->kind_ = TypeKind::Float;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "f32");
+
+    mt->kind_ = TypeKind::Double;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "f64");
+
+    mt->kind_ = TypeKind::String;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "String");
+
+    mt->kind_ = TypeKind::Sequenceable;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "MetaSequenceable");
+
+    mt->kind_ = TypeKind::Interface;
+    result = codeEmitter->ConvertType(mt, false);
+    EXPECT_STREQ(result, "MetaInterface");
+
+    delete codeEmitter;
+    delete mt;
+    delete [] mc.types_;
+    delete [] mc.sequenceables_;
+    delete [] mc.interfaces_;
 }
 } // namespace idl
 } // namespace OHOS
