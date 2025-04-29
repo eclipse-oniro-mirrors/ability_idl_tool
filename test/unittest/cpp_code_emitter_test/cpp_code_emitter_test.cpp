@@ -1152,7 +1152,7 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceProxyCppFile_test_001, TestSize.Le
     codeEmitter.SetHitraceTag(HitraceTag);
     codeEmitter.SetHitraceOn(true);
     codeEmitter.SetLogTag(logTag);
-
+    codeEmitter.SetLogOn(true);
     /**
      * @tc.steps: step4. Execute functions that require validation.
      * @tc.expected: Can obtain the correct hitraceOn_.
@@ -1195,7 +1195,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceMemberVariables_test_001, TestSize
      */
     codeEmitter.SetDomainId(domainId);
     codeEmitter.SetLogTag(logTag);
-
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
     /**
      * @tc.steps: step3. Execute functions that require validation.
      * @tc.expected: Can obtain the correct logTag_.
@@ -1227,7 +1228,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceDBinderInclusions_test_001, TestSi
      */
     codeEmitter.SetDomainId(domainId);
     codeEmitter.SetLogTag(logTag);
-
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
     /**
      * @tc.steps: step3. Execute functions that require validation.
      * @tc.expected: Can obtain the correct logTag_.
@@ -1281,13 +1283,15 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceStubCppFile_test_001, TestSize.Lev
      */
     codeEmitter.SetDomainId(domainId);
     codeEmitter.SetLogTag(logTag);
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
 
     /**
      * @tc.steps: step4. Execute functions that require validation.
      * @tc.expected: Can obtain the correct hitraceOn_.
      */
     codeEmitter.EmitInterfaceStubCppFile();
-    EXPECT_FALSE(codeEmitter.hitraceOn_);
+    EXPECT_TRUE(codeEmitter.hitraceOn_);
 
     for (int i = 0; i < 6; i++) {
         delete codeEmitter.metaInterface_->methods_[i];
@@ -1328,6 +1332,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_009, TestSize.Level1)
     mt.kind_ = TypeKind::Integer;
     codeEmitter.SetDomainId(domainId);
     codeEmitter.SetLogTag(logTag);
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
     codeEmitter.EmitWriteVariable(parcelName, name, &mt, sb, prefix);
 
     mt.kind_ = TypeKind::Long;
@@ -1377,6 +1383,8 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_0010, TestSize.Level1)
     mt.kind_ = TypeKind::Integer;
     codeEmitter.SetDomainId(domainId);
     codeEmitter.SetLogTag(logTag);
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
     codeEmitter.metaComponent_->types_ = new MetaType *[3];
     for (int i = 0; i < 3; ++i) {
         codeEmitter.metaComponent_->types_[i] = new MetaType();
@@ -1395,6 +1403,55 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitWriteVariable_test_0010, TestSize.Level1)
         delete codeEmitter.metaComponent_->types_[j];
     }
     delete[] codeEmitter.metaComponent_->types_;
+}
+
+/**
+ * @tc.name: GetFilePath_test_0010
+ * @tc.desc: Verify the GetFilePath function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, GetFilePath_test_0010, TestSize.Level1)
+{
+    /**
+     * @tc.steps: step1. Initialization parameters.
+     */
+    MetaComponent mc;
+    CppCodeEmitter codeEmitter(&mc);
+
+    StringBuilder sb;
+    String prefix = "const";
+    codeEmitter.deathRecipientName_ = String("deathName");
+    codeEmitter.interfaceName_ = "ability_interface";
+    codeEmitter.proxyName_ = "ability_proxy";
+    codeEmitter.metaInterface_ = new MetaInterface[13];
+    ASSERT_NE(codeEmitter.metaInterface_, nullptr);
+    codeEmitter.metaInterface_->methodNumber_ = 0;
+    codeEmitter.SetLogOn(true);
+    codeEmitter.SetHitraceOn(true);
+
+    codeEmitter.EmitInterfaceProxyDeathRecipient(sb, prefix);
+    codeEmitter.EmitInterfaceProxyConstructor(sb, prefix);
+    codeEmitter.EmitInterfaceProxyUnRegisterDeathRecipient(sb, prefix);
+    codeEmitter.EmitInterfaceProxyRegisterDeathRecipient(sb, prefix);
+    codeEmitter.EmitInterfaceProxyInHeaderFile(sb);
+    codeEmitter.EmitInterfaceStubInHeaderFile(sb);
+
+    String fpnp = "path a";
+    String result = codeEmitter.GetFilePath(fpnp);
+    EXPECT_EQ(result.string(), nullptr);
+    result = codeEmitter.GetFilePathNoPoint(fpnp);
+    EXPECT_EQ(result.string(), nullptr);
+
+    fpnp = "../fpnp";
+    result = codeEmitter.GetFilePath(fpnp);
+    EXPECT_STREQ(result, ".");
+    result = codeEmitter.GetFilePathNoPoint(fpnp);
+    EXPECT_STREQ(result, "");
+    result = codeEmitter.GetNamespace(fpnp);
+    EXPECT_STREQ(result, "/fpnp");
+
+    delete [] codeEmitter.metaInterface_;
 }
 } // namespace idl
 } // namespace OHOS
