@@ -110,7 +110,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyAddCacheApi(StringBuilder &s
         int32_t cacheableTime = method->GetCacheableTime();
         if (cacheableTime != 0) {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
-                .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), %d000);\n",
+                .Append(prefix + TAB).AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s), %d);\n",
                 interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str(), cacheableTime);
         } else {
             sb.Append(prefix).Append("ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n")
