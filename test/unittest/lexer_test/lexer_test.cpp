@@ -236,6 +236,9 @@ HWTEST_F(LexerUnitTest, TokenToCharTest_1100, Function | MediumTest | Level1)
     Token token = Token::IDENTIFIER;
     int result = imageLexer.TokenToChar(token);
     EXPECT_EQ(result, -1);
+    token = Token::SEMICOLON;
+    result = imageLexer.TokenToChar(token);
+    EXPECT_EQ(result, ';');
 }
 
 /*
@@ -303,6 +306,57 @@ HWTEST_F(LexerUnitTest, strToIntTest_0100, Function | MediumTest | Level1)
         EXPECT_EQ(result, true);
         EXPECT_EQ(number, 0);
     }
+}
+
+/*
+ * @tc.name: DumpTokenSecondTest_1100
+ * @tc.desc: test the token in Lexer's DumpTokenSecond function is other.
+ * @tc.type: FUNC
+ * @tc.require:
+ */
+HWTEST_F(LexerUnitTest, DumpTokenSecondTest_1100, Function | MediumTest | Level1)
+{
+    Lexer* lexer = new Lexer();
+    lexer->currentToken_ = Token::DOUBLE;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("double"));
+    lexer->currentToken_ = Token::END_OF_FILE;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("eof"));
+    lexer->currentToken_ = Token::FLOAT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("float"));
+    lexer->currentToken_ = Token::IDENTIFIER;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String());
+    lexer->currentToken_ = Token::IN;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("in"));
+    lexer->currentToken_ = Token::INOUT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("inout"));
+    lexer->currentToken_ = Token::INTEGER;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("int"));
+    lexer->currentToken_ = Token::LIST;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("List"));
+    lexer->currentToken_ = Token::LONG;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("long"));
+    lexer->currentToken_ = Token::MAP;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("Map"));
+    lexer->currentToken_ = Token::ONEWAY;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("oneway"));
+    lexer->currentToken_ = Token::OUT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("out"));
+    lexer->currentToken_ = Token::SEQUENCEABLE;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("sequenceable"));
+    lexer->currentToken_ = Token::PARENTHESES_LEFT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("("));
+    lexer->currentToken_ = Token::PARENTHESES_RIGHT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String(")"));
+    lexer->currentToken_ = Token::SEMICOLON;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String(";"));
+    lexer->currentToken_ = Token::SHORT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("short"));
+    lexer->currentToken_ = Token::STRING;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("String"));
+    lexer->currentToken_ = Token::ANGLE_BRACKETS_RIGHT;
+    EXPECT_STREQ(lexer->DumpTokenSecond(), String("unknown token"));
+
+    delete lexer;
 }
 } // namespace idl
 } // namespace OHOS
