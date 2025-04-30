@@ -219,5 +219,31 @@ HWTEST_F(MetadataDumperUnitTest, MetadataDumperUnitTest_1700, Function | MediumT
     mt = {TypeKind::Unknown, 0, 1, new (std::nothrow) int(0)};
     metadataDumper->DumpMetaType(&mt);
 }
+
+/*
+ * @tc.name: MetadataDumperUnitTest_0200
+ * @tc.desc: test DumpMetaParameter in MetadataDumperUnitTest.
+ * @tc.type: FUNC
+ * @tc.require: issue
+ */
+HWTEST_F(MetadataDumperUnitTest, MetadataDumperUnitTest_0200, Function | MediumTest | Level1)
+{
+    MetaComponent* mc = new MetaComponent;
+    std::shared_ptr<MetadataDumper> metadataDumper = std::make_shared<MetadataDumper>(mc);
+    ASSERT_NE(nullptr, metadataDumper);
+
+    String prefix = "this is prefix";
+    mc->magic_ = 1;
+    mc->size_ = 10;
+    const char* name = "DumpMetaComponent Test";
+    mc->name_ = (char*)name;
+    mc->typeNumber_ = 0;
+    mc->namespaceNumber_ = 0;
+    mc->sequenceableNumber_ = 0;
+    mc->interfaceNumber_ = 0;
+    metadataDumper->Dump(prefix);
+
+    delete mc;
+}
 } // namespace idl
 } // namespace OHOS
