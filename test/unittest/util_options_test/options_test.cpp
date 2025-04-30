@@ -13,9 +13,14 @@
  * limitations under the License.
  */
 
+#include <cstdint>
 #include <gtest/gtest.h>
 #define private public
 #define protected public
+#include "ast/ast_module.h"
+#include "parser/lexer.h"
+#include "parser/parser.h"
+#include "util/file.h"
 #include "util/logger.h"
 #include "util/options.h"
 #undef protected
@@ -101,7 +106,7 @@ HWTEST_F(OptionsUnitTest, OptionsUnitTest_0102, Function | MediumTest | Level1)
 {
     std::string strings[] = {"./idl", "--help", "--version", "-c", "-dump-ast",
         "-dump-metadata", "-s", "-gen-rust", "-gen-cpp", "-gen-ts", "-d",
-        "-log-domainid", "-log-tag", "-t"};
+        "-log-domainid", "-log-tag", "-t", "-others"};
     int32_t count = sizeof(strings) / sizeof(strings[0]);
     char **argv = new char *[count];
     for (int32_t i = 0; i < count; i++) {
@@ -109,17 +114,47 @@ HWTEST_F(OptionsUnitTest, OptionsUnitTest_0102, Function | MediumTest | Level1)
     }
 
     Options options(count, argv);
+    options.ParseSub(String("-gen-cpp"), count, argv);
     options.Parse(count, argv);
     EXPECT_TRUE(argv != nullptr);
 }
 
 HWTEST_F(OptionsUnitTest, OptionsUnitTest_0103, Function | MediumTest | Level1)
 {
-    Logger::SetLevel(Logger::DEBUG);
+    Logger::SetLevel(Logger::VERBOSE);
     Logger::D("OptionsUnitTest", "idl log ut test::DEBUG");
     Logger::E("OptionsUnitTest", "idl log ut test::ERROR");
     Logger::V("OptionsUnitTest", "idl log ut test::VERBOSE");
-    EXPECT_EQ(Logger::level_, Logger::DEBUG);
+    EXPECT_EQ(Logger::level_, Logger::VERBOSE);
+}
+
+HWTEST_F(OptionsUnitTest, OptionsUnitTest_0104, Function | MediumTest | Level1)
+{
+    File file(String(), File::WRITE);
+    EXPECT_EQ(file.Skip(0), false);
+    EXPECT_EQ(file.Reset(), false);
+    EXPECT_EQ(file.WriteData(nullptr, 0), true);
+    EXPECT_EQ(file.ReadData(nullptr, 0), true);
+    int32_t count = 0;
+    void* data = &count;
+    EXPECT_EQ(file.ReadData(data, INT16_MAX), false);
+}
+
+HWTEST_F(OptionsUnitTest, OptionsUnitTest_0105, Function | MediumTest | Level1)
+{
+    std::string strings[] = {"-t", "-log-domainid", "-log-tag"};
+    int32_t count = sizeof(strings) / sizeof(strings[0]);
+    char **argv = new char *[count];
+    for (int32_t i = 0; i < count; i++) {
+        argv[i] = const_cast<char*>(strings[i].c_str());
+    }
+
+    Options options(count, argv);
+    Parser* parser = new Parser(options);
+    parser->module_ = new ASTModule();
+    EXPECT_NE(parser->NameSpaceEmpty(), nullptr);
+    delete [] argv;
+    delete parser;
 }
 }
 }

@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <climits>
 #include <gtest/gtest.h>
 
 #define private public
@@ -168,6 +169,8 @@ HWTEST_F(UtilStringUnitTest, Replace_test_001, TestSize.Level1)
     EXPECT_STREQ(name.Replace('.', '.'), name);
     EXPECT_STREQ(String("n.a.m.e").Replace('.', '|'), String("n|a|m|e"));
     EXPECT_STREQ(String().Replace('.', '|'), String());
+    EXPECT_STREQ(String("n.a.m.e").Replace('d', '|'), String("n.a.m.e"));
+    EXPECT_STREQ(String("n.a.m.e").Replace(String("ab"), String("cd")), String("n.a.m.e"));
 }
 
 /**
@@ -213,7 +216,44 @@ HWTEST_F(UtilStringUnitTest, Operator_test_001, TestSize.Level1)
     GTEST_LOG_(INFO) << "UtilStringUnitTest, Operator_test_001, TestSize.Level1";
 
     EXPECT_STREQ(String("str1") += String("str2"), String("str1str2"));
+    EXPECT_STREQ(String("str1") += String(), String("str1"));
     EXPECT_STREQ(String("str1") = static_cast<const char *>(nullptr), nullptr);
+}
+
+/**
+ * @tc.name: Allocate_test_001
+ * @tc.desc: Verify the Allocate function.
+ * @tc.type: FUNC
+ * @tc.require: #I72EZC
+ */
+HWTEST_F(UtilStringUnitTest, Allocate_test_001, TestSize.Level1)
+{
+    EXPECT_EQ(String("name", -1), nullptr);
+    EXPECT_EQ(String("name", INT_MAX), nullptr);
+
+    String name("a..a..m..e");
+    const char* strChar = nullptr;
+    EXPECT_EQ(name.Equals(strChar), false);
+    EXPECT_EQ(name.Equals(String(nullptr)), false);
+    EXPECT_EQ(name[-1], '\0');
+
+    EXPECT_EQ(name.IndexOf('a', -1), 0);
+    EXPECT_EQ(name.IndexOf('a', INT_MAX), -1);
+    EXPECT_EQ(name.IndexOf(String("ab"), -1), -1);
+    EXPECT_EQ(name.IndexOf(String("ab"), INT_MAX), -1);
+    EXPECT_EQ(name.LastIndexOf('\0', 0), -1);
+    EXPECT_EQ(name.LastIndexOf('a', -1), -1);
+
+    EXPECT_EQ(name.StartsWith(strChar), false);
+    EXPECT_EQ(name.StartsWith('\0'), true);
+    EXPECT_EQ(name.StartsWith("n..a..m..e..long"), false);
+    EXPECT_EQ(name.StartsWith(String('\0')), true);
+
+    EXPECT_EQ(name.EndsWith(strChar), false);
+    EXPECT_EQ(name.EndsWith('\0'), true);
+    EXPECT_EQ(name.EndsWith("n..a..m..e..long"), false);
+
+    EXPECT_EQ(name.Substring(-1), String());
 }
 
 } // namespace idl
