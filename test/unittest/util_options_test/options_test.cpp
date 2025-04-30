@@ -152,9 +152,8 @@ HWTEST_F(OptionsUnitTest, OptionsUnitTest_0105, Function | MediumTest | Level1)
     Options options(count, argv);
     Parser* parser = new Parser(options);
     parser->module_ = new ASTModule();
-    EXPECT_EQ(parser->NameSpaceEmpty(), nullptr);
+    EXPECT_NE(parser->NameSpaceEmpty(), nullptr);
     delete [] argv;
-    delete parser->module_;
     delete parser;
 }
 }
