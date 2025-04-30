@@ -234,21 +234,34 @@ HWTEST_F(UtilStringUnitTest, Allocate_test_001, TestSize.Level1)
     String name("a..a..m..e");
     const char* strChar = nullptr;
     EXPECT_EQ(name.Equals(strChar), false);
+    EXPECT_EQ(String().Equals(strChar), true);
     EXPECT_EQ(name.Equals(String(nullptr)), false);
+    EXPECT_EQ(String().Equals(String(nullptr)), true);
     EXPECT_EQ(name[-1], '\0');
+    EXPECT_EQ(name[INT8_MAX], '\0');
 
+    EXPECT_EQ(String().IndexOf('a', -1), -1);
+    EXPECT_EQ(name.IndexOf(strChar, -1), -1);
+    EXPECT_EQ(name.IndexOf('\0', -1), -1);
     EXPECT_EQ(name.IndexOf('a', -1), 0);
     EXPECT_EQ(name.IndexOf('a', INT_MAX), -1);
     EXPECT_EQ(name.IndexOf(String("ab"), -1), -1);
     EXPECT_EQ(name.IndexOf(String("ab"), INT_MAX), -1);
+
+    EXPECT_EQ(String().LastIndexOf('\0', 0), -1);
+    EXPECT_EQ(name.LastIndexOf(strChar, 0), -1);
     EXPECT_EQ(name.LastIndexOf('\0', 0), -1);
     EXPECT_EQ(name.LastIndexOf('a', -1), -1);
 
+    EXPECT_EQ(String().StartsWith(strChar), false);
     EXPECT_EQ(name.StartsWith(strChar), false);
     EXPECT_EQ(name.StartsWith('\0'), true);
+    EXPECT_EQ(String().StartsWith('\0'), false);
     EXPECT_EQ(name.StartsWith("n..a..m..e..long"), false);
+    EXPECT_EQ(String().StartsWith(String('\0')), false);
     EXPECT_EQ(name.StartsWith(String('\0')), true);
 
+    EXPECT_EQ(String().EndsWith(strChar), false);
     EXPECT_EQ(name.EndsWith(strChar), false);
     EXPECT_EQ(name.EndsWith('\0'), true);
     EXPECT_EQ(name.EndsWith("n..a..m..e..long"), false);
