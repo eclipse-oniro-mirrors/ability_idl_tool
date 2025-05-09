@@ -767,4 +767,50 @@ ErrCode FooProxy::overloadfun(
     }
     return ERR_OK;
 }
+
+ErrCode FooProxy::overloadfun(
+    const std::shared_ptr<picture>& sharedParam,
+    std::unique_ptr<picture>& uniqueParam,
+    sptr<picture>& sParam)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteParcelable(sharedParam.get())) {
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(sParam)) {
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_OVERLOADFUN_IN_SHARED_PTR_PICTURE_OUT_UNIQUE_PTR_PICTURE_INOUT_SPTR_PICTURE), data, reply, option);
+    if (FAILED(result)) {
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        return errCode;
+    }
+
+    uniqueParam = std::unique_ptr<picture>(reply.ReadParcelable<picture>());
+    if (!uniqueParam) {
+        return ERR_INVALID_DATA;
+    }
+    sParam = sptr<picture>(reply.ReadParcelable<picture>());
+    if (!sParam) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_OK;
+}
 } // namespace overload
