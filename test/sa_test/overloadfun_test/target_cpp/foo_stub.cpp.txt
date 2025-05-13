@@ -509,6 +509,30 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_OVERLOADFUN_IN_SHARED_PTR_PICTURE_OUT_UNIQUE_PTR_PICTURE_INOUT_SPTR_PICTURE: {
+            std::shared_ptr<picture> sharedParam = std::shared_ptr<picture>(data.ReadParcelable<picture>());
+            if (!sharedParam) {
+                return ERR_INVALID_DATA;
+            }
+            std::unique_ptr<picture> uniqueParam;
+            sptr<picture> sParam = sptr<picture>(data.ReadParcelable<picture>());
+            if (!sParam) {
+                return ERR_INVALID_DATA;
+            }
+            ErrCode errCode = overloadfun(sharedParam, uniqueParam, sParam);
+            if (!reply.WriteInt32(errCode)) {
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(uniqueParam.get())) {
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(sParam)) {
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
         default:
             return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
     }
