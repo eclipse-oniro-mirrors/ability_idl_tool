@@ -366,6 +366,41 @@ int32_t FooStub::OnRemoteRequest(
             }
             return ERR_NONE;
         }
+        case IFooIpcCode::COMMAND_FDSAN_TEST_FUNC: {
+            int inParam = data.ReadFileDescriptor();
+            int outParam;
+            int inoutParam = data.ReadFileDescriptor();
+            int result;
+            ErrCode errCode = fdsan_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HiLog::Error(LABEL, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFileDescriptor(outParam)) {
+                    HiLog::Error(LABEL, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (outParam >= 0) {
+                    fdsan_close_with_tag(outParam, new_id);
+                }
+                if (!reply.WriteFileDescriptor(inoutParam)) {
+                    HiLog::Error(LABEL, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam >= 0) {
+                    fdsan_close_with_tag(inoutParam, new_id);
+                }
+                if (!reply.WriteFileDescriptor(result)) {
+                    HiLog::Error(LABEL, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (result >= 0) {
+                    fdsan_close_with_tag(result, new_id);
+                }
+            }
+            return ERR_NONE;
+        }
         default:
             return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
     }

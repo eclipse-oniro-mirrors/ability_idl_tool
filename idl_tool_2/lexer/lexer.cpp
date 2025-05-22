@@ -34,6 +34,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"float",          TokenType::FLOAT        },
     {"double",         TokenType::DOUBLE       },
     {"FileDescriptor", TokenType::FD           },
+    {"FileDescriptorSan", TokenType::FDSAN     },
     {"Ashmem",         TokenType::ASHMEM       },
     {"NativeBuffer",   TokenType::NATIVE_BUFFER},
     {"Pointer",        TokenType::POINTER      },

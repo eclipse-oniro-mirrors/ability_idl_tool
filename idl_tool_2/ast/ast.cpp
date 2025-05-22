@@ -40,6 +40,7 @@ AST::TypeStringMap AST::basicTypes_ = {
     {"unsigned int",   new ASTUintType()        },
     {"unsigned long",  new ASTUlongType()       },
     {"FileDescriptor", new ASTFdType()          },
+    {"FileDescriptorSan", new ASTFdSanType()    },
     {"Ashmem",         new ASTAshmemType()      },
     {"NativeBuffer",   new ASTNativeBufferType()},
     {"Pointer",        new ASTPointerType()     },

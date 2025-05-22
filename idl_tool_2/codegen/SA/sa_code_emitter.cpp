@@ -43,6 +43,7 @@
 #include "type/sa_ulong_type_emitter.h"
 #include "type/sa_ushort_type_emitter.h"
 #include "type/sa_fd_type_emitter.h"
+#include "type/sa_fdsan_type_emitter.h"
 #include "type/sa_enum_type_emitter.h"
 #include "type/sa_struct_type_emitter.h"
 #include "type/sa_union_type_emitter.h"
@@ -70,6 +71,7 @@ SACodeEmitter::TypeEmitterMap SACodeEmitter::basicEmitters_ = {
     {TypeKind::TYPE_ULONG,             new SaUlongTypeEmitter()       },
     {TypeKind::TYPE_USHORT,            new SaUshortTypeEmitter()      },
     {TypeKind::TYPE_FILEDESCRIPTOR,    new SaFdTypeEmitter()          },
+    {TypeKind::TYPE_FILEDESCRIPTORSAN, new SaFdSanTypeEmitter()       },
 };
 
 bool SACodeEmitter::OutPut(const AutoPtr<AST> &ast, const std::string &targetDirectory, GenMode mode)

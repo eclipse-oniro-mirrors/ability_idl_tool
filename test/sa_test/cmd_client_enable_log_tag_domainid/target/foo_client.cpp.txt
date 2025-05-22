@@ -488,6 +488,37 @@ ErrCode FooClient::interface_test_func(
     return ret;
 }
 
+ErrCode FooClient::fdsan_test_func(
+    int inParam,
+    int& outParam,
+    int& inoutParam,
+    int& funcResult,
+    int32_t timeout)
+{
+    {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->fdsan_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    ErrCode ret = PreventJitter(true, timeout);
+    if (ret == ERR_OK) {
+        std::shared_lock<std::shared_mutex> readLock(mutexRemote_);
+        if (proxy_) {
+            return proxy_->fdsan_test_func(
+                inParam,
+                outParam,
+                inoutParam,
+                funcResult);
+        }
+    }
+    return ret;
+}
+
 void FooClient::RemoveDeathRecipient()
 {
     std::unique_lock<std::shared_mutex> writeLock(mutexRemote_);
