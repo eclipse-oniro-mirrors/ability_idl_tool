@@ -636,4 +636,53 @@ ErrCode FooProxy::interface_test_func(
     funcResult = iface_cast<myinterface>(reply.ReadRemoteObject());
     return ERR_OK;
 }
+
+ErrCode FooProxy::fdsan_test_func(
+    int inParam,
+    int& outParam,
+    int& inoutParam,
+    int& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HiLog::Error(LABEL, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFileDescriptor(inParam)) {
+        HiLog::Error(LABEL, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFileDescriptor(inoutParam)) {
+        HiLog::Error(LABEL, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HiLog::Error(LABEL, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FDSAN_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HiLog::Error(LABEL, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HiLog::Error(LABEL, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_FDSAN_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadFileDescriptor();
+    inoutParam = reply.ReadFileDescriptor();
+    funcResult = reply.ReadFileDescriptor();
+    return ERR_OK;
+}
 } // namespace test

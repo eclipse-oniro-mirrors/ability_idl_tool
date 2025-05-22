@@ -359,6 +359,7 @@ bool IntfTypeChecker::CheckBasicType(Token token)
         case TokenType::FLOAT:
         case TokenType::DOUBLE:
         case TokenType::FD:
+        case TokenType::FDSAN:
         case TokenType::ASHMEM:
         case TokenType::NATIVE_BUFFER:
         case TokenType::POINTER:

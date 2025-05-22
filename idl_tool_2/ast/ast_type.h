@@ -48,6 +48,7 @@ enum class TypeKind {
     TYPE_STRING16,
     TYPE_U16STRING,
     TYPE_FILEDESCRIPTOR,
+    TYPE_FILEDESCRIPTORSAN,
     TYPE_SEQUENCEABLE,
     TYPE_RAWDATA,
     TYPE_INTERFACE,
@@ -157,6 +158,8 @@ public:
     virtual bool IsSetType();
 
     virtual bool IsFdType();
+
+    virtual bool IsFdSanType();
 
     virtual bool IsSmqType();
 

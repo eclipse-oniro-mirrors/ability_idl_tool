@@ -36,6 +36,7 @@ enum class TokenType {
     FLOAT,   // "float"
     DOUBLE,  // "double"
     FD,      // "FileDescriptor"
+    FDSAN,      // "FileDescriptorSan"
     ASHMEM,  // "Ashmem"
     NATIVE_BUFFER, // "NativeBuffer"
     POINTER, // "Pointer"

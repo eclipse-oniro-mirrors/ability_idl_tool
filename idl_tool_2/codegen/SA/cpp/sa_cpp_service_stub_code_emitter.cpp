@@ -299,6 +299,11 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubFdClose(TypeKind kind, const 
         sb.Append(prefix + TAB + TAB).AppendFormat("if (%s >= 0) {\n", name.c_str());
         sb.Append(prefix + TAB + TAB).Append(TAB).AppendFormat("close(%s);\n", name.c_str());
         sb.Append(prefix + TAB + TAB).Append("}\n");
+    } else if (kind == TypeKind::TYPE_FILEDESCRIPTORSAN) {
+        sb.Append(prefix + TAB + TAB).AppendFormat("if (%s >= 0) {\n", name.c_str());
+        sb.Append(prefix + TAB + TAB).Append(TAB).AppendFormat("fdsan_close_with_tag(%s, %s);\n",
+            name.c_str(), domainId_.c_str());
+        sb.Append(prefix + TAB + TAB).Append("}\n");
     }
 }
 
@@ -400,6 +405,7 @@ void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name,
         case TypeKind::TYPE_ULONG:
         case TypeKind::TYPE_USHORT:
         case TypeKind::TYPE_FILEDESCRIPTOR:
+        case TypeKind::TYPE_FILEDESCRIPTORSAN:
         case TypeKind::TYPE_ENUM:
         case TypeKind::TYPE_STRUCT:
         case TypeKind::TYPE_UNION:

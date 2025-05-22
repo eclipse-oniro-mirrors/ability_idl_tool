@@ -177,6 +177,11 @@ bool ASTType::IsFdType()
     return false;
 }
 
+bool ASTType::IsFdSanType()
+{
+    return false;
+}
+
 bool ASTType::IsSmqType()
 {
     return false;

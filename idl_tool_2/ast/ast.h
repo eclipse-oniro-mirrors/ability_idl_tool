@@ -27,6 +27,7 @@
 #include "ast/base/ast_double_type.h"
 #include "ast/ast_enum_type.h"
 #include "ast/ast_fd_type.h"
+#include "ast/ast_fdsan_type.h"
 #include "ast/base/ast_float_type.h"
 #include "ast/base/ast_integer_type.h"
 #include "ast/ast_interface_type.h"
