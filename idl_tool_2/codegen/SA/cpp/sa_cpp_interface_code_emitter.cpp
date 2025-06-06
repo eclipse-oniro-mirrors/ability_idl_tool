@@ -189,7 +189,13 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceDefinition(StringBuilder &sb)
     EmitBeginNamespace(sb);
     EmitImportUsingNamespace(sb);
     EmitInterfaceMethodCommands(sb, TAB);
-    sb.AppendFormat("class %s : public IRemoteBroker {\n", interface_->GetName().c_str());
+    auto extendsInterface = interface_->GetExtendsInterface();
+    if (extendsInterface != nullptr) {
+        auto fullName = CppFullName(extendsInterface->GetName());
+        sb.AppendFormat("class %s : public %s {\n", interface_->GetName().c_str(), fullName.c_str());
+    } else {
+        sb.AppendFormat("class %s : public IRemoteBroker {\n", interface_->GetName().c_str());
+    }
     sb.Append("public:\n");
     EmitInterfaceBody(sb, TAB);
     EmitInterfaceMemberVariables(sb, TAB);
