@@ -2358,6 +2358,12 @@ void Parser::ParseExtendsInfo(AutoPtr<ASTInterfaceType> &interfaceType)
         LogError(__func__, __LINE__, token, std::string("extends interface name is empty"));
         return;
     }
+    if (Options::GetInstance().GetInterfaceType() == InterfaceType::SA) {
+        AutoPtr<ASTInterfaceType> extendsInterface = new ASTInterfaceType;
+        extendsInterface->SetName(extendsInterfaceName);
+        interfaceType->AddExtendsInterface(extendsInterface);
+        return;
+    }
     if (!CheckImport(token)) {
         LogError(__func__, __LINE__, token, std::string("extends interface name is illegal"));
         return;
