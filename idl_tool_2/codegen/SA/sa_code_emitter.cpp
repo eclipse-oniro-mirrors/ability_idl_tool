@@ -134,6 +134,7 @@ void SACodeEmitter::CleanData()
     hitraceOn_ = options.DoHitraceState();
     logOn_ = options.DoLogOn();
     SaTypeEmitter::logOn_ = logOn_;
+    SaTypeEmitter::domainId_ = domainId_;
     ast_ = nullptr;
     interface_ = nullptr;
     directory_ = "";

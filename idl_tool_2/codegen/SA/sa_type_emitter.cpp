@@ -17,6 +17,7 @@
 
 namespace OHOS {
 namespace Idl {
+std::string SaTypeEmitter::domainId_ = "";
 bool SaTypeEmitter::logOn_ = false;
 int SaTypeEmitter::circleCount_ = 0;
 

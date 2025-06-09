@@ -379,6 +379,9 @@ int32_t FooStub::OnRemoteRequest(
             if (SUCCEEDED(errCode)) {
                 if (!reply.WriteFileDescriptor(outParam)) {
                     HiLog::Error(LABEL, "Write [outParam] failed!");
+                    if (outParam >= 0) {
+                        fdsan_close_with_tag(outParam, new_id);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (outParam >= 0) {
@@ -386,6 +389,9 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 if (!reply.WriteFileDescriptor(inoutParam)) {
                     HiLog::Error(LABEL, "Write [inoutParam] failed!");
+                    if (inoutParam >= 0) {
+                        fdsan_close_with_tag(inoutParam, new_id);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (inoutParam >= 0) {
@@ -393,6 +399,9 @@ int32_t FooStub::OnRemoteRequest(
                 }
                 if (!reply.WriteFileDescriptor(result)) {
                     HiLog::Error(LABEL, "Write [result] failed!");
+                    if (result >= 0) {
+                        fdsan_close_with_tag(result, new_id);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (result >= 0) {
