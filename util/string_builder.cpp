@@ -86,7 +86,7 @@ StringBuilder& StringBuilder::Append(const String& string)
 
 StringBuilder& StringBuilder::AppendFormat(const char* format, ...)
 {
-    va_list args; 
+    va_list args;
     va_list argsCopy;
 
     va_start(args, format);
