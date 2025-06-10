@@ -653,7 +653,8 @@ String String::operator+=(const String& other) const
 
 String String::Format(const char* format, ...)
 {
-    va_list args, argsCopy;
+    va_list args;
+    va_list argsCopy;
 
     va_start(args, format);
     va_copy(argsCopy, args);
