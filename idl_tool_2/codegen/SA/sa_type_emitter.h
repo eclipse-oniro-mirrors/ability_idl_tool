@@ -67,6 +67,7 @@ public:
     virtual void EmitTsReadVar(const std::string &parcelName, const std::string &name, StringBuilder &sb,
         const std::string &prefix, TypeMode mode = TypeMode::NO_MODE) const;
 
+    static std::string domainId_;
     static bool logOn_;
     static int circleCount_;
     bool isParamInout = false;

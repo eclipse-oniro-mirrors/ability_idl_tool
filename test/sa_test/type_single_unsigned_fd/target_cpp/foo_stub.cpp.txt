@@ -128,18 +128,27 @@ int32_t FooStub::OnRemoteRequest(
             }
             if (SUCCEEDED(errCode)) {
                 if (!reply.WriteFileDescriptor(outParam)) {
+                    if (outParam >= 0) {
+                        close(outParam);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (outParam >= 0) {
                     close(outParam);
                 }
                 if (!reply.WriteFileDescriptor(inoutParam)) {
+                    if (inoutParam >= 0) {
+                        close(inoutParam);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (inoutParam >= 0) {
                     close(inoutParam);
                 }
                 if (!reply.WriteFileDescriptor(result)) {
+                    if (result >= 0) {
+                        close(result);
+                    }
                     return ERR_INVALID_DATA;
                 }
                 if (result >= 0) {

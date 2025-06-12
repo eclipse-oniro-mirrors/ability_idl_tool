@@ -44,6 +44,12 @@ void SaFdSanTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
     if (logOn_) {
         sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
     }
+    if (!isProxy) {
+        sb.Append(prefix).Append(TAB).AppendFormat("if (%s >= 0) {\n", name.c_str());
+        sb.Append(prefix).Append(TAB).Append(TAB).AppendFormat("fdsan_close_with_tag(%s, %s);\n", name.c_str(),
+            domainId_.c_str());
+        sb.Append(prefix).Append(TAB).Append("}\n");
+    }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
 }
