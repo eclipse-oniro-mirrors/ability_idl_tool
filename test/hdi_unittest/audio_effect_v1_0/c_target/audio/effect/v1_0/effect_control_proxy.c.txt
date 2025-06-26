@@ -437,14 +437,21 @@ struct IEffectControl *IEffectControlGet(struct HdfRemoteService *remote)
     int32_t effectControlRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
     if (effectControlRet != HDF_SUCCESS) {
         HDF_LOGE("%{public}s: get version failed!", __func__);
-        IEffectControlRelease(false, client);
+        IEffectControlRelease(client, false);
         return NULL;
     }
 
     if (serMajorVer != IEFFECT_CONTROL_MAJOR_VERSION) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
             serMajorVer, serMinorVer, IEFFECT_CONTROL_MAJOR_VERSION, IEFFECT_CONTROL_MINOR_VERSION);
-        IEffectControlRelease(false, client);
+        IEffectControlRelease(client, false);
+        return NULL;
+    }
+
+    if (serMinorVer < IEFFECT_CONTROL_MINOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! client minor version(%u) should be less "
+            "or equal to server minor version(%u).", __func__, IEFFECT_CONTROL_MINOR_VERSION, serMinorVer);
+        IEffectControlRelease(client, false);
         return NULL;
     }
 

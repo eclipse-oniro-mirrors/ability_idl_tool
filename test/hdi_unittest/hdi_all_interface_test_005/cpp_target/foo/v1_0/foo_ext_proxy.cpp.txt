@@ -33,12 +33,32 @@ sptr<OHOS::HDI::Foo::V1_0::IFooExt> IFooExt::Get(const std::string &serviceName,
 {
     if (isStub) {
         std::string desc = Str16ToStr8(OHOS::HDI::Foo::V1_0::IFooExt::GetDescriptor());
-        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "foo_ext_service" ? "service" : serviceName.c_str());
+        std::string svrName = (serviceName == "foo_ext_service") ? "service" : serviceName;
+        sptr<OHOS::HDI::Foo::V1_0::IFooExt> impl = \
+            reinterpret_cast<OHOS::HDI::Foo::V1_0::IFooExt *>(LoadHdiImpl(desc.c_str(), svrName.c_str()));
         if (impl == nullptr) {
             HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
             return nullptr;
         }
-        return reinterpret_cast<OHOS::HDI::Foo::V1_0::IFooExt *>(impl);
+        uint32_t serMajorVer = 0;
+        uint32_t serMinorVer = 0;
+        int32_t fooExtRet = impl->GetVersion(serMajorVer, serMinorVer);
+        if (fooExtRet != HDF_SUCCESS) {
+            HDF_LOGE("%{public}s: get version failed!", __func__);
+            return nullptr;
+        }
+
+        if (serMajorVer != 1) {
+            HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+            return nullptr;
+        }
+        if (serMinorVer < 0) {
+            HDF_LOGE("%{public}s:check Minor version failed! "
+                "client minor version(0) should be less or equal to implementation minor version(%u).", __func__, serMinorVer);
+            return nullptr;
+        }
+
+        return impl;
     }
 
     return nullptr;
