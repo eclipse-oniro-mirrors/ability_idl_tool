@@ -44,12 +44,32 @@ sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> OHOS::HDI::SecureE
 {
     if (isStub) {
         std::string desc = Str16ToStr8(OHOS::HDI::SecureElement::V1_0::ISecureElementInterface::GetDescriptor());
-        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "secure_element_interface_service" ? "service" : serviceName.c_str());
+        std::string svrName = (serviceName == "secure_element_interface_service") ? "service" : serviceName;
+        sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> impl = \
+            reinterpret_cast<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface *>(LoadHdiImpl(desc.c_str(), svrName.c_str()));
         if (impl == nullptr) {
             HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
             return nullptr;
         }
-        return reinterpret_cast<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface *>(impl);
+        uint32_t serMajorVer = 0;
+        uint32_t serMinorVer = 0;
+        int32_t secureElementInterfaceRet = impl->GetVersion(serMajorVer, serMinorVer);
+        if (secureElementInterfaceRet != HDF_SUCCESS) {
+            HDF_LOGE("%{public}s: get version failed!", __func__);
+            return nullptr;
+        }
+
+        if (serMajorVer != 1) {
+            HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+            return nullptr;
+        }
+        if (serMinorVer < 0) {
+            HDF_LOGE("%{public}s:check Minor version failed! "
+                "client minor version(0) should be less or equal to implementation minor version(%u).", __func__, serMinorVer);
+            return nullptr;
+        }
+
+        return impl;
     }
 
     using namespace OHOS::HDI::ServiceManager::V1_0;
@@ -86,6 +106,12 @@ sptr<OHOS::HDI::SecureElement::V1_0::ISecureElementInterface> OHOS::HDI::SecureE
 
     if (serMajorVer != 1) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.0", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    if (serMinorVer < 0) {
+        HDF_LOGE("%{public}s:check Minor version failed! "
+            "client minor version(0) should be less or equal to server minor version(%u).", __func__, serMinorVer);
         return nullptr;
     }
 

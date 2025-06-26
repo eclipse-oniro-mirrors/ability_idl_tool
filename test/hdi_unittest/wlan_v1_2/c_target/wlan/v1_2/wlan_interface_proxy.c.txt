@@ -2472,7 +2472,39 @@ struct IWlanInterface *IWlanInterfaceGetInstance(const char *serviceName, bool i
         if (strcmp(instName, "wlan_interface_service") == 0) {
             instName = "service";
         }
-        return LoadHdiImpl(IWLANINTERFACE_INTERFACE_DESC, instName);
+        struct IWlanInterface *inst = LoadHdiImpl(IWLANINTERFACE_INTERFACE_DESC, instName);
+        if (inst == NULL) {
+            HDF_LOGE("%{public}s, failed to load hdi impl %{public}s!", __func__, IWLANINTERFACE_INTERFACE_DESC);
+            return NULL;
+        }
+        if (inst->GetVersion == NULL) {
+            HDF_LOGE("%{public}s: GetVersion is not implemented!", __func__);
+            IWlanInterfaceRelease(inst, true);
+            return NULL;
+        }
+        uint32_t serMajorVer = 0;
+        uint32_t serMinorVer = 0;
+        int32_t wlanInterfaceRet = inst->GetVersion(inst, &serMajorVer, &serMinorVer);
+        if (wlanInterfaceRet != HDF_SUCCESS) {
+            HDF_LOGE("%{public}s: get version failed!", __func__);
+            IWlanInterfaceRelease(inst, true);
+            return NULL;
+        }
+
+        if (serMajorVer != IWLAN_INTERFACE_MAJOR_VERSION) {
+            HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
+                serMajorVer, serMinorVer, IWLAN_INTERFACE_MAJOR_VERSION, IWLAN_INTERFACE_MINOR_VERSION);
+            IWlanInterfaceRelease(inst, true);
+            return NULL;
+        }
+
+        if (serMinorVer < IWLAN_INTERFACE_MINOR_VERSION) {
+            HDF_LOGE("%{public}s:check version failed! client minor version(%u) should be less "
+                "or equal to server minor version(%u).", __func__, IWLAN_INTERFACE_MINOR_VERSION, serMinorVer);
+            IWlanInterfaceRelease(inst, true);
+            return NULL;
+        }
+        return inst;
     }
 
     struct HDIServiceManager *serviceMgr = HDIServiceManagerGet();
@@ -2510,14 +2542,21 @@ struct IWlanInterface *IWlanInterfaceGetInstance(const char *serviceName, bool i
     int32_t wlanInterfaceRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
     if (wlanInterfaceRet != HDF_SUCCESS) {
         HDF_LOGE("%{public}s: get version failed!", __func__);
-        IWlanInterfaceRelease(false, client);
+        IWlanInterfaceRelease(client, false);
         return NULL;
     }
 
     if (serMajorVer != IWLAN_INTERFACE_MAJOR_VERSION) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
             serMajorVer, serMinorVer, IWLAN_INTERFACE_MAJOR_VERSION, IWLAN_INTERFACE_MINOR_VERSION);
-        IWlanInterfaceRelease(false, client);
+        IWlanInterfaceRelease(client, false);
+        return NULL;
+    }
+
+    if (serMinorVer < IWLAN_INTERFACE_MINOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! client minor version(%u) should be less "
+            "or equal to server minor version(%u).", __func__, IWLAN_INTERFACE_MINOR_VERSION, serMinorVer);
+        IWlanInterfaceRelease(client, false);
         return NULL;
     }
 

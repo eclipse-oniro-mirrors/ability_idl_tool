@@ -68,6 +68,12 @@ static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
         return nullptr;
     }
 
+    if (serMinorVer < 2) {
+        HDF_LOGE("%{public}s:check Minor version failed! "
+            "client minor version(2) should be less or equal to server minor version(%u).", __func__, serMinorVer);
+        return nullptr;
+    }
+
     return proxy;
 }
 
@@ -80,12 +86,32 @@ sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> OHOS::HDI::Vibrator::V1_2::I
 {
     if (isStub) {
         std::string desc = Str16ToStr8(OHOS::HDI::Vibrator::V1_2::IVibratorInterface::GetDescriptor());
-        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "vibrator_interface_service" ? "service" : serviceName.c_str());
+        std::string svrName = (serviceName == "vibrator_interface_service") ? "service" : serviceName;
+        sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> impl = \
+            reinterpret_cast<OHOS::HDI::Vibrator::V1_2::IVibratorInterface *>(LoadHdiImpl(desc.c_str(), svrName.c_str()));
         if (impl == nullptr) {
             HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
             return nullptr;
         }
-        return reinterpret_cast<OHOS::HDI::Vibrator::V1_2::IVibratorInterface *>(impl);
+        uint32_t serMajorVer = 0;
+        uint32_t serMinorVer = 0;
+        int32_t vibratorInterfaceRet = impl->GetVersion(serMajorVer, serMinorVer);
+        if (vibratorInterfaceRet != HDF_SUCCESS) {
+            HDF_LOGE("%{public}s: get version failed!", __func__);
+            return nullptr;
+        }
+
+        if (serMajorVer != 1) {
+            HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+            return nullptr;
+        }
+        if (serMinorVer < 2) {
+            HDF_LOGE("%{public}s:check Minor version failed! "
+                "client minor version(2) should be less or equal to implementation minor version(%u).", __func__, serMinorVer);
+            return nullptr;
+        }
+
+        return impl;
     }
 
     using namespace OHOS::HDI::ServiceManager::V1_0;
@@ -122,6 +148,12 @@ sptr<OHOS::HDI::Vibrator::V1_2::IVibratorInterface> OHOS::HDI::Vibrator::V1_2::I
 
     if (serMajorVer != 1) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.2", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    if (serMinorVer < 2) {
+        HDF_LOGE("%{public}s:check Minor version failed! "
+            "client minor version(2) should be less or equal to server minor version(%u).", __func__, serMinorVer);
         return nullptr;
     }
 

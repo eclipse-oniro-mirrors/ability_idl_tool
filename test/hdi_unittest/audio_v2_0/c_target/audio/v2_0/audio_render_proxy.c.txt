@@ -2178,14 +2178,21 @@ struct IAudioRender *IAudioRenderGet(struct HdfRemoteService *remote)
     int32_t audioRenderRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
     if (audioRenderRet != HDF_SUCCESS) {
         HDF_LOGE("%{public}s: get version failed!", __func__);
-        IAudioRenderRelease(false, client);
+        IAudioRenderRelease(client, false);
         return NULL;
     }
 
     if (serMajorVer != IAUDIO_RENDER_MAJOR_VERSION) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
             serMajorVer, serMinorVer, IAUDIO_RENDER_MAJOR_VERSION, IAUDIO_RENDER_MINOR_VERSION);
-        IAudioRenderRelease(false, client);
+        IAudioRenderRelease(client, false);
+        return NULL;
+    }
+
+    if (serMinorVer < IAUDIO_RENDER_MINOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! client minor version(%u) should be less "
+            "or equal to server minor version(%u).", __func__, IAUDIO_RENDER_MINOR_VERSION, serMinorVer);
+        IAudioRenderRelease(client, false);
         return NULL;
     }
 

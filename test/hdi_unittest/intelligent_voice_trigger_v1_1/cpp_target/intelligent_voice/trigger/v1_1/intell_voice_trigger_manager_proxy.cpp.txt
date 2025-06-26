@@ -71,6 +71,12 @@ static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)
         return nullptr;
     }
 
+    if (serMinorVer < 1) {
+        HDF_LOGE("%{public}s:check Minor version failed! "
+            "client minor version(1) should be less or equal to server minor version(%u).", __func__, serMinorVer);
+        return nullptr;
+    }
+
     return proxy;
 }
 
@@ -83,12 +89,32 @@ sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> OHO
 {
     if (isStub) {
         std::string desc = Str16ToStr8(OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager::GetDescriptor());
-        void *impl = LoadHdiImpl(desc.c_str(), serviceName == "intell_voice_trigger_manager_service" ? "service" : serviceName.c_str());
+        std::string svrName = (serviceName == "intell_voice_trigger_manager_service") ? "service" : serviceName;
+        sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> impl = \
+            reinterpret_cast<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager *>(LoadHdiImpl(desc.c_str(), svrName.c_str()));
         if (impl == nullptr) {
             HDF_LOGE("failed to load hdi impl %{public}s", desc.data());
             return nullptr;
         }
-        return reinterpret_cast<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager *>(impl);
+        uint32_t serMajorVer = 0;
+        uint32_t serMinorVer = 0;
+        int32_t intellVoiceTriggerManagerRet = impl->GetVersion(serMajorVer, serMinorVer);
+        if (intellVoiceTriggerManagerRet != HDF_SUCCESS) {
+            HDF_LOGE("%{public}s: get version failed!", __func__);
+            return nullptr;
+        }
+
+        if (serMajorVer != 1) {
+            HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+            return nullptr;
+        }
+        if (serMinorVer < 1) {
+            HDF_LOGE("%{public}s:check Minor version failed! "
+                "client minor version(1) should be less or equal to implementation minor version(%u).", __func__, serMinorVer);
+            return nullptr;
+        }
+
+        return impl;
     }
 
     using namespace OHOS::HDI::ServiceManager::V1_0;
@@ -125,6 +151,12 @@ sptr<OHOS::HDI::IntelligentVoice::Trigger::V1_1::IIntellVoiceTriggerManager> OHO
 
     if (serMajorVer != 1) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:1.1", __func__, serMajorVer, serMinorVer);
+        return nullptr;
+    }
+
+    if (serMinorVer < 1) {
+        HDF_LOGE("%{public}s:check Minor version failed! "
+            "client minor version(1) should be less or equal to server minor version(%u).", __func__, serMinorVer);
         return nullptr;
     }
 

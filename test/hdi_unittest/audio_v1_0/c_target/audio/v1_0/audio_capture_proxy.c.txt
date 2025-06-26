@@ -1728,14 +1728,21 @@ struct IAudioCapture *IAudioCaptureGet(struct HdfRemoteService *remote)
     int32_t audioCaptureRet = client->GetVersion(client, &serMajorVer, &serMinorVer);
     if (audioCaptureRet != HDF_SUCCESS) {
         HDF_LOGE("%{public}s: get version failed!", __func__);
-        IAudioCaptureRelease(false, client);
+        IAudioCaptureRelease(client, false);
         return NULL;
     }
 
     if (serMajorVer != IAUDIO_CAPTURE_MAJOR_VERSION) {
         HDF_LOGE("%{public}s:check version failed! version of service:%u.%u, version of client:%u.%u", __func__,
             serMajorVer, serMinorVer, IAUDIO_CAPTURE_MAJOR_VERSION, IAUDIO_CAPTURE_MINOR_VERSION);
-        IAudioCaptureRelease(false, client);
+        IAudioCaptureRelease(client, false);
+        return NULL;
+    }
+
+    if (serMinorVer < IAUDIO_CAPTURE_MINOR_VERSION) {
+        HDF_LOGE("%{public}s:check version failed! client minor version(%u) should be less "
+            "or equal to server minor version(%u).", __func__, IAUDIO_CAPTURE_MINOR_VERSION, serMinorVer);
+        IAudioCaptureRelease(client, false);
         return NULL;
     }
 
