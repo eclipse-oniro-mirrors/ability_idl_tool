@@ -243,7 +243,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) con
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
-            AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
+            AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             EmitCustomTypeMarshallingImpl(sb, structType);
             EmitCustomTypeUnmarshallingImpl(sb, structType);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {

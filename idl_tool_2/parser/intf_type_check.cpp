@@ -199,7 +199,7 @@ bool IntfTypeChecker::CheckIntfHdiAstParam(AutoPtr<ASTParameter> param, size_t m
 
     AutoPtr<ASTType> paramType = param->GetType();
     if (paramType != nullptr && paramType->IsInterfaceType()) {
-        AutoPtr<ASTInterfaceType> ifaceType = dynamic_cast<ASTInterfaceType *>(paramType.Get());
+        AutoPtr<ASTInterfaceType> ifaceType = static_cast<ASTInterfaceType *>(paramType.Get());
         if (ifaceType->IsCallback() && paramAttr != ASTParamAttr::PARAM_IN) {
             Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf hdi: '%s' "
                 "param of callback interface type must be 'in' attr", __func__, __LINE__,

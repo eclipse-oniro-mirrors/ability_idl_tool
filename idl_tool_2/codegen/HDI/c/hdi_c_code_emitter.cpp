@@ -129,12 +129,12 @@ bool HDICCodeEmitter::EmitNeedLoopVar(const AutoPtr<ASTType> &type, bool needRW,
     };
 
     if (type->IsArrayType()) {
-        AutoPtr<ASTArrayType> arrType = dynamic_cast<ASTArrayType *>(type.Get());
+        AutoPtr<ASTArrayType> arrType = static_cast<ASTArrayType *>(type.Get());
         if (rwNeedLoopVar(arrType->GetElementType()) || freeNeedLoopVar(arrType->GetElementType())) {
             return true;
         }
     } else if (type->IsListType()) {
-        AutoPtr<ASTListType> listType = dynamic_cast<ASTListType *>(type.Get());
+        AutoPtr<ASTListType> listType = static_cast<ASTListType *>(type.Get());
         if (rwNeedLoopVar(listType->GetElementType()) || freeNeedLoopVar(listType->GetElementType())) {
             return true;
         }

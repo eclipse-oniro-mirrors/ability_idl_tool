@@ -269,7 +269,7 @@ void CppServiceStubCodeEmitter::GetSourceOtherFileInclusions(HeaderFile::HeaderF
             AutoPtr<ASTType> paramType = param->GetType();
             if ((param->GetAttribute() == ASTParamAttr::PARAM_IN) &&
                 (param->GetType()->IsInterfaceType() || paramType->HasInnerType(TypeKind::TYPE_INTERFACE))) {
-                AutoPtr<ASTInterfaceType> type = dynamic_cast<ASTInterfaceType *>(paramType.Get());
+                AutoPtr<ASTInterfaceType> type = static_cast<ASTInterfaceType *>(paramType.Get());
                 std::string FileName = InterfaceToFilePath(paramType->ToString());
                 headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, FileName);
             }
@@ -533,7 +533,7 @@ void CppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> &p
         sb.Append(prefix + TAB).AppendFormat("%s(%s, >, %s / sizeof(char), HDF_ERR_INVALID_PARAM);\n",
             CHECK_VALUE_RETURN_MACRO, capacityName.c_str(), MAX_BUFF_SIZE_MACRO);
     } else {
-        AutoPtr<ASTArrayType> arrayType = dynamic_cast<ASTArrayType *>(type.Get());
+        AutoPtr<ASTArrayType> arrayType = static_cast<ASTArrayType *>(type.Get());
         sb.Append(prefix + TAB).AppendFormat("%s(%s, >, %s / sizeof(%s), HDF_ERR_INVALID_PARAM);\n",
             CHECK_VALUE_RETURN_MACRO, capacityName.c_str(), MAX_BUFF_SIZE_MACRO,
             GetTypeEmitter(arrayType->GetElementType())->EmitCppType().c_str());
