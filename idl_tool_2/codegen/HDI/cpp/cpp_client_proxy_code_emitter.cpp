@@ -449,7 +449,7 @@ void CppClientProxyCodeEmitter::GetSourceOtherFileInclusions(HeaderFile::HeaderF
             AutoPtr<ASTType> paramType = param->GetType();
             if ((param->GetAttribute() == ASTParamAttr::PARAM_OUT) &&
                 (param->GetType()->IsInterfaceType() || paramType->HasInnerType(TypeKind::TYPE_INTERFACE))) {
-                AutoPtr<ASTInterfaceType> type = dynamic_cast<ASTInterfaceType *>(paramType.Get());
+                AutoPtr<ASTInterfaceType> type = static_cast<ASTInterfaceType *>(paramType.Get());
                 std::string FileName = InterfaceToFilePath(paramType->ToString());
                 headerFiles.emplace(HeaderFileType::OWN_MODULE_HEADER_FILE, FileName);
             }

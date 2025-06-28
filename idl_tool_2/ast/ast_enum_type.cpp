@@ -24,7 +24,7 @@ void ASTEnumType::SetBaseType(const AutoPtr<ASTType> &baseType)
         return;
     }
     if (baseType->GetTypeKind() == TypeKind::TYPE_ENUM) {
-        AutoPtr<ASTEnumType> parentEnumType = dynamic_cast<ASTEnumType *>(baseType.Get());
+        AutoPtr<ASTEnumType> parentEnumType = static_cast<ASTEnumType *>(baseType.Get());
         if (parentEnumType == nullptr) {
             return;
         }

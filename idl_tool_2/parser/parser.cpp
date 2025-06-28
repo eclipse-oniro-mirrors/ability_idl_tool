@@ -1194,7 +1194,7 @@ AutoPtr<ASTParameter> Parser::ParseParam()
     }
 
     if (paramType != nullptr && paramType->IsInterfaceType()) {
-        AutoPtr<ASTInterfaceType> ifaceType = dynamic_cast<ASTInterfaceType *>(paramType.Get());
+        AutoPtr<ASTInterfaceType> ifaceType = static_cast<ASTInterfaceType *>(paramType.Get());
         if (!ifaceType->IsCallback()) {
             ifaceType->SetSerializable(true);
         }
@@ -1819,7 +1819,7 @@ AutoPtr<ASTStructType> Parser::ParseStructParentType()
         LogErrorBeforeToken(__func__, __LINE__, token, std::string("expected '{'"));
     }
     lexer_.GetToken();
-    return dynamic_cast<ASTStructType *>(baseType.Get());
+    return static_cast<ASTStructType *>(baseType.Get());
 }
 
 void Parser::ParseStructMember(const AutoPtr<ASTStructType> &structType)

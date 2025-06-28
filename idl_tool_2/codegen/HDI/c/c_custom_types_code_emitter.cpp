@@ -228,7 +228,7 @@ void CCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb)
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
-            AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
+            AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             EmitCustomTypeMarshallingImpl(sb, structType);
             EmitCustomTypeUnmarshallingImpl(sb, structType);
             sb.Append("\n");
@@ -477,10 +477,10 @@ void CCustomTypesCodeEmitter::EmitArrayMemberUnmarshalling(const AutoPtr<ASTType
     }
     AutoPtr<ASTType> elementType = nullptr;
     if (type->GetTypeKind() == TypeKind::TYPE_ARRAY) {
-        AutoPtr<ASTArrayType> arrayType = dynamic_cast<ASTArrayType *>(type.Get());
+        AutoPtr<ASTArrayType> arrayType = static_cast<ASTArrayType *>(type.Get());
         elementType = arrayType->GetElementType();
     } else {
-        AutoPtr<ASTListType> listType = dynamic_cast<ASTListType *>(type.Get());
+        AutoPtr<ASTListType> listType = static_cast<ASTListType *>(type.Get());
         elementType = listType->GetElementType();
     }
 

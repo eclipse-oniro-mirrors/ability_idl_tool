@@ -70,7 +70,7 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
-            AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
+            AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             if (!type->IsPod() && logOn_) {
                 needLogh = true;
             }
@@ -220,7 +220,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) c
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
         AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
-            AutoPtr<ASTStructType> structType = dynamic_cast<ASTStructType *>(type.Get());
+            AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             if (structType == nullptr) {
                 continue;
             }
