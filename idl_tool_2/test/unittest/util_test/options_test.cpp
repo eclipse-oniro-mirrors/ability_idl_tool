@@ -116,6 +116,7 @@ HWTEST_F(IdlTool2UtilOptionsTest, Options_test_003, Level1)
     Options &options = Options::GetInstance();
     options.Parse(count, argv);
     EXPECT_TRUE(argv != nullptr);
+    delete[] argv;
 }
 
 /*
