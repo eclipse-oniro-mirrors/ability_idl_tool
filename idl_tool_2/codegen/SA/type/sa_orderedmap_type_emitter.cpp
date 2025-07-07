@@ -94,6 +94,7 @@ void SaOrderedMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, cons
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
+    sb.Append("\n");
 
     sb.Append(prefix).AppendFormat("for (int32_t i%d = 0; i%d < %sSize; ++i%d) {\n", circleCount_,
         circleCount_, useName.c_str(), circleCount_);
