@@ -26,6 +26,9 @@ config("idl_tool_2_test_config") {
 
 common_sources = [
   "${IDL_DIR}/codegen/SA/sa_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_cstring_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_fd_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_fdsan_type_emitter.cpp",
   "${IDL_DIR}/codegen/SA/type/sa_int_type_emitter.cpp",
   "${IDL_DIR}/codegen/SA/type/sa_set_type_emitter.cpp",
   "${IDL_DIR}/codegen/SA/type/sa_short_type_emitter.cpp",
@@ -42,6 +45,54 @@ common_sources = [
   "${IDL_DIR}/util/string_builder.cpp",
   "${IDL_DIR}/util/string_helper.cpp",
 ]
+
+ohos_unittest("SaCStringTypeEmitterTest") {
+  module_out_path = module_output_path
+  include_dirs = [ "${IDL_DIR}" ]
+
+  configs = [ ":idl_tool_2_test_config" ]
+  sources = [ "./sa_cstring_type_emitter_test.cpp" ]
+  sources += common_sources
+
+  deps = []
+
+  external_deps = [ "c_utils:utils" ]
+
+  part_name = "idl_tool"
+  subsystem_name = "ability"
+}
+
+ohos_unittest("SaFdTypeEmitterTest") {
+  module_out_path = module_output_path
+  include_dirs = [ "${IDL_DIR}" ]
+
+  configs = [ ":idl_tool_2_test_config" ]
+  sources = [ "./sa_fd_type_emitter_test.cpp" ]
+  sources += common_sources
+
+  deps = []
+
+  external_deps = [ "c_utils:utils" ]
+
+  part_name = "idl_tool"
+  subsystem_name = "ability"
+}
+
+ohos_unittest("SaFdSanTypeEmitterTest") {
+  module_out_path = module_output_path
+  include_dirs = [ "${IDL_DIR}" ]
+
+  configs = [ ":idl_tool_2_test_config" ]
+  sources = [ "./sa_fdsan_type_emitter_test.cpp" ]
+  sources += common_sources
+
+  deps = []
+
+  external_deps = [ "c_utils:utils" ]
+
+  part_name = "idl_tool"
+  subsystem_name = "ability"
+}
 
 ohos_unittest("SaUshortTypeEmitterTest") {
   module_out_path = module_output_path
@@ -207,6 +258,9 @@ ohos_unittest("SaSetTypeEmitterTest") {
 group("unittest") {
   testonly = true
   deps = [
+    ":SaCStringTypeEmitterTest",
+    ":SaFdTypeEmitterTest",
+    ":SaFdSanTypeEmitterTest",
     ":SaUshortTypeEmitterTest",
     ":SaSetTypeEmitterTest",
     ":SaStructTypeEmitterTest",
