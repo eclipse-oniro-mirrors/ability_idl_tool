@@ -80,6 +80,8 @@ HWTEST_F(SaUlongTypeEmitterTest, EmitCppType_001, Level1)
     EXPECT_EQ(ret, "uint64_t");
     ret = emitter.EmitCppType(TypeMode::PARAM_OUT);
     EXPECT_EQ(ret, "uint64_t&");
+    ret = emitter.EmitCppType(static_cast<TypeMode>(-1));
+    EXPECT_EQ(ret, "unknown type");
     DTEST_LOG << "EmitCppType_001 end" << std::endl;
 }
 
