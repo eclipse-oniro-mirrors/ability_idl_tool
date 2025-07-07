@@ -69,6 +69,9 @@ int32_t FooStub::OnRemoteRequest(
         case IFooIpcCode::COMMAND_TEST004: {
             std::unordered_map<int64_t, int64_t> inParam;
             int32_t inParamSize = data.ReadInt32();
+            if (inParamSize > static_cast<size_t>(MAP_MAX_SIZE)) {
+                return ERR_INVALID_DATA;
+            }
             for (int32_t i1 = 0; i1 < inParamSize; ++i1) {
                 int64_t key1 = data.ReadInt64();
                 int64_t value1 = data.ReadInt64();

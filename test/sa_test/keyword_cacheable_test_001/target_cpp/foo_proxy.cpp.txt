@@ -193,6 +193,9 @@ ErrCode FooProxy::test004(
             return errCode;
         }
         int32_t outParamSize = reply.ReadInt32();
+        if (outParamSize > static_cast<size_t>(MAP_MAX_SIZE)) {
+            return ERR_INVALID_DATA;
+        }
         for (int32_t i2 = 0; i2 < outParamSize; ++i2) {
             int64_t key2 = reply.ReadInt64();
             int64_t value2 = reply.ReadInt64();
@@ -219,6 +222,9 @@ ErrCode FooProxy::test004(
     ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(),
         static_cast<uint32_t>(IFooIpcCode::COMMAND_TEST004), data, reply);
     int32_t outParamSize = reply.ReadInt32();
+    if (outParamSize > static_cast<size_t>(MAP_MAX_SIZE)) {
+        return ERR_INVALID_DATA;
+    }
     for (int32_t i3 = 0; i3 < outParamSize; ++i3) {
         int64_t key3 = reply.ReadInt64();
         int64_t value3 = reply.ReadInt64();

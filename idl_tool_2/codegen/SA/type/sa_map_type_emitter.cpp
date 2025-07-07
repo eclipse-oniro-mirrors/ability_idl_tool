@@ -101,6 +101,15 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
     std::string keyStr = "key" + circleCountStr.str();
     std::string valueStr = "value" + circleCountStr.str();
     sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
+
+    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<size_t>(MAP_MAX_SIZE)) {\n", useName.c_str());
+    if (logOn_) {
+        sb.Append(prefix).Append(TAB).AppendFormat(
+            "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
+    }
+    sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
+    sb.Append(prefix).Append("}\n");
+
     sb.Append(prefix).AppendFormat("for (int32_t i%d = 0; i%d < %sSize; ++i%d) {\n", circleCount_,
         circleCount_, useName.c_str(), circleCount_);
     keyEmitter_->EmitCppReadVar(parcelName, keyStr, sb, prefix + TAB);
