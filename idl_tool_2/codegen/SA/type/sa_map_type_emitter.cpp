@@ -102,7 +102,7 @@ void SaMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std::
     std::string valueStr = "value" + circleCountStr.str();
     sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
 
-    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<size_t>(MAP_MAX_SIZE)) {\n", useName.c_str());
+    sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n", useName.c_str());
     if (logOn_) {
         sb.Append(prefix).Append(TAB).AppendFormat(
             "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");

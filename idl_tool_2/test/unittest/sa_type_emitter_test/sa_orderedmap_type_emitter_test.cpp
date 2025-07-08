@@ -63,7 +63,7 @@ HWTEST_F(SaOrderedMapTypeEmitterTest, EmitCppReadVar_001, Level1)
 
     std::string expectedCode = "    std::map<int32_t, int32_t> inParam;\n"
                                "    int32_t inParamSize = parcel.ReadInt32();\n"
-                               "    if (inParamSize > static_cast<size_t>(MAP_MAX_SIZE)) {\n"
+                               "    if (inParamSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n"
                                "        Hilog::Error(LABEL, \"The map size exceeds the security limit!\");\n"
                                "        return ERR_INVALID_DATA;\n"
                                "    }\n"
@@ -99,7 +99,7 @@ HWTEST_F(SaOrderedMapTypeEmitterTest, EmitCppReadVar_002, Level1)
 
     std::string expectedCode = "    std::map<int32_t, int32_t> inParam;\n"
                                "    int32_t inParamSize = parcel.ReadInt32();\n"
-                               "    if (inParamSize > static_cast<size_t>(MAP_MAX_SIZE)) {\n"
+                               "    if (inParamSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n"
                                "        return ERR_INVALID_DATA;\n"
                                "    }\n"
                                "\n"
