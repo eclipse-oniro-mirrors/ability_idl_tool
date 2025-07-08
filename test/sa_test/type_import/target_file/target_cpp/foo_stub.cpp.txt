@@ -233,6 +233,9 @@ int32_t FooStub::OnRemoteRequest(
         case IFooIpcCode::COMMAND_GET_ALL_APP_SUSPEND_STATE: {
             std::unordered_map<int32_t, FooStruct> inApp;
             int32_t inAppSize = data.ReadInt32();
+            if (inAppSize > static_cast<int32_t>(MAP_MAX_SIZE)) {
+                return ERR_INVALID_DATA;
+            }
             for (int32_t i2 = 0; i2 < inAppSize; ++i2) {
                 int32_t key2 = data.ReadInt32();
                 FooStruct value2;
