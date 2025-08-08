@@ -32,9 +32,9 @@ void ASTType::SetNamespace(ASTNamespace* nspace)
     namespace_ = nspace;
 }
 
-ASTNamespace* ASTType::GetNamespace()
+AutoPtr<ASTNamespace> ASTType::GetNamespace()
 {
-    return namespace_;
+    return AutoPtr<ASTNamespace>(namespace_);
 }
 
 bool ASTType::IsBooleanType()
