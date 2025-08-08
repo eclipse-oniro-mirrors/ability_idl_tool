@@ -31,7 +31,7 @@ public:
 
     virtual void SetNamespace(ASTNamespace* nspace);
 
-    virtual ASTNamespace* GetNamespace();
+    virtual AutoPtr<ASTNamespace> GetNamespace();
 
     virtual String GetSignature() = 0;
 
