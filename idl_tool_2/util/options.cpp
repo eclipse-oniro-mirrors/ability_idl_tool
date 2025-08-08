@@ -63,10 +63,6 @@ Options &Options::GetInstance()
 
 bool Options::Parse(int argc, char *argv[])
 {
-    if (argv == nullptr) {
-        Logger::E(TAG, "argv is NULL");
-        return false;
-    }
     int ret = true;
     program = argv[0];
     opterr = 0;
