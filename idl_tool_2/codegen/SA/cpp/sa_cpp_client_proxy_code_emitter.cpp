@@ -163,7 +163,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyConstructor(StringBuilder &s
         sb.Append(prefix).Append("{}\n");
     }
     sb.Append("\n");
-    sb.Append(prefix).AppendFormat("virtual ~%s() override\n", proxyName_.c_str());
+    sb.Append(prefix).AppendFormat("virtual ~%s()\n", proxyName_.c_str());
     if (ast_->GetHasCacheableProxyMethods()) {
         EmitInterfaceProxyUnRegisterDeathRecipient(sb, prefix);
     } else {
