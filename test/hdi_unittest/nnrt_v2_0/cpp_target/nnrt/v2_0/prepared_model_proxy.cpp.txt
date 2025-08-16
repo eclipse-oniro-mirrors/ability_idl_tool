@@ -45,7 +45,10 @@ static bool ReadPodArray(MessageParcel &parcel, std::vector<ElementType> &data)
     if (size == 0) {
         return true;
     }
-    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sizeof(ElementType) * size));
+    size_t sz;
+    bool ok = __builtin_mul_overflow(sizeof(ElementType), size, &sz);
+    if (ok) { return false; }
+    const ElementType *dataPtr = reinterpret_cast<const ElementType*>(parcel.ReadUnpadBuffer(sz));
     if (dataPtr == nullptr) {
         HDF_LOGI("%{public}s: failed to read data", __func__);
         return false;
