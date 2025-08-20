@@ -44,7 +44,10 @@ static bool WritePodArray(MessageParcel &parcel, const std::vector<ElementType> 
     if (data.empty()) {
         return true;
     }
-    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sizeof(ElementType) * data.size())) {
+    size_t sz;
+    bool ok = __builtin_mul_overflow(sizeof(ElementType), data.size(), &sz);
+    if (ok) { return false; }
+    if (!parcel.WriteUnpadBuffer((const void*)data.data(), sz)) {
         HDF_LOGE("%{public}s: failed to write array", __func__);
         return false;
     }

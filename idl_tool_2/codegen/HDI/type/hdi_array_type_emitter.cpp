@@ -1125,8 +1125,12 @@ void HdiArrayTypeEmitter::EmitCppWriteMethods(
         sb.Append(prefix + TAB + TAB).Append("return true;\n");
         sb.Append(prefix + TAB).Append("}\n");
 
+        sb.Append(prefix + TAB).Append("size_t sz;\n");
+        sb.Append(prefix + TAB).Append("bool ok = __builtin_mul_overflow(sizeof(ElementType), data.size(), &sz);\n");
+        sb.Append(prefix + TAB).Append("if (ok) { return false; }\n");
+
         sb.Append(prefix + TAB).Append("if (!parcel.WriteUnpadBuffer(");
-        sb.Append("(const void*)data.data(), sizeof(ElementType) * data.size())) {\n");
+        sb.Append("(const void*)data.data(), sz)) {\n");
         sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s: failed to write array\", __func__);\n");
         sb.Append(prefix + TAB + TAB).Append("return false;\n");
         sb.Append(prefix + TAB).Append("}\n");
@@ -1165,8 +1169,12 @@ void HdiArrayTypeEmitter::EmitCppReadMethods(
         sb.Append(prefix + TAB + TAB).Append("return true;\n");
         sb.Append(prefix + TAB).Append("}\n");
 
+        sb.Append(prefix + TAB).Append("size_t sz;\n");
+        sb.Append(prefix + TAB).Append("bool ok = __builtin_mul_overflow(sizeof(ElementType), size, &sz);\n");
+        sb.Append(prefix + TAB).Append("if (ok) { return false; }\n");
+
         sb.Append(prefix + TAB).Append("const ElementType *dataPtr = reinterpret_cast<const ElementType*>(");
-        sb.Append("parcel.ReadUnpadBuffer(sizeof(ElementType) * size));\n");
+        sb.Append("parcel.ReadUnpadBuffer(sz));\n");
         sb.Append(prefix + TAB).Append("if (dataPtr == nullptr) {\n");
         sb.Append(prefix + TAB + TAB).Append("HDF_LOGI(\"%{public}s: failed to read data\", __func__);\n");
         sb.Append(prefix + TAB + TAB).Append("return false;\n");
