@@ -131,6 +131,7 @@ ErrCode ListenAbility::GetAllAppSuspendState(
 ErrCode ListenAbility::rawdata_test_func(
     const MyRawdata& inParam,
     MyRawdata& outParam,
+    int& fd,
     MyRawdata& inoutParam,
     MyRawdata& funcResult)
 {

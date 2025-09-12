@@ -65,6 +65,7 @@ public:
     ErrCode rawdata_test_func(
         const MyRawdata& inParam,
         MyRawdata& outParam,
+        int& fd,
         MyRawdata& inoutParam,
         MyRawdata& funcResult) override;
 
