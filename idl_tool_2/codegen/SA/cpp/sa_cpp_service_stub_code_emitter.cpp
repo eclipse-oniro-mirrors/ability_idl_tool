@@ -369,7 +369,8 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
         return;
     }
     if (type->GetTypeKind() == TypeKind::TYPE_FILEDESCRIPTOR) {
-        sb.Append(prefix).AppendFormat("%s %s = -1;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
+        sb.Append(prefix).AppendFormat("%s %s = -1;\n",
+            typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     } else {
         sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
     }
