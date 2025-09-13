@@ -482,7 +482,7 @@ void CppServiceStubCodeEmitter::EmitStubCallMethod(
 
     sb.Append(prefix).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB)
-        .AppendFormat("HDF_LOGE(\"%%{public}s failed, error code is %%{public}d\", __func__, %s);\n",
+        .AppendFormat("HDF_LOGD(\"%%{public}s failed, error code is %%{public}d\", __func__, %s);\n",
         HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB).AppendFormat("return %s;\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix).Append("}\n");
