@@ -365,10 +365,15 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
     AutoPtr<ASTType> type = param->GetType();
     const std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
-    if (typeEmitter == nullptr) {
+    if (typeEmitter == nullptr || type == nullptr) {
         return;
     }
-    sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
+    if (type->GetTypeKind() == TypeKind::TYPE_FILEDESCRIPTOR) {
+        sb.Append(prefix).AppendFormat("%s %s = -1;\n",
+            typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
+    } else {
+        sb.Append(prefix).AppendFormat("%s %s;\n", typeEmitter->EmitCppType(TypeMode::LOCAL_VAR).c_str(), name.c_str());
+    }
 }
 
 void SaCppServiceStubCodeEmitter::EmitSaReturnParameter(const std::string &name, const TypeKind kind,

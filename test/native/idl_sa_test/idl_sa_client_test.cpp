@@ -272,13 +272,17 @@ HWTEST_F(IdlSaUnitTest, IdlRawDataTest001, TestSize.Level1)
     MyRawdata in, out, inout, result;
     const char sampleData[] = "Hello!";
 
+    int fd = -1;
     in.size = sizeof(sampleData);
     in.RawDataCpy(sampleData);
     out.size = sizeof(sampleData);
     out.RawDataCpy(sampleData);
     inout.size = sizeof(sampleData);
     inout.RawDataCpy(sampleData);
-    int32_t ret = client_->rawdata_test_func(in, out, inout, result);
+    int32_t ret = client_->rawdata_test_func(in, out, fd, inout, result);
+    if (fd >= 0) {
+        close(fd);
+    }
     std::cout << "TestRawData" << std::endl;
 
     EXPECT_STREQ(static_cast<const char*>(out.data), "Hello, world!");
