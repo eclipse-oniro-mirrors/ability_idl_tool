@@ -84,6 +84,11 @@ bool IntfTypeChecker::CheckIntfSaAstTypes()
 bool IntfTypeChecker::CheckIntfSaAstMethods()
 {
     AutoPtr<ASTInterfaceType> interfaceType = ast_->GetInterfaceDef();
+    if (interfaceType == nullptr) {
+        Logger::E(TAG, StringHelper::Format("[%s:%d] error:custom ast cannot has interface.", __func__,
+            __LINE__).c_str());
+        return false;
+    }
     bool onewayInterface = (interfaceType->GetAttribute()->GetValue() == ASTAttr::ONEWAY);
 
     for (size_t i = 0; i < interfaceType->GetMethodNumber(); i++) {
