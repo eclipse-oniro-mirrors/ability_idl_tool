@@ -153,6 +153,7 @@ ErrCode fd_test_func(int& fd) {
     fd = 0;
     HiLog::Info(LABEL, "[idlTest] fd_test_func service");
     return ERR_OK;
+}
 
 void ListenAbility::OnStart()
 {
