@@ -149,7 +149,8 @@ ErrCode ListenAbility::rawdata_test_func(
     return ERR_OK;
 }
 
-ErrCode fd_test_func(int& fd) {
+ErrCode fd_test_func(int& fd)
+{
     fd = 0;
     HiLog::Info(LABEL, "[idlTest] fd_test_func service");
     return ERR_OK;
