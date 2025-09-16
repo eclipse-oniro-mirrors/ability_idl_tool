@@ -131,7 +131,6 @@ ErrCode ListenAbility::GetAllAppSuspendState(
 ErrCode ListenAbility::rawdata_test_func(
     const MyRawdata& inParam,
     MyRawdata& outParam,
-    int& fd,
     MyRawdata& inoutParam,
     MyRawdata& funcResult)
 {
@@ -149,6 +148,11 @@ ErrCode ListenAbility::rawdata_test_func(
         inParam.size, static_cast<const char*>(inParam.data));
     return ERR_OK;
 }
+
+ErrCode fd_test_func(int& fd) {
+    fd = 0;
+    HiLog::Info(LABEL, "[idlTest] fd_test_func service");
+    return ERR_OK;
 
 void ListenAbility::OnStart()
 {
