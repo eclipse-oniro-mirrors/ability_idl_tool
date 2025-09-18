@@ -308,7 +308,8 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
     int32_t ret = client_->fd_test_func(fd);
     std::cout << "fd_test_func client" << std::endl;
     EXPECT_EQ(ret, ERR_OK);
-
+    EXPECT_EQ(fd, -1);
+    
     if (fd >= 0) {
         close(fd);
     }
