@@ -65,9 +65,10 @@ public:
     ErrCode rawdata_test_func(
         const MyRawdata& inParam,
         MyRawdata& outParam,
-        int& fd,
         MyRawdata& inoutParam,
         MyRawdata& funcResult) override;
+    
+    ErrCode fd_test_func(int32_t& fd) override;
 
 protected:
     void OnStart() override;

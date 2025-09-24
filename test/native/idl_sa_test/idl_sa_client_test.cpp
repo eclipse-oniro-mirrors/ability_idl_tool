@@ -272,17 +272,13 @@ HWTEST_F(IdlSaUnitTest, IdlRawDataTest001, TestSize.Level1)
     MyRawdata in, out, inout, result;
     const char sampleData[] = "Hello!";
 
-    int fd = -1;
     in.size = sizeof(sampleData);
     in.RawDataCpy(sampleData);
     out.size = sizeof(sampleData);
     out.RawDataCpy(sampleData);
     inout.size = sizeof(sampleData);
     inout.RawDataCpy(sampleData);
-    int32_t ret = client_->rawdata_test_func(in, out, fd, inout, result);
-    if (fd >= 0) {
-        close(fd);
-    }
+    int32_t ret = client_->rawdata_test_func(in, out, inout, result);
     std::cout << "TestRawData" << std::endl;
 
     EXPECT_STREQ(static_cast<const char*>(out.data), "Hello, world!");
@@ -295,5 +291,30 @@ HWTEST_F(IdlSaUnitTest, IdlRawDataTest001, TestSize.Level1)
     delete client_;
 }
 
+/*
+ * @tc.name: IdlfdTest001
+ * @tc.desc: test valid fd
+ * @tc.type: FUNC
+ */
+HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
+{
+    std::cout << "IdlfdTest001 start" << std::endl;
+
+    ListenAbilityClient* client_ = new ListenAbilityClient(1494);
+    ASSERT_NE(client_, nullptr);
+
+    // sync func
+    int fd = -2;
+    int32_t ret = client_->fd_test_func(fd);
+    std::cout << "fd_test_func client" << std::endl;
+    EXPECT_EQ(ret, ERR_OK);
+    EXPECT_NE(fd, -2);
+    
+    if (fd >= 0) {
+        close(fd);
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    delete client_;
+}
 } // namespace idl
 } // namespace OHOS

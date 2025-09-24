@@ -19,6 +19,7 @@
 #include "iremote_object.h"
 #include "if_system_ability_manager.h"
 #include "iservice_registry.h"
+#include <fcntl.h>
 
 using namespace OHOS::HiviewDFX;
 
@@ -131,7 +132,6 @@ ErrCode ListenAbility::GetAllAppSuspendState(
 ErrCode ListenAbility::rawdata_test_func(
     const MyRawdata& inParam,
     MyRawdata& outParam,
-    int& fd,
     MyRawdata& inoutParam,
     MyRawdata& funcResult)
 {
@@ -147,6 +147,13 @@ ErrCode ListenAbility::rawdata_test_func(
     funcResult.RawDataCpy(sampleData2);
     HiLog::Info(LABEL, "[idlTest] in rawdata service, said: %{public}u, %{public}s",
         inParam.size, static_cast<const char*>(inParam.data));
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::fd_test_func(int32_t& fd)
+{
+    fd = open("/dev/null", O_RDWR);
+    HiLog::Info(LABEL, "[idlTest] valid_fd_test_func inout fd service");
     return ERR_OK;
 }
 
