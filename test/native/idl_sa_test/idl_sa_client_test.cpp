@@ -305,7 +305,7 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
 
     // sync func
     int fd = -2;
-    int32_t ret = client_->valid_fd_test_func(fd);
+    int32_t ret = client_->fd_test_func(fd);
     std::cout << "fd_test_func client" << std::endl;
     EXPECT_EQ(ret, ERR_OK);
     EXPECT_NE(fd, -2);
