@@ -68,7 +68,7 @@ public:
         MyRawdata& inoutParam,
         MyRawdata& funcResult) override;
     
-    ErrCode fd_test_func(int& fd) override;
+    ErrCode fd_test_func(int32_t& fd) override;
 
 protected:
     void OnStart() override;

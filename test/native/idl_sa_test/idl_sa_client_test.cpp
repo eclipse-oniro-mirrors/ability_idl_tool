@@ -293,7 +293,7 @@ HWTEST_F(IdlSaUnitTest, IdlRawDataTest001, TestSize.Level1)
 
 /*
  * @tc.name: IdlfdTest001
- * @tc.desc: test fd
+ * @tc.desc: test valid fd
  * @tc.type: FUNC
  */
 HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
@@ -304,11 +304,11 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
     ASSERT_NE(client_, nullptr);
 
     // sync func
-    int fd;
-    int32_t ret = client_->fd_test_func(fd);
+    int fd = -2;
+    int32_t ret = client_->valid_fd_test_func(fd);
     std::cout << "fd_test_func client" << std::endl;
     EXPECT_EQ(ret, ERR_OK);
-    EXPECT_EQ(fd, -1);
+    EXPECT_NE(fd, -2);
     
     if (fd >= 0) {
         close(fd);
@@ -316,6 +316,5 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
     std::this_thread::sleep_for(std::chrono::seconds(2));
     delete client_;
 }
-
 } // namespace idl
 } // namespace OHOS

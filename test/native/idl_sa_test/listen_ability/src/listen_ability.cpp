@@ -19,6 +19,7 @@
 #include "iremote_object.h"
 #include "if_system_ability_manager.h"
 #include "iservice_registry.h"
+#include <fcntl.h>
 
 using namespace OHOS::HiviewDFX;
 
@@ -149,9 +150,10 @@ ErrCode ListenAbility::rawdata_test_func(
     return ERR_OK;
 }
 
-ErrCode fd_test_func(int& fd)
+ErrCode ListenAbility::fd_test_func(int32_t& fd)
 {
-    HiLog::Info(LABEL, "[idlTest] fd_test_func service");
+    fd = open("/dev/null", O_RDWR);
+    HiLog::Info(LABEL, "[idlTest] valid_fd_test_func inout fd service");
     return ERR_OK;
 }
 
