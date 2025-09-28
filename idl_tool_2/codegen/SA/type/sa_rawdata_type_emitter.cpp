@@ -43,7 +43,8 @@ void SaRawDataTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const 
 {
     sb.Append(prefix).AppendFormat("if (!%sWriteUint32(%s.size)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Write [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -67,7 +68,7 @@ void SaRawDataTypeEmitter::EmitCppReadVar(const std::string &parcelName, const s
     sb.Append(prefix).AppendFormat(
         "if (!%sReadUint32(%s.size)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).AppendFormat(", \"Read [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -76,7 +77,8 @@ void SaRawDataTypeEmitter::EmitCppReadVar(const std::string &parcelName, const s
         "auto read%s = %sReadRawData(%s.size);\n", name.c_str(), parcelName.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("if (read%s == nullptr) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s RawData] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Read [%s RawData] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -85,7 +87,8 @@ void SaRawDataTypeEmitter::EmitCppReadVar(const std::string &parcelName, const s
         name.c_str(), name.c_str(), name.c_str());
     sb.Append(prefix).AppendFormat("if (%soutError) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"RawDataCpy [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"RawDataCpy [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).AppendFormat("return %soutError;\n", name.c_str());
     sb.Append(prefix).Append("}\n");

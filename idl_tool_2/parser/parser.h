@@ -108,6 +108,8 @@ private:
 
     bool ParseOptionParcelHooks();
 
+    bool ParseOptionMacroHilog();
+
     bool ParserPackageInfo(const std::string &packageName);
 
     bool ParseImports();

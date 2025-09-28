@@ -59,7 +59,8 @@ void SaUnionTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const st
     sb.Append(prefix).AppendFormat("if (!%sWriteUnpadBuffer(&%s, sizeof(%s))) {\n",
         parcelName.c_str(), name.c_str(), EmitCppType().c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Write [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -75,14 +76,16 @@ void SaUnionTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
         EmitCppType().c_str(), name.c_str(), EmitCppType().c_str(), parcelName.c_str(), EmitCppType().c_str());
     sb.Append(prefix).AppendFormat("if (%sCp == nullptr) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Read [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n\n");
     sb.Append(prefix).AppendFormat("if (memcpy_s(&%s, sizeof(%s), %sCp, sizeof(%s)) != EOK) {\n", name.c_str(),
         EmitCppType().c_str(), name.c_str(), EmitCppType().c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Memcpy [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Memcpy [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");

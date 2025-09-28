@@ -92,7 +92,8 @@ void SaArrayTypeEmitter::EmitCppReadVar(const std::string &parcelName, const std
     sb.Append(prefix).AppendFormat("int32_t %sSize = %sReadInt32();\n", useName.c_str(), parcelName.c_str());
     sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n", useName.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).Append("HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n");
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            Append(", \"The vector/array size exceeds the security limit!\");\n");
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");

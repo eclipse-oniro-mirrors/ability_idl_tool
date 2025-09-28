@@ -59,6 +59,7 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"support_delegator",   TokenType::SUPPORT_DELEGATOR  },
     {"option_stub_hooks",  TokenType::OPTION_STUB_HOOKS  },
     {"option_parcel_hooks",  TokenType::OPTION_PARCEL_HOOKS  },
+    {"option_macro_hilog",  TokenType::OPTION_MACRO_HILOG  },
     {"sequenceable",   TokenType::SEQ          },
     {"rawdata",        TokenType::RAWDATA      },
     {"import",         TokenType::IMPORT       },

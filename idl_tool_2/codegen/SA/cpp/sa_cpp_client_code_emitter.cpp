@@ -226,7 +226,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientSetParam(StringBuilder &sb, cons
         Append("static constexpr int32_t LOAD_SA_TIMEOUT = 4;    // default load sa timeout is 4 seconds\n");
     sb.Append(prefix).
         Append("static constexpr double MICROSECOND_TO_SECOND = 1000000.0;    // microseconds to seconds\n");
-    if (logOn_) {
+    if (logOn_ && (ast_ != nullptr && ast_->GetOptionParcelHooksOn())) {
         sb.Append(prefix).AppendFormat(
             "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
             domainId_.c_str(), logTag_.c_str());
@@ -252,7 +252,7 @@ void SaCppClientCodeEmitter::EmitClientSourceFile()
     }
     sb.Append('\n');
     if (logOn_) {
-        sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
+        sb.Append(macroDefine_.c_str());
     }
     EmitBeginNamespace(sb);
     EmitImportUsingNamespace(sb);
@@ -284,14 +284,15 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodConstructor(StringBuilder 
         baseName_.c_str());
     if (logOn_) {
         sb.Append(prefix + TAB).Append("if (!deathRecipient_) {\n");
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl init deathRecipient_ failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"idl init deathRecipient_ failed\");\n");
         sb.Append(prefix + TAB).Append("}\n");
     }
     sb.Append("\n");
     sb.Append(prefix + TAB).Append("localLoadCallback_ = new (std::nothrow) LocalLoadCallback(*this);\n");
     if (logOn_) {
         sb.Append(prefix + TAB).Append("if (!localLoadCallback_) {\n");
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl init localLoadCallback_ failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).
+            Append(", \"idl init localLoadCallback_ failed\");\n");
         sb.Append(prefix + TAB).Append("}\n");
     }
     sb.Append(prefix).Append("}\n\n");
@@ -340,7 +341,8 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodAbilityAsync(StringBuilder
     sb.Append(prefix + TAB + TAB).Append("}");
     if (logOn_) {
         sb.Append(" else {\n");
-        sb.Append(prefix + TAB + TAB + TAB).Append("HiLog::Warn(LABEL, \"idl load callback is already exist\");\n");
+        sb.Append(prefix + TAB + TAB + TAB).Append(macroWarn_.c_str()).
+            Append(", \"idl load callback is already exist\");\n");
         sb.Append(prefix + TAB + TAB).Append("}");
     }
     sb.Append("\n");
@@ -501,7 +503,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodAbilitySF(StringBuilder &s
     sb.Append(prefix).Append("{\n");
     if (logOn_) {
         sb.Append(prefix + TAB).
-            Append("HiLog::Error(LABEL, \"idl LoadSystemAbility failed, %{public}d\", systemAbilityId);\n");
+            Append(macroError_.c_str()).Append(", \"idl LoadSystemAbility failed, %{public}d\", systemAbilityId);\n");
     }
     sb.Append(prefix + TAB).AppendFormat("client_.Set%sStatus();\n", baseName_.c_str());
     sb.Append(prefix + TAB).Append("if (localCallback_) {\n");
@@ -521,8 +523,8 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodAbilitySF(StringBuilder &s
         clientName_.c_str());
     sb.Append(prefix).Append("{\n");
     if (logOn_) {
-        sb.Append(prefix + TAB).
-            Append("HiLog::Error(LABEL, \"idl local LoadSystemAbility failed, %{public}d\", systemAbilityId);\n");
+        sb.Append(prefix + TAB).Append(macroError_.c_str()).
+            Append(", \"idl local LoadSystemAbility failed, %{public}d\", systemAbilityId);\n");
     }
     sb.Append(prefix + TAB).AppendFormat("client_.Set%sStatus();\n", baseName_.c_str());
     sb.Append(prefix).Append("}\n\n");
@@ -545,7 +547,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodStatusProxy(StringBuilder 
     sb.Append(prefix + TAB).Append("if (!remote) {\n");
     if (logOn_) {
         sb.Append(prefix + TAB + TAB)
-            .Append("HiLog::Error(LABEL, \"idl remote is nullptr, said:%{public}d\", systemAbilityId_);\n");
+            .Append(macroError_.c_str()).Append(", \"idl remote is nullptr, said:%{public}d\", systemAbilityId_);\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_NULL_OBJECT;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -555,13 +557,13 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodStatusProxy(StringBuilder 
     sb.Append(prefix + TAB).Append("remote_ = remote;\n\n");
     if (logOn_) {
         sb.Append(prefix + TAB).Append("if (deathRecipient_ && !remote_->AddDeathRecipient(deathRecipient_)) {\n");
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl AddDeathRecipient failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"idl AddDeathRecipient failed\");\n");
         sb.Append(prefix + TAB).Append("}\n\n");
     }
     sb.Append(prefix + TAB).AppendFormat("proxy_ = iface_cast<%s>(remote_);\n", interfaceName_.c_str());
     sb.Append(prefix + TAB).Append("if (!proxy_) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl init proxy failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"idl init proxy failed\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_NULL_OBJECT;\n");
     sb.Append(prefix + TAB).Append("}\n\n");
@@ -592,7 +594,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodPrevent(StringBuilder &sb,
     sb.Append(prefix + TAB + TAB).Append("return LoadSystemAbility();\n");
     sb.Append(prefix + TAB).Append("} else {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl sa is loading or not timeout\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"idl sa is loading or not timeout\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -606,7 +608,8 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodAbilityLoad(StringBuilder 
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).Append("if (!localLoadCallback_) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl localLoadCallback_ is nullptr\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).
+            Append(", \"idl localLoadCallback_ is nullptr\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_NULL_OBJECT;\n");
     sb.Append(prefix + TAB).Append("}\n\n");
@@ -628,7 +631,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientSamgr(StringBuilder &sb, const s
         Append("auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();\n");
     sb.Append(prefix + TAB).Append("if (!samgr) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"idl samgr is nullptr\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"idl samgr is nullptr\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_NULL_OBJECT;\n");
     sb.Append(prefix + TAB).Append("}\n\n");

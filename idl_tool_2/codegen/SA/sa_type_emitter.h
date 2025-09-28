@@ -68,6 +68,7 @@ public:
         const std::string &prefix, TypeMode mode = TypeMode::NO_MODE) const;
 
     static std::string domainId_;
+    static std::string macroHilog_;
     static bool logOn_;
     static int circleCount_;
     bool isParamInout = false;

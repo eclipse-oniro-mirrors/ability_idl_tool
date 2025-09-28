@@ -74,7 +74,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(Strin
     sb.Append(prefix).Append("if (remote_) {\n");
     sb.Append(prefix + TAB).Append("if (!remote->IsProxyObject()) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"remote is not proxy object!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"remote is not proxy object!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return;\n")
         .Append(prefix + TAB).Append("}\n")
@@ -82,13 +82,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyRegisterDeathRecipient(Strin
         .AppendFormat("deathRecipient_ = new (std::nothrow) %s(*this);\n", deathRecipientName_.c_str())
         .Append(prefix + TAB).Append("if (!deathRecipient_) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"deathRecipient_ is nullptr!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"deathRecipient_ is nullptr!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return;\n")
         .Append(prefix + TAB).Append("}\n")
         .Append(prefix + TAB).Append("if (!remote->AddDeathRecipient(deathRecipient_)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"AddDeathRecipient failed!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"AddDeathRecipient failed!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return;\n")
         .Append(prefix + TAB).Append("}\n")
@@ -260,7 +260,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyCppFile()
     }
     sb.Append("\n");
     if (logOn_) {
-        sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
+        sb.Append(macroDefine_.c_str());
     }
     EmitBeginNamespace(sb);
     EmitImportUsingNamespace(sb);
@@ -336,9 +336,8 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod>
         method->GetIpcCode());
     sb.Append(prefix).AppendFormat("if (!data.SetMaxCapacity(%s)) {\n", capacity.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat(
-            "HiLog::Error(LABEL, \"Failed to set maximum capacity to %%zu\", %s);\n",
-            capacity.c_str());
+        sb.Append(prefix + TAB).Append(macroError_.c_str()).
+            .AppendFormat(", \"Failed to set maximum capacity to %%zu\", %s);\n", capacity.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix).Append("}\n\n");
@@ -365,7 +364,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     }
     sb.Append(prefix + TAB).Append("if (!data.WriteInterfaceToken(GetDescriptor())) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Write interface token failed!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"Write interface token failed!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n").Append(prefix + TAB).Append("}\n\n");
     size_t paramNumber = method->GetParameterNumber();
@@ -382,7 +381,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
     sb.Append(prefix + TAB).Append("sptr<IRemoteObject> remote = Remote();\n");
     sb.Append(prefix + TAB).Append("if (!remote) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Remote is nullptr!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"Remote is nullptr!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_DATA;\n").Append(prefix + TAB).Append("}\n");
     std::string overloadname = SACppCodeEmitter::GetOverloadName();
@@ -391,7 +390,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
         interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"Send request failed!\");\n");
     }
     sb.Append(prefix + TAB).Append("    return result;\n").Append(prefix + TAB).Append("}\n");
     EmitInterfaceProxyMethodRetValue(method, sb, prefix);
@@ -404,9 +403,9 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodErrCode(AutoPtr<ASTMet
     sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
     if (logOn_) {
         std::string overloadname = SACppCodeEmitter::GetOverloadName();
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read result failed, code is: %{public}d.\",\n")
-            .Append(prefix + TAB + TAB + TAB)
-            .AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).
+            Append(", \"Read result failed, code is: %{public}d.\",\n").Append(prefix + TAB + TAB + TAB).
+            AppendFormat("static_cast<uint32_t>(%sIpcCode::COMMAND_%s));\n",
             interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
     }
     sb.Append(prefix + TAB).Append("    return errCode;\n");

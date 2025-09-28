@@ -93,9 +93,11 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
         sb.AppendFormat("%s\n", file.ToString().c_str());
     }
     if (needLogh && !domainId_.empty() && !logTag_.empty()) {
-        sb.AppendFormat(
-            "static constexpr OHOS::HiviewDFX::HiLogLabel %s_LABEL = {LOG_CORE, %s, \"%s\"};\n",
-            StringHelper::StrToUpper(baseName_).c_str(), domainId_.c_str(), logTag_.c_str());
+        if (ast_ != nullptr && ast_->GetOptionParcelHooksOn()) {
+            sb.AppendFormat(
+                "static constexpr OHOS::HiviewDFX::HiLogLabel %s_LABEL = {LOG_CORE, %s, \"%s\"};\n",
+                StringHelper::StrToUpper(baseName_).c_str(), domainId_.c_str(), logTag_.c_str());
+        }
     }
 }
 
@@ -177,9 +179,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypesSourceFile()
         sb.Append("#include \"hitrace_meter.h\"\n");
     }
     if (logOn_) {
-        sb.Append(
-            "#include \"hilog/log.h\"\n"
-            "using OHOS::HiviewDFX::HiLog;\n\n");
+        sb.Append("#include \"hilog/log.h\"\n").Append(macroDefine_.c_str());
     }
     EmitBeginNamespace(sb);
     sb.Append("\n");
@@ -326,8 +326,8 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImplNoPod(
                 name.c_str(), typeEmitter->EmitCppType().c_str(), cpName.c_str(),
                 typeEmitter->EmitCppType().c_str());
             if (logOn_) {
-                sb.Append(TAB).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"memcpy [%s] failed!\");\n",
-                    name.c_str());
+                sb.Append(TAB).Append(TAB).Append(macroError_.c_str()).
+                    AppendFormat(", \"memcpy [%s] failed!\");\n", name.c_str());
             }
             sb.Append(TAB).Append(TAB).Append("return false;\n");
             sb.Append(TAB).Append("}\n");

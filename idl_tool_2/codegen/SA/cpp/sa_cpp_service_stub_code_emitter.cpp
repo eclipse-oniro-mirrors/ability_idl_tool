@@ -123,7 +123,7 @@ void SaCppServiceStubCodeEmitter::EmitStubSourceFile()
     }
     sb.Append("\n");
     if (logOn_) {
-        sb.Append("using OHOS::HiviewDFX::HiLog;\n\n");
+        sb.Append(macroDefine_.c_str());
     }
     EmitBeginNamespace(sb);
     EmitImportUsingNamespace(sb);
@@ -181,7 +181,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubUseHooks(StringBuilder &sb, c
     sb.Append(prefix + TAB).Append("int32_t enterRet = CallbackEnter(code);\n");
     sb.Append(prefix + TAB).Append("if (enterRet != ERR_NONE) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackEnter failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"CallbackEnter failed\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return enterRet;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -189,7 +189,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubUseHooks(StringBuilder &sb, c
     sb.Append(prefix + TAB).Append("int32_t exitRet = CallbackExit(code, ret);\n");
     sb.Append(prefix + TAB).Append("if (exitRet != ERR_NONE) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackExit failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"CallbackExit failed\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return exitRet;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -208,7 +208,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceParcelUseHooks(StringBuilder &sb,
     sb.Append(prefix + TAB).Append("int32_t parcelRet = CallbackParcel(code, data, reply, option);\n");
     sb.Append(prefix + TAB).Append("if (parcelRet != ERR_NONE) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"CallbackParcel failed\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"CallbackParcel failed\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return parcelRet;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -221,9 +221,8 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod>
         method->GetIpcCode());
     sb.Append(prefix).AppendFormat("if (!reply.SetMaxCapacity(%s)) {\n", capacity.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat(
-            "HiLog::Error(LABEL, \"Failed to set maximum capacity to %%zu\", %s);\n",
-            capacity.c_str());
+        sb.Append(prefix + TAB).Append(macroError_.c_str()).
+            AppendFormat(", \"Failed to set maximum capacity to %%zu\", %s);\n", capacity.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix).Append("}\n");
@@ -353,7 +352,7 @@ void SaCppServiceStubCodeEmitter::EmitInterfaceStubMethodCall(AutoPtr<ASTMethod>
     sb.Append(");\n");
     sb.Append(prefix + TAB).Append("if (!reply.WriteInt32(errCode)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Write Int32 failed!\");\n");
+        sb.Append(prefix + TAB).Append(TAB).Append(macroError_.c_str()).Append(", \"Write Int32 failed!\");\n");
     }
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n");

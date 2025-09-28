@@ -65,7 +65,8 @@ void SaStructTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const s
     sb.Append(prefix).AppendFormat(
         "if (%sBlockMarshalling(%s, %s) != ERR_NONE) {\n", EmitCppType().c_str(), useName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Write [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -86,7 +87,7 @@ void SaStructTypeEmitter::EmitCppReadVar(const std::string &parcelName, const st
     sb.Append(prefix).AppendFormat(
         "if (%sBlockUnmarshalling(%s, %s) != ERR_NONE) {\n", typeName_.c_str(), useName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix + TAB).AppendFormat(macroHilog_.c_str()).Append(", \"Read [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
