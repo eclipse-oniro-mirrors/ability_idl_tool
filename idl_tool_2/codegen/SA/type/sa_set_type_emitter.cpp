@@ -46,8 +46,8 @@ void SaSetTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const std:
 {
     sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(SET_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).Append(
-            "HiLog::Error(LABEL, \"The set size exceeds the security limit!\");\n");
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            Append(", \"The set size exceeds the security limit!\");\n");
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");

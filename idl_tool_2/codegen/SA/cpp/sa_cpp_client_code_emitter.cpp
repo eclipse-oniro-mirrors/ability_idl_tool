@@ -226,7 +226,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientSetParam(StringBuilder &sb, cons
         Append("static constexpr int32_t LOAD_SA_TIMEOUT = 4;    // default load sa timeout is 4 seconds\n");
     sb.Append(prefix).
         Append("static constexpr double MICROSECOND_TO_SECOND = 1000000.0;    // microseconds to seconds\n");
-    if (logOn_ && (ast_ != nullptr && ast_->GetOptionParcelHooksOn())) {
+    if (logOn_ && (ast_ == nullptr || !ast_->GetOptionMacroHilogOn())) {
         sb.Append(prefix).AppendFormat(
             "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
             domainId_.c_str(), logTag_.c_str());

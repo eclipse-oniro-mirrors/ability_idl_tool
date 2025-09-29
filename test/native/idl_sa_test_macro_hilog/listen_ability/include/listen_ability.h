@@ -20,10 +20,10 @@
 
 #include "listen_ability_macro_hilog_stub.h"
 #include "system_ability.h"
-#include "ifoo_custom_macro_hilog_.h"
+#include "ifoo_custom_macro_hilog.h"
 
 namespace OHOS {
-class ListenAbility : public SystemAbility, public ListenAbilityMacroHilog_Stub {
+class ListenAbility : public SystemAbility, public ListenAbilityMacroHilogStub {
     DECLARE_SYSTEM_ABILITY(ListenAbility);
 
 public:
@@ -69,6 +69,7 @@ public:
         MyRawdata& funcResult) override;
     
     ErrCode fd_test_func(int32_t& fd) override;
+    ErrCode invalid_fd_test_func(int32_t& fd) override;
 
 protected:
     void OnStart() override;

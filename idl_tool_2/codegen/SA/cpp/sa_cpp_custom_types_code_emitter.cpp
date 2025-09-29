@@ -93,7 +93,7 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
         sb.AppendFormat("%s\n", file.ToString().c_str());
     }
     if (needLogh && !domainId_.empty() && !logTag_.empty()) {
-        if (ast_ != nullptr && ast_->GetOptionParcelHooksOn()) {
+        if (ast_ == nullptr || !ast_->GetOptionMacroHilogOn()) {
             sb.AppendFormat(
                 "static constexpr OHOS::HiviewDFX::HiLogLabel %s_LABEL = {LOG_CORE, %s, \"%s\"};\n",
                 StringHelper::StrToUpper(baseName_).c_str(), domainId_.c_str(), logTag_.c_str());

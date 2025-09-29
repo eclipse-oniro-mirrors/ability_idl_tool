@@ -185,13 +185,13 @@ bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
 
 void SACodeEmitter::GetOption()
 {
-    if (ast_ != nullptr && ast_->GetOptionParcelHooksOn()) {
+    if (ast_ == nullptr || !ast_->GetOptionMacroHilogOn()) {
         macroError_ = "HILOG_ERROR(LOG_CORE";
         macroWarn_ = "HILOG_WARN(LOG_CORE";
         macroDefine_ = "#undef LOG_DOMAIN\n";
-        macroDefine_ += "#define LOG_DOMAIN" + domainId_ + "\n\n";
-        macroDefine_ += "#undef LOG_TAG";
-        macroDefine_ += "#define LOG_TAG" + logTag_ + "\"\n\n";
+        macroDefine_ += "#define LOG_DOMAIN " + domainId_ + "\n\n";
+        macroDefine_ += "#undef LOG_TAG\n";
+        macroDefine_ += "#define LOG_TAG \"" + logTag_ + "\"\n\n";
         SaTypeEmitter::macroHilog_ = "HILOG_ERROR(LOG_CORE";
     } else {
         macroError_ = "HiLog::Error(LABEL";

@@ -157,6 +157,12 @@ ErrCode ListenAbility::fd_test_func(int32_t& fd)
     return ERR_OK;
 }
 
+ErrCode ListenAbility::invalid_fd_test_func(int32_t& fd)
+{
+    HiLog::Info(LABEL, "[idlTest] invalid_fd_test_func inout fd service");
+    return ERR_OK;
+}
+
 void ListenAbility::OnStart()
 {
     HiLog::Info(LABEL, "[idlTest] OnStart() service");

@@ -305,7 +305,7 @@ public:
         return optionParcelHooksOn_;
     }
 
-    inline void SetOptionMacroHilog(std::string &optionParcelHooks)
+    inline void SetOptionMacroHilog(std::string &optionMacroHilog)
     {
         if (optionMacroHilog == "on") {
             optionMacroHilogOn_ = true;
@@ -314,7 +314,7 @@ public:
         }
     }
 
-    inline bool GetOptionoptionMacroHilogOn() const
+    inline bool GetOptionMacroHilogOn() const
     {
         return optionMacroHilogOn_;
     }

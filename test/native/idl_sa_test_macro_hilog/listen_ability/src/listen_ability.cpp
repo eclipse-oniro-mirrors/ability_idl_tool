@@ -39,37 +39,37 @@ REGISTER_SYSTEM_ABILITY_BY_ID(ListenAbility, 1494, true);
 
 ListenAbility::ListenAbility(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
 {
-    HiLog::Info(LABEL, "ListenAbility()");
+    HILOG_INFO(LOG_CORE, "ListenAbility()");
 }
 
 ListenAbility::~ListenAbility()
 {
-    HiLog::Info(LABEL, "~ListenAbility()");
+    HILOG_INFO(LOG_CORE, "~ListenAbility()");
 }
 
 ErrCode ListenAbility::AddVolume(int32_t volume)
 {
-    HiLog::Info(LABEL, "[idlTest] AddVolume service, volume: %{public}d", volume);
+    HILOG_INFO(LOG_CORE, "[idlTest] AddVolume service, volume: %{public}d", volume);
     return volume + 1;
 }
 
 ErrCode ListenAbility::TestSaCallSa(int32_t input, double &output)
 {
-    HiLog::Info(LABEL, "[idlTest] TestSaCallSa service, input: %{public}d, output: %{public}lf", input, output);
+    HILOG_INFO(LOG_CORE, "[idlTest] TestSaCallSa service, input: %{public}d, output: %{public}lf", input, output);
     return ERR_OK;
 }
 
 ErrCode ListenAbility::TestGetIpcSendRequestTimes(int32_t &times)
 {
     times = 1;
-    HiLog::Info(LABEL, "[idlTest] TestGetIpcSendRequestTimes service");
+    HILOG_INFO(LOG_CORE, "[idlTest] TestGetIpcSendRequestTimes service");
     return ERR_OK;
 }
 
 ErrCode ListenAbility::overloadfun(int32_t& outParam)
 {
     outParam = TEST_TEN;
-    HiLog::Info(LABEL, "[idlTest] overloadfunone service");
+    HILOG_INFO(LOG_CORE, "[idlTest] overloadfunone service");
     return ERR_OK;
 }
 
@@ -77,7 +77,7 @@ ErrCode ListenAbility::overloadfun(int32_t& outParam)
 ErrCode ListenAbility::overloadfun(std::unordered_map<int32_t, int32_t>& outParam)
 {
     outParam[TEST_FOUR] = TEST_SEVEN;
-    HiLog::Info(LABEL, "[idlTest] overloadfuntwo service");
+    HILOG_INFO(LOG_CORE, "[idlTest] overloadfuntwo service");
     return ERR_OK;
 }
 #endif
@@ -85,7 +85,7 @@ ErrCode ListenAbility::overloadfun(std::unordered_map<int32_t, int32_t>& outPara
 ErrCode ListenAbility::enum_test_func(FooEnum inParam, FooEnum& outParam, FooEnum& inoutParam, FooEnum& funcResult)
 {
     outParam = FooEnum::ENUM_TWO;
-    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] enum_test_func service said: %{public}d", static_cast<int>(inParam));
+    HILOG_INFO(LOG_CORE, "[idlTest] enum_test_func service said: %{public}d", static_cast<int>(inParam));
     return ERR_OK;
 }
 
@@ -96,7 +96,7 @@ ErrCode ListenAbility::struct_test_func(
     FooStruct& funcResult)
 {
     outParam.initData.push_back(TEST_THREE);
-    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] struct_test_func service, said: %{public}s", inParam.name.c_str());
+    HILOG_INFO(LOG_CORE, "[idlTest] struct_test_func service, said: %{public}s", inParam.name.c_str());
     return ERR_OK;
 }
 
@@ -107,7 +107,7 @@ ErrCode ListenAbility::union_test_func(
     FooUnion& funcResult)
 {
     outParam.enumType = FooEnum::ENUM_TWO;
-    HiLog::Info(IFOOCUSTOM_LABEL, "[idlTest] union_test_func service, said: %{public}d",
+    HILOG_INFO(LOG_CORE, "[idlTest] union_test_func service, said: %{public}d",
         static_cast<int>(inParam.enumType));
     return ERR_OK;
 }
@@ -118,7 +118,7 @@ ErrCode ListenAbility::ApplyQuickFix(const std::vector<std::string>& quickFixFil
     if (isDebug) {
         debugTrue = "true";
     }
-    HiLog::Info(LABEL, "[idlTest] ApplyQuickFix service, said: %{public}s", debugTrue.c_str());
+    HILOG_INFO(LOG_CORE, "[idlTest] ApplyQuickFix service, said: %{public}s", debugTrue.c_str());
     return ERR_OK;
 }
 
@@ -128,7 +128,7 @@ ErrCode ListenAbility::GetAllAppSuspendState(
 {
     outApp[1].id = TEST_NNN;
     outApp[1].name = "MapTest";
-    HiLog::Info(LABEL, "[idlTest] GetAllAppSuspendState service,said: %{public}d, %{public}s",
+    HILOG_INFO(LOG_CORE, "[idlTest] GetAllAppSuspendState service,said: %{public}d, %{public}s",
         inApp.at(0).id, inApp.at(0).name.c_str());
     return ERR_OK;
 }
@@ -143,13 +143,13 @@ ErrCode ListenAbility::rawdata_test_func(
     const char sampleData2[] = "world!";
     outParam.size = sizeof(sampleData);
     outParam.RawDataCpy(sampleData);
-    HiLog::Info(LABEL, "[idlTest] inout rawdata service, said: %{public}u, %{public}s",
+    HILOG_INFO(LOG_CORE, "[idlTest] inout rawdata service, said: %{public}u, %{public}s",
         inoutParam.size, static_cast<const char*>(inoutParam.data));
     inoutParam.size = sizeof(sampleData2);
     inoutParam.RawDataCpy(sampleData2);
     funcResult.size = sizeof(sampleData2);
     funcResult.RawDataCpy(sampleData2);
-    HiLog::Info(LABEL, "[idlTest] in rawdata service, said: %{public}u, %{public}s",
+    HILOG_INFO(LOG_CORE, "[idlTest] in rawdata service, said: %{public}u, %{public}s",
         inParam.size, static_cast<const char*>(inParam.data));
     return ERR_OK;
 }
@@ -157,29 +157,35 @@ ErrCode ListenAbility::rawdata_test_func(
 ErrCode ListenAbility::fd_test_func(int32_t& fd)
 {
     fd = open("/dev/null", O_RDWR);
-    HiLog::Info(LABEL, "[idlTest] valid_fd_test_func inout fd service");
+    HILOG_INFO(LOG_CORE, "[idlTest] valid_fd_test_func inout fd service");
+    return ERR_OK;
+}
+
+ErrCode ListenAbility::invalid_fd_test_func(int32_t& fd)
+{
+    HILOG_INFO(LOG_CORE, "[idlTest] invalid_fd_test_func inout fd service");
     return ERR_OK;
 }
 
 void ListenAbility::OnStart()
 {
-    HiLog::Info(LABEL, "[idlTest] OnStart() service");
+    HILOG_INFO(LOG_CORE, "[idlTest] OnStart() service");
     bool res = Publish(this);
     if (!res) {
-        HiLog::Info(LABEL, "[idlTest] OnStart service Publish failed");
+        HILOG_INFO(LOG_CORE, "[idlTest] OnStart service Publish failed");
         return;
     }
-    HiLog::Info(LABEL, "[idlTest] ListenAbility service begin");
+    HILOG_INFO(LOG_CORE, "[idlTest] ListenAbility service begin");
 }
 
 void ListenAbility::OnAddSystemAbility(int32_t systemAbilityId, const std::string &deviceId)
 {
-    HiLog::Info(LABEL, "[idlTest] OnAddSystemAbility service begin, said: %{public}d", systemAbilityId);
+    HILOG_INFO(LOG_CORE, "[idlTest] OnAddSystemAbility service begin, said: %{public}d", systemAbilityId);
 }
 
 void ListenAbility::OnRemoveSystemAbility(int32_t systemAbilityId, const std::string &deviceId)
 {
-    HiLog::Info(LABEL, "[idlTest] OnRemoveSystemAbility service begin, said: %{public}d", systemAbilityId);
+    HILOG_INFO(LOG_CORE, "[idlTest] OnRemoveSystemAbility service begin, said: %{public}d", systemAbilityId);
 }
 
 }

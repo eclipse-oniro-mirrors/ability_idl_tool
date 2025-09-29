@@ -173,6 +173,32 @@ HWTEST_F(IdlSaUnitTest, IdlSaLoadTest002, TestSize.Level1)
 }
 
 /*
+ * @tc.name: IdlSaLoadTest003
+ * @tc.desc: async load sa with a callback
+ * @tc.type: FUNC
+ */
+HWTEST_F(IdlSaUnitTest, IdlSaLoadTest003, TestSize.Level1)
+{
+    std::cout << "IdlSaLoadTest003 start" << std::endl;
+
+    ListenAbilityClient* client_ = new ListenAbilityClient(1494);
+    ASSERT_NE(client_, nullptr);
+
+    auto cb = [](bool status) {
+        std::cout << "LoadSystemAbility cb status: " << status << std::endl;
+    };
+
+    int32_t ret = client_->LoadSystemAbility(cb);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    int32_t ret1 = client_->LoadSystemAbility(cb);
+    EXPECT_EQ(ret, ERR_OK);
+    EXPECT_EQ(ret1, ERR_OK);
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    delete client_;
+}
+
+/*
  * @tc.name: IdlOverLoadTest001
  * @tc.desc: async load sa
  * @tc.type: FUNC
@@ -316,5 +342,31 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
     std::this_thread::sleep_for(std::chrono::seconds(2));
     delete client_;
 }
+
+/*
+ * @tc.name: IdlfdTest001
+ * @tc.desc: test invalid fd
+ * @tc.type: FUNC
+ */
+HWTEST_F(IdlSaUnitTest, IdlfdTest002, TestSize.Level1)
+{
+    std::cout << "IdlfdTest002 start" << std::endl;
+
+    ListenAbilityClient* client_ = new ListenAbilityClient(1494);
+    ASSERT_NE(client_, nullptr);
+
+    // sync func
+    int fd = -2;
+    int32_t ret = client_->invalid_fd_test_func(fd);
+    std::cout << "fd_test_func client" << std::endl;
+    EXPECT_EQ(ret, ERR_OK);
+    
+    if (fd >= 0) {
+        close(fd);
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    delete client_;
+}
+
 } // namespace idl
 } // namespace OHOS

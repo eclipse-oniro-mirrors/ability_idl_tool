@@ -48,8 +48,8 @@ void SaOrderedMapTypeEmitter::EmitCppWriteVar(const std::string &parcelName, con
 {
     sb.Append(prefix).AppendFormat("if (%s.size() > static_cast<size_t>(MAP_MAX_SIZE)) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat(
-            "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            Append(", \"The map size exceeds the security limit!\");\n");
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
@@ -89,8 +89,8 @@ void SaOrderedMapTypeEmitter::EmitCppReadVar(const std::string &parcelName, cons
 
     sb.Append(prefix).AppendFormat("if (%sSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n", useName.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat(
-            "HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n");
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            Append(", \"The map size exceeds the security limit!\");\n");
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");

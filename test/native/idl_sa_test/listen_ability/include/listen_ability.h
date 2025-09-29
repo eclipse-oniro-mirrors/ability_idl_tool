@@ -69,6 +69,7 @@ public:
         MyRawdata& funcResult) override;
     
     ErrCode fd_test_func(int32_t& fd) override;
+    ErrCode invalid_fd_test_func(int32_t& fd) override;
 
 protected:
     void OnStart() override;

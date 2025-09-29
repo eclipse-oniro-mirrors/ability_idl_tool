@@ -336,7 +336,7 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceSetIpcCapacity(AutoPtr<ASTMethod>
         method->GetIpcCode());
     sb.Append(prefix).AppendFormat("if (!data.SetMaxCapacity(%s)) {\n", capacity.c_str());
     if (logOn_) {
-        sb.Append(prefix + TAB).Append(macroError_.c_str()).
+        sb.Append(prefix + TAB).Append(macroError_.c_str())
             .AppendFormat(", \"Failed to set maximum capacity to %%zu\", %s);\n", capacity.c_str());
     }
     sb.Append(prefix + TAB).Append("return ERR_INVALID_VALUE;\n");
