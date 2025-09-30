@@ -121,7 +121,7 @@ bool Parser::ParseFile()
                 continue;
             case TokenType::OPTION_MACRO_HILOG:
                 ret = ParseOptionMacroHilog() && ret;
-                continue;            
+                continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
             case TokenType::RAWDATA:
