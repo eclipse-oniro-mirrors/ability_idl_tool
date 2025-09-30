@@ -240,9 +240,11 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceMemberVariables(StringBuilder &sb, 
 {
     sb.Append("protected:\n");
     if (!domainId_.empty() && !logTag_.empty()) {
-        sb.Append(prefix).AppendFormat(
-            "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
-            domainId_.c_str(), logTag_.c_str());
+        if (ast_ == nullptr || !ast_->GetOptionMacroHilogOn()) {
+            sb.Append(prefix).AppendFormat(
+                "static constexpr OHOS::HiviewDFX::HiLogLabel LABEL = {LOG_CORE, %s, \"%s\"};\n",
+                domainId_.c_str(), logTag_.c_str());
+        }
     }
     sb.Append(prefix).Append("const int VECTOR_MAX_SIZE = 102400;\n");
     sb.Append(prefix).Append("const int LIST_MAX_SIZE = 102400;\n");

@@ -1,0 +1,692 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_proxy.h"
+#include "hilog/log.h"
+
+#undef LOG_DOMAIN
+#define LOG_DOMAIN new_id
+
+#undef LOG_TAG
+#define LOG_TAG "new_tag"
+
+namespace test {
+
+ErrCode FooProxy::void_test_func1()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC1), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC1));
+        return errCode;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::void_test_func2()
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_ASYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_VOID_TEST_FUNC2), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+    return ERR_OK;
+}
+
+ErrCode FooProxy::bool_test_func(
+    bool inParam,
+    bool& outParam,
+    bool& inoutParam,
+    bool& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam ? 1 : 0)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam ? 1 : 0)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_BOOL_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_BOOL_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadInt32() == 1 ? true : false;
+    inoutParam = reply.ReadInt32() == 1 ? true : false;
+    funcResult = reply.ReadInt32() == 1 ? true : false;
+    return ERR_OK;
+}
+
+ErrCode FooProxy::byte_test_func(
+    int8_t inParam,
+    int8_t& outParam,
+    int8_t& inoutParam,
+    int8_t& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_BYTE_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_BYTE_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = (int8_t)reply.ReadInt32();
+    inoutParam = (int8_t)reply.ReadInt32();
+    funcResult = (int8_t)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::short_test_func(
+    short inParam,
+    short& outParam,
+    short& inoutParam,
+    short& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_SHORT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_SHORT_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = (short)reply.ReadInt32();
+    inoutParam = (short)reply.ReadInt32();
+    funcResult = (short)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::int_test_func(
+    int32_t inParam,
+    int32_t& outParam,
+    int32_t& inoutParam,
+    int32_t& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_INT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_INT_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadInt32();
+    inoutParam = reply.ReadInt32();
+    funcResult = reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::long_test_func(
+    int64_t inParam,
+    int64_t& outParam,
+    int64_t& inoutParam,
+    int64_t& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt64(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt64(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_LONG_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_LONG_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadInt64();
+    inoutParam = reply.ReadInt64();
+    funcResult = reply.ReadInt64();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::string_test_func(
+    const std::string& inParam,
+    std::string& outParam,
+    std::string& inoutParam,
+    std::string& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteString16(Str8ToStr16(inParam))) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteString16(Str8ToStr16(inoutParam))) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_STRING_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_STRING_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = Str16ToStr8(reply.ReadString16());
+    inoutParam = Str16ToStr8(reply.ReadString16());
+    funcResult = Str16ToStr8(reply.ReadString16());
+    return ERR_OK;
+}
+
+ErrCode FooProxy::float_test_func(
+    float inParam,
+    float& outParam,
+    float& inoutParam,
+    float& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFloat(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFloat(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FLOAT_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_FLOAT_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadFloat();
+    inoutParam = reply.ReadFloat();
+    funcResult = reply.ReadFloat();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::double_test_func(
+    double inParam,
+    double& outParam,
+    double& inoutParam,
+    double& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteDouble(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteDouble(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadDouble();
+    inoutParam = reply.ReadDouble();
+    funcResult = reply.ReadDouble();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::char_test_func(
+    char inParam,
+    char& outParam,
+    char& inoutParam,
+    char& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteInt32(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteInt32(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_CHAR_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_CHAR_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = (char)reply.ReadInt32();
+    inoutParam = (char)reply.ReadInt32();
+    funcResult = (char)reply.ReadInt32();
+    return ERR_OK;
+}
+
+ErrCode FooProxy::seq_test_func(
+    const myseq& inParam,
+    myseq& outParam,
+    myseq& inoutParam,
+    myseq& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteParcelable(&inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteParcelable(&inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_SEQ_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_SEQ_TEST_FUNC));
+        return errCode;
+    }
+
+    std::unique_ptr<myseq> outParamInfo(reply.ReadParcelable<myseq>());
+    if (outParamInfo != nullptr) {
+        outParam = *outParamInfo;
+    }
+
+    std::unique_ptr<myseq> inoutParamInfo(reply.ReadParcelable<myseq>());
+    if (inoutParamInfo != nullptr) {
+        inoutParam = *inoutParamInfo;
+    }
+
+    std::unique_ptr<myseq> funcResultInfo(reply.ReadParcelable<myseq>());
+    if (funcResultInfo != nullptr) {
+        funcResult = *funcResultInfo;
+    }
+
+    return ERR_OK;
+}
+
+ErrCode FooProxy::interface_test_func(
+    const sptr<myinterface>& inParam,
+    sptr<myinterface>& outParam,
+    sptr<myinterface>& inoutParam,
+    sptr<myinterface>& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (inParam == nullptr) {
+        HILOG_ERROR(LOG_CORE, "inParam is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inParam->AsObject())) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (inoutParam == nullptr) {
+        HILOG_ERROR(LOG_CORE, "inoutParam is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteRemoteObject(inoutParam->AsObject())) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_INTERFACE_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_INTERFACE_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = iface_cast<myinterface>(reply.ReadRemoteObject());
+    inoutParam = iface_cast<myinterface>(reply.ReadRemoteObject());
+    funcResult = iface_cast<myinterface>(reply.ReadRemoteObject());
+    return ERR_OK;
+}
+
+ErrCode FooProxy::fdsan_test_func(
+    int inParam,
+    int& outParam,
+    int& inoutParam,
+    int& funcResult)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    MessageOption option(MessageOption::TF_SYNC);
+
+    if (!data.WriteInterfaceToken(GetDescriptor())) {
+        HILOG_ERROR(LOG_CORE, "Write interface token failed!");
+        return ERR_INVALID_VALUE;
+    }
+
+    if (!data.WriteFileDescriptor(inParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+    if (!data.WriteFileDescriptor(inoutParam)) {
+        HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+        return ERR_INVALID_DATA;
+    }
+
+    sptr<IRemoteObject> remote = Remote();
+    if (!remote) {
+        HILOG_ERROR(LOG_CORE, "Remote is nullptr!");
+        return ERR_INVALID_DATA;
+    }
+    int32_t result = remote->SendRequest(
+        static_cast<uint32_t>(IFooIpcCode::COMMAND_FDSAN_TEST_FUNC), data, reply, option);
+    if (FAILED(result)) {
+        HILOG_ERROR(LOG_CORE, "Send request failed!");
+        return result;
+    }
+
+    ErrCode errCode = reply.ReadInt32();
+    if (FAILED(errCode)) {
+        HILOG_ERROR(LOG_CORE, "Read result failed, code is: %{public}d.",
+            static_cast<uint32_t>(IFooIpcCode::COMMAND_FDSAN_TEST_FUNC));
+        return errCode;
+    }
+
+    outParam = reply.ReadFileDescriptor();
+    inoutParam = reply.ReadFileDescriptor();
+    funcResult = reply.ReadFileDescriptor();
+    return ERR_OK;
+}
+} // namespace test

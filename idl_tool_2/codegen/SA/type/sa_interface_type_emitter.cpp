@@ -53,14 +53,15 @@ void SaInterfaceTypeEmitter::EmitCppWriteVar(const std::string &parcelName, cons
 {
     sb.Append(prefix).AppendFormat("if (%s == nullptr) {\n", name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"%s is nullptr!\");\n", name.c_str());
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"%s is nullptr!\");\n", name.c_str());
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");
     sb.Append(prefix).AppendFormat(
         "if (!%sWriteRemoteObject(%s->AsObject())) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n",
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).AppendFormat(", \"Write [%s] failed!\");\n",
             name.c_str());
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
@@ -75,7 +76,8 @@ void SaInterfaceTypeEmitter::EmitCppReadVar(const std::string &parcelName, const
             EmitCppType(TypeMode::NO_MODE).c_str(), name.c_str(), typeName_.c_str(), parcelName.c_str());
         sb.Append(prefix).AppendFormat("if (%s == nullptr) {\n", name.c_str());
         if (logOn_) {
-            sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Read [%s] failed!\");\n", name.c_str());
+            sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+                AppendFormat(", \"Read [%s] failed!\");\n", name.c_str());
         }
         sb.Append(prefix).Append(TAB).AppendFormat("return ERR_INVALID_DATA;\n");
         sb.Append(prefix).Append("}\n\n");

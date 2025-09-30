@@ -305,6 +305,20 @@ public:
         return optionParcelHooksOn_;
     }
 
+    inline void SetOptionMacroHilog(std::string &optionMacroHilog)
+    {
+        if (optionMacroHilog == "on") {
+            optionMacroHilogOn_ = true;
+        } else {
+            optionMacroHilogOn_ = false;
+        }
+    }
+
+    inline bool GetOptionMacroHilogOn() const
+    {
+        return optionMacroHilogOn_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -332,6 +346,7 @@ private:
     bool supportDelegatorOn_ = false;
     bool optionStubHooksOn_ = false;
     bool optionParcelHooksOn_ = false;
+    bool optionMacroHilogOn_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

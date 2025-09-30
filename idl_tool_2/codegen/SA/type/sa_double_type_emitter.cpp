@@ -52,7 +52,8 @@ void SaDoubleTypeEmitter::EmitCppWriteVar(const std::string &parcelName, const s
 {
     sb.Append(prefix).AppendFormat("if (!%sWriteDouble(%s)) {\n", parcelName.c_str(), name.c_str());
     if (logOn_) {
-        sb.Append(prefix).Append(TAB).AppendFormat("HiLog::Error(LABEL, \"Write [%s] failed!\");\n", name.c_str());
+        sb.Append(prefix).Append(TAB).Append(macroHilog_.c_str()).
+            AppendFormat(", \"Write [%s] failed!\");\n", name.c_str());
     }
     sb.Append(prefix).Append(TAB).Append("return ERR_INVALID_DATA;\n");
     sb.Append(prefix).Append("}\n");

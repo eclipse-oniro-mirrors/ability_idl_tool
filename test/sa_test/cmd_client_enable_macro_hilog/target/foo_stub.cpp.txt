@@ -1,0 +1,423 @@
+/*
+ * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "foo_stub.h"
+#include "hilog/log.h"
+
+#undef LOG_DOMAIN
+#define LOG_DOMAIN new_id
+
+#undef LOG_TAG
+#define LOG_TAG "new_tag"
+
+namespace test {
+
+int32_t FooStub::OnRemoteRequest(
+    uint32_t code,
+    MessageParcel& data,
+    MessageParcel& reply,
+    MessageOption& option)
+{
+    std::u16string localDescriptor = GetDescriptor();
+    std::u16string remoteDescriptor = data.ReadInterfaceToken();
+    if (localDescriptor != remoteDescriptor) {
+        return ERR_TRANSACTION_FAILED;
+    }
+    switch (static_cast<IFooIpcCode>(code)) {
+        case IFooIpcCode::COMMAND_VOID_TEST_FUNC1: {
+            ErrCode errCode = void_test_func1();
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_VOID_TEST_FUNC2: {
+            ErrCode errCode = void_test_func2();
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_BOOL_TEST_FUNC: {
+            bool inParam = data.ReadInt32() == 1 ? true : false;
+            bool outParam;
+            bool inoutParam = data.ReadInt32() == 1 ? true : false;
+            bool result;
+            ErrCode errCode = bool_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam ? 1 : 0)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam ? 1 : 0)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result ? 1 : 0)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_BYTE_TEST_FUNC: {
+            int8_t inParam = (int8_t)data.ReadInt32();
+            int8_t outParam;
+            int8_t inoutParam = (int8_t)data.ReadInt32();
+            int8_t result;
+            ErrCode errCode = byte_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_SHORT_TEST_FUNC: {
+            short inParam = (short)data.ReadInt32();
+            short outParam;
+            short inoutParam = (short)data.ReadInt32();
+            short result;
+            ErrCode errCode = short_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_INT_TEST_FUNC: {
+            int32_t inParam = data.ReadInt32();
+            int32_t outParam;
+            int32_t inoutParam = data.ReadInt32();
+            int32_t result;
+            ErrCode errCode = int_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_LONG_TEST_FUNC: {
+            int64_t inParam = data.ReadInt64();
+            int64_t outParam;
+            int64_t inoutParam = data.ReadInt64();
+            int64_t result;
+            ErrCode errCode = long_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt64(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt64(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt64(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_STRING_TEST_FUNC: {
+            std::string inParam = Str16ToStr8(data.ReadString16());
+            std::string outParam;
+            std::string inoutParam = Str16ToStr8(data.ReadString16());
+            std::string result;
+            ErrCode errCode = string_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteString16(Str8ToStr16(outParam))) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(Str8ToStr16(inoutParam))) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteString16(Str8ToStr16(result))) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_FLOAT_TEST_FUNC: {
+            float inParam = data.ReadFloat();
+            float outParam;
+            float inoutParam = data.ReadFloat();
+            float result;
+            ErrCode errCode = float_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFloat(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFloat(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteFloat(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_DOUBLE_TEST_FUNC: {
+            double inParam = data.ReadDouble();
+            double outParam;
+            double inoutParam = data.ReadDouble();
+            double result;
+            ErrCode errCode = double_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteDouble(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteDouble(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteDouble(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_CHAR_TEST_FUNC: {
+            char inParam = (char)data.ReadInt32();
+            char outParam;
+            char inoutParam = (char)data.ReadInt32();
+            char result;
+            ErrCode errCode = char_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteInt32(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteInt32(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_SEQ_TEST_FUNC: {
+            std::unique_ptr<myseq> inParam(data.ReadParcelable<myseq>());
+            if (!inParam) {
+                HILOG_ERROR(LOG_CORE, "Read [myseq] failed!");
+                return ERR_INVALID_DATA;
+            }
+
+            myseq outParam;
+            std::unique_ptr<myseq> inoutParam(data.ReadParcelable<myseq>());
+            if (!inoutParam) {
+                HILOG_ERROR(LOG_CORE, "Read [myseq] failed!");
+                return ERR_INVALID_DATA;
+            }
+
+            myseq result;
+            ErrCode errCode = seq_test_func(*inParam, outParam, *inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteParcelable(&outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(inoutParam.get())) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteParcelable(&result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_INTERFACE_TEST_FUNC: {
+            sptr<myinterface> inParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inParam == nullptr) {
+                HILOG_ERROR(LOG_CORE, "Read [inParam] failed!");
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface> outParam;
+            sptr<myinterface> inoutParam = iface_cast<myinterface>(data.ReadRemoteObject());
+            if (inoutParam == nullptr) {
+                HILOG_ERROR(LOG_CORE, "Read [inoutParam] failed!");
+                return ERR_INVALID_DATA;
+            }
+
+            sptr<myinterface> result = nullptr;
+            ErrCode errCode = interface_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (outParam == nullptr) {
+                    HILOG_ERROR(LOG_CORE, "outParam is nullptr!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(outParam->AsObject())) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam == nullptr) {
+                    HILOG_ERROR(LOG_CORE, "inoutParam is nullptr!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(inoutParam->AsObject())) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    return ERR_INVALID_DATA;
+                }
+                if (result == nullptr) {
+                    HILOG_ERROR(LOG_CORE, "result is nullptr!");
+                    return ERR_INVALID_DATA;
+                }
+                if (!reply.WriteRemoteObject(result->AsObject())) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    return ERR_INVALID_DATA;
+                }
+            }
+            return ERR_NONE;
+        }
+        case IFooIpcCode::COMMAND_FDSAN_TEST_FUNC: {
+            int inParam = data.ReadFileDescriptor();
+            int outParam;
+            int inoutParam = data.ReadFileDescriptor();
+            int result;
+            ErrCode errCode = fdsan_test_func(inParam, outParam, inoutParam, result);
+            if (!reply.WriteInt32(errCode)) {
+                HILOG_ERROR(LOG_CORE, "Write Int32 failed!");
+                return ERR_INVALID_VALUE;
+            }
+            if (SUCCEEDED(errCode)) {
+                if (!reply.WriteFileDescriptor(outParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [outParam] failed!");
+                    if (outParam >= 0) {
+                        fdsan_close_with_tag(outParam, new_id);
+                    }
+                    return ERR_INVALID_DATA;
+                }
+                if (outParam >= 0) {
+                    fdsan_close_with_tag(outParam, new_id);
+                }
+                if (!reply.WriteFileDescriptor(inoutParam)) {
+                    HILOG_ERROR(LOG_CORE, "Write [inoutParam] failed!");
+                    if (inoutParam >= 0) {
+                        fdsan_close_with_tag(inoutParam, new_id);
+                    }
+                    return ERR_INVALID_DATA;
+                }
+                if (inoutParam >= 0) {
+                    fdsan_close_with_tag(inoutParam, new_id);
+                }
+                if (!reply.WriteFileDescriptor(result)) {
+                    HILOG_ERROR(LOG_CORE, "Write [result] failed!");
+                    if (result >= 0) {
+                        fdsan_close_with_tag(result, new_id);
+                    }
+                    return ERR_INVALID_DATA;
+                }
+                if (result >= 0) {
+                    fdsan_close_with_tag(result, new_id);
+                }
+            }
+            return ERR_NONE;
+        }
+        default:
+            return IPCObjectStub::OnRemoteRequest(code, data, reply, option);
+    }
+
+    return ERR_TRANSACTION_FAILED;
+}
+} // namespace test

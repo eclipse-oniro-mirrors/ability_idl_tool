@@ -64,6 +64,7 @@ enum class TokenType {
     SUPPORT_DELEGATOR,    // "support_delegator"
     OPTION_STUB_HOOKS,    // "option_stub_hooks"
     OPTION_PARCEL_HOOKS,    // "option_parcel_hooks"
+    OPTION_MACRO_HILOG,   // "option_macro_hilog"
     SEQ,                  // "sequenceable"
     RAWDATA,              // "rawdata"
     IMPORT,               // "import"

@@ -93,6 +93,7 @@ bool SACodeEmitter::Reset(const AutoPtr<AST> &ast, const std::string &targetDire
     CleanData();
 
     ast_ = ast;
+    GetOption();
     for (auto interface : ast_->GetInterfaceDefs()) {
         if (interface->IsExternal() == false) {
             interface_ = interface;
@@ -180,6 +181,24 @@ bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
     }
 
     return true;
+}
+
+void SACodeEmitter::GetOption()
+{
+    if (ast_ != nullptr && ast_->GetOptionMacroHilogOn()) {
+        macroError_ = "HILOG_ERROR(LOG_CORE";
+        macroWarn_ = "HILOG_WARN(LOG_CORE";
+        macroDefine_ = "#undef LOG_DOMAIN\n";
+        macroDefine_ += "#define LOG_DOMAIN " + domainId_ + "\n\n";
+        macroDefine_ += "#undef LOG_TAG\n";
+        macroDefine_ += "#define LOG_TAG \"" + logTag_ + "\"\n\n";
+        SaTypeEmitter::macroHilog_ = "HILOG_ERROR(LOG_CORE";
+    } else {
+        macroError_ = "HiLog::Error(LABEL";
+        macroWarn_ = "HiLog::Warn(LABEL";
+        macroDefine_ = "using OHOS::HiviewDFX::HiLog;\n\n";
+        SaTypeEmitter::macroHilog_ = "HiLog::Error(LABEL";
+    }
 }
 
 AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) const

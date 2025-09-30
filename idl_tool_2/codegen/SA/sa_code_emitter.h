@@ -36,11 +36,16 @@ protected:
 
     void CleanData();
 
+    void GetOption();
+
     AutoPtr<SaTypeEmitter> GetTypeEmitter(AutoPtr<ASTType> astType) const;
 
     std::string domainId_;
     std::string logTag_;
     std::string hitraceTag_;
+    std::string macroError_;
+    std::string macroWarn_;
+    std::string macroDefine_;
     bool hitraceOn_ = false;
     bool logOn_ = false;
 
