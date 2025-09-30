@@ -177,7 +177,7 @@ HWTEST_F(IdlSaUnitTest, IdlSaLoadTest002, TestSize.Level1)
  * @tc.desc: async load sa with a callback
  * @tc.type: FUNC
  */
-HWTEST_F(IdlSaUnitTest, IdlSaLoadTest002, TestSize.Level1)
+HWTEST_F(IdlSaUnitTest, IdlSaLoadTest003, TestSize.Level1)
 {
     std::cout << "IdlSaLoadTest003 start" << std::endl;
 
@@ -348,9 +348,9 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
  * @tc.desc: test invalid fd
  * @tc.type: FUNC
  */
-HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
+HWTEST_F(IdlSaUnitTest, IdlfdTest002, TestSize.Level1)
 {
-    std::cout << "IdlfdTest001 start" << std::endl;
+    std::cout << "IdlfdTest002 start" << std::endl;
 
     ListenAbilityMacroHilogClient* client_ = new ListenAbilityMacroHilogClient(1494);
     ASSERT_NE(client_, nullptr);
@@ -358,7 +358,7 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
     // sync func
     int fd = -2;
     int32_t ret = client_->invalid_fd_test_func(fd);
-    std::cout << "fd_test_func client" << std::endl;
+    std::cout << "invalid_fd_test_func client" << std::endl;
     EXPECT_EQ(ret, ERR_OK);
     
     if (fd >= 0) {

@@ -344,7 +344,7 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest001, TestSize.Level1)
 }
 
 /*
- * @tc.name: IdlfdTest001
+ * @tc.name: IdlfdTest002
  * @tc.desc: test invalid fd
  * @tc.type: FUNC
  */
@@ -358,7 +358,7 @@ HWTEST_F(IdlSaUnitTest, IdlfdTest002, TestSize.Level1)
     // sync func
     int fd = -2;
     int32_t ret = client_->invalid_fd_test_func(fd);
-    std::cout << "fd_test_func client" << std::endl;
+    std::cout << "invalid_fd_test_func client" << std::endl;
     EXPECT_EQ(ret, ERR_OK);
     
     if (fd >= 0) {

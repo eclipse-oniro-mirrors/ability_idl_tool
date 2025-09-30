@@ -185,7 +185,7 @@ bool SACodeEmitter::ResolveDirectory(const std::string &targetDirectory)
 
 void SACodeEmitter::GetOption()
 {
-    if (ast_ == nullptr || !ast_->GetOptionMacroHilogOn()) {
+    if (ast_ != nullptr || ast_->GetOptionMacroHilogOn()) {
         macroError_ = "HILOG_ERROR(LOG_CORE";
         macroWarn_ = "HILOG_WARN(LOG_CORE";
         macroDefine_ = "#undef LOG_DOMAIN\n";
