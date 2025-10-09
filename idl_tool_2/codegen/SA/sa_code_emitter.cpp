@@ -199,6 +199,11 @@ void SACodeEmitter::GetOption()
         macroDefine_ = "using OHOS::HiviewDFX::HiLog;\n\n";
         SaTypeEmitter::macroHilog_ = "HiLog::Error(LABEL";
     }
+
+    SaTypeEmitter::usingOn_ = false;
+    if (ast_ != nullptr && ast_->GetOptionUsingHooksOn()) {
+        SaTypeEmitter::usingOn_ = true;
+    }
 }
 
 AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) const
@@ -213,10 +218,23 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) c
         typeEmitter = NewTypeEmitter(astType);
     }
 
-    if (astType->IsSequenceableType() || astType->IsInterfaceType() || astType->IsRawDataType()) {
+    Options &options = Options::GetInstance();
+    if (astType->IsSequenceableType() && astType->ToShortString() == "IRemoteObject") {
         typeEmitter->SetTypeName(astType->ToShortString());
+    } else if (astType->IsSequenceableType() || astType->IsInterfaceType() || astType->IsRawDataType()) {
+        if (options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP &&
+            SaTypeEmitter::usingOn_) {
+            typeEmitter->SetTypeName(GetNameWithNamespace(astType->GetNamespace(), astType->ToShortString()));
+        } else {
+            typeEmitter->SetTypeName(astType->ToShortString());
+        }
     } else if (astType->IsEnumType() || astType->IsStructType() || astType->IsUnionType()) {
-        typeEmitter->SetTypeName(astType->GetName());
+        if (options.GetInterfaceType() == InterfaceType::SA && options.GetLanguage() == Language::CPP &&
+            SaTypeEmitter::usingOn_) {
+            typeEmitter->SetTypeName(GetNameWithNamespace(astType->GetNamespace(), astType->GetName()));
+        } else {
+            typeEmitter->SetTypeName(astType->GetName());
+        }
     } else {
         typeEmitter->SetTypeName(astType->ToString());
     }
@@ -225,24 +243,17 @@ AutoPtr<SaTypeEmitter> SACodeEmitter::GetTypeEmitter(AutoPtr<ASTType> astType) c
 
 std::string SACodeEmitter::GetNameWithNamespace(AutoPtr<ASTNamespace> space, const std::string name) const
 {
-    std::vector<std::string> namespaceVec = StringHelper::Split(space->ToString(), ".");
-    std::vector<std::string> result;
-
-    std::string rootPackage = Options::GetInstance().GetRootPackage(space->ToString());
-    size_t rootPackageNum = StringHelper::Split(rootPackage, ".").size();
-
-    for (size_t i = 0; i < namespaceVec.size(); i++) {
-        std::string ns;
-        if (i < rootPackageNum) {
-            ns = StringHelper::StrToUpper(namespaceVec[i]);
-        } else {
-            ns = PascalName(namespaceVec[i]);
-        }
-
-        result.emplace_back(ns);
+    std::string nameSpace = space->ToString();
+    std::string nameSpaceNoInclude = nameSpace;
+    size_t pos = nameSpace.find("..");
+    if (pos != std::string::npos) {
+        nameSpaceNoInclude = nameSpace.substr(pos);
     }
+
+    std::vector<std::string> nameSpaceVec = StringHelper::Split(nameSpaceNoInclude, ".");
+    std::vector<std::string> result;
     StringBuilder sb;
-    for (const auto &ns : result) {
+    for (const auto &ns : nameSpaceVec) {
         sb.AppendFormat("%s::", ns.c_str());
     }
     sb.Append(name);
