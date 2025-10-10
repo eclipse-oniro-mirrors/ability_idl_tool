@@ -166,7 +166,7 @@ std::string SaRustInterfaceCodeEmitter::TrimDot(const std::string &fpnp) const
     }
 
     if (left >= right) {
-        return nullptr;
+        return "";
     }
 
     return fpnp.substr(left, right + 1);
