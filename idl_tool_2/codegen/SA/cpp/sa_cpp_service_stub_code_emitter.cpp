@@ -362,9 +362,12 @@ void SaCppServiceStubCodeEmitter::EmitLocalVariable(const AutoPtr<ASTParameter> 
     const std::string &prefix) const
 {
     AutoPtr<ASTType> type = param->GetType();
+    if (type == nullptr) {
+        return;
+    }
     const std::string name = param->GetName();
     AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(type);
-    if (typeEmitter == nullptr || type == nullptr) {
+    if (typeEmitter == nullptr) {
         return;
     }
     if (type->GetTypeKind() == TypeKind::TYPE_FILEDESCRIPTOR) {
