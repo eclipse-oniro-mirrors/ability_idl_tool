@@ -122,6 +122,9 @@ bool Parser::ParseFile()
             case TokenType::OPTION_MACRO_HILOG:
                 ret = ParseOptionMacroHilog() && ret;
                 continue;
+            case TokenType::OPTION_USING_HOOKS:
+                ret = ParseOptionUsingHooks() && ret;
+                continue;
             case TokenType::IMPORT:
             case TokenType::SEQ:
             case TokenType::RAWDATA:
@@ -303,6 +306,8 @@ bool Parser::ParseKeywordWithId(TokenType expectedKeyword, const std::string& co
         ast_->SetOptionParcelHooks(value);
     } else if (context == "option_macro_hilog") {
         ast_->SetOptionMacroHilog(value);
+    } else if (context == "option_using_hooks") {
+        ast_->SetOptionUsingHooks(value);
     }
     return true;
 }
@@ -325,6 +330,11 @@ bool Parser::ParseOptionParcelHooks()
 bool Parser::ParseOptionMacroHilog()
 {
     return ParseKeywordWithId(TokenType::OPTION_MACRO_HILOG, "option_macro_hilog");
+}
+
+bool Parser::ParseOptionUsingHooks()
+{
+    return ParseKeywordWithId(TokenType::OPTION_USING_HOOKS, "option_using_hooks");
 }
 
 bool Parser::ParseImports()

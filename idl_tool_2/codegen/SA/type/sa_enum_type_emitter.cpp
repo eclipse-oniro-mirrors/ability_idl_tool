@@ -45,10 +45,15 @@ std::string SaEnumTypeEmitter::EmitCppType(TypeMode mode) const
 std::string SaEnumTypeEmitter::EmitCppTypeDecl() const
 {
     StringBuilder sb;
+    std::string typeName = typeName_;
+    size_t pos = typeName_.rfind("::");
+    if (SaTypeEmitter::usingOn_ && (std::string::npos != pos)) {
+        typeName = typeName_.substr(pos + strlen("::"));
+    }
     if (baseTypeName_.empty()) {
-        sb.AppendFormat("enum class %s {\n", typeName_.c_str());
+        sb.AppendFormat("enum class %s {\n", typeName.c_str());
     } else {
-        sb.AppendFormat("enum class %s : %s {\n", typeName_.c_str(), baseTypeName_.c_str());
+        sb.AppendFormat("enum class %s : %s {\n", typeName.c_str(), baseTypeName_.c_str());
     }
 
     for (auto it : members_) {

@@ -319,6 +319,20 @@ public:
         return optionMacroHilogOn_;
     }
 
+    inline void SetOptionUsingHooks(std::string &optionUsingHooks)
+    {
+        if (optionUsingHooks == "on") {
+            optionUsingHooksOn_ = true;
+        } else {
+            optionUsingHooksOn_ = false;
+        }
+    }
+
+    inline bool GetOptionUsingHooksOn() const
+    {
+        return optionUsingHooksOn_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -347,6 +361,7 @@ private:
     bool optionStubHooksOn_ = false;
     bool optionParcelHooksOn_ = false;
     bool optionMacroHilogOn_ = false;
+    bool optionUsingHooksOn_ = false;
 };
 } // namespace Idl
 } // namespace OHOS

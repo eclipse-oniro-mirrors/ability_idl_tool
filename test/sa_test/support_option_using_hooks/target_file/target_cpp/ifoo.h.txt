@@ -1,0 +1,77 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TEST_IFOO_H
+#define TEST_IFOO_H
+
+#include <cstdint>
+#include <iremote_broker.h>
+#include <string_ex.h>
+#include "../fcallback/icallback.h"
+#include "foo_my_seq.h"
+#include "myinterface.h"
+#include "myinterface2.h"
+#include "myseq.h"
+#include "myseq3.h"
+
+namespace test {
+using namespace OHOS::fcallback;
+
+enum class IFooIpcCode {
+    COMMAND_VOID_TEST_FUNC = MIN_TRANSACTION_ID,
+    COMMAND_SEQ_TEST_FUNC,
+    COMMAND_CALLBACK_TEST_FUNC,
+    COMMAND_INTERFACE_TEST_FUNC,
+    COMMAND_INTERFACE_TEST_FUNC2,
+};
+
+class IFoo : public IRemoteBroker {
+public:
+    DECLARE_INTERFACE_DESCRIPTOR(u"test.IFoo");
+
+    virtual ErrCode void_test_func() = 0;
+
+    virtual ErrCode seq_test_func(
+        const test::myseq& inParam,
+        test::myseq& outParam,
+        test::myseq& inoutParam,
+        test::myseq& funcResult) = 0;
+
+    virtual ErrCode callback_test_func(
+        const sptr<OHOS::fcallback::ICallback>& inParam,
+        sptr<OHOS::fcallback::ICallback>& outParam,
+        sptr<OHOS::fcallback::ICallback>& inoutParam,
+        sptr<OHOS::fcallback::ICallback>& funcResult) = 0;
+
+    virtual ErrCode interface_test_func(
+        const sptr<test::myinterface>& inParam,
+        sptr<test::myinterface>& outParam,
+        sptr<test::myinterface>& inoutParam,
+        sptr<test::myinterface>& funcResult) = 0;
+
+    virtual ErrCode interface_test_func2(
+        const sptr<test::myinterface2>& inParam,
+        sptr<test::myinterface2>& outParam,
+        sptr<test::myinterface2>& inoutParam,
+        sptr<test::myinterface2>& funcResult) = 0;
+protected:
+    const int VECTOR_MAX_SIZE = 102400;
+    const int LIST_MAX_SIZE = 102400;
+    const int SET_MAX_SIZE = 102400;
+    const int MAP_MAX_SIZE = 102400;
+};
+} // namespace test
+#endif // TEST_IFOO_H
+

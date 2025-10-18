@@ -65,7 +65,7 @@ void SaCppInterfaceCodeEmitter::EmitInterfaceHeaderFile()
     sb.Append("\n");
     EmitInterfaceInclusions(sb);
     sb.Append("\n");
-    if (EmitInterfaceUsings(sb)) {
+    if (!ast_->GetOptionUsingHooksOn() && EmitInterfaceUsings(sb)) {
         sb.Append("\n");
     }
     EmitInterfaceDefinition(sb);

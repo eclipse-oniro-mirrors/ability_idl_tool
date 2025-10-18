@@ -70,6 +70,7 @@ public:
     static std::string domainId_;
     static std::string macroHilog_;
     static bool logOn_;
+    static bool usingOn_;
     static int circleCount_;
     bool isParamInout = false;
     bool isProxy = false;
