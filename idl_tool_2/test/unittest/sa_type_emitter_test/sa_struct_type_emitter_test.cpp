@@ -113,7 +113,7 @@ HWTEST_F(SaStructTypeEmitterTest, EmitCppWriteVar_001, Level1)
 
 /*
  * @tc.name: EmitCppWriteVar_002
- * @tc.desc: test SaStructTypeEmitter EmitCppWriteVar without log
+ * @tc.desc: test SaStructTypeEmitter EmitCppWriteVar
  * @tc.type: FUNC
  * @tc.require:
  */
@@ -131,6 +131,27 @@ HWTEST_F(SaStructTypeEmitterTest, EmitCppWriteVar_002, Level1)
     emitter.EmitCppWriteVar("reply.", "value", sb, "");
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppWriteVar_002 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppWriteVar_003
+ * @tc.desc: test SaStructTypeEmitter EmitCppWriteVar without log
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaStructTypeEmitterTest, EmitCppWriteVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppWriteVar_003 begin" << std::endl;
+    SaStructTypeEmitter emitter;
+    emitter.SetTypeName("FooStruct");
+    emitter.logOn_ = false;
+    std::string expectedCode =
+        "if (FooStructBlockMarshalling(, value) != ERR_NONE) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("code.", "value", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppWriteVar_003 end" << std::endl;
 }
 
 /*
@@ -177,6 +198,27 @@ HWTEST_F(SaStructTypeEmitterTest, EmitCppReadVar_002, Level1)
     emitter.EmitCppReadVar("reply.", "value", sb, "", false);
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppReadVar_002 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_003
+ * @tc.desc: test SaStructTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaStructTypeEmitterTest, EmitCppReadVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_003 begin" << std::endl;
+    SaStructTypeEmitter emitter;
+    emitter.SetTypeName("FooStruct");
+    emitter.logOn_ = false;
+    std::string expectedCode =
+        "if (FooStructBlockUnmarshalling(, value) != ERR_NONE) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("code.", "value", sb, "", false);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_003 end" << std::endl;
 }
 
 /*

@@ -220,6 +220,53 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppWriteVar_003, Level1)
 }
 
 /*
+ * @tc.name: EmitCppWriteVar_004
+ * @tc.desc: test SaSeqTypeEmitter EmitCppWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppWriteVar_004, Level1)
+{
+    DTEST_LOG << "EmitCppWriteVar_004 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
+    emitter.isParamInout = false;
+    emitter.isProxy = true;
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "if (!parcel.WriteParcelable(&fd)) {\n"
+        "    HiLog::Error(LABEL, \"Write [fd] failed!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("parcel.", "fd", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppWriteVar_004 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppWriteVar_005
+ * @tc.desc: test SaSeqTypeEmitter EmitCppWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppWriteVar_005, Level1)
+{
+    DTEST_LOG << "EmitCppWriteVar_005 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = false;
+    emitter.isParamInout = true;
+    emitter.isProxy = true;
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "if (!parcel.WriteParcelable(&fd)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("parcel.", "fd", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppWriteVar_005 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitCppReadVar_001
  * @tc.desc: test SaSeqTypeEmitter EmitCppReadVar
  * @tc.type: FUNC
@@ -272,12 +319,11 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppReadVar_003, Level1)
 {
     DTEST_LOG << "EmitCppReadVar_003 begin" << std::endl;
     SaSeqTypeEmitter emitter;
-    emitter.logOn_ = true;
-    emitter.SetTypeName("long");
+    emitter.logOn_ = false;
+    emitter.SetTypeName("IRemoteObject");
     std::string expectedCode =
-        "std::unique_ptr<long> fd(parcel.ReadParcelable<long>());\n"
+        "sptr<IRemoteObject> fd = parcel.ReadRemoteObject();\n"
         "if (!fd) {\n"
-        "    HiLog::Error(LABEL, \"Read [long] failed!\");\n"
         "    return ERR_INVALID_DATA;\n"
         "}\n\n";
     StringBuilder sb;
@@ -299,6 +345,30 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppReadVar_004, Level1)
     emitter.logOn_ = true;
     emitter.SetTypeName("long");
     std::string expectedCode =
+        "std::unique_ptr<long> fd(parcel.ReadParcelable<long>());\n"
+        "if (!fd) {\n"
+        "    HiLog::Error(LABEL, \"Read [long] failed!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("parcel.", "fd", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_004 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_005
+ * @tc.desc: test SaSeqTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ * @tc.require: issueICL05Z
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppReadVar_005, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_005 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
+    emitter.SetTypeName("long");
+    std::string expectedCode =
         "std::unique_ptr<long> fdInfo(parcel.ReadParcelable<long>());\n"
         "if (fdInfo != nullptr) {\n"
         "    fd = *fdInfo;\n"
@@ -306,7 +376,29 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppReadVar_004, Level1)
     StringBuilder sb;
     emitter.EmitCppReadVar("parcel.", "fd", sb, "", false);
     EXPECT_EQ(sb.ToString(), expectedCode);
-    DTEST_LOG << "EmitCppReadVar_004 end" << std::endl;
+    DTEST_LOG << "EmitCppReadVar_005 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_006
+ * @tc.desc: test SaSeqTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppReadVar_006, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_006 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = false;
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "std::unique_ptr<long> fd(parcel.ReadParcelable<long>());\n"
+        "if (!fd) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("parcel.", "fd", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_006 end" << std::endl;
 }
 
 /*
@@ -319,6 +411,7 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrWriteVar_001, Level1)
 {
     DTEST_LOG << "EmitCppPtrWriteVar_001 begin" << std::endl;
     SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
     EmitCppPtrVar emitCppPtrVar = { "parcel.", "fd", "", "sptr", true };
     std::string expectedCode =
         "bool fdValid = fd != nullptr;\n"
@@ -347,6 +440,7 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrWriteVar_002, Level1)
 {
     DTEST_LOG << "EmitCppPtrWriteVar_002 begin" << std::endl;
     SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
     EmitCppPtrVar emitCppPtrVar = { "parcel.", "fd", "", "uptr", true };
     std::string expectedCode =
         "bool fdValid = fd != nullptr;\n"
@@ -366,6 +460,55 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrWriteVar_002, Level1)
 }
 
 /*
+ * @tc.name: EmitCppPtrWriteVar_003
+ * @tc.desc: test SaSeqTypeEmitter EmitCppPtrWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrWriteVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppPtrWriteVar_003 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
+    EmitCppPtrVar emitCppPtrVar = { "parcel.", "fd", "", "uptr", false };
+    std::string expectedCode =
+        "if (!parcel.WriteParcelable(fd.get())) {\n"
+        "    HiLog::Error(LABEL, \"Write [fd] failed!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppPtrWriteVar(emitCppPtrVar, sb);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppPtrWriteVar_003 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppPtrWriteVar_004
+ * @tc.desc: test SaSeqTypeEmitter EmitCppPtrWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrWriteVar_004, Level1)
+{
+    DTEST_LOG << "EmitCppPtrWriteVar_004 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = false;
+    EmitCppPtrVar emitCppPtrVar = { "parcel.", "fd", "", "uptr", true };
+    std::string expectedCode =
+        "bool fdValid = fd != nullptr;\n"
+        "if (!parcel.WriteBool(fdValid)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "if (fdValid) {\n"
+        "    if (!parcel.WriteParcelable(fd.get())) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppPtrWriteVar(emitCppPtrVar, sb);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppPtrWriteVar_004 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitCppPtrReadVar_001
  * @tc.desc: test SaSeqTypeEmitter EmitCppPtrReadVar
  * @tc.type: FUNC
@@ -375,6 +518,7 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_001, Level1)
 {
     DTEST_LOG << "EmitCppPtrReadVar_001 begin" << std::endl;
     SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
     EmitCppPtrVar emitCppPtrVar = { "parcel.", "ptr", "", "sptr", true };
     emitter.SetTypeName("long");
     std::string expectedCode =
@@ -402,6 +546,7 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_002, Level1)
 {
     DTEST_LOG << "EmitCppPtrReadVar_002 begin" << std::endl;
     SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
     EmitCppPtrVar emitCppPtrVar = { "parcel.", "ptr", "", "sptr", false };
     emitter.SetTypeName("long");
     std::string expectedCode =
@@ -415,6 +560,79 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_002, Level1)
     emitter.EmitCppPtrReadVar(emitCppPtrVar, sb, true);
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppPtrReadVar_002 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppPtrReadVar_003
+ * @tc.desc: test SaSeqTypeEmitter EmitCppPtrReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppPtrReadVar_003 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
+    EmitCppPtrVar emitCppPtrVar = { "parcel.", "ptr", "", "sptr", true };
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "if (parcel.ReadBool()) {\n"
+        "    ptr = sptr<long>(parcel.ReadParcelable<long>());\n"
+        "    if (!ptr) {\n"
+        "        HiLog::Error(LABEL, \"Read [long] failed!\");\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "}\n\n";
+    StringBuilder sb;
+    emitter.EmitCppPtrReadVar(emitCppPtrVar, sb, false);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppPtrReadVar_003 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppPtrReadVar_004
+ * @tc.desc: test SaSeqTypeEmitter EmitCppPtrReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_004, Level1)
+{
+    DTEST_LOG << "EmitCppPtrReadVar_004 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = true;
+    EmitCppPtrVar emitCppPtrVar = { "parcel.", "ptr", "", "sptr", false };
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "ptr = sptr<long>(parcel.ReadParcelable<long>());\n"
+        "if (!ptr) {\n"
+        "    HiLog::Error(LABEL, \"Read [long] failed!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppPtrReadVar(emitCppPtrVar, sb, false);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppPtrReadVar_004 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppPtrReadVar_005
+ * @tc.desc: test SaSeqTypeEmitter EmitCppPtrReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSeqTypeEmitterTest, EmitCppPtrReadVar_005, Level1)
+{
+    DTEST_LOG << "EmitCppPtrReadVar_005 begin" << std::endl;
+    SaSeqTypeEmitter emitter;
+    emitter.logOn_ = false;
+    EmitCppPtrVar emitCppPtrVar = { "parcel.", "ptr", "", "sptr", false };
+    emitter.SetTypeName("long");
+    std::string expectedCode =
+        "ptr = sptr<long>(parcel.ReadParcelable<long>());\n"
+        "if (!ptr) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppPtrReadVar(emitCppPtrVar, sb, false);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppPtrReadVar_005 end" << std::endl;
 }
 
 /*

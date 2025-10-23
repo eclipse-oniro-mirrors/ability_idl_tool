@@ -275,6 +275,108 @@ HWTEST_F(SaArrayTypeEmitterTest, EmitCppReadVar_002, Level1)
 }
 
 /*
+ * @tc.name: EmitCppReadVar_003
+ * @tc.desc: test SaArrayTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaArrayTypeEmitterTest, EmitCppReadVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_003 begin" << std::endl;
+    SaArrayTypeEmitter emitter;
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.elementEmitter_->SetTypeName("long");
+    std::string expectedCode =
+        "std::vector<long> fd;\n"
+        "int32_t fdSize = parcel.ReadInt32();\n"
+        "if (fdSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < fdSize; ++i1) {\n"
+        "    std::unique_ptr<long> value1(parcel.ReadParcelable<long>());\n"
+        "    if (!value1) {\n"
+        "        HiLog::Error(LABEL, \"Read [long] failed!\");\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n\n"
+        "    fd.push_back(*value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("parcel.", "fd", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_003 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_004
+ * @tc.desc: test SaArrayTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaArrayTypeEmitterTest, EmitCppReadVar_004, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_004 begin" << std::endl;
+    SaArrayTypeEmitter emitter;
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.elementEmitter_->SetTypeName("long");
+    std::string expectedCode =
+        "int32_t fdSize = parcel.ReadInt32();\n"
+        "if (fdSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The vector/array size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < fdSize; ++i1) {\n"
+        "    std::unique_ptr<long> value1(parcel.ReadParcelable<long>());\n"
+        "    if (!value1) {\n"
+        "        HiLog::Error(LABEL, \"Read [long] failed!\");\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n\n"
+        "    fd.push_back(*value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("parcel.", "fd", sb, "", false);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_004 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_005
+ * @tc.desc: test SaArrayTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaArrayTypeEmitterTest, EmitCppReadVar_005, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_005 begin" << std::endl;
+    SaArrayTypeEmitter emitter;
+    emitter.logOn_ = false;
+    emitter.circleCount_ = 0;
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.elementEmitter_->SetTypeName("long");
+    std::string expectedCode =
+        "std::vector<long> fd;\n"
+        "int32_t fdSize = parcel.ReadInt32();\n"
+        "if (fdSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < fdSize; ++i1) {\n"
+        "    std::unique_ptr<long> value1(parcel.ReadParcelable<long>());\n"
+        "    if (!value1) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n\n"
+        "    fd.push_back(*value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("parcel.", "fd", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_005 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitTsWriteVar_001
  * @tc.desc: test SaArrayTypeEmitter EmitTsWriteVar
  * @tc.type: FUNC
@@ -377,6 +479,35 @@ HWTEST_F(SaArrayTypeEmitterTest, EmitTsReadVar_001, Level1)
 }
 
 /*
+ * @tc.name: EmitTsReadVar_002
+ * @tc.desc: test SaArrayTypeEmitter EmitTsReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaArrayTypeEmitterTest, EmitTsReadVar_002, Level1)
+{
+    DTEST_LOG << "EmitTsReadVar_002 begin" << std::endl;
+    SaArrayTypeEmitter emitter;
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.elementEmitter_->SetTypeName("long");
+    std::string expectedCode =
+        "let fdSize = parcel.readInt();\n"
+        "let fd:Array<long> = [];\n"
+        "for (let index = 0; index < fdSize; index++) {\n"
+        "    let fdValue = new long();\n"
+        "    parcel.readSequenceable(fdValue);\n"
+        "    fd.push(fdValue);\n"
+        "}\n";
+    StringBuilder sb2;
+    emitter.EmitTsReadVar("parcel", "fd", sb2, "", TypeMode::NO_MODE);
+    EXPECT_EQ(sb2.ToString(), expectedCode);
+    DTEST_LOG << "EmitTsReadVar_002 end" << std::endl;
+}
+
+/*
  * @tc.name: SaListTypeEmitter_001
  * @tc.desc: test SaArrayTypeEmitter SaListTypeEmitter
  * @tc.type: FUNC
@@ -412,5 +543,34 @@ HWTEST_F(SaArrayTypeEmitterTest, SaListTypeEmitter_001, Level1)
     std::string ret = emitter.EmitTsType(TypeMode::NO_MODE);
     EXPECT_EQ(ret, "unknown type");
     DTEST_LOG << "SaListTypeEmitter_001 end" << std::endl;
+}
+
+/*
+ * @tc.name: SaListTypeEmitter_002
+ * @tc.desc: test SaArrayTypeEmitter SaListTypeEmitter
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaArrayTypeEmitterTest, SaListTypeEmitter_002, Level1)
+{
+    DTEST_LOG << "SaListTypeEmitter_002 start" << std::endl;
+    SaListTypeEmitter emitter;
+    emitter.logOn_ = false;
+    emitter.circleCount_ = 0;
+    AutoPtr<SaTypeEmitter> longEmitter = new SaLongTypeEmitter();
+    emitter.SetElementEmitter(longEmitter);
+    std::string expectedCode =
+        "if (fd.size() > static_cast<size_t>(VECTOR_MAX_SIZE)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "parcel.WriteInt32(fd.size());\n"
+        "for (auto it1 = fd.begin(); it1 != fd.end(); ++it1) {\n"
+        "    if (!parcel.WriteInt64((*it1))) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("parcel.", "fd", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "SaListTypeEmitter_002 end" << std::endl;
 }
 } // namespace OHOS::idl
