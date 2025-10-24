@@ -16,8 +16,13 @@
 #include "gtest/gtest.h"
 #include "test_log.h"
 
+#ifdef IDLTOOL_GTEST
+#define private   public
+#define protected public
+#endif
 #include "codegen/SA/type/sa_int_type_emitter.h"
 #include "codegen/SA/type/sa_set_type_emitter.h"
+#include "codegen/SA/type/sa_seq_type_emitter.h"
 
 using namespace testing;
 using namespace testing::ext;
@@ -205,5 +210,138 @@ HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_002, Level1)
     emitter.EmitCppReadVar("reply.", "value", sb, "", false);
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppReadVar_002 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_003
+ * @tc.desc: test SaSetTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_003 begin" << std::endl;
+    SaSetTypeEmitter emitter;
+    AutoPtr<SaTypeEmitter> intEmitter = new SaIntTypeEmitter();
+    emitter.SetElementEmitter(intEmitter);
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    std::string expectedCode =
+        "std::set<int32_t> value.txt;\n"
+        "int32_t txtSize = data.ReadInt32();\n"
+        "if (txtSize > static_cast<int32_t>(SET_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The set size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < txtSize; ++i1) {\n"
+        "    int32_t value1 = data.ReadInt32();\n"
+        "    value.txt.insert(value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("data.", "value.txt", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_003 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_004
+ * @tc.desc: test SaSetTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_004, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_004 begin" << std::endl;
+    SaSetTypeEmitter emitter;
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    seqEmitter->SetTypeName("int");
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    std::string expectedCode =
+        "std::set<int> value;\n"
+        "int32_t valueSize = data.ReadInt32();\n"
+        "if (valueSize > static_cast<int32_t>(SET_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The set size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < valueSize; ++i1) {\n"
+        "    std::unique_ptr<int> value1(data.ReadParcelable<int>());\n"
+        "    if (!value1) {\n"
+        "        HiLog::Error(LABEL, \"Read [int] failed!\");\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "\n"
+        "    value.insert(*value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("data.", "value", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_004 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_005
+ * @tc.desc: test SaSetTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_005, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_005 begin" << std::endl;
+    SaSetTypeEmitter emitter;
+    AutoPtr<SaTypeEmitter> seqEmitter = new SaSeqTypeEmitter();
+    seqEmitter->SetTypeName("IRemoteObject");
+    emitter.SetElementEmitter(seqEmitter);
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    std::string expectedCode =
+        "std::set<sptr<IRemoteObject>> value;\n"
+        "int32_t valueSize = data.ReadInt32();\n"
+        "if (valueSize > static_cast<int32_t>(SET_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The set size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < valueSize; ++i1) {\n"
+        "    sptr<IRemoteObject> value1 = data.ReadRemoteObject();\n"
+        "    if (!value1) {\n"
+        "        HiLog::Error(LABEL, \"Read [IRemoteObject] failed!\");\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "\n"
+        "    value.insert(value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("data.", "value", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_005 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppReadVar_006
+ * @tc.desc: test SaSetTypeEmitter EmitCppReadVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_006, Level1)
+{
+    DTEST_LOG << "EmitCppReadVar_006 begin" << std::endl;
+    SaSetTypeEmitter emitter;
+    AutoPtr<SaTypeEmitter> intEmitter = new SaIntTypeEmitter();
+    intEmitter->SetTypeName("IRemoteObject");
+    emitter.SetElementEmitter(intEmitter);
+    emitter.logOn_ = true;
+    emitter.circleCount_ = 0;
+    std::string expectedCode =
+        "std::set<int32_t> value;\n"
+        "int32_t valueSize = data.ReadInt32();\n"
+        "if (valueSize > static_cast<int32_t>(SET_MAX_SIZE)) {\n"
+        "    HiLog::Error(LABEL, \"The set size exceeds the security limit!\");\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < valueSize; ++i1) {\n"
+        "    int32_t value1 = data.ReadInt32();\n"
+        "    value.insert(value1);\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppReadVar("data.", "value", sb, "", true);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppReadVar_006 end" << std::endl;
 }
 } // namespace OHOS::idl

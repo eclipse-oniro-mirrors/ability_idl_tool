@@ -119,7 +119,7 @@ HWTEST_F(SaFdSanTypeEmitterTest, EmitCppWriteVar_001, Level1)
 
 /*
  * @tc.name: EmitCppWriteVar_002
- * @tc.desc: test SaFdSanTypeEmitter EmitCppWriteVar without log
+ * @tc.desc: test SaFdSanTypeEmitter EmitCppWriteVar
  * @tc.type: FUNC
  */
 HWTEST_F(SaFdSanTypeEmitterTest, EmitCppWriteVar_002, Level1)
@@ -138,6 +138,28 @@ HWTEST_F(SaFdSanTypeEmitterTest, EmitCppWriteVar_002, Level1)
     emitter.EmitCppWriteVar("parcel.", "fd", sb, "");
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppWriteVar_002 end" << std::endl;
+}
+
+/*
+ * @tc.name: EmitCppWriteVar_003
+ * @tc.desc: test SaFdSanTypeEmitter EmitCppWriteVar without log
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaFdSanTypeEmitterTest, EmitCppWriteVar_003, Level1)
+{
+    DTEST_LOG << "EmitCppWriteVar_003 begin" << std::endl;
+    SaFdSanTypeEmitter emitter;
+    emitter.logOn_ = false;
+    emitter.isProxy = true;
+    emitter.domainId_ = "testDomainId";
+    std::string expectedCode =
+        "if (!parcel.WriteFileDescriptor(fd)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("parcel.", "fd", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppWriteVar_003 end" << std::endl;
 }
 
 /*
