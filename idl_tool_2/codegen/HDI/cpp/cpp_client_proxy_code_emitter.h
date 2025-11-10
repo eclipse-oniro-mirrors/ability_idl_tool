@@ -100,6 +100,8 @@ private:
     void EmitProxyCastFromMethodImpls(StringBuilder &sb, const std::string &prefix) const;
     void EmitProxyCastFromMethodImpl(const AutoPtr<ASTInterfaceType> interface, StringBuilder &sb,
         const std::string &prefix) const;
+
+    void EmitPassthroughProxyCastFromMethodImplTemplate(StringBuilder &sb, const std::string &prefix) const;
     void EmitProxyCastFromMethodImplTemplate(StringBuilder &sb, const std::string &prefix) const;
 
     std::string GetNameSpaceByInterface(AutoPtr<ASTInterfaceType> interface, const std::string &name);
