@@ -306,9 +306,15 @@ void CppClientProxyCodeEmitter::EmitPassthroughProxySourceFile()
     EmitLogTagMacro(sb, FileName(proxyName_));
     sb.Append("\n");
     EmitBeginNamespace(sb);
+    if (interface_->GetExtendsInterface() != nullptr) {
+        EmitPassthroughProxyCastFromMethodImplTemplate(sb, "");
+        sb.Append("\n");
+    }
     EmitGetMethodImpl(sb, "");
     sb.Append("\n");
     EmitPassthroughGetInstanceMethodImpl(sb, "");
+    sb.Append("\n");
+    EmitProxyCastFromMethodImpls(sb, "");
     EmitEndNamespace(sb);
 
     std::string data = sb.ToString();
@@ -704,6 +710,49 @@ void CppClientProxyCodeEmitter::EmitProxyCastFromMethodImpl(const AutoPtr<ASTInt
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).AppendFormat("return CastFromTemplate<%s, %s>(parent);\n",
         currentInterface.c_str(), parentInterface.c_str());
+    sb.Append(prefix).Append("}\n");
+}
+
+void CppClientProxyCodeEmitter::EmitPassthroughProxyCastFromMethodImplTemplate(StringBuilder &sb,
+                                                                               const std::string &prefix) const
+{
+    std::string serMajorName = "serMajorVer";
+    std::string serMinorName = "serMinorVer";
+
+    sb.Append(prefix).Append("template<typename ChildType, typename ParentType>\n");
+    sb.Append(prefix).Append("static sptr<ChildType> CastFromTemplate(const sptr<ParentType> &parent)\n");
+    sb.Append(prefix).Append("{\n");
+    sb.Append(prefix + TAB).Append("if (parent == nullptr) {\n");
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:parent is nullptr!\", __func__);\n");
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
+    sb.Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).AppendFormat("uint32_t %s = 0;\n", serMajorName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("uint32_t %s = 0;\n", serMinorName.c_str());
+    sb.Append(prefix + TAB).AppendFormat("int32_t %s = parent->GetVersion(%s, %s);\n",
+        HdiTypeEmitter::errorCodeName_.c_str(), serMajorName.c_str(), serMinorName.c_str());
+        sb.Append(prefix + TAB).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:get version failed!\", __func__);\n");
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
+    sb.Append("version of implementation:%u.%u");
+    sb.AppendFormat(", version of cast target:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
+    sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
+    sb.Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
+    sb.Append(prefix + TAB + TAB + TAB);
+    sb.AppendFormat("\"cast target minor version(%u) should be less or equal to implementation minor version(%%u).", \
+        ast_->GetMinorVer());
+    sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
+    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+
+    sb.Append(prefix + TAB).Append("return sptr<ChildType>(reinterpret_cast<std::add_pointer_t<ChildType>>");
+    sb.Append("(parent.GetRefPtr()));\n");
     sb.Append(prefix).Append("}\n");
 }
 
