@@ -367,6 +367,13 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
         sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"Write interface token failed!\");\n");
     }
     sb.Append(prefix + TAB + TAB).Append("return ERR_INVALID_VALUE;\n").Append(prefix + TAB).Append("}\n\n");
+
+    EmitInterfaceProxyMethodSendRequest(method, sb, prefix);
+}
+
+void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+    const std::string &prefix) const
+{
     size_t paramNumber = method->GetParameterNumber();
     for (size_t i = 0; i < paramNumber; i++) {
         AutoPtr<ASTParameter> param = method->GetParameter(i);
@@ -390,7 +397,8 @@ void SaCppClientProxyCodeEmitter::EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod
         interface_->GetName().c_str(), ConstantName(method->GetName() + overloadname).c_str());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).Append(", \"Send request failed!\");\n");
+        sb.Append(prefix + TAB + TAB).Append(macroError_.c_str()).
+            Append(", \"Send request failed! result = %{public}d\", result);\n");
     }
     sb.Append(prefix + TAB).Append("    return result;\n").Append(prefix + TAB).Append("}\n");
     EmitInterfaceProxyMethodRetValue(method, sb, prefix);
