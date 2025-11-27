@@ -105,4 +105,4 @@ HWTEST_F(ASTAttrTest, CacheableStrToInt_001, Level1)
     EXPECT_FALSE(attr.CacheableStrToInt());
     DTEST_LOG << "CacheableStrToInt_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

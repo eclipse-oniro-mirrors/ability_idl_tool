@@ -106,4 +106,4 @@ HWTEST_F(ASTArrayTypeTest, ToString_001, Level1)
     EXPECT_EQ(listType.ToString(), "List<>");
     DTEST_LOG << "ToString_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

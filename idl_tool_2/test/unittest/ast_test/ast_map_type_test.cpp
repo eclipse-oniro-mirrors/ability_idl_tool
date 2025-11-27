@@ -126,4 +126,4 @@ HWTEST_F(ASTMapTypeTest, HasInnerType_001, Level1)
     EXPECT_TRUE(ret);
     DTEST_LOG << "HasInnerType_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

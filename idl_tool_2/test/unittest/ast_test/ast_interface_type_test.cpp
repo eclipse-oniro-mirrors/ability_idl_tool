@@ -143,4 +143,4 @@ HWTEST_F(ASTInterfaceTypeTest, Dump_001, Level1)
     EXPECT_EQ(ret, "prefixinterface com.example.package. {\n();\n\n();\nprefix}\n");
     DTEST_LOG << "Dump_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

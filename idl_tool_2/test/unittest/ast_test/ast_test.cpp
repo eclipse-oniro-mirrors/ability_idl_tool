@@ -273,4 +273,4 @@ HWTEST_F(ASTTest, SetVersion_001, Level1)
     EXPECT_NE(ast.GetMinorVer(), 0);
     DTEST_LOG << "SetVersion_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl
