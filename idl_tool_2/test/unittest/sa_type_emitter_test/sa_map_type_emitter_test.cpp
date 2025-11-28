@@ -168,6 +168,40 @@ HWTEST_F(SaMapTypeEmitterTest, EmitCppWriteVar_001, Level1)
 }
 
 /*
+ * @tc.name: EmitCppWriteVar_002
+ * @tc.desc: test SaMapTypeEmitter EmitCppWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaMapTypeEmitterTest, EmitCppWriteVar_002, Level1)
+{
+    DTEST_LOG << "EmitCppWriteVar_002 begin" << std::endl;
+    SaMapTypeEmitter emitter;
+    AutoPtr<SaTypeEmitter> intEmitter = new SaIntTypeEmitter();
+    emitter.SetKeyEmitter(intEmitter);
+    emitter.SetValueEmitter(intEmitter);
+    emitter.logOn_ = false;
+    emitter.circleCount_ = 0;
+    std::string expectedCode =
+        "if (data.size() > static_cast<size_t>(MAP_MAX_SIZE)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "\n"
+        "parcel.WriteInt32(data.size());\n"
+        "for (auto it1 = data.begin(); it1 != data.end(); ++it1) {\n"
+        "    if (!parcel.WriteInt32((it1->first))) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "    if (!parcel.WriteInt32((it1->second))) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "}\n";
+    StringBuilder sb;
+    emitter.EmitCppWriteVar("parcel.", "data", sb, "");
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitCppWriteVar_002 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitCppReadVar_001
  * @tc.desc: test SaMapTypeEmitter EmitCppReadVar
  * @tc.type: FUNC
@@ -256,7 +290,7 @@ HWTEST_F(SaMapTypeEmitterTest, EmitCppReadVar_003, Level1)
     std::string parcelName = "parcel.";
     std::string name = "data";
     std::string prefix = "";
-    bool emitType = true;
+    bool emitType = false;
 
     emitter.logOn_ = true;
     emitter.circleCount_ = 0;
@@ -267,7 +301,6 @@ HWTEST_F(SaMapTypeEmitterTest, EmitCppReadVar_003, Level1)
     emitter.EmitCppReadVar(parcelName, name, sb, prefix, emitType);
 
     std::string expectedCode =
-        "std::unordered_map<sptr<IRemoteObject>, sptr<IRemoteObject>> data;\n"
         "int32_t dataSize = parcel.ReadInt32();\n"
         "if (dataSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n"
         "    HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n"
