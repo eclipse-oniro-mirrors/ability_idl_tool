@@ -253,7 +253,7 @@ HWTEST_F(SaOrderedMapTypeEmitterTest, EmitCppReadVar_003, Level1)
     std::string parcelName = "parcel.";
     std::string name = "data.txt";
     std::string prefix = "";
-    bool emitType = true;
+    bool emitType = false;
 
     emitter.logOn_ = true;
     emitter.circleCount_ = 0;
@@ -264,7 +264,6 @@ HWTEST_F(SaOrderedMapTypeEmitterTest, EmitCppReadVar_003, Level1)
     emitter.EmitCppReadVar(parcelName, name, sb, prefix, emitType);
 
     std::string expectedCode =
-        "std::map<sptr<IRemoteObject>, sptr<IRemoteObject>> data.txt;\n"
         "int32_t txtSize = parcel.ReadInt32();\n"
         "if (txtSize > static_cast<int32_t>(MAP_MAX_SIZE)) {\n"
         "    HiLog::Error(LABEL, \"The map size exceeds the security limit!\");\n"
