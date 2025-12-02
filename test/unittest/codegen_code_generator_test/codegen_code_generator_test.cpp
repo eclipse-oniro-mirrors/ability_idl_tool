@@ -18,6 +18,7 @@
 #define protected public
 #include "util/options.h"
 #include "codegen/code_generator.h"
+#include "codegen/cpp_code_emitter.h"
 #undef protected
 #undef private
 
@@ -65,8 +66,23 @@ HWTEST_F(CodeGeneratorUnitTest, CodeGeneratorUnitTest_0100, Function | MediumTes
      * @tc.steps: step2. Create codeGenerator object.
      * @tc.expected: Can obtain the correct logOn_.
      */
-    CodeGenerator codeGenerator(&mc, language, dir, att);
-    EXPECT_FALSE(codeGenerator.emitter_->logOn_);
+    CodeGenerator codeGenCpp(&mc, language, dir, att);
+    CodeGenerator codeGenRust(&mc, "rust", dir, att);
+    CodeGenerator codeGenTs(&mc, "ts", dir, att);
+    CodeGenerator codeGenPython(&mc, "python", dir, att);
+    EXPECT_FALSE(codeGenCpp.emitter_->logOn_);
+
+#ifdef __MINGW32__
+    codeGenCpp.targetDirectory_ = "\\idl_tool\\idl_tool2\\Test.idl";
+#else
+    codeGenCpp.targetDirectory_ = "/idl_tool/idl_tool2/Test.idl";
+#endif
+
+    auto ret = codeGenCpp.ResolveDirectory();
+    EXPECT_FALSE(ret);
+    codeGenCpp.emitter_ = new CppCodeEmitter(&mc);
+    ret = codeGenCpp.Generate();
+    EXPECT_FALSE(ret);
 }
 }
 }
