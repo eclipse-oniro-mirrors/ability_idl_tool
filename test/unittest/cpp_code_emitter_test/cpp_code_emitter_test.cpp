@@ -1533,5 +1533,522 @@ HWTEST_F(CppCodeEmitterUnitTest, RustCodeEmitter_test_0010, TestSize.Level1)
     delete [] mc.sequenceables_;
     delete [] mc.interfaces_;
 }
+
+/**
+ * @tc.name: EmitInterfaceProxyMethodImpl_0010
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceProxyMethodImpl_0010, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    MetaType mtVoid = {TypeKind::Void, 0, 0, 0};
+    MetaType mtBool = {TypeKind::Boolean, 0, 0, 0};
+    codeEmitter->metaComponent_->types_ = new MetaType*[2]{&mtVoid, &mtBool};
+    char mtName[] = "seq_test_func";
+    codeEmitter->proxyName_ = "FooProxy";
+    char inParam[] = "inParam";
+    char outParam[] = "outParam";
+
+    MetaParameter* inMpt = new MetaParameter{inParam, ATTR_IN, 0, false};
+    MetaParameter* outMpt = new MetaParameter{outParam, ATTR_OUT, 0, false};
+    MetaParameter** parameters = new MetaParameter*[2]{inMpt, outMpt};
+
+    MetaMethod mmt1 = {mtName, nullptr, 0, 0, 0, nullptr, 0, false};
+    codeEmitter->EmitInterfaceProxyMethodPreSendRequest(&mmt1, sb, "");
+    codeEmitter->EmitInterfaceProxyMethodImpl(&mmt1, sb, "");
+    MetaMethod mmt2 = {mtName, nullptr, 0, 0, 1, parameters, 0, true};
+    codeEmitter->EmitInterfaceProxyMethodPreSendRequest(&mmt2, sb, "");
+    codeEmitter->EmitInterfaceProxyMethodImpl(&mmt2, sb, "");
+    MetaMethod mmt3 = {mtName, nullptr, 1, 1, 0, nullptr, 0, false};
+    codeEmitter->EmitInterfaceProxyMethodPreSendRequest(&mmt3, sb, "");
+    codeEmitter->EmitInterfaceProxyMethodImpl(&mmt3, sb, "");
+    MetaMethod mmt4 = {mtName, nullptr, 1, 1, 1, parameters, 0, true};
+    codeEmitter->EmitInterfaceProxyMethodPreSendRequest(&mmt4, sb, "");
+    codeEmitter->EmitInterfaceProxyMethodImpl(&mmt4, sb, "");
+    delete inMpt;
+    delete outMpt;
+    delete [] parameters;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete codeEmitter;
+    EXPECT_NE(sb.buffer_, nullptr);
+}
+
+/**
+ * @tc.name: EmitInterfaceUsings_test_0010
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0010, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    codeEmitter->metaComponent_->sequenceableNumber_ = 0;
+    codeEmitter->metaComponent_->interfaceNumber_ = 0;
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, nullptr);
+    codeEmitter->EmitInterfaceUsings(sb);
+
+    codeEmitter->EmitHeadMacro(sb, "test.MySeq");
+    codeEmitter->EmitTailMacro(sb, "test.MySeq");
+
+    std::string expectedCode =
+        "#ifndef TEST_MYSEQ_H\n"
+        "#define TEST_MYSEQ_H\n"
+        "#endif // TEST_MYSEQ_H\n\n";
+
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitInterfaceUsings_test_0011
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0011, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char seqName[] = "test.myseq";
+    char seqNameSpace[] = "FooMySeq..test.MySeq";
+
+    codeEmitter->metaComponent_->sequenceableNumber_ = 1;
+    codeEmitter->metaComponent_->interfaceNumber_ = 0;
+    MetaSequenceable* msq = new MetaSequenceable{seqName, seqNameSpace};
+    codeEmitter->metaComponent_->sequenceables_ = new MetaSequenceable*[1]{msq};
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, "#include \"foo_my_seq.h\"\n");
+
+    StringBuilder sbUsing;
+    codeEmitter->EmitInterfaceUsings(sbUsing);
+    delete msq;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete codeEmitter;
+    EXPECT_STREQ(sbUsing.buffer_, "using test::MySeqtest::myseq;\n");
+}
+
+/**
+ * @tc.name: EmitInterfaceUsings_test_0012
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0012, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char intfaceName[] = "myinterface";
+    char intfaceNameSpace[] = "test.myinterface";
+
+    codeEmitter->metaComponent_->sequenceableNumber_ = 0;
+    codeEmitter->metaComponent_->interfaceNumber_ = 1;
+    MetaInterface* mif = new MetaInterface{nullptr, intfaceName, intfaceNameSpace, 0, 0, nullptr, false};
+    codeEmitter->metaComponent_->interfaces_ = new MetaInterface*[1]{mif};
+
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, nullptr);
+
+    codeEmitter->metaComponent_->interfaces_[0]->external_ = true;
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, "#include \"myinterface.h\"\n");
+
+    StringBuilder sbUsing;
+    codeEmitter->EmitInterfaceUsings(sbUsing);
+    delete mif;
+    delete [] codeEmitter->metaComponent_->interfaces_;
+    delete codeEmitter;
+    EXPECT_STREQ(sbUsing.buffer_, "using test::myinterfacemyinterface;\n");
+}
+
+/**
+ * @tc.name: EmitInterfaceUsings_test_0013
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0013, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char intfaceName[] = "myinterface";
+    char intfaceNameSpace[] = "test.myinterface";
+    char seqName[] = "test.myseq";
+    char seqNameSpace[] = "FooMySeq..test.MySeq";
+
+    codeEmitter->metaComponent_->sequenceableNumber_ = 1;
+    codeEmitter->metaComponent_->interfaceNumber_ = 1;
+    MetaSequenceable* msq = new MetaSequenceable{seqName, seqNameSpace};
+    codeEmitter->metaComponent_->sequenceables_ = new MetaSequenceable*[1]{msq};
+   
+    MetaInterface* mif = new MetaInterface{nullptr, intfaceName, intfaceNameSpace, 0, 0, nullptr, true};
+    codeEmitter->metaComponent_->interfaces_ = new MetaInterface*[1]{mif};
+
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, "#include \"foo_my_seq.h\"\n#include \"myinterface.h\"\n");
+
+    StringBuilder sbUsing;
+    codeEmitter->EmitInterfaceUsings(sbUsing);
+    delete msq;
+    delete mif;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete [] codeEmitter->metaComponent_->interfaces_;
+    delete codeEmitter;
+    EXPECT_STREQ(sbUsing.buffer_, "using test::MySeqtest::myseq;\nusing test::myinterfacemyinterface;\n");
+}
+
+/**
+ * @tc.name: EmitInterfaceDefinition_0001
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceDefinition_0001, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char mtNameSpace[] = "FooMySeq..test.MySeq2";
+    char mtName[] = "IFoo";
+    char seqName[] = "seq_test_func";
+    char intfName[] = "interface_test_func";
+    char inParam[] = "inParam";
+    char outParam[] = "outParam";
+    String parcelName = "parcel";
+
+    MetaParameter* inMpt = new MetaParameter{inParam, ATTR_IN, 0, false};
+    MetaParameter* outMpt = new MetaParameter{outParam, ATTR_OUT, 0, false};
+    MetaParameter** parameters = new MetaParameter*[2]{inMpt, outMpt};
+    MetaMethod* mt = new MetaMethod{seqName, nullptr, 0, 0, 2, parameters};
+
+    MetaParameter* mpt = new MetaParameter{nullptr, -1, 0, false};
+    MetaParameter** parameter = new MetaParameter*[1]{mpt};
+    MetaMethod* mmt = new MetaMethod{intfName, nullptr, 0, 1, 0, parameter};
+    MetaMethod** pmmt = new MetaMethod*[2]{mt, mmt};
+
+    MetaInterface mif = {nullptr, mtName, mtNameSpace, 0, 2, pmmt, false};
+    codeEmitter->metaInterface_ = &mif;
+    codeEmitter->interfaceFullName_ = "test.IFoo";
+
+    MetaType* mtBool = new MetaType{TypeKind::Boolean, 0, 0, 0};
+    MetaType* mtVoid = new MetaType{TypeKind::Void, 0, 0, 0};
+    codeEmitter->metaComponent_->types_ = new MetaType*[2]{mtBool, mtVoid};
+    std::string expectedCode =
+        "namespace test {\n"
+        "class IFoo : public IRemoteBroker {\n"
+        "public:\n"
+        "    DECLARE_INTERFACE_DESCRIPTOR(u\"test.IFoo\");\n"
+        "\n"
+        "    virtual ErrCode seq_test_func(\n"
+        "        bool inParam,\n"
+        "        bool& outParam,\n"
+        "        bool& result) = 0;\n"
+        "\n"
+        "    virtual ErrCode interface_test_func() = 0;\n"
+        "protected:\n"
+        "    const int VECTOR_MAX_SIZE = 102400;\n"
+        "    const int LIST_MAX_SIZE = 102400;\n"
+        "    const int MAP_MAX_SIZE = 102400;\n"
+        "};\n"
+        "} // namespace MySeq\n"
+        "} // namespace test\n";
+    
+    codeEmitter->EmitInterfaceDefinition(sb);
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+
+    StringBuilder sbProxyHead;
+    codeEmitter->EmitInterfaceProxyInHeaderFile(sbProxyHead);
+    EXPECT_NE(sbProxyHead.buffer_, nullptr);
+    
+    StringBuilder sbFals;
+    expectedCode =
+        "if (!parcelWriteInt32(inParam ? 1 : 0)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    codeEmitter->EmitWriteMethodParameter(parameters[0], parcelName, sbFals, "");
+    delete mt;
+    delete mmt;
+    delete inMpt;
+    delete outMpt;
+    delete mpt;
+    delete mtBool;
+    delete mtVoid;
+    delete [] parameters;
+    delete [] parameter;
+    delete [] pmmt;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete codeEmitter;
+    EXPECT_STREQ(sbFals.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitReadVariableComplex_0001
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitReadVariableComplex_0001, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    int nestedTypeIndexes[2] = {0, 1};
+    MetaType mt = {TypeKind::Map, 0, 1, nestedTypeIndexes};
+    
+    MetaType* mtInteger = new MetaType{TypeKind::Integer, 0, 0, nullptr};
+    MetaType* mtString = new MetaType{TypeKind::String, 0, 0, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[2]{mtInteger, mtString};
+
+    std::string expectedCode =
+        "std::unordered_map<int32_t, std::string> varMap;\n"
+        "int32_t varMapSize = parcelReadInt32();\n"
+        "for (int32_t i = 0; i < varMapSize; ++i) {\n"
+        "    int32_t key = parcelReadInt32();\n"
+        "    std::string value = Str16ToStr8(parcelReadString16());\n"
+        "    varMap[key] = value;\n"
+        "}\n";
+    codeEmitter->EmitReadVariableComplex("parcel", "varMap", &mt, sb, "", true);
+    delete mtInteger;
+    delete mtString;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitReadVariableComplex_0002
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitReadVariableComplex_0002, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    int nestedTypeIndexes = 0;
+    MetaType mt = {TypeKind::List, 0, 1, &nestedTypeIndexes};
+    
+    MetaType* mtList = new MetaType{TypeKind::Integer, 0, 0, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[1]{mtList};
+
+    std::string expectedCode =
+        "std::vector<int32_t> varList;\n"
+        "int32_t varListSize = parcelReadInt32();\n"
+        "if (varListSize > static_cast<int32_t>(VECTOR_MAX_SIZE)) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n"
+        "for (int32_t i1 = 0; i1 < varListSize; ++i1) {\n"
+        "    int32_t value1 = parcelReadInt32();\n"
+        "    varList.push_back(value1);\n"
+        "}\n";
+    codeEmitter->EmitReadVariableComplex("parcel", "varList", &mt, sb, "", true);
+    delete mtList;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitReadVariableComplex_0003
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitReadVariableComplex_0003, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char seqName[] = "Sequenceable";
+    int nestedTypeIndexes = 0;
+    MetaType mt = {TypeKind::Sequenceable, 0, 1, &nestedTypeIndexes};
+    
+    MetaType* mtSeq = new MetaType{TypeKind::Sequenceable, 0, 0, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[1]{mtSeq};
+
+    MetaSequenceable* msq = new MetaSequenceable{seqName, nullptr};
+    codeEmitter->metaComponent_->sequenceables_ = new MetaSequenceable*[1]{msq};
+
+    std::string expectedCode =
+        "std::unique_ptr<Sequenceable> varSeq(parcelReadParcelable<Sequenceable>());\n\n"
+        "if (!varSeq) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n";
+    codeEmitter->EmitReadVariableComplex("parcel", "varSeq", &mt, sb, "", true);
+    delete mtSeq;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete msq;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitReadVariableComplex_0004
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitReadVariableComplex_0004, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char intfName[] = "Interface";
+    int nestedTypeIndexes = 0;
+    MetaType mt = {TypeKind::Interface, 0, 1, &nestedTypeIndexes};
+    
+    MetaType* mtIntf = new MetaType{TypeKind::Interface, 0, 0, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[1]{mtIntf};
+
+    MetaInterface* mif = new MetaInterface;
+    mif->name_ = intfName;
+    codeEmitter->metaComponent_->interfaces_ = new MetaInterface*[1]{mif};
+
+    std::string expectedCode =
+        "sptr<Interface> varIntf = iface_cast<Interface>(parcelReadRemoteObject());\n"
+        "if (varIntf == nullptr) {\n"
+        "    return ERR_INVALID_DATA;\n"
+        "}\n\n";
+
+    codeEmitter->EmitReadVariableComplex("parcel", "varIntf", &mt, sb, "", true);
+    delete mtIntf;
+    delete mif;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitInterfaceProxyMethodRetValue_0001
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceProxyMethodRetValue_0001, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char mptName[] = "ret_str";
+    char mmtName[] = "get_string_func";
+
+    MetaType* mtString = new MetaType{TypeKind::String, 0, 0, nullptr};
+    MetaType* mtVoid = new MetaType{TypeKind::Void, 0, 0, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[2]{mtString, mtVoid};
+    MetaParameter* mpt = new MetaParameter{mptName, 3, 0, false};
+    MetaParameter** parameters = new MetaParameter*[1]{mpt};
+    MetaMethod mmt = {mmtName, nullptr, 0, 1, 1, parameters, 0, true};
+
+    std::string expectedCode =
+        "    ErrCode errCode = reply.ReadInt32();\n"
+        "    if (FAILED(errCode)) {\n"
+        "        return errCode;\n"
+        "    }\n"
+        "\n"
+        "    ApiCacheManager::GetInstance().PostSendRequest(GetDescriptor(), COMMAND_GET_STRING_FUNC, data, reply);\n"
+        "    ret_str = Str16ToStr8(reply.ReadString16());\n"
+        "    return ERR_OK;\n";
+    codeEmitter->EmitInterfaceProxyMethodRetValue(&mmt, sb, "");
+    delete mtString;
+    delete mtVoid;
+    delete mpt;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete [] parameters;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
+
+/**
+ * @tc.name: EmitInterfaceStubMethodImpl_0001
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ * @tc.require: #I8JQUO
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceStubMethodImpl_0001, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char mptStrName[] = "retStr";
+    char mptSeqName[] = "retSeq";
+    char mptIntfName[] = "retIntf";
+    
+    MetaType* mtString = new MetaType{TypeKind::String, 0, 2, nullptr};
+    MetaType* mtSeq = new MetaType{TypeKind::Sequenceable, 0, 0, nullptr};
+    MetaType* mtIntf = new MetaType{TypeKind::Interface, 0, 1, nullptr};
+    codeEmitter->metaComponent_->types_ = new MetaType*[3]{mtString, mtSeq, mtIntf};
+   
+    char mSeqName [] = "Sequenceable";
+    MetaSequenceable* mSeq = new MetaSequenceable{mSeqName, nullptr};
+    codeEmitter->metaComponent_->sequenceables_ = new MetaSequenceable*[1]{mSeq};
+   
+    char mIntfName [] = "Interface";
+    MetaInterface* mif = new MetaInterface;
+    mif->name_ = mIntfName;
+    codeEmitter->metaComponent_->interfaces_ = new MetaInterface*[1]{mif};
+
+    MetaParameter* mptStr = new MetaParameter{mptStrName, ATTR_IN, 0, false};
+    MetaParameter* mptSeq = new MetaParameter{mptSeqName, ATTR_OUT, 1, false};
+    MetaParameter* mptIntf = new MetaParameter{mptIntfName, ATTR_OUT, 2, false};
+    MetaParameter** parameters = new MetaParameter*[3]{mptStr, mptSeq, mptIntf};
+   
+    char mmtName[] = "get_string_func";
+    MetaMethod mmt = {mmtName, nullptr, 2, 1, 3, parameters, 0, true};
+
+    std::string expectedCode =
+        "case COMMAND_GET_STRING_FUNC: {\n"
+        "    std::string retStr = Str16ToStr8(data.ReadString16());\n"
+        "    Sequenceable retSeq;\n"
+        "    sptr<Interface> retIntf;\n"
+        "    Sequenceable result = nullptr;\n"
+        "    ErrCode errCode = get_string_func(retStr, retSeq, retIntf, result);\n"
+        "    if (!reply.WriteInt32(errCode)) {\n"
+        "        return ERR_INVALID_VALUE;\n"
+        "    }\n"
+        "    if (SUCCEEDED(errCode)) {\n"
+        "        if (!reply.WriteParcelable(&retSeq)) {\n"
+        "            return ERR_INVALID_DATA;\n"
+        "        }\n"
+        "        if (retIntf == nullptr) {\n"
+        "            return ERR_INVALID_DATA;\n"
+        "        }\n"
+        "        if (!reply.WriteRemoteObject(retIntf->AsObject())) {\n"
+        "            return ERR_INVALID_DATA;\n"
+        "        }\n"
+        "        if (!reply.WriteParcelable(&result)) {\n"
+        "            return ERR_INVALID_DATA;\n"
+        "        }\n"
+        "    }\n"
+        "    return ERR_NONE;\n"
+        "}\n";
+
+    codeEmitter->EmitInterfaceStubMethodImpl(&mmt, sb, "");
+    delete mtString;
+    delete mtSeq;
+    delete mtIntf;
+    delete mSeq;
+    delete mif;
+    delete mptStr;
+    delete mptSeq;
+    delete mptIntf;
+    delete [] codeEmitter->metaComponent_->types_;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete [] codeEmitter->metaComponent_->interfaces_;
+    delete [] parameters;
+    delete codeEmitter;
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+}
 } // namespace idl
 } // namespace OHOS
