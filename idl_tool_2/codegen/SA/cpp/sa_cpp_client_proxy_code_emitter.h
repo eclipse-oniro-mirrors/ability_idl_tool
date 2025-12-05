@@ -60,6 +60,9 @@ private:
 
     void EmitInterfaceProxyMethodBody(AutoPtr<ASTMethod> &method, StringBuilder &sb, const std::string &prefix) const;
 
+    void EmitInterfaceProxyMethodSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
+        const std::string &prefix) const;
+
     void EmitInterfaceProxyMethodPreSendRequest(AutoPtr<ASTMethod> &method, StringBuilder &sb,
         const std::string &prefix) const;
 

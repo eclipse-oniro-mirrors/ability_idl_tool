@@ -607,7 +607,8 @@ void CppCodeEmitter::EmitInterfaceProxyMethodBody(MetaMethod* mm, StringBuilder&
         ConstantName(mm->name_).string());
     sb.Append(prefix + TAB).Append("if (FAILED(result)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Send request failed!\");\n");
+        sb.Append(prefix + TAB).Append(TAB).
+            Append("HiLog::Error(LABEL, \"Send request failed! result = %{public}d\", result);\n");
     }
     sb.Append(prefix + TAB).Append("    return result;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -620,7 +621,8 @@ void CppCodeEmitter::EmitInterfaceProxyMethodErrCode(StringBuilder& sb, const St
     sb.Append(prefix + TAB).Append("ErrCode errCode = reply.ReadInt32();\n");
     sb.Append(prefix + TAB).Append("if (FAILED(errCode)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB + TAB).Append("HiLog::Error(LABEL, \"Read Int32 failed!\");\n");
+        sb.Append(prefix + TAB + TAB).
+            Append("HiLog::Error(LABEL, \"Read Int32 failed! errCode = %{public}d\", errCode);\n");
     }
     sb.Append(prefix + TAB).Append("    return errCode;\n");
     sb.Append(prefix + TAB).Append("}\n");
@@ -846,7 +848,8 @@ void CppCodeEmitter::EmitInterfaceStubMethodImpl(MetaMethod* mm, StringBuilder& 
 
     sb.Append(prefix + TAB).Append("if (!reply.WriteInt32(errCode)) {\n");
     if (logOn_) {
-        sb.Append(prefix + TAB).Append(TAB).Append("HiLog::Error(LABEL, \"Write Int32 failed!\");\n");
+        sb.Append(prefix + TAB).Append(TAB).
+            Append("HiLog::Error(LABEL, \"Write Int32 failed! errCode = %{public}d\", errCode);\n");
     }
     sb.Append(prefix + TAB).Append(TAB).Append("return ERR_INVALID_VALUE;\n");
     sb.Append(prefix + TAB).Append("}\n");
