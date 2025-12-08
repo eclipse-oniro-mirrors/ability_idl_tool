@@ -96,11 +96,6 @@ int32_t OHOS::HDI::Ril::V1_2::RilCallbackProxy::CleanAllConnectionsResponse(cons
     return OHOS::HDI::Ril::V1_2::RilCallbackProxy::CleanAllConnectionsResponse_(responseInfo, Remote());
 }
 
-int32_t OHOS::HDI::Ril::V1_2::RilCallbackProxy::GetNrSsbIdResponse(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo, const OHOS::HDI::Ril::V1_2::NrCellSsbIds& nrCellSsbIds)
-{
-    return OHOS::HDI::Ril::V1_2::RilCallbackProxy::GetNrSsbIdResponse_(responseInfo, nrCellSsbIds, Remote());
-}
-
 int32_t OHOS::HDI::Ril::V1_2::RilCallbackProxy::NetworkCurrentCellUpdated_1_2(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo, const OHOS::HDI::Ril::V1_2::CellListCurrentInfo_1_2& cellListCurrentInfo)
 {
     return OHOS::HDI::Ril::V1_2::RilCallbackProxy::NetworkCurrentCellUpdated_1_2_(responseInfo, cellListCurrentInfo, Remote());
@@ -928,41 +923,6 @@ int32_t OHOS::HDI::Ril::V1_2::RilCallbackProxy::CleanAllConnectionsResponse_(con
     }
 
     int32_t rilCallbackRet = remote->SendRequest(CMD_RIL_CALLBACK_CLEAN_ALL_CONNECTIONS_RESPONSE, rilCallbackData, rilCallbackReply, rilCallbackOption);
-    if (rilCallbackRet != HDF_SUCCESS) {
-        HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
-        return rilCallbackRet;
-    }
-
-    return rilCallbackRet;
-}
-
-int32_t OHOS::HDI::Ril::V1_2::RilCallbackProxy::GetNrSsbIdResponse_(const OHOS::HDI::Ril::V1_1::RilRadioResponseInfo& responseInfo, const OHOS::HDI::Ril::V1_2::NrCellSsbIds& nrCellSsbIds, const sptr<IRemoteObject> remote)
-{
-    MessageParcel rilCallbackData;
-    MessageParcel rilCallbackReply;
-    MessageOption rilCallbackOption(MessageOption::TF_SYNC);
-
-    if (!rilCallbackData.WriteInterfaceToken(OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor())) {
-        HDF_LOGE("%{public}s: failed to write interface descriptor!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    if (!OHOS::HDI::Ril::V1_1::RilRadioResponseInfoBlockMarshalling(rilCallbackData, responseInfo)) {
-        HDF_LOGE("%{public}s: write responseInfo failed!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    if (!OHOS::HDI::Ril::V1_2::NrCellSsbIdsBlockMarshalling(rilCallbackData, nrCellSsbIds)) {
-        HDF_LOGE("%{public}s: write nrCellSsbIds failed!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    if (remote == nullptr) {
-        HDF_LOGE("%{public}s: invalid remote object!", __func__);
-        return HDF_ERR_INVALID_OBJECT;
-    }
-
-    int32_t rilCallbackRet = remote->SendRequest(CMD_RIL_CALLBACK_GET_NR_SSB_ID_RESPONSE, rilCallbackData, rilCallbackReply, rilCallbackOption);
     if (rilCallbackRet != HDF_SUCCESS) {
         HDF_LOGE("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
         return rilCallbackRet;

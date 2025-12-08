@@ -48,8 +48,6 @@ int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::OnRemoteRequest(uint32_t code, Me
             return RilCallbackStubSendSimMatchedOperatorInfoResponse(data, reply, option);
         case CMD_RIL_CALLBACK_CLEAN_ALL_CONNECTIONS_RESPONSE:
             return RilCallbackStubCleanAllConnectionsResponse(data, reply, option);
-        case CMD_RIL_CALLBACK_GET_NR_SSB_ID_RESPONSE:
-            return RilCallbackStubGetNrSsbIdResponse(data, reply, option);
         case CMD_RIL_CALLBACK_NETWORK_CURRENT_CELL_UPDATED_1_2:
             return RilCallbackStubNetworkCurrentCellUpdated_1_2(data, reply, option);
         case CMD_RIL_CALLBACK_GET_CURRENT_CELL_INFO_RESPONSE_1_2:
@@ -364,11 +362,6 @@ int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubSendSimMatchedOper
 int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnectionsResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
 {
     return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnectionsResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
-}
-
-int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
-{
-    return OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse_(rilCallbackData, rilCallbackReply, rilCallbackOption, impl_);
 }
 
 int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubNetworkCurrentCellUpdated_1_2(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption)
@@ -1191,39 +1184,6 @@ int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubCleanAllConnection
     }
 
     int32_t rilCallbackRet = impl->CleanAllConnectionsResponse(responseInfo);
-    if (rilCallbackRet != HDF_SUCCESS) {
-        HDF_LOGD("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
-        return rilCallbackRet;
-    }
-
-    return rilCallbackRet;
-}
-
-int32_t OHOS::HDI::Ril::V1_2::RilCallbackStub::RilCallbackStubGetNrSsbIdResponse_(MessageParcel& rilCallbackData, MessageParcel& rilCallbackReply, MessageOption& rilCallbackOption, sptr<OHOS::HDI::Ril::V1_2::IRilCallback> impl)
-{
-    if (rilCallbackData.ReadInterfaceToken() != OHOS::HDI::Ril::V1_2::IRilCallback::GetDescriptor()) {
-        HDF_LOGE("%{public}s: interface token check failed!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    OHOS::HDI::Ril::V1_1::RilRadioResponseInfo responseInfo;
-    if (!RilRadioResponseInfoBlockUnmarshalling(rilCallbackData, responseInfo)) {
-        HDF_LOGE("%{public}s: read responseInfo failed!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    OHOS::HDI::Ril::V1_2::NrCellSsbIds nrCellSsbIds;
-    if (!NrCellSsbIdsBlockUnmarshalling(rilCallbackData, nrCellSsbIds)) {
-        HDF_LOGE("%{public}s: read nrCellSsbIds failed!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    if (impl == nullptr) {
-        HDF_LOGE("%{public}s: impl is nullptr!", __func__);
-        return HDF_ERR_INVALID_PARAM;
-    }
-
-    int32_t rilCallbackRet = impl->GetNrSsbIdResponse(responseInfo, nrCellSsbIds);
     if (rilCallbackRet != HDF_SUCCESS) {
         HDF_LOGD("%{public}s failed, error code is %{public}d", __func__, rilCallbackRet);
         return rilCallbackRet;
