@@ -88,6 +88,7 @@ HWTEST_F(ASTAttrTest, Match_001, Level1)
     EXPECT_FALSE(attr.Match(SystemLevel::MINI));
     EXPECT_FALSE(attr.Match(SystemLevel::LITE));
     EXPECT_FALSE(attr.Match(SystemLevel::FULL));
+    EXPECT_FALSE(attr.Match(static_cast<SystemLevel>(-1)));
     DTEST_LOG << "Match_001 end" << std::endl;
 }
 

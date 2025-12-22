@@ -87,6 +87,8 @@ HWTEST_F(ASTExprTest, ASTUnaryExpr_002, Level1)
     EXPECT_EQ(ret, "-");
     ret = expr.UnaryOpToString(UnaryOpKind::TILDE);
     EXPECT_EQ(ret, "~");
+    ret = expr.UnaryOpToString(static_cast<UnaryOpKind>(-1));
+    EXPECT_EQ(ret, "unknown");
     DTEST_LOG << "ASTUnaryExpr_002 end" << std::endl;
 }
 
@@ -138,6 +140,8 @@ HWTEST_F(ASTExprTest, ASTBinaryExpr_002, Level1)
     EXPECT_EQ(ret, "^");
     ret = expr.BinaryOpToString(BinaryOpKind::OR);
     EXPECT_EQ(ret, "|");
+    ret = expr.BinaryOpToString(static_cast<BinaryOpKind>(-1));
+    EXPECT_EQ(ret, "unknown");
     DTEST_LOG << "ASTBinaryExpr_002 end" << std::endl;
 }
 } // namespace OHOS::idl
