@@ -208,4 +208,4 @@ HWTEST_F(SaUnionTypeEmitterTest, EmitCppTypeDecl_001, Level1)
     EXPECT_EQ(ret, expectedCode);
     DTEST_LOG << "EmitCppTypeDecl_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

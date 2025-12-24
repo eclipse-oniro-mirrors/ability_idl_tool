@@ -377,4 +377,4 @@ HWTEST_F(SaOrderedMapTypeEmitterTest, EmitCppReadVar_005, Level1)
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppReadVar_005 begin" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

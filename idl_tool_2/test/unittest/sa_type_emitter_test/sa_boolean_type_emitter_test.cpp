@@ -20,78 +20,76 @@
 #define private   public
 #define protected public
 #endif
-#include "codegen/SA/type/sa_long_type_emitter.h"
+#include "codegen/SA/type/sa_boolean_type_emitter.h"
 
 using namespace testing;
 using namespace testing::ext;
 using namespace OHOS::Idl;
 
 namespace OHOS::Idl {
-class SaLongTypeEmitterTest : public testing::Test {
+class SaBooleanTypeEmitterTest : public testing::Test {
 public:
-    SaLongTypeEmitterTest() {}
-    virtual ~SaLongTypeEmitterTest() {}
+    SaBooleanTypeEmitterTest() {}
+    virtual ~SaBooleanTypeEmitterTest() {}
     static void SetUpTestCase();
     static void TearDownTestCase();
     void SetUp();
     void TearDown();
 };
 
-void SaLongTypeEmitterTest::SetUpTestCase()
+void SaBooleanTypeEmitterTest::SetUpTestCase()
 {
     DTEST_LOG << "SetUpTestCase" << std::endl;
 }
 
-void SaLongTypeEmitterTest::TearDownTestCase()
+void SaBooleanTypeEmitterTest::TearDownTestCase()
 {
     DTEST_LOG << "TearDownTestCase" << std::endl;
 }
 
-void SaLongTypeEmitterTest::SetUp()
+void SaBooleanTypeEmitterTest::SetUp()
 {
     DTEST_LOG << "SetUp" << std::endl;
 }
 
-void SaLongTypeEmitterTest::TearDown()
+void SaBooleanTypeEmitterTest::TearDown()
 {
     DTEST_LOG << "TearDown" << std::endl;
 }
 
 /*
  * @tc.name: GetTypeKind_001
- * @tc.desc: test SaLongTypeEmitter GetTypeKind
+ * @tc.desc: test SaBooleanTypeEmitter GetTypeKind
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, GetTypeKind_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, GetTypeKind_001, Level1)
 {
     DTEST_LOG << "GetTypeKind_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     auto ret = emitter.GetTypeKind();
-    EXPECT_EQ(ret, TypeKind::TYPE_LONG);
+    EXPECT_EQ(ret, TypeKind::TYPE_BOOLEAN);
     DTEST_LOG << "GetTypeKind_001 end" << std::endl;
 }
 
 /*
  * @tc.name: EmitCppType_001
- * @tc.desc: test SaLongTypeEmitter EmitCppType
+ * @tc.desc: test SaBooleanTypeEmitter EmitCppType
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitCppType_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitCppType_001, Level1)
 {
     DTEST_LOG << "EmitCppType_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     std::string type = emitter.EmitCppType(TypeMode::NO_MODE);
-    EXPECT_EQ(type, "int64_t");
+    EXPECT_EQ(type, "bool");
     type = emitter.EmitCppType(TypeMode::PARAM_IN);
-    EXPECT_EQ(type, "int64_t");
+    EXPECT_EQ(type, "bool");
     type = emitter.EmitCppType(TypeMode::LOCAL_VAR);
-    EXPECT_EQ(type, "int64_t");
+    EXPECT_EQ(type, "bool");
     type = emitter.EmitCppType(TypeMode::PARAM_INOUT);
-    EXPECT_EQ(type, "int64_t&");
+    EXPECT_EQ(type, "bool&");
     type = emitter.EmitCppType(TypeMode::PARAM_OUT);
-    EXPECT_EQ(type, "int64_t&");
+    EXPECT_EQ(type, "bool&");
     type = emitter.EmitCppType(static_cast<TypeMode>(9));
     EXPECT_EQ(type, "unknown type");
     DTEST_LOG << "EmitCppType_001 end" << std::endl;
@@ -99,47 +97,44 @@ HWTEST_F(SaLongTypeEmitterTest, EmitCppType_001, Level1)
 
 /*
  * @tc.name: EmitRustType_001
- * @tc.desc: test SaLongTypeEmitter EmitRustType
+ * @tc.desc: test SaBooleanTypeEmitter EmitRustType
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitRustType_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitRustType_001, Level1)
 {
     DTEST_LOG << "EmitRustType_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     std::string stringHelper = emitter.EmitRustType(true, TypeMode::NO_MODE);
-    EXPECT_EQ(stringHelper, "i64");
+    EXPECT_EQ(stringHelper, "bool");
     DTEST_LOG << "EmitRustType_001 end" << std::endl;
 }
 
 /*
  * @tc.name: EmitTsType_001
- * @tc.desc: test SaLongTypeEmitter EmitTsType
+ * @tc.desc: test SaBooleanTypeEmitter EmitTsType
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitTsType_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitTsType_001, Level1)
 {
     DTEST_LOG << "EmitTsType_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     std::string stringHelper = emitter.EmitTsType(TypeMode::NO_MODE);
-    EXPECT_EQ(stringHelper, "number");
+    EXPECT_EQ(stringHelper, "boolean");
     DTEST_LOG << "EmitTsType_001 end" << std::endl;
 }
 
 /*
  * @tc.name: EmitCppWriteVar_001
- * @tc.desc: test SaLongTypeEmitter EmitCppWriteVar with log
+ * @tc.desc: test SaBooleanTypeEmitter EmitCppWriteVar with log
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitCppWriteVar_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitCppWriteVar_001, Level1)
 {
     DTEST_LOG << "EmitCppWriteVar_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     emitter.logOn_ = true;
     std::string expectedCode =
-        "if (!parcel.WriteInt64(fd)) {\n"
+        "if (!parcel.WriteInt32(fd ? 1 : 0)) {\n"
         "    HiLog::Error(LABEL, \"Write [fd] failed!\");\n"
         "    return ERR_INVALID_DATA;\n"
         "}\n";
@@ -151,17 +146,16 @@ HWTEST_F(SaLongTypeEmitterTest, EmitCppWriteVar_001, Level1)
 
 /*
  * @tc.name: EmitCppWriteVar_002
- * @tc.desc: test SaLongTypeEmitter EmitCppWriteVar with log
+ * @tc.desc: test SaBooleanTypeEmitter EmitCppWriteVar without log
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitCppWriteVar_002, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitCppWriteVar_002, Level1)
 {
     DTEST_LOG << "EmitCppWriteVar_002 begin" << std::endl;
-    SaLongTypeEmitter emitter;
+    SaBooleanTypeEmitter emitter;
     emitter.logOn_ = false;
     std::string expectedCode =
-        "if (!parcel.WriteInt64(fd)) {\n"
+        "if (!parcel.WriteInt32(fd ? 1 : 0)) {\n"
         "    return ERR_INVALID_DATA;\n"
         "}\n";
     StringBuilder sb;
@@ -172,15 +166,14 @@ HWTEST_F(SaLongTypeEmitterTest, EmitCppWriteVar_002, Level1)
 
 /*
  * @tc.name: EmitCppReadVar_001
- * @tc.desc: test SaLongTypeEmitter EmitCppReadVar
+ * @tc.desc: test SaBooleanTypeEmitter EmitCppReadVar
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitCppReadVar_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitCppReadVar_001, Level1)
 {
     DTEST_LOG << "EmitCppReadVar_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
-    std::string expectedCode = "int64_t fd = parcel.ReadInt64();\n";
+    SaBooleanTypeEmitter emitter;
+    std::string expectedCode = "bool fd = parcel.ReadInt32() == 1 ? true : false;\n";
     StringBuilder sb;
     emitter.EmitCppReadVar("parcel.", "fd", sb, "", true);
     EXPECT_EQ(sb.ToString(), expectedCode);
@@ -189,15 +182,14 @@ HWTEST_F(SaLongTypeEmitterTest, EmitCppReadVar_001, Level1)
 
 /*
  * @tc.name: EmitCppReadVar_002
- * @tc.desc: test SaLongTypeEmitter EmitCppReadVar
+ * @tc.desc: test SaBooleanTypeEmitter EmitCppReadVar
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitCppReadVar_002, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitCppReadVar_002, Level1)
 {
     DTEST_LOG << "EmitCppReadVar_002 begin" << std::endl;
-    SaLongTypeEmitter emitter;
-    std::string expectedCode = "fd = parcel.ReadInt64();\n";
+    SaBooleanTypeEmitter emitter;
+    std::string expectedCode = "fd = parcel.ReadInt32() == 1 ? true : false;\n";
     StringBuilder sb;
     emitter.EmitCppReadVar("parcel.", "fd", sb, "", false);
     EXPECT_EQ(sb.ToString(), expectedCode);
@@ -206,15 +198,14 @@ HWTEST_F(SaLongTypeEmitterTest, EmitCppReadVar_002, Level1)
 
 /*
  * @tc.name: EmitTsWriteVar_001
- * @tc.desc: test SaLongTypeEmitter EmitTsWriteVar
+ * @tc.desc: test SaBooleanTypeEmitter EmitTsWriteVar
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitTsWriteVar_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitTsWriteVar_001, Level1)
 {
     DTEST_LOG << "EmitTsWriteVar_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
-    std::string expectedCode = "parcel.writeLong(fd);\n";
+    SaBooleanTypeEmitter emitter;
+    std::string expectedCode = "parcel.writeInt(fd ? 1 : 0);\n";
     StringBuilder sb;
     emitter.EmitTsWriteVar("parcel", "fd", sb, "");
     EXPECT_EQ(sb.ToString(), expectedCode);
@@ -223,15 +214,14 @@ HWTEST_F(SaLongTypeEmitterTest, EmitTsWriteVar_001, Level1)
 
 /*
  * @tc.name: EmitTsReadVar_001
- * @tc.desc: test SaLongTypeEmitter EmitTsReadVar
+ * @tc.desc: test SaBooleanTypeEmitter EmitTsReadVar
  * @tc.type: FUNC
- * @tc.require: issueICL05Z
  */
-HWTEST_F(SaLongTypeEmitterTest, EmitTsReadVar_001, Level1)
+HWTEST_F(SaBooleanTypeEmitterTest, EmitTsReadVar_001, Level1)
 {
     DTEST_LOG << "EmitTsReadVar_001 begin" << std::endl;
-    SaLongTypeEmitter emitter;
-    std::string expectedCode = "let fd = parcel.readLong();\n";
+    SaBooleanTypeEmitter emitter;
+    std::string expectedCode = "let fd = parcel.readInt() == 1 ? true : false;\n";
     StringBuilder sb;
     emitter.EmitTsReadVar("parcel", "fd", sb, "", TypeMode::NO_MODE);
     EXPECT_EQ(sb.ToString(), expectedCode);

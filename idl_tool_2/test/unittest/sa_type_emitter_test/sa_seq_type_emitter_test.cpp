@@ -706,4 +706,4 @@ HWTEST_F(SaSeqTypeEmitterTest, EmitTsReadVar_002, Level1)
     EXPECT_EQ(sb2.ToString(), expectedCode);
     DTEST_LOG << "EmitTsReadVar_002 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl
