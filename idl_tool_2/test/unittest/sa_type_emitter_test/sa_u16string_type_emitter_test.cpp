@@ -162,4 +162,4 @@ HWTEST_F(SaU16stringTypeEmitterTest, EmitCppReadVar_002, Level1)
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppReadVar_002 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

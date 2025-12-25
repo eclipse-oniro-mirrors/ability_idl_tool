@@ -344,4 +344,4 @@ HWTEST_F(SaSetTypeEmitterTest, EmitCppReadVar_006, Level1)
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitCppReadVar_006 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

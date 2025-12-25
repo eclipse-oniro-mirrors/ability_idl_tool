@@ -231,4 +231,4 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppTypeDecl_002, Level1)
     EXPECT_EQ(ret, expectedCode);
     DTEST_LOG << "EmitCppTypeDecl_002 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl

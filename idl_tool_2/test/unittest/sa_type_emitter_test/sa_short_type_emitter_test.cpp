@@ -224,4 +224,4 @@ HWTEST_F(SaShortTypeEmitterTest, EmitTsReadVar_001, Level1)
     EXPECT_EQ(sb.ToString(), expectedCode);
     DTEST_LOG << "EmitTsReadVar_001 end" << std::endl;
 }
-} // namespace OHOS::idl
+} // namespace OHOS::Idl
