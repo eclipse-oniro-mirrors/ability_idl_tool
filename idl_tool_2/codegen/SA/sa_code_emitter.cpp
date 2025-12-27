@@ -193,11 +193,6 @@ void SACodeEmitter::GetOption()
         macroDefine_ += "#undef LOG_TAG\n";
         macroDefine_ += "#define LOG_TAG \"" + logTag_ + "\"\n\n";
         SaTypeEmitter::macroHilog_ = "HILOG_ERROR(LOG_CORE";
-    } else {
-        macroError_ = "HiLog::Error(LABEL";
-        macroWarn_ = "HiLog::Warn(LABEL";
-        macroDefine_ = "using OHOS::HiviewDFX::HiLog;\n\n";
-        SaTypeEmitter::macroHilog_ = "HiLog::Error(LABEL";
     }
 
     SaTypeEmitter::usingOn_ = false;

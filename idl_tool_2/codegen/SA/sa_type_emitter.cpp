@@ -18,7 +18,7 @@
 namespace OHOS {
 namespace Idl {
 std::string SaTypeEmitter::domainId_ = "";
-std::string SaTypeEmitter::macroHilog_ = "";
+std::string SaTypeEmitter::macroHilog_ = "HiLog::Error(LABEL";
 bool SaTypeEmitter::logOn_ = false;
 bool SaTypeEmitter::usingOn_ = false;
 int SaTypeEmitter::circleCount_ = 0;
