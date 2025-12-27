@@ -2,7 +2,7 @@
 
 ## 简介
 
-在OpenHarmony中，当应用/系统服务的客户端和服务端进行IPC（Inter-Process Communication）跨线程通信时，需要定义双方都认可的接口，以保障双方可以成功通信，OpenHarmony IDL（Interface Definition Language）则是一种定义此类接口的工具。OpenHarmony IDL先把需要传递的对象分解成操作系统能够理解的基本类型，并根据开发者的需要封装跨边界的对象。
+在OpenHarmony中，当客户端和服务端进行IPC（Inter-Process Communication）跨线程通信时，需要定义双方都认可的接口，以保障双方可以成功通信，OpenHarmony IDL（Interface Definition Language）则是一种定义此类接口的工具。OpenHarmony IDL先把需要传递的对象分解成操作系统能够理解的基本类型，并根据开发者的需要封装跨边界的对象。
 
   **图1** IDL接口描述
   ![IDL-interface-description](./figures/IDL-interface-description.png)
