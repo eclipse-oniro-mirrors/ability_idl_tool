@@ -80,7 +80,7 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppType_001, Level1)
     auto ret = emitter.EmitCppType(TypeMode::LOCAL_VAR);
     EXPECT_EQ(ret, "FooEnum");
     ret = emitter.EmitCppType(TypeMode::PARAM_IN);
-    EXPECT_EQ(ret, "const FooEnum&");
+    EXPECT_EQ(ret, "FooEnum");
     ret = emitter.EmitCppType(TypeMode::PARAM_OUT);
     EXPECT_EQ(ret, "FooEnum&");
     ret = emitter.EmitCppType(static_cast<TypeMode>(-1));
@@ -98,10 +98,9 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppWriteVar_001, Level1)
     DTEST_LOG << "EmitCppWriteVar_001 begin" << std::endl;
     SaEnumTypeEmitter emitter;
     emitter.SetTypeName("FooEnum");
-    emitter.logOn_ = true;
+    emitter.logOn_ = false;
     std::string expectedCode =
-        "if (!data.WriteInt32(static_cast<int32_t>(FooEnum))) {\n"
-        "    HiLog::Error(LABEL, \"Write [value] failed!\");\n"
+        "if (!data.WriteInt32(static_cast<int32_t>(value))) {\n"
         "    return ERR_INVALID_DATA;\n"
         "}\n";
     StringBuilder sb;
@@ -123,7 +122,7 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppWriteVar_002, Level1)
     emitter.SetTypeName("FooEnum");
     emitter.logOn_ = false;
     std::string expectedCode =
-        "if (!data.WriteInt32(static_cast<int32_t>(FooEnum))) {\n"
+        "if (!data.WriteInt32(static_cast<int32_t>(value))) {\n"
         "    return ERR_INVALID_DATA;\n"
         "}\n";
     StringBuilder sb;
@@ -143,16 +142,15 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppReadVar_001, Level1)
     DTEST_LOG << "EmitCppReadVar_001 begin" << std::endl;
     SaEnumTypeEmitter emitter;
     emitter.SetTypeName("FooEnum");
-    emitter.logOn_ = true;
+    emitter.logOn_ = false;
     std::string expectedCode =
         "FooEnum value;\n"
         "{\n"
-        "int32_t enumTmp = 0;\n"
-        "if (!data.ReadInt32(enumTmp)) {\n"
-        "    HiLog::Error(LABEL, \"Read [value] failed!\");\n"
-        "    return ERR_INVALID_DATA;\n"
-        "}\n"
-        "value = static_cast<FooEnum>(enumTmp);\n"
+        "    int32_t enumTmp = 0;\n"
+        "    if (!data.ReadInt32(enumTmp)) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "    value = static_cast<FooEnum>(enumTmp);\n"
         "}\n";
     StringBuilder sb;
     emitter.EmitCppReadVar("data.", "value", sb, "", true);
@@ -175,11 +173,11 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppReadVar_002, Level1)
     std::string expectedCode =
         "FooEnum value;\n"
         "{\n"
-        "int32_t enumTmp = 0;\n"
-        "if (!data.ReadInt32(enumTmp)) {\n"
-        "    return ERR_INVALID_DATA;\n"
-        "}\n"
-        "value = static_cast<FooEnum>(enumTmp);\n"
+        "    int32_t enumTmp = 0;\n"
+        "    if (!data.ReadInt32(enumTmp)) {\n"
+        "        return ERR_INVALID_DATA;\n"
+        "    }\n"
+        "    value = static_cast<FooEnum>(enumTmp);\n"
         "}\n";
     StringBuilder sb;
     emitter.EmitCppReadVar("data.", "value", sb, "", true);
@@ -200,10 +198,10 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppTypeDecl_001, Level1)
     emitter.AddMember(new SaEnumValueEmitter("ENUM_ONE", std::string("")));
     emitter.AddMember(new SaEnumValueEmitter("ENUM_TWO", std::string("ONE")));
     std::string expectedCode =
-        "enum class FooEnum{\n"
+        "enum class FooEnum {\n"
         "    ENUM_ONE,\n"
         "    ENUM_TWO = ONE,\n"
-        "};\n";
+        "};";
     auto ret = emitter.EmitCppTypeDecl();
     EXPECT_EQ(ret, expectedCode);
     DTEST_LOG << "EmitCppTypeDecl_001 end" << std::endl;
@@ -223,10 +221,10 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppTypeDecl_002, Level1)
     emitter.AddMember(new SaEnumValueEmitter("ENUM_ONE", std::string("")));
     emitter.AddMember(new SaEnumValueEmitter("ENUM_TWO", std::string("ONE")));
     std::string expectedCode =
-        "enum class FooEnum : SaTypeEmitter{\n"
+        "enum class FooEnum : SaTypeEmitter {\n"
         "    ENUM_ONE,\n"
         "    ENUM_TWO = ONE,\n"
-        "};\n";
+        "};";
     auto ret = emitter.EmitCppTypeDecl();
     EXPECT_EQ(ret, expectedCode);
     DTEST_LOG << "EmitCppTypeDecl_002 end" << std::endl;

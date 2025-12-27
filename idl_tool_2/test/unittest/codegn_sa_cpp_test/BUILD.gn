@@ -1,0 +1,284 @@
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//build/test.gni")
+import("//foundation/ability/idl_tool/idl_tool.gni")
+
+module_output_path = "idl_tool/idl_tool"
+
+IDL_DIR = "../../../"
+
+config("idl_tool_2_test_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "${IDL_DIR}/test/unittest/include" ]
+}
+
+common_sources = [
+  "${IDL_DIR}/ast/base/ast_boolean_type.cpp",
+  "${IDL_DIR}/ast/base/ast_boolean_type.h",
+  "${IDL_DIR}/ast/base/ast_byte_type.cpp",
+  "${IDL_DIR}/ast/base/ast_byte_type.h",
+  "${IDL_DIR}/ast/base/ast_char_type.cpp",
+  "${IDL_DIR}/ast/base/ast_char_type.h",
+  "${IDL_DIR}/ast/base/ast_cstring_type.cpp",
+  "${IDL_DIR}/ast/base/ast_cstring_type.h",
+  "${IDL_DIR}/ast/base/ast_double_type.cpp",
+  "${IDL_DIR}/ast/base/ast_double_type.h",
+  "${IDL_DIR}/ast/base/ast_float_type.cpp",
+  "${IDL_DIR}/ast/base/ast_float_type.h",
+  "${IDL_DIR}/ast/base/ast_integer_type.cpp",
+  "${IDL_DIR}/ast/base/ast_integer_type.h",
+  "${IDL_DIR}/ast/base/ast_long_type.cpp",
+  "${IDL_DIR}/ast/base/ast_long_type.h",
+  "${IDL_DIR}/ast/base/ast_short_type.cpp",
+  "${IDL_DIR}/ast/base/ast_short_type.h",
+  "${IDL_DIR}/ast/base/ast_string16_type.cpp",
+  "${IDL_DIR}/ast/base/ast_string16_type.h",
+  "${IDL_DIR}/ast/base/ast_string_type.cpp",
+  "${IDL_DIR}/ast/base/ast_string_type.h",
+  "${IDL_DIR}/ast/base/ast_u16string_type.cpp",
+  "${IDL_DIR}/ast/base/ast_u16string_type.h",
+  "${IDL_DIR}/ast/base/ast_uchar_type.cpp",
+  "${IDL_DIR}/ast/base/ast_uchar_type.h",
+  "${IDL_DIR}/ast/base/ast_uint_type.cpp",
+  "${IDL_DIR}/ast/base/ast_uint_type.h",
+  "${IDL_DIR}/ast/base/ast_ulong_type.cpp",
+  "${IDL_DIR}/ast/base/ast_ulong_type.h",
+  "${IDL_DIR}/ast/base/ast_ushort_type.cpp",
+  "${IDL_DIR}/ast/base/ast_ushort_type.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/ast/ast.cpp",
+  "${IDL_DIR}/ast/ast.h",
+  "${IDL_DIR}/ast/ast_array_type.cpp",
+  "${IDL_DIR}/ast/ast_array_type.h",
+  "${IDL_DIR}/ast/ast_attribute.cpp",
+  "${IDL_DIR}/ast/ast_attribute.h",
+  "${IDL_DIR}/ast/ast_enum_type.cpp",
+  "${IDL_DIR}/ast/ast_enum_type.h",
+  "${IDL_DIR}/ast/ast_expr.cpp",
+  "${IDL_DIR}/ast/ast_expr.h",
+  "${IDL_DIR}/ast/ast_fd_type.cpp",
+  "${IDL_DIR}/ast/ast_fd_type.h",
+  "${IDL_DIR}/ast/ast_fdsan_type.cpp",
+  "${IDL_DIR}/ast/ast_fdsan_type.h",
+  "${IDL_DIR}/ast/ast_interface_type.cpp",
+  "${IDL_DIR}/ast/ast_interface_type.h",
+  "${IDL_DIR}/ast/ast_map_type.cpp",
+  "${IDL_DIR}/ast/ast_map_type.h",
+  "${IDL_DIR}/ast/ast_method.cpp",
+  "${IDL_DIR}/ast/ast_method.h",
+  "${IDL_DIR}/ast/ast_namespace.cpp",
+  "${IDL_DIR}/ast/ast_namespace.h",
+  "${IDL_DIR}/ast/ast_native_buffer_type.cpp",
+  "${IDL_DIR}/ast/ast_native_buffer_type.h",
+  "${IDL_DIR}/ast/ast_node.cpp",
+  "${IDL_DIR}/ast/ast_node.h",
+  "${IDL_DIR}/ast/ast_orderedmap_type.cpp",
+  "${IDL_DIR}/ast/ast_orderedmap_type.h",
+  "${IDL_DIR}/ast/ast_parameter.cpp",
+  "${IDL_DIR}/ast/ast_parameter.h",
+  "${IDL_DIR}/ast/ast_pointer_type.cpp",
+  "${IDL_DIR}/ast/ast_pointer_type.h",
+  "${IDL_DIR}/ast/ast_ptr_type.cpp",
+  "${IDL_DIR}/ast/ast_rawdata_type.cpp",
+  "${IDL_DIR}/ast/ast_rawdata_type.h",
+  "${IDL_DIR}/ast/ast_sequenceable_type.cpp",
+  "${IDL_DIR}/ast/ast_sequenceable_type.h",
+  "${IDL_DIR}/ast/ast_set_type.cpp",
+  "${IDL_DIR}/ast/ast_set_type.h",
+  "${IDL_DIR}/ast/ast_smq_type.cpp",
+  "${IDL_DIR}/ast/ast_smq_type.h",
+  "${IDL_DIR}/ast/ast_struct_type.cpp",
+  "${IDL_DIR}/ast/ast_struct_type.h",
+  "${IDL_DIR}/ast/ast_type.cpp",
+  "${IDL_DIR}/ast/ast_type.h",
+  "${IDL_DIR}/ast/ast_union_type.cpp",
+  "${IDL_DIR}/ast/ast_union_type.h",
+  "${IDL_DIR}/ast/ast_void_type.cpp",
+  "${IDL_DIR}/ast/ast_void_type.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_client_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_client_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_client_proxy_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_client_proxy_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_custom_types_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_custom_types_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_interface_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_interface_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_service_stub_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/cpp/sa_cpp_service_stub_code_emitter.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/SA/rust/sa_rust_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/rust/sa_rust_interface_code_emitter.h",
+  "../mock/mock_sa_rust_code_emitter.cpp",
+  "../mock/mock_sa_rust_interface_code_emitter.cpp",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/SA/ts/sa_ts_client_proxy_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/ts/sa_ts_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/ts/sa_ts_interface_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/ts/sa_ts_service_stub_code_emitter.h",
+  "../mock/mock_sa_ts_client_proxy_code_emitter.cpp",
+  "../mock/mock_sa_ts_code_emitter.cpp",
+  "../mock/mock_sa_ts_interface_code_emitter.cpp",
+  "../mock/mock_sa_ts_service_stub_code_emitter.cpp",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/SA/type/sa_array_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_array_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_boolean_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_boolean_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_byte_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_byte_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_char_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_char_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_cstring_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_cstring_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_double_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_double_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_enum_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_enum_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_fd_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_fd_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_fdsan_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_fdsan_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_float_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_float_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_int_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_int_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_interface_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_interface_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_long_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_long_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_map_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_map_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_orderedmap_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_orderedmap_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_ptr_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_rawdata_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_rawdata_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_seq_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_seq_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_set_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_set_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_short_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_short_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_string_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_string_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_struct_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_struct_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_u16string_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_u16string_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_uchar_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_uchar_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_uint_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_uint_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_ulong_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_ulong_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_union_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_union_type_emitter.h",
+  "${IDL_DIR}/codegen/SA/type/sa_ushort_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/type/sa_ushort_type_emitter.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/SA/sa_code_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/sa_code_emitter.h",
+  "${IDL_DIR}/codegen/SA/sa_code_generator.cpp",
+  "${IDL_DIR}/codegen/SA/sa_code_generator.h",
+  "${IDL_DIR}/codegen/SA/sa_type_emitter.cpp",
+  "${IDL_DIR}/codegen/SA/sa_type_emitter.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/codegen/code_emitter.cpp",
+  "${IDL_DIR}/codegen/code_emitter.h",
+  "${IDL_DIR}/codegen/code_generator.cpp",
+  "${IDL_DIR}/codegen/code_generator.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/lexer/lexer.cpp",
+  "${IDL_DIR}/lexer/lexer.h",
+  "${IDL_DIR}/lexer/token.cpp",
+  "${IDL_DIR}/lexer/token.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/parser/intf_type_check.h",
+  "${IDL_DIR}/parser/parser.cpp",
+  "${IDL_DIR}/parser/parser.h",
+  "../mock/mock_intf_type_check.cpp",
+]
+
+common_sources += [
+  "${IDL_DIR}/preprocessor/preprocessor.cpp",
+  "${IDL_DIR}/preprocessor/preprocessor.h",
+]
+
+common_sources += [
+  "${IDL_DIR}/util/autoptr.h",
+  "${IDL_DIR}/util/common.h",
+  "${IDL_DIR}/util/file.h",
+  "${IDL_DIR}/util/light_refcount_base.cpp",
+  "${IDL_DIR}/util/light_refcount_base.h",
+  "${IDL_DIR}/util/logger.cpp",
+  "${IDL_DIR}/util/logger.h",
+  "${IDL_DIR}/util/options.h",
+  "${IDL_DIR}/util/string_builder.cpp",
+  "${IDL_DIR}/util/string_builder.h",
+  "${IDL_DIR}/util/string_helper.cpp",
+  "${IDL_DIR}/util/string_helper.h",
+  "${IDL_DIR}/util/string_pool.cpp",
+  "${IDL_DIR}/util/string_pool.h",
+  "../mock/mock_file.cpp",
+  "../mock/mock_options.cpp",
+]
+
+ohos_unittest("SaCppClientProxyCodeEmitterTest") {
+  module_out_path = module_output_path
+  include_dirs = [ "${IDL_DIR}" ]
+
+  configs = [
+    ":idl_tool_2_test_config",
+    "//build/config/compiler:exceptions",
+  ]
+
+  sources = [ "./sa_cpp_client_proxy_code_emitter_test.cpp" ]
+  sources += common_sources
+
+  defines = [ "IDLTOOL_GTEST" ]
+
+  deps = []
+
+  external_deps = [ "c_utils:utils" ]
+
+  part_name = "idl_tool"
+  subsystem_name = "ability"
+}
+
+group("unittest") {
+  testonly = true
+  deps = [ ":SaCppClientProxyCodeEmitterTest" ]
+}
