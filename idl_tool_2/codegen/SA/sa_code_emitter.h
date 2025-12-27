@@ -43,9 +43,9 @@ protected:
     std::string domainId_;
     std::string logTag_;
     std::string hitraceTag_;
-    std::string macroError_;
-    std::string macroWarn_;
-    std::string macroDefine_;
+    std::string macroError_ = "HiLog::Error(LABEL";
+    std::string macroWarn_ = "HiLog::Warn(LABEL";
+    std::string macroDefine_ = "using OHOS::HiviewDFX::HiLog;\n\n";
     bool hitraceOn_ = false;
     bool logOn_ = false;
 
