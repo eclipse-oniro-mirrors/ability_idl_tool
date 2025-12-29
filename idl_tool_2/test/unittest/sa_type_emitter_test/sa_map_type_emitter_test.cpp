@@ -479,6 +479,37 @@ HWTEST_F(SaMapTypeEmitterTest, EmitRustWriteVar_001, Level1)
 }
 
 /*
+ * @tc.name: EmitTsWriteVar_001
+ * @tc.desc: test SaMapTypeEmitter EmitTsWriteVar
+ * @tc.type: FUNC
+ */
+HWTEST_F(SaMapTypeEmitterTest, EmitTsWriteVar_001, Level1)
+{
+    DTEST_LOG << "EmitTsWriteVar_001 begin" << std::endl;
+    SaMapTypeEmitter emitter;
+    StringBuilder sb;
+    std::string parcelName = "parcel";
+    std::string name = "data";
+    std::string prefix = "";
+
+    emitter.logOn_ = true;
+    AutoPtr<SaTypeEmitter> intEmitter = new SaIntTypeEmitter();
+    emitter.SetKeyEmitter(intEmitter);
+    emitter.SetValueEmitter(intEmitter);
+
+    std::string expectedCode =
+        "parcel.writeInt(data.size);\n"
+        "for (let [key, value] of data) {\n"
+        "    parcel.writeInt(key);\n"
+        "    parcel.writeInt(value);\n"
+        "}\n";
+    
+    emitter.EmitTsWriteVar(parcelName, name, sb, prefix);
+    EXPECT_EQ(sb.ToString(), expectedCode);
+    DTEST_LOG << "EmitTsWriteVar_001 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitTsReadVar_001
  * @tc.desc: test SaMapTypeEmitter EmitTsReadVar
  * @tc.type: FUNC

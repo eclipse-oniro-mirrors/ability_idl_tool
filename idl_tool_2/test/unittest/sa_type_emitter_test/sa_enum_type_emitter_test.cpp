@@ -77,10 +77,14 @@ HWTEST_F(SaEnumTypeEmitterTest, EmitCppType_001, Level1)
     DTEST_LOG << "EmitCppType_001 begin" << std::endl;
     SaEnumTypeEmitter emitter;
     emitter.SetTypeName("FooEnum");
-    auto ret = emitter.EmitCppType(TypeMode::LOCAL_VAR);
+    auto ret = emitter.EmitCppType(TypeMode::NO_MODE);
     EXPECT_EQ(ret, "FooEnum");
     ret = emitter.EmitCppType(TypeMode::PARAM_IN);
     EXPECT_EQ(ret, "FooEnum");
+    ret = emitter.EmitCppType(TypeMode::LOCAL_VAR);
+    EXPECT_EQ(ret, "FooEnum");
+    ret = emitter.EmitCppType(TypeMode::PARAM_INOUT);
+    EXPECT_EQ(ret, "FooEnum&");
     ret = emitter.EmitCppType(TypeMode::PARAM_OUT);
     EXPECT_EQ(ret, "FooEnum&");
     ret = emitter.EmitCppType(static_cast<TypeMode>(-1));
