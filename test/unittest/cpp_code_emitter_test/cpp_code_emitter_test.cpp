@@ -108,6 +108,47 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceStdlibInclusions_test_001, TestSiz
 }
 
 /**
+ * @tc.name: EmitInterfaceStdlibInclusions_test_002
+ * @tc.desc: Verify the EmitInterfaceStdlibInclusions function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceStdlibInclusions_test_002, TestSize.Level1)
+{
+    GTEST_LOG_(INFO)
+        << "CppCodeEmitterUnitTest, EmitInterfaceStdlibInclusions_test_002, TestSize.Level1";
+
+    MetaComponent mc;
+    mc.typeNumber_ = 2;
+
+    MetaType *mt1 = new MetaType;
+    MetaType *mt2 = new MetaType;
+    mc.types_ = new MetaType *[2];
+    mc.types_[0] = mt1;
+    mc.types_[1] = mt2;
+
+    CppCodeEmitter codeEmitter(&mc);
+    StringBuilder sb;
+
+    mt1->kind_ = TypeKind::Byte;
+    mt2->kind_ = TypeKind::Byte;
+    codeEmitter.EmitInterfaceStdlibInclusions(sb);
+    mt1->kind_ = TypeKind::String;
+    mt2->kind_ = TypeKind::String;
+    codeEmitter.EmitInterfaceStdlibInclusions(sb);
+    mt1->kind_ = TypeKind::Array;
+    mt2->kind_ = TypeKind::Array;
+    codeEmitter.EmitInterfaceStdlibInclusions(sb);
+    mt1->kind_ = TypeKind::Map;
+    mt2->kind_ = TypeKind::Map;
+    codeEmitter.EmitInterfaceStdlibInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, "#include <cstdint>\n#include <string_ex.h>\n"
+        "#include <vector>\n#include <unordered_map>\n");
+    delete mt1;
+    delete mt2;
+    delete [] mc.types_;
+}
+
+/**
  * @tc.name: FileName_test_001
  * @tc.desc: Verify the FileName function.
  * @tc.type: FUNC
@@ -1222,6 +1263,11 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceDBinderInclusions_test_001, TestSi
     CppCodeEmitter codeEmitter(&mc);
     String logTag = "HITRACE_TAG_ABILITY_MANAGER";
     String domainId = "0xb0d2d4";
+    {
+        StringBuilder sb;
+        codeEmitter.EmitInterfaceDBinderInclusions(sb);
+        EXPECT_STREQ(sb.buffer_, "#include <iremote_broker.h>\n");
+    }
     StringBuilder sb;
 
     /**
@@ -1676,6 +1722,42 @@ HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0012, TestSize.Level1)
  * @tc.require: #I8JQUO
  */
 HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0013, TestSize.Level1)
+{
+    MetaComponent mc;
+    CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
+    StringBuilder sb;
+    char intfaceName[] = "myinterface";
+    char intfaceNameSpace[] = "test.myinterface";
+    char seqName[] = "test.myseq";
+    char seqNameSpace[] = "FooMySeq..test.MySeq";
+
+    codeEmitter->metaComponent_->sequenceableNumber_ = 1;
+    codeEmitter->metaComponent_->interfaceNumber_ = 1;
+    MetaSequenceable* msq = new MetaSequenceable{seqName, seqNameSpace};
+    codeEmitter->metaComponent_->sequenceables_ = new MetaSequenceable*[1]{msq};
+   
+    MetaInterface* mif = new MetaInterface{nullptr, intfaceName, intfaceNameSpace, 0, 0, nullptr, true};
+    codeEmitter->metaComponent_->interfaces_ = new MetaInterface*[1]{mif};
+
+    codeEmitter->EmitInterfaceSelfDefinedTypeInclusions(sb);
+    EXPECT_STREQ(sb.buffer_, "#include \"foo_my_seq.h\"\n#include \"myinterface.h\"\n");
+
+    StringBuilder sbUsing;
+    codeEmitter->EmitInterfaceUsings(sbUsing);
+    delete msq;
+    delete mif;
+    delete [] codeEmitter->metaComponent_->sequenceables_;
+    delete [] codeEmitter->metaComponent_->interfaces_;
+    delete codeEmitter;
+    EXPECT_STREQ(sbUsing.buffer_, "using test::MySeqtest::myseq;\nusing test::myinterfacemyinterface;\n");
+}
+
+/**
+ * @tc.name: EmitInterfaceUsings_test_0014
+ * @tc.desc: Verify the CppCodeEmitter function.
+ * @tc.type: FUNC
+ */
+HWTEST_F(CppCodeEmitterUnitTest, EmitInterfaceUsings_test_0014, TestSize.Level1)
 {
     MetaComponent mc;
     CppCodeEmitter* codeEmitter = new CppCodeEmitter(&mc);
