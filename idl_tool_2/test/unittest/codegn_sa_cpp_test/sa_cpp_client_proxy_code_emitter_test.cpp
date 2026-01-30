@@ -139,6 +139,77 @@ HWTEST_F(SaCppClientProxyCodeEmitterTest, EmitInterfaceProxyConstructor_001, Lev
 }
 
 /*
+ * @tc.name: EmitInterfaceProxyConstructor_002
+ * @tc.desc: test EmitInterfaceProxyConstructor function.
+ * @tc.type: FUNC
+  * @tc.require: #I8JQUO
+ */
+HWTEST_F(SaCppClientProxyCodeEmitterTest, EmitInterfaceProxyConstructor_002, Level1)
+{
+    DTEST_LOG << "EmitInterfaceProxyConstructor_002 begin" << std::endl;
+    StringBuilder sb;
+    std::string prefix;
+    AutoPtr<SaCppClientProxyCodeEmitter> emitter = new SaCppClientProxyCodeEmitter;
+    emitter->interface_ = new ASTInterfaceType();
+    std::string methodName = "methodName";
+    ASTMethod* method = new ASTMethod();
+    method->SetName(methodName);
+    method->attr_ = new ASTAttr(ASTAttr::CACHEABLE);
+    method->attr_->cacheableTime_ = 23;
+    emitter->interface_->AddMethod(method);
+    emitter->logOn_ = true;
+    emitter->proxyName_ = "UProxy";
+    emitter->interfaceName_ = "Iuu";
+    emitter->ast_ = new AST();
+    emitter->ast_->SetHasCacheableProxyMethods(true);
+
+    emitter->EmitInterfaceProxyConstructor(sb, prefix);
+    std::string expectedCode =
+        "explicit UProxy(\n"
+        "    const sptr<IRemoteObject>& remote)\n"
+        "    : IRemoteProxy<Iuu>(remote)\n"
+        "{\n"
+        "ApiCacheManager::GetInstance().AddCacheApi(GetDescriptor(),\n"
+        "    static_cast<uint32_t>(IpcCode::COMMAND_METHOD_NAME), 23);\n"
+        "\n"
+        "    if (remote_) {\n"
+        "        if (!remote->IsProxyObject()) {\n"
+        "            HiLog::Error(LABEL, \"remote is not proxy object!\");\n"
+        "            return;\n"
+        "        }\n"
+        "        deathRecipient_ = new (std::nothrow) (*this);\n"
+        "        if (!deathRecipient_) {\n"
+        "            HiLog::Error(LABEL, \"deathRecipient_ is nullptr!\");\n"
+        "            return;\n"
+        "        }\n"
+        "        if (!remote->AddDeathRecipient(deathRecipient_)) {\n"
+        "            HiLog::Error(LABEL, \"AddDeathRecipient failed!\");\n"
+        "            return;\n"
+        "        }\n"
+        "        remote_ = remote;\n"
+        "    }\n"
+        "}\n"
+        "\n"
+        "virtual ~UProxy()\n"
+        "{\n"
+        "    if (remote_ == nullptr) {\n"
+        "        return;\n"
+        "    }\n"
+        "    if (deathRecipient_ == nullptr) {\n"
+        "        return;\n"
+        "    }\n"
+        "    remote_->RemoveDeathRecipient(deathRecipient_);\n"
+        "    remote_ = nullptr;\n"
+        "\n"
+        "ApiCacheManager::GetInstance().DelCacheApi(GetDescriptor(),\n"
+        "    static_cast<uint32_t>(IpcCode::COMMAND_METHOD_NAME));\n"
+        "}\n";
+
+    EXPECT_STREQ(sb.buffer_, expectedCode.c_str());
+    DTEST_LOG << "EmitInterfaceProxyConstructor_002 end" << std::endl;
+}
+
+/*
  * @tc.name: EmitInterfaceProxyConstants_001
  * @tc.desc: test EmitInterfaceProxyConstants function.
  * @tc.type: FUNC
