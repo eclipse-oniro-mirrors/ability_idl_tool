@@ -41,12 +41,7 @@ std::string SaStructTypeEmitter::EmitCppType(TypeMode mode) const
 std::string SaStructTypeEmitter::EmitCppTypeDecl() const
 {
     StringBuilder sb;
-    std::string typeName = typeName_;
-    size_t pos = typeName_.rfind("::");
-    if (SaTypeEmitter::usingOn_ && (std::string::npos != pos)) {
-        typeName = typeName_.substr(pos + strlen("::"));
-    }
-    sb.AppendFormat("struct %s {\n", typeName.c_str());
+    sb.AppendFormat("struct %s {\n", typeName_.c_str());
 
     for (auto it : members_) {
         AutoPtr<SaTypeEmitter> member = std::get<1>(it);

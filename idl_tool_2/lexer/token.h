@@ -65,7 +65,6 @@ enum class TokenType {
     OPTION_STUB_HOOKS,    // "option_stub_hooks"
     OPTION_PARCEL_HOOKS,    // "option_parcel_hooks"
     OPTION_MACRO_HILOG,   // "option_macro_hilog"
-    OPTION_USING_HOOKS,    // "option_using_hooks"
     SEQ,                  // "sequenceable"
     RAWDATA,              // "rawdata"
     IMPORT,               // "import"

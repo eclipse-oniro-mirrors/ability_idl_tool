@@ -60,7 +60,6 @@ Lexer::StrTokenTypeMap Lexer::keyWords_ = {
     {"option_stub_hooks",  TokenType::OPTION_STUB_HOOKS  },
     {"option_parcel_hooks",  TokenType::OPTION_PARCEL_HOOKS  },
     {"option_macro_hilog",  TokenType::OPTION_MACRO_HILOG  },
-    {"option_using_hooks",  TokenType::OPTION_USING_HOOKS  },
     {"sequenceable",   TokenType::SEQ          },
     {"rawdata",        TokenType::RAWDATA      },
     {"import",         TokenType::IMPORT       },
