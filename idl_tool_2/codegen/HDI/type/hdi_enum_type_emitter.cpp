@@ -167,7 +167,7 @@ void HdiEnumTypeEmitter::EmitCppReadVar(const std::string &name, StringBuilder &
     std::string parcelName = (mode == TypeMode::PARAM_IN) ? dataParcelName_ : replyParcelName_;
     if ((mode == TypeMode::PARAM_IN) || (innerLevel > 0)) {
         sb.Append(prefix).AppendFormat("%s %s = static_cast<%s>(0);\n", EmitCppType().c_str(), name.c_str(),
-            EmitCType().c_str());
+            EmitCppType().c_str());
     }
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).AppendFormat("uint64_t %s = 0;\n", tmpVarName.c_str());
@@ -176,7 +176,7 @@ void HdiEnumTypeEmitter::EmitCppReadVar(const std::string &name, StringBuilder &
         name.c_str());
     sb.Append(prefix + TAB + TAB).Append("return HDF_ERR_INVALID_PARAM;\n");
     sb.Append(prefix + TAB).Append("}\n");
-    sb.Append(prefix + TAB).AppendFormat("%s = static_cast<%s>(%s);\n", name.c_str(), EmitCType().c_str(),
+    sb.Append(prefix + TAB).AppendFormat("%s = static_cast<%s>(%s);\n", name.c_str(), EmitCppType().c_str(),
         tmpVarName.c_str());
     sb.Append(prefix).Append("}\n");
 }
@@ -219,7 +219,7 @@ void HdiEnumTypeEmitter::EmitCppUnMarshalling(const std::string &parcelName, con
     std::string tmpVarName = "enumTmp";
     if (innerLevel > 0) {
         sb.Append(prefix).AppendFormat("%s %s = static_cast<%s>(0);\n", EmitCppType().c_str(), name.c_str(),
-            EmitCType().c_str());
+            EmitCppType().c_str());
     }
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).AppendFormat("uint64_t %s = 0;\n", tmpVarName.c_str());
@@ -228,7 +228,7 @@ void HdiEnumTypeEmitter::EmitCppUnMarshalling(const std::string &parcelName, con
         name.c_str());
     sb.Append(prefix + TAB + TAB).Append("return false;\n");
     sb.Append(prefix + TAB).Append("}\n");
-    sb.Append(prefix + TAB).AppendFormat("%s = static_cast<%s>(%s);\n", name.c_str(), EmitCType().c_str(),
+    sb.Append(prefix + TAB).AppendFormat("%s = static_cast<%s>(%s);\n", name.c_str(), EmitCppType().c_str(),
         tmpVarName.c_str());
     sb.Append(prefix).Append("}\n");
 }
