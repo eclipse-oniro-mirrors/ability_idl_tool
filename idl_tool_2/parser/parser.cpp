@@ -2547,7 +2547,9 @@ void Parser::MergeInterfaceDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
     for (size_t i = 0; i < sourceInterface->GetMethodNumber(); i++) {
         targetInterface->AddMethod(sourceInterface->GetMethod(i));
     }
-    targetInterface->SetSerializable(sourceInterface->IsSerializable());
+    bool isSerializable = sourceInterface->IsSerializable() ||
+        targetInterface->IsSerializable();
+    targetInterface->SetSerializable(isSerializable);
 }
 
 void Parser::MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)

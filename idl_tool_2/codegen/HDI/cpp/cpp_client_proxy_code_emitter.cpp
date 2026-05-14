@@ -536,16 +536,19 @@ void CppClientProxyCodeEmitter::EmitGetInstanceMethodInitProxyImpl(StringBuilder
 
     sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
-    sb.Append("version of service:%u.%u");
+    sb.Append("version of service:%{public}u.%{public}u");
     sb.AppendFormat(", version of client:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
     sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
-    sb.Append(prefix + TAB).Append("}\n\n");
-
+    sb.Append(prefix + TAB).Append("}\n");
+    if (interface_->IsCallback()) {
+        return;
+    }
+    sb.Append("\n");
     sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
     sb.Append(prefix + TAB + TAB + TAB);
-    sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%u).", \
+    sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%{public}u).", \
         ast_->GetMinorVer());
     sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
@@ -642,14 +645,15 @@ void CppClientProxyCodeEmitter::EmitProxyPassthroughtLoadImpl(StringBuilder &sb,
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s: get version failed!\", __func__);\n");
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
     sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
-    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! version of service:%u.%u");
+    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed!"
+                                            " version of service:%{public}u.%{public}u");
     sb.AppendFormat(", version of client:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
     sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n");
     sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
     sb.Append(prefix + TAB + TAB + TAB).AppendFormat("\"client minor version(%u) should be less or equal to "
-        "implementation minor version(%%u).", ast_->GetMinorVer());
+        "implementation minor version(%%{public}u).", ast_->GetMinorVer());
     sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
     sb.Append(prefix + TAB).Append("return impl;\n").Append(prefix).Append("}\n\n");
@@ -737,7 +741,7 @@ void CppClientProxyCodeEmitter::EmitPassthroughProxyCastFromMethodImplTemplate(S
 
     sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
-    sb.Append("version of implementation:%u.%u");
+    sb.Append("version of implementation:%{public}u.%{public}u");
     sb.AppendFormat(", version of cast target:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
     sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
@@ -746,8 +750,8 @@ void CppClientProxyCodeEmitter::EmitPassthroughProxyCastFromMethodImplTemplate(S
     sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
     sb.Append(prefix + TAB + TAB + TAB);
-    sb.AppendFormat("\"cast target minor version(%u) should be less or equal to implementation minor version(%%u).", \
-        ast_->GetMinorVer());
+    sb.AppendFormat("\"cast target minor version(%u) should be less or equal to "
+        "implementation minor version(%%{public}u).", ast_->GetMinorVer());
     sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
 
@@ -796,20 +800,23 @@ void CppClientProxyCodeEmitter::EmitProxyCastFromMethodImplTemplate(StringBuilde
 
     sb.Append(prefix + TAB).AppendFormat("if (%s != %d) {\n", serMajorName.c_str(), ast_->GetMajorVer());
     sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
-    sb.Append("version of service:%u.%u");
+    sb.Append("version of service:%{public}u.%{public}u");
     sb.AppendFormat(", version of client:%d.%d\", __func__, ", ast_->GetMajorVer(), ast_->GetMinorVer());
     sb.AppendFormat("%s, %s);\n", serMajorName.c_str(), serMinorName.c_str());
     sb.Append(prefix + TAB + TAB).Append("return nullptr;\n");
-    sb.Append(prefix + TAB).Append("}\n\n");
+    sb.Append(prefix + TAB).Append("}\n");
 
-    sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
-    sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
-    sb.Append(prefix + TAB + TAB + TAB);
-    sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%u).", \
-        ast_->GetMinorVer());
-    sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
-    sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+    if (!interface_->IsCallback()) {
+        sb.Append(prefix + TAB).AppendFormat("if (%s < %d) {\n", serMinorName.c_str(), ast_->GetMinorVer());
+        sb.Append(prefix + TAB + TAB).Append("HDF_LOGE(\"%{public}s:check Minor version failed! \"\n");
+        sb.Append(prefix + TAB + TAB + TAB);
+        sb.AppendFormat("\"client minor version(%u) should be less or equal to server minor version(%%{public}u).", \
+            ast_->GetMinorVer());
+        sb.AppendFormat("\", __func__, %s);\n", serMinorName.c_str());
+        sb.Append(prefix + TAB + TAB).Append("return nullptr;\n").Append(prefix + TAB).Append("}\n\n");
+    }
 
+    sb.Append("\n");
     sb.Append(prefix + TAB).Append("return proxy;\n").Append(prefix).Append("}\n");
 }
 
