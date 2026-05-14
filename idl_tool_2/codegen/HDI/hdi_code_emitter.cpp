@@ -326,11 +326,11 @@ void HDICodeEmitter::EmitInterfaceBuffSizeMacro(StringBuilder &sb) const
     sb.Append("#endif\n\n");
 
     sb.Append("#ifndef HDI_VECTOR_MAX_SIZE\n");
-    sb.Append("#define HDI_VECTOR_MAX_SIZE 102400\n");
+    sb.Append("#define HDI_VECTOR_MAX_SIZE 102400000\n");
     sb.Append("#endif\n\n");
 
     sb.Append("#ifndef HDI_MAP_MAX_SIZE\n");
-    sb.Append("#define HDI_MAP_MAX_SIZE 102400\n");
+    sb.Append("#define HDI_MAP_MAX_SIZE 102400000\n");
     sb.Append("#endif\n\n");
 
     sb.AppendFormat("#ifndef %s\n", CHECK_VALUE_RETURN_MACRO);
