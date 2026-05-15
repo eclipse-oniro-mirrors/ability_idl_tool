@@ -234,7 +234,7 @@ bool IntfTypeChecker::CheckInterfaceAst()
         return false;
     }
 
-    if (interface->GetMethodNumber() == 0) {
+    if (interface->GetMethodNumber() == 0 && interface->GetExtendsInterface() == nullptr) {
         Logger::E(TAG, StringHelper::Format("[%s:%d] error:intf hdi: interface ast has no method.", __func__,
             __LINE__).c_str());
         return false;

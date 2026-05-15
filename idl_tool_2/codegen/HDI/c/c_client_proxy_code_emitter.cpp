@@ -773,7 +773,7 @@ void CClientProxyCodeEmitter::EmitProxyCheckVersion(const std::string &clientObj
     sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n\n");
     sb.Append(prefix).AppendFormat("if (%s != %s) {\n", serMajorName.c_str(), majorVerName_.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
-    sb.Append("version of service:%u.%u, version of client:%u.%u\", __func__,\n");
+    sb.Append("version of service:%{public}u.%{public}u, version of client:%{public}u.%{public}u\", __func__,\n");
     sb.Append(prefix + TAB + TAB).AppendFormat("%s, %s, %s, %s);\n", serMajorName.c_str(), serMinorName.c_str(),
         majorVerName_.c_str(), minorVerName_.c_str());
     if (mode_ == GenMode::KERNEL || interface_->IsCallback()) {
@@ -783,11 +783,15 @@ void CClientProxyCodeEmitter::EmitProxyCheckVersion(const std::string &clientObj
     } else {
         sb.Append(prefix + TAB).AppendFormat("%sRelease(%s, false);\n", interfaceName_.c_str(), clientObjName.c_str());
     }
-    sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n\n");
+    sb.Append(prefix + TAB).Append("return NULL;\n").Append(prefix).Append("}\n");
+    if (interface_->IsCallback()) {
+        return;
+    }
+    sb.Append("\n");
     sb.Append(prefix).AppendFormat("if (%s < %s) {\n", serMinorName.c_str(), minorVerName_.c_str());
     sb.Append(prefix + TAB).Append("HDF_LOGE(\"%{public}s:check version failed! ");
-    sb.Append("client minor version(%u) should be less \"\n");
-    sb.Append(prefix + TAB + TAB).Append("\"or equal to server minor version(%u).");
+    sb.Append("client minor version(%{public}u) should be less \"\n");
+    sb.Append(prefix + TAB + TAB).Append("\"or equal to server minor version(%{public}u).");
     sb.AppendFormat("\", __func__, %s, %s);\n", minorVerName_.c_str(), serMinorName.c_str());
     if (mode_ == GenMode::KERNEL || interface_->IsCallback()) {
         sb.Append(prefix + TAB).AppendFormat("%sRelease(%s);\n", interfaceName_.c_str(), clientObjName.c_str());
