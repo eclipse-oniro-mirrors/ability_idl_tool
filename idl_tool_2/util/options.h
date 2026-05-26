@@ -207,6 +207,11 @@ public:
     {
         return interfaceType;
     }
+
+    inline bool DoGenerateWithVersion() const
+    {
+        return generateWithVersion;
+    }
 private:
     Options()
         : program(),
@@ -231,7 +236,8 @@ private:
         doKeywords(false),
         doSaveMetadata(false),
         doHitrace(false),
-        interfaceType(InterfaceType::SA)
+        interfaceType(InterfaceType::SA),
+        generateWithVersion(false)
     {
     }
 
@@ -324,6 +330,7 @@ private:
     bool doSaveMetadata;
     bool doHitrace;
     InterfaceType interfaceType;
+    bool generateWithVersion;
 };
 } // namespace Idl
 } // namespace OHOS
