@@ -60,6 +60,10 @@ private:
     void EmitInterfaceGetMethodDecl(StringBuilder &sb) const;
 
     void EmitInterfaceReleaseMethodDecl(StringBuilder &sb) const;
+
+    void EmitInterfaceGetMethodDeclVer(StringBuilder &sb) const;
+
+    void EmitInterfaceReleaseMethodDeclVer(StringBuilder &sb) const;
 };
 } // namespace Idl
 } // namespace OHOS

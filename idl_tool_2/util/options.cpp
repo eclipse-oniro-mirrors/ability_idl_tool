@@ -35,24 +35,25 @@ namespace OHOS {
 namespace Idl {
 const char *Options::optSupportArgs = "hvcs:m:p:d:r:o:D:t:";
 static struct option g_longOpts[] = {
-    {"help",          no_argument,       nullptr, 'h'},
-    {"version",       no_argument,       nullptr, 'v'},
-    {"client-enable", no_argument,       nullptr, 'C'},
-    {"system",        required_argument, nullptr, 'S'},
-    {"mode",          required_argument, nullptr, 'm'},
-    {"gen-c",         no_argument,       nullptr, '1'},
-    {"gen-cpp",       no_argument,       nullptr, '2'},
-    {"gen-java",      no_argument,       nullptr, '3'},
-    {"gen-rust",      no_argument,       nullptr, '4'},
-    {"gen-ts",        no_argument,       nullptr, '5'},
-    {"package",       required_argument, nullptr, 'p'},
-    {"dump-ast",      no_argument,       nullptr, 'a'},
-    {"dump-metadata", no_argument,       nullptr, 'e'},
-    {"hash",          no_argument,       nullptr, 'H'},
-    {"log-domainid",  required_argument, nullptr, 'i'},
-    {"log-tag",       required_argument, nullptr, 'g'},
-    {"intf-type",     required_argument, nullptr, 'T'},
-    {nullptr,         0,                 nullptr,  0 }
+    {"help",                  no_argument,       nullptr, 'h'},
+    {"version",               no_argument,       nullptr, 'v'},
+    {"client-enable",         no_argument,       nullptr, 'C'},
+    {"system",                required_argument, nullptr, 'S'},
+    {"mode",                  required_argument, nullptr, 'm'},
+    {"gen-c",                 no_argument,       nullptr, '1'},
+    {"gen-cpp",               no_argument,       nullptr, '2'},
+    {"gen-java",              no_argument,       nullptr, '3'},
+    {"gen-rust",              no_argument,       nullptr, '4'},
+    {"gen-ts",                no_argument,       nullptr, '5'},
+    {"package",               required_argument, nullptr, 'p'},
+    {"dump-ast",              no_argument,       nullptr, 'a'},
+    {"dump-metadata",         no_argument,       nullptr, 'e'},
+    {"hash",                  no_argument,       nullptr, 'H'},
+    {"log-domainid",          required_argument, nullptr, 'i'},
+    {"log-tag",               required_argument, nullptr, 'g'},
+    {"intf-type",             required_argument, nullptr, 'T'},
+    {"generate-with-version", no_argument,       nullptr, 'V'},
+    {nullptr,                 0,                 nullptr,  0 }
 };
 
 Options &Options::GetInstance()
@@ -131,6 +132,9 @@ bool Options::ParseSingle(int option, std::string optVal)
             break;
         case '5':
             SetLanguage("ts");
+            break;
+        case 'V':
+            generateWithVersion = true;
             break;
         default:
             ret = ParseOptionWithValue(option, optVal);

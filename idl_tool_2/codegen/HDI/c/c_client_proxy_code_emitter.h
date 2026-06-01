@@ -136,6 +136,8 @@ private:
 
     void EmitUtilMethods(StringBuilder &sb, bool isDecl) override;
 
+    void EmitProxyExternalMethodImplVer(StringBuilder &sb);
+
     std::vector<std::string> freeObjStatements_;
 
     mutable bool loadVersionCheck_;

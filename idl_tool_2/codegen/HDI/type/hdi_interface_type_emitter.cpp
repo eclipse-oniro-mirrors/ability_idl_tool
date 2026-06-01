@@ -14,6 +14,7 @@
  */
 
 #include "hdi_interface_type_emitter.h"
+#include "util/options.h"
 
 namespace OHOS {
 namespace Idl {
@@ -214,6 +215,14 @@ void HdiInterfaceTypeEmitter::EmitCReadMethods(UtilMethodMap &methods, const std
 {
     StringBuilder sb;
     std::string methodName = StringHelper::Format("%sRead%s", methodPrefix.c_str(), name_.c_str());
+    std::string verSuffix = "";
+    if (Options::GetInstance().DoGenerateWithVersion() && !typeName_.empty()) {
+        std::vector<std::string> parts = StringHelper::Split(typeName_, "::");
+        if (parts.size() >= 2) {
+            std::string verStr = parts[parts.size() - 2];
+            verSuffix = verStr;
+        }
+    }
     if (isDecl) {
         sb.Append(prefix).AppendFormat("static struct %s *%s(struct HdfSBuf *parcel);\n", name_.c_str(),
             methodName.c_str());
@@ -228,7 +237,7 @@ void HdiInterfaceTypeEmitter::EmitCReadMethods(UtilMethodMap &methods, const std
         sb.AppendFormat(" failed to read remote service of '%s'\", __func__);\n", name_.c_str());
         sb.Append(prefix + TAB + TAB).Append("return NULL;\n");
         sb.Append(prefix + TAB).Append("}\n\n");
-        sb.Append(prefix + TAB).AppendFormat("return %sGet(remote);\n", name_.c_str());
+        sb.Append(prefix + TAB).AppendFormat("return %sGet%s(remote);\n", name_.c_str(), verSuffix.c_str());
         sb.Append(prefix).Append("}\n");
     }
     methods.emplace(methodName, sb.ToString());
