@@ -133,4 +133,4 @@ HWTEST_F(ASTNamespaceTest, GetRawData_001, Level1)
     EXPECT_NE(ret, nullptr);
     DTEST_LOG << "GetRawData_001 end" << std::endl;
 }
-} // namespace OHOS::Idl
+} // namespace OHOS::Idl
