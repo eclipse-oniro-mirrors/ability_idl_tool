@@ -2428,8 +2428,18 @@ bool Parser::CheckImportsVersion(AutoPtr<AST> extendsAst)
 
 bool Parser::PostProcess()
 {
-    if ((Options::GetInstance().GetLanguage() != Language::C) || !CheckExistExtends()) {
+    if (Options::GetInstance().GetLanguage() != Language::C) {
         return true;
+    }
+    if (!CheckExistExtends()) {
+        // No extends clauses. When generate_with_version is enabled,
+        // prior minor version IDL files have already been discovered by
+        // the Preprocessor and parsed alongside the source files.
+        // Proceed with the merge so the higher version's header declares
+        // all prior version interfaces.
+        if (!Options::GetInstance().DoGenerateWithVersion()) {
+            return true;
+        }
     }
     std::vector<size_t> genVersion = {0, 0};
     std::string genPackageName;
@@ -2514,8 +2524,12 @@ void Parser::MergeAst(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
 {
     if (targetAst == nullptr) {
         targetAst = sourceAst;
+        targetAst->AddMergedMinorVersion(targetAst->GetMinorVer());
         return;
     }
+    targetAst->AddMergedMinorVersion(sourceAst->GetMinorVer());
+    // Use the highest version's license (source is always higher than target).
+    targetAst->SetLicense(sourceAst->GetLicense());
     MergeImport(targetAst, sourceAst);
     MergeInterfaceDef(targetAst, sourceAst);
     MergeTypeDefinitions(targetAst, sourceAst);
@@ -2544,8 +2558,25 @@ void Parser::MergeInterfaceDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
         return;
     }
 
+    // Build a set of existing method names in the target interface to avoid
+    // duplicating methods that are identical across minor versions.
+    std::set<std::string> existingMethodNames;
+    for (size_t i = 0; i < targetInterface->GetMethodNumber(); i++) {
+        AutoPtr<ASTMethod> method = targetInterface->GetMethod(i);
+        if (method != nullptr) {
+            existingMethodNames.insert(method->GetName());
+        }
+    }
+
     for (size_t i = 0; i < sourceInterface->GetMethodNumber(); i++) {
-        targetInterface->AddMethod(sourceInterface->GetMethod(i));
+        AutoPtr<ASTMethod> method = sourceInterface->GetMethod(i);
+        if (method == nullptr) {
+            continue;
+        }
+        if (existingMethodNames.find(method->GetName()) != existingMethodNames.end()) {
+            continue;
+        }
+        targetInterface->AddMethod(method);
     }
     bool isSerializable = sourceInterface->IsSerializable() ||
         targetInterface->IsSerializable();
@@ -2554,8 +2585,26 @@ void Parser::MergeInterfaceDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
 
 void Parser::MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
 {
+    // ASTs are merged in ascending minor-version order. When a type with the
+    // same name exists in both target and source, the higher-version (source)
+    // definition wins — the IDL file being compiled is the source of truth.
     for (size_t i = 0; i < sourceAst->GetTypeDefinitionNumber(); i++) {
-        targetAst->AddTypeDefinition(sourceAst->GetTypeDefintion(i));
+        AutoPtr<ASTType> sourceType = sourceAst->GetTypeDefintion(i);
+        if (sourceType == nullptr) {
+            continue;
+        }
+        bool replaced = false;
+        for (size_t j = 0; j < targetAst->GetTypeDefinitionNumber(); j++) {
+            AutoPtr<ASTType> targetType = targetAst->GetTypeDefintion(j);
+            if (targetType != nullptr && targetType->GetName() == sourceType->GetName()) {
+                targetAst->ReplaceTypeDefinition(j, sourceType);
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            targetAst->AddTypeDefinition(sourceType);
+        }
     }
 }
 

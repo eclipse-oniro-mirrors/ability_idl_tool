@@ -43,8 +43,10 @@
 #include "lexer/token.h"
 #include "preprocessor/preprocessor.h"
 #include "util/autoptr.h"
+#include "util/file.h"
 #include "util/light_refcount_base.h"
 #include "util/logger.h"
+#include "util/options.h"
 
 namespace OHOS {
 namespace Idl {

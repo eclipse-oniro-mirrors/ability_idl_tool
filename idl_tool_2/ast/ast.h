@@ -16,6 +16,7 @@
 #ifndef OHOS_IDL_AST_H
 #define OHOS_IDL_AST_H
 
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -187,6 +188,8 @@ public:
 
     void AddTypeDefinition(const AutoPtr<ASTType> &type);
 
+    void ReplaceTypeDefinition(size_t index, const AutoPtr<ASTType> &type);
+
     inline size_t GetTypeDefinitionNumber() const
     {
         return typeDefinitions_.size();
@@ -333,6 +336,20 @@ public:
         return optionUsingHooksOn_;
     }
 
+    // Track all minor versions that were merged into this AST (including
+    // the current/highest version). Used by the C code emitter to generate
+    // version-specific Get/Release declarations for each prior minor version
+    // when --generate-with-version is active.
+    void AddMergedMinorVersion(size_t minorVer)
+    {
+        mergedMinorVersions_.insert(minorVer);
+    }
+
+    const std::set<size_t> &GetMergedMinorVersions() const
+    {
+        return mergedMinorVersions_;
+    }
+
 private:
     AutoPtr<ASTNamespace> NewNameSpace(std::string nameSpace);
 
@@ -362,6 +379,7 @@ private:
     bool optionParcelHooksOn_ = false;
     bool optionMacroHilogOn_ = false;
     bool optionUsingHooksOn_ = false;
+    std::set<size_t> mergedMinorVersions_;
 };
 } // namespace Idl
 } // namespace OHOS

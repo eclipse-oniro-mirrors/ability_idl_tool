@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <queue>
+#include <sys/stat.h>
 
 #include "util/common.h"
 #include "util/file.h"
@@ -48,6 +49,10 @@ bool Preprocessor::Preprocess(std::vector<FileDetail> &fileDetails)
 {
     std::set<std::string> sourceFiles = Options::GetInstance().GetSourceFiles();
 
+    // When generate_with_version is enabled, discover prior minor version IDL
+    // files and add them to the source set so imports resolve correctly.
+    CollectPriorVersionFiles(sourceFiles);
+
     // check all path of idl files
     if (!CheckAllFilesPath(sourceFiles)) {
         return false;
@@ -65,6 +70,64 @@ bool Preprocessor::Preprocess(std::vector<FileDetail> &fileDetails)
     }
 
     return true;
+}
+
+void Preprocessor::CollectPriorVersionFiles(std::set<std::string> &sourceFiles)
+{
+    Options &options = Options::GetInstance();
+    if (!options.DoGenerateWithVersion() || options.GetLanguage() != Language::C) {
+        return;
+    }
+
+    // For each source file, find its version directory and scan for prior
+    // minor version directories containing the same .idl file name.
+    // Also add all .idl files from those prior version directories so that
+    // imports within prior version files can be resolved.
+    std::set<std::string> priorDirs;
+    for (const auto &srcFile : sourceFiles) {
+        size_t sep = srcFile.rfind(SEPARATOR);
+        if (sep == std::string::npos) {
+            continue;
+        }
+        std::string versionDir = srcFile.substr(0, sep);
+        size_t prevSep = versionDir.rfind(SEPARATOR);
+        if (prevSep == std::string::npos) {
+            continue;
+        }
+        std::string parentDir = versionDir.substr(0, prevSep);
+        std::string versionDirName = versionDir.substr(prevSep + 1);
+
+        // Parse version directory name (e.g., v6_1 -> major=6, minor=1)
+        const size_t miniDirSize = 4;
+        if (versionDirName.size() < miniDirSize || versionDirName[0] != 'v') {
+            continue;
+        }
+        size_t underscorePos = versionDirName.find('_');
+        if (underscorePos == std::string::npos) {
+            continue;
+        }
+        size_t majorVer = std::stoul(versionDirName.substr(1, underscorePos - 1));
+        size_t minorVer = std::stoul(versionDirName.substr(underscorePos + 1));
+
+        // For v6_1, look for v6_0. For v6_2, look for v6_1 and v6_0.
+        for (size_t m = 0; m < minorVer; m++) {
+            std::string priorDirName = StringHelper::Format("v%u_%u", majorVer, m);
+            std::string priorDir = parentDir + SEPARATOR + priorDirName;
+            // Check if directory exists (File::CheckValid only works for files)
+            struct stat st;
+            if (stat(priorDir.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+                priorDirs.insert(priorDir);
+            }
+        }
+    }
+
+    // Add all .idl files from prior version directories.
+    for (const auto &dir : priorDirs) {
+        std::set<std::string> idlFiles = File::FindFiles(dir);
+        for (const auto &f : idlFiles) {
+            sourceFiles.insert(f);
+        }
+    }
 }
 
 bool Preprocessor::UnitPreprocess(FileDetailMap &fileDetails)
