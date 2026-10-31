@@ -61,6 +61,11 @@ private:
 
     static bool AnalyseImportInfo(std::set<std::string> sourceFiles, FileDetailMap &allFileDetails);
 
+    // When generate_with_version is enabled, discover prior minor version IDL
+    // directories and add their .idl files to the source set so that imports
+    // from higher versions can resolve.
+    static void CollectPriorVersionFiles(std::set<std::string> &sourceFiles);
+
     static bool ParseFileDetail(const std::string &sourceFile, FileDetail &info);
 
     static bool ParsePackage(Lexer &lexer, FileDetail &info);

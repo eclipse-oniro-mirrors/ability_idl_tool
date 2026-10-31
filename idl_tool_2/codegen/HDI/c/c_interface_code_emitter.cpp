@@ -297,32 +297,46 @@ void CInterfaceCodeEmitter::EmitInterfaceReleaseMethodDecl(StringBuilder &sb) co
 
 void CInterfaceCodeEmitter::EmitInterfaceGetMethodDeclVer(StringBuilder &sb) const
 {
-    std::string verNum = StringHelper::Format("V%u_%u", ast_->GetMajorVer(), ast_->GetMinorVer());
-    if (interface_->IsSerializable()) {
-        sb.AppendFormat("struct %s *%sGet%s(struct HdfRemoteService *remote);\n", interfaceName_.c_str(),
-            interfaceName_.c_str(), verNum.c_str());
-    } else {
-        sb.AppendFormat("struct %s *%sGet%s(bool isStub);\n", interfaceName_.c_str(), interfaceName_.c_str(),
-            verNum.c_str());
-        sb.AppendFormat("struct %s *%sGetInstance%s(const char *serviceName, bool isStub);\n", interfaceName_.c_str(),
-            interfaceName_.c_str(), verNum.c_str());
+    size_t majorVer = ast_->GetMajorVer();
+    const std::set<size_t> &mergedMinors = ast_->GetMergedMinorVersions();
+    for (size_t minorVer : mergedMinors) {
+        if (minorVer == 0) {
+            continue;
+        }
+        std::string verNum = StringHelper::Format("V%u_%u", majorVer, minorVer);
+        if (interface_->IsSerializable()) {
+            sb.AppendFormat("struct %s *%sGet%s(struct HdfRemoteService *remote);\n", interfaceName_.c_str(),
+                interfaceName_.c_str(), verNum.c_str());
+        } else {
+            sb.AppendFormat("struct %s *%sGet%s(bool isStub);\n", interfaceName_.c_str(), interfaceName_.c_str(),
+                verNum.c_str());
+            sb.AppendFormat("struct %s *%sGetInstance%s(const char *serviceName, bool isStub);\n",
+                interfaceName_.c_str(), interfaceName_.c_str(), verNum.c_str());
+        }
     }
 }
 
 void CInterfaceCodeEmitter::EmitInterfaceReleaseMethodDeclVer(StringBuilder &sb) const
 {
-    std::string verNum = StringHelper::Format("V%u_%u", ast_->GetMajorVer(), ast_->GetMinorVer());
-    if (interface_->IsCallback()) {
-        sb.AppendFormat("void %sRelease%s(struct %s *instance);\n", interfaceName_.c_str(),
-            verNum.c_str(), interfaceName_.c_str());
-    } else if (interface_->IsSerializable()) {
-        sb.AppendFormat("void %sRelease%s(struct %s *instance, bool isStub);\n", interfaceName_.c_str(),
-            verNum.c_str(), interfaceName_.c_str());
-    } else {
-        sb.AppendFormat("void %sRelease%s(struct %s *instance, bool isStub);\n", interfaceName_.c_str(),
-            verNum.c_str(), interfaceName_.c_str());
-        sb.AppendFormat("void %sReleaseInstance%s(const char *serviceName, struct %s *instance, bool isStub);\n",
-            interfaceName_.c_str(), verNum.c_str(), interfaceName_.c_str());
+    size_t majorVer = ast_->GetMajorVer();
+    const std::set<size_t> &mergedMinors = ast_->GetMergedMinorVersions();
+    for (size_t minorVer : mergedMinors) {
+        if (minorVer == 0) {
+            continue;
+        }
+        std::string verNum = StringHelper::Format("V%u_%u", majorVer, minorVer);
+        if (interface_->IsCallback()) {
+            sb.AppendFormat("void %sRelease%s(struct %s *instance);\n", interfaceName_.c_str(),
+                verNum.c_str(), interfaceName_.c_str());
+        } else if (interface_->IsSerializable()) {
+            sb.AppendFormat("void %sRelease%s(struct %s *instance, bool isStub);\n", interfaceName_.c_str(),
+                verNum.c_str(), interfaceName_.c_str());
+        } else {
+            sb.AppendFormat("void %sRelease%s(struct %s *instance, bool isStub);\n", interfaceName_.c_str(),
+                verNum.c_str(), interfaceName_.c_str());
+            sb.AppendFormat("void %sReleaseInstance%s(const char *serviceName, struct %s *instance, bool isStub);\n",
+                interfaceName_.c_str(), verNum.c_str(), interfaceName_.c_str());
+        }
     }
 }
 } // namespace Idl

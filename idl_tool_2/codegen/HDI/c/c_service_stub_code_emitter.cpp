@@ -267,6 +267,71 @@ void CServiceStubCodeEmitter::EmitReleaseInstanceMethodImpl(StringBuilder &sb) c
     sb.Append("}\n");
 }
 
+void CServiceStubCodeEmitter::EmitExternalMethodImplVer(StringBuilder &sb)
+{
+    std::string verNum = StringHelper::Format("V%u_%u", ast_->GetMajorVer(), ast_->GetMinorVer());
+    EmitGetMethodImplVer(verNum, sb);
+    sb.Append("\n");
+    EmitGetInstanceMehtodImplVer(verNum, sb);
+    sb.Append("\n");
+    EmitReleaseMethodImplVer(verNum, sb);
+    sb.Append("\n");
+    EmitReleaseInstanceMethodImplVer(verNum, sb);
+}
+
+void CServiceStubCodeEmitter::EmitGetMethodImplVer(const std::string &verNum, StringBuilder &sb) const
+{
+    sb.AppendFormat("struct %s *%sGet%s(bool isStub)\n", interfaceName_.c_str(),
+        interfaceName_.c_str(), verNum.c_str());
+    sb.Append("{\n");
+    sb.Append(TAB).AppendFormat("return %sGetInstance%s(\"%s\", isStub);\n", interfaceName_.c_str(),
+        verNum.c_str(), FileName(implName_).c_str());
+    sb.Append("}\n");
+}
+
+void CServiceStubCodeEmitter::EmitGetInstanceMehtodImplVer(const std::string &verNum, StringBuilder &sb) const
+{
+    sb.AppendFormat("struct %s *%sGetInstance%s(const char *serviceName, bool isStub)\n", interfaceName_.c_str(),
+        interfaceName_.c_str(), verNum.c_str());
+    sb.Append("{\n");
+    sb.Append(TAB).Append("if (!isStub) {\n");
+    sb.Append(TAB).Append(TAB).Append("return NULL;\n");
+    sb.Append(TAB).Append("}\n\n");
+    sb.Append(TAB).Append("const char *instName = serviceName;\n");
+    sb.Append(TAB).AppendFormat("if (strcmp(serviceName, \"%s\") == 0) {\n", FileName(implName_).c_str());
+    sb.Append(TAB).Append(TAB).Append("instName = \"service\";\n");
+    sb.Append(TAB).Append("}\n");
+    sb.Append(TAB).AppendFormat("return (struct %s *)LoadHdiImpl(%s, instName);\n",
+        interfaceName_.c_str(), EmitDescMacroName().c_str());
+    sb.Append("}\n");
+}
+
+void CServiceStubCodeEmitter::EmitReleaseMethodImplVer(const std::string &verNum, StringBuilder &sb) const
+{
+    sb.AppendFormat("void %sRelease%s(struct %s *instance, bool isStub)\n", interfaceName_.c_str(),
+        verNum.c_str(), interfaceName_.c_str());
+    sb.Append("{\n");
+    sb.Append(TAB).AppendFormat("%sReleaseInstance%s(\"%s\", instance, isStub);\n", interfaceName_.c_str(),
+        verNum.c_str(), FileName(implName_).c_str());
+    sb.Append("}\n");
+}
+
+void CServiceStubCodeEmitter::EmitReleaseInstanceMethodImplVer(const std::string &verNum, StringBuilder &sb) const
+{
+    sb.AppendFormat("void %sReleaseInstance%s(const char *serviceName, struct %s *instance, bool isStub)\n",
+        interfaceName_.c_str(), verNum.c_str(), interfaceName_.c_str());
+    sb.Append("{\n");
+    sb.Append(TAB).Append("if (serviceName == NULL || !isStub || instance == NULL) {\n");
+    sb.Append(TAB).Append(TAB).Append("return;\n");
+    sb.Append(TAB).Append("}\n");
+    sb.Append(TAB).Append("const char *instName = serviceName;\n");
+    sb.Append(TAB).AppendFormat("if (strcmp(serviceName, \"%s\") == 0) {\n", FileName(implName_).c_str());
+    sb.Append(TAB).Append(TAB).Append("instName = \"service\";\n");
+    sb.Append(TAB).Append("}\n");
+    sb.Append(TAB).AppendFormat("UnloadHdiImpl(%s, instName, instance);\n", EmitDescMacroName().c_str());
+    sb.Append("}\n");
+}
+
 void CServiceStubCodeEmitter::EmitServiceStubMethodImpls(StringBuilder &sb, const std::string &prefix)
 {
     for (const auto &method : interface_->GetMethodsBySystem(Options::GetInstance().GetSystemLevel())) {

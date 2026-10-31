@@ -48,6 +48,9 @@ private:
     // get or release method for driver interface object
     void EmitExternalMethodImpl(StringBuilder &sb);
 
+    // version-specific get or release method
+    void EmitExternalMethodImplVer(StringBuilder &sb);
+
     void EmitGetMethodImpl(StringBuilder &sb) const;
 
     void EmitGetInstanceMehtodImpl(StringBuilder &sb) const;
@@ -55,6 +58,14 @@ private:
     void EmitReleaseMethodImpl(StringBuilder &sb) const;
 
     void EmitReleaseInstanceMethodImpl(StringBuilder &sb) const;
+
+    void EmitGetMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
+
+    void EmitGetInstanceMehtodImplVer(const std::string &verNum, StringBuilder &sb) const;
+
+    void EmitReleaseMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
+
+    void EmitReleaseInstanceMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
 
     void EmitServiceStubMethodImpls(StringBuilder &sb, const std::string &prefix);
 

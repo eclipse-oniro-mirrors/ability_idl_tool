@@ -140,12 +140,18 @@ void CClientProxyCodeEmitter::EmitProxySourceFile()
     EmitProxyMethodImpls(sb);
     sb.Append("\n");
     EmitProxyConstruction(sb);
-    sb.Append("\n");
-    EmitProxyExternalMethodImpl(sb);
-
     if (Options::GetInstance().DoGenerateWithVersion()) {
+        // When version generation is enabled, emit both the default
+        // (non-versioned) and the version-specific Get/Release implementations.
+        // The default implementation is identical to the current version's
+        // version-specific implementation.
+        sb.Append("\n");
+        EmitProxyExternalMethodImpl(sb);
         sb.Append("\n");
         EmitProxyExternalMethodImplVer(sb);
+    } else {
+        sb.Append("\n");
+        EmitProxyExternalMethodImpl(sb);
     }
 
     std::string data = sb.ToString();
