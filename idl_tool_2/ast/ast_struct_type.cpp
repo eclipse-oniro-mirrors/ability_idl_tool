@@ -43,6 +43,15 @@ void ASTStructType::AddMember(const AutoPtr<ASTType> &typeName, std::string name
     if (!typeName->IsPod()) {
         isPod_ = false;
     }
+
+    if (typeName->GetTypeKind() == TypeKind::TYPE_BOOLEAN) {
+        needNormalize_ = true;
+    } else if (typeName->GetTypeKind() == TypeKind::TYPE_STRUCT) {
+        AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(typeName.Get());
+        if (structType != nullptr && structType->NeedNormalize()) {
+            needNormalize_ = true;
+        }
+    }
 }
 
 std::string ASTStructType::GetSignature()
