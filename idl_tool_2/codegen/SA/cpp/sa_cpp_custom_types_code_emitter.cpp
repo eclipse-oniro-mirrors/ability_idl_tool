@@ -248,8 +248,14 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeMarshallingImpl(
     sb.Append("{\n");
 
     if (type->IsPod()) {
+        std::string marshalObj = objName;
+        if (type->NeedNormalize()) {
+            marshalObj = StringHelper::Format("%sCp", objName.c_str());
+            sb.Append(TAB).AppendFormat("%s %s = %s;\n", typeName.c_str(), marshalObj.c_str(), objName.c_str());
+            EmitNormalizeBoolStatements(type, marshalObj, false, sb, TAB);
+        }
         sb.Append(TAB).AppendFormat("if (!data.WriteUnpadBuffer(&%s, sizeof(%s))) {\n",
-            objName.c_str(), typeName.c_str());
+            marshalObj.c_str(), typeName.c_str());
         sb.Append(TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
         sb.Append(TAB).Append("}\n");
     } else {
@@ -296,6 +302,10 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImpl(
             typeName.c_str(), objPtrName.c_str(), typeName.c_str());
         sb.Append(TAB).Append(TAB).Append("return ERR_INVALID_DATA;\n");
         sb.Append(TAB).Append("}\n");
+        if (type->NeedNormalize()) {
+            sb.Append("\n");
+            EmitNormalizeBoolStatements(type, objName, false, sb, TAB);
+        }
     } else {
         EmitCustomTypeUnmarshallingImplNoPod(sb, type);
     }
@@ -337,6 +347,31 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeUnmarshallingImplNoPod(
             sb.Append(TAB).AppendFormat("%s = %s;\n", name.c_str(), cpName.c_str());
         } else {
             typeEmitter->EmitCppReadVar("data.", name, sb, TAB, false);
+        }
+    }
+}
+
+void SaCppCustomTypesCodeEmitter::EmitNormalizeBoolStatements(const AutoPtr<ASTStructType> &type,
+    const std::string &objName, bool objIsPointer, StringBuilder &sb, const std::string &prefix) const
+{
+    std::string separator = objIsPointer ? "->" : ".";
+    for (size_t i = 0; i < type->GetMemberNumber(); i++) {
+        AutoPtr<ASTType> memberType = type->GetMemberType(i);
+        std::string memberName = type->GetMemberName(i);
+        std::string path = StringHelper::Format("%s%s%s", objName.c_str(), separator.c_str(), memberName.c_str());
+        if (memberType->GetTypeKind() == TypeKind::TYPE_BOOLEAN) {
+            std::string normVar = StringHelper::Format("%sNorm", memberName.c_str());
+            sb.Append(prefix).Append("{\n");
+            sb.Append(prefix).Append(TAB).AppendFormat(
+                "unsigned char %s = *reinterpret_cast<const unsigned char *>(&%s);\n", normVar.c_str(),
+                path.c_str());
+            sb.Append(prefix).Append(TAB).AppendFormat("%s = (%s == 1);\n", path.c_str(), normVar.c_str());
+            sb.Append(prefix).Append("}\n");
+        } else if (memberType->GetTypeKind() == TypeKind::TYPE_STRUCT) {
+            AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(memberType.Get());
+            if (structType != nullptr && structType->NeedNormalize()) {
+                EmitNormalizeBoolStatements(structType, path, false, sb, prefix);
+            }
         }
     }
 }

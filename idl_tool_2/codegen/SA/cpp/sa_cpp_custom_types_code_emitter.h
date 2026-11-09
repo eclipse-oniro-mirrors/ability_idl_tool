@@ -58,6 +58,9 @@ private:
 
     void EmitCustomTypeUnmarshallingImplNoPod(StringBuilder &sb, const AutoPtr<ASTStructType> &type) const;
 
+    void EmitNormalizeBoolStatements(const AutoPtr<ASTStructType> &type, const std::string &objName,
+        bool objIsPointer, StringBuilder &sb, const std::string &prefix) const;
+
     bool EmitCustomTypeNeedSecurec(const AutoPtr<ASTStructType> &type) const;
 
     void EmitBeginNamespace(StringBuilder &sb);

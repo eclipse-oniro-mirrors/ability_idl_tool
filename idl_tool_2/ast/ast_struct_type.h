@@ -27,7 +27,7 @@ namespace OHOS {
 namespace Idl {
 class ASTStructType : public ASTType {
 public:
-    ASTStructType() : ASTType(true), attr_(new ASTAttr()), members_() {}
+    ASTStructType() : ASTType(true), attr_(new ASTAttr()), members_(), needNormalize_(false) {}
 
     inline void SetName(const std::string &name) override
     {
@@ -86,6 +86,13 @@ public:
         return std::get<1>(members_[index]);
     }
 
+    // POD struct with boolean members must be normalized before block marshalling,
+    // because the raw byte of a boolean may be invalid (not 0/1) on the wire or in memory
+    inline bool NeedNormalize()
+    {
+        return needNormalize_;
+    }
+
     std::string GetSignature() override;
 
     bool IsStructType() override;
@@ -98,6 +105,7 @@ private:
     AutoPtr<ASTAttr> attr_;
     std::vector<std::tuple<std::string, AutoPtr<ASTType>>> members_;
     AutoPtr<ASTStructType> parentType_; // used to dump parent type when using struct extension identify in idl
+    bool needNormalize_; // struct itself or nested struct has boolean member
 };
 } // namespace Idl
 } // namespace OHOS

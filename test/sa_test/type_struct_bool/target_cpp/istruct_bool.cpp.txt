@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "istruct_bool.h"
+
+namespace ohos {
+namespace idl {
+namespace structbool {
+
+[[maybe_unused]] static constexpr int VECTOR_MAX_SIZE = 102400;
+[[maybe_unused]] static constexpr int LIST_MAX_SIZE = 102400;
+[[maybe_unused]] static constexpr int SET_MAX_SIZE = 102400;
+[[maybe_unused]] static constexpr int MAP_MAX_SIZE = 102400;
+
+ErrCode InnerInfoBlockMarshalling(OHOS::MessageParcel& data, const InnerInfo& dataBlock)
+{
+    InnerInfo dataBlockCp = dataBlock;
+    {
+        unsigned char flagNorm = *reinterpret_cast<const unsigned char *>(&dataBlockCp.flag);
+        dataBlockCp.flag = (flagNorm == 1);
+    }
+    if (!data.WriteUnpadBuffer(&dataBlockCp, sizeof(InnerInfo))) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_NONE;
+}
+
+ErrCode InnerInfoBlockUnmarshalling(OHOS::MessageParcel& data, InnerInfo& dataBlock)
+{
+    const InnerInfo *dataBlockPtr = reinterpret_cast<const InnerInfo *>(data.ReadUnpadBuffer(sizeof(InnerInfo)));
+    if (dataBlockPtr == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(InnerInfo), dataBlockPtr, sizeof(InnerInfo)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+
+    {
+        unsigned char flagNorm = *reinterpret_cast<const unsigned char *>(&dataBlock.flag);
+        dataBlock.flag = (flagNorm == 1);
+    }
+    return ERR_NONE;
+}
+
+ErrCode OuterInfoBlockMarshalling(OHOS::MessageParcel& data, const OuterInfo& dataBlock)
+{
+    OuterInfo dataBlockCp = dataBlock;
+    {
+        unsigned char flagNorm = *reinterpret_cast<const unsigned char *>(&dataBlockCp.inner.flag);
+        dataBlockCp.inner.flag = (flagNorm == 1);
+    }
+    if (!data.WriteUnpadBuffer(&dataBlockCp, sizeof(OuterInfo))) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_NONE;
+}
+
+ErrCode OuterInfoBlockUnmarshalling(OHOS::MessageParcel& data, OuterInfo& dataBlock)
+{
+    const OuterInfo *dataBlockPtr = reinterpret_cast<const OuterInfo *>(data.ReadUnpadBuffer(sizeof(OuterInfo)));
+    if (dataBlockPtr == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(OuterInfo), dataBlockPtr, sizeof(OuterInfo)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+
+    {
+        unsigned char flagNorm = *reinterpret_cast<const unsigned char *>(&dataBlock.inner.flag);
+        dataBlock.inner.flag = (flagNorm == 1);
+    }
+    return ERR_NONE;
+}
+
+ErrCode PlainInfoBlockMarshalling(OHOS::MessageParcel& data, const PlainInfo& dataBlock)
+{
+    if (!data.WriteUnpadBuffer(&dataBlock, sizeof(PlainInfo))) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_NONE;
+}
+
+ErrCode PlainInfoBlockUnmarshalling(OHOS::MessageParcel& data, PlainInfo& dataBlock)
+{
+    const PlainInfo *dataBlockPtr = reinterpret_cast<const PlainInfo *>(data.ReadUnpadBuffer(sizeof(PlainInfo)));
+    if (dataBlockPtr == nullptr) {
+        return ERR_INVALID_DATA;
+    }
+
+    if (memcpy_s(&dataBlock, sizeof(PlainInfo), dataBlockPtr, sizeof(PlainInfo)) != EOK) {
+        return ERR_INVALID_DATA;
+    }
+    return ERR_NONE;
+}
+} // namespace structbool
+} // namespace idl
+} // namespace ohos
