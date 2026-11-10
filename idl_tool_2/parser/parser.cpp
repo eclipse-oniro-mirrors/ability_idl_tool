@@ -2589,13 +2589,13 @@ void Parser::MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAs
     // same name exists in both target and source, the higher-version (source)
     // definition wins — the IDL file being compiled is the source of truth.
     for (size_t i = 0; i < sourceAst->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> sourceType = sourceAst->GetTypeDefintion(i);
+        AutoPtr<ASTType> sourceType = sourceAst->GetTypeDefinition(i);
         if (sourceType == nullptr) {
             continue;
         }
         bool replaced = false;
         for (size_t j = 0; j < targetAst->GetTypeDefinitionNumber(); j++) {
-            AutoPtr<ASTType> targetType = targetAst->GetTypeDefintion(j);
+            AutoPtr<ASTType> targetType = targetAst->GetTypeDefinition(j);
             if (targetType != nullptr && targetType->GetName() == sourceType->GetName()) {
                 targetAst->ReplaceTypeDefinition(j, sourceType);
                 replaced = true;

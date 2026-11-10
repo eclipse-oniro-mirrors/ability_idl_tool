@@ -68,7 +68,7 @@ void SaCppCustomTypesCodeEmitter::EmitHeaderFileInclusions(StringBuilder &sb)
     bool needLogh = false;
     bool needSecurec = false;
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             if (!type->IsPod() && logOn_) {
@@ -128,7 +128,7 @@ void SaCppCustomTypesCodeEmitter::EmitDefineConstant(StringBuilder &sb) const
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        AutoPtr<SaTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefinition(i));
         if (typeEmitter == nullptr) {
             return;
         }
@@ -142,7 +142,7 @@ void SaCppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             EmitCustomTypeMarshallFuncDecl(sb, type);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
@@ -218,7 +218,7 @@ void SaCppCustomTypesCodeEmitter::EmitSourceFileInclusions(StringBuilder &sb)
 void SaCppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             if (structType == nullptr) {

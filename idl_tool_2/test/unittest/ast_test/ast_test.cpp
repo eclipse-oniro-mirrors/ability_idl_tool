@@ -203,7 +203,7 @@ HWTEST_F(ASTTest, AddTypeDefinition_001, Level1)
     DTEST_LOG << "AddTypeDefinition_001 begin" << std::endl;
     AST ast;
     ast.AddTypeDefinition(nullptr);
-    EXPECT_EQ(ast.GetTypeDefintion(0), nullptr);
+    EXPECT_EQ(ast.GetTypeDefinition(0), nullptr);
     DTEST_LOG << "AddTypeDefinition_001 end" << std::endl;
 }
 

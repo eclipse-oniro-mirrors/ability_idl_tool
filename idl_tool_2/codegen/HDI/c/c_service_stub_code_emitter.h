@@ -53,7 +53,7 @@ private:
 
     void EmitGetMethodImpl(StringBuilder &sb) const;
 
-    void EmitGetInstanceMehtodImpl(StringBuilder &sb) const;
+    void EmitGetInstanceMethodImpl(StringBuilder &sb) const;
 
     void EmitReleaseMethodImpl(StringBuilder &sb) const;
 
@@ -61,7 +61,7 @@ private:
 
     void EmitGetMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
 
-    void EmitGetInstanceMehtodImplVer(const std::string &verNum, StringBuilder &sb) const;
+    void EmitGetInstanceMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
 
     void EmitReleaseMethodImplVer(const std::string &verNum, StringBuilder &sb) const;
 
