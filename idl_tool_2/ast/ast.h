@@ -195,7 +195,7 @@ public:
         return typeDefinitions_.size();
     }
 
-    AutoPtr<ASTType> GetTypeDefintion(size_t index);
+    AutoPtr<ASTType> GetTypeDefinition(size_t index);
 
     std::string Dump(const std::string &prefix) override;
 

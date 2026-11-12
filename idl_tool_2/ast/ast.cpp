@@ -308,7 +308,7 @@ void AST::ReplaceTypeDefinition(size_t index, const AutoPtr<ASTType> &type)
     AddType(type);
 }
 
-AutoPtr<ASTType> AST::GetTypeDefintion(size_t index)
+AutoPtr<ASTType> AST::GetTypeDefinition(size_t index)
 {
     if (index >= typeDefinitions_.size()) {
         return nullptr;

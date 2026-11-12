@@ -156,7 +156,7 @@ void CppCustomTypesCodeEmitter::EmitUsingNamespace(StringBuilder &sb)
 void CppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefintion(i));
+        AutoPtr<HdiTypeEmitter> typeEmitter = GetTypeEmitter(ast_->GetTypeDefinition(i));
         if (typeEmitter == nullptr) {
             continue;
         }
@@ -170,7 +170,7 @@ void CppCustomTypesCodeEmitter::EmitCustomTypeDecls(StringBuilder &sb) const
 void CppCustomTypesCodeEmitter::EmitCustomTypeFuncDecl(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             EmitCustomTypeMarshallFuncDecl(sb, type);
             if (i + 1 < ast_->GetTypeDefinitionNumber()) {
@@ -241,7 +241,7 @@ void CppCustomTypesCodeEmitter::GetSourceOtherLibInclusions(HeaderFile::HeaderFi
 void CppCustomTypesCodeEmitter::EmitCustomTypeDataProcess(StringBuilder &sb) const
 {
     for (size_t i = 0; i < ast_->GetTypeDefinitionNumber(); i++) {
-        AutoPtr<ASTType> type = ast_->GetTypeDefintion(i);
+        AutoPtr<ASTType> type = ast_->GetTypeDefinition(i);
         if (type->GetTypeKind() == TypeKind::TYPE_STRUCT) {
             AutoPtr<ASTStructType> structType = static_cast<ASTStructType *>(type.Get());
             EmitCustomTypeMarshallingImpl(sb, structType);

@@ -2553,7 +2553,7 @@ void Parser::MergeInterfaceDef(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
 void Parser::MergeTypeDefinitions(AutoPtr<AST> &targetAst, AutoPtr<AST> sourceAst)
 {
     for (size_t i = 0; i < sourceAst->GetTypeDefinitionNumber(); i++) {
-        targetAst->AddTypeDefinition(sourceAst->GetTypeDefintion(i));
+        targetAst->AddTypeDefinition(sourceAst->GetTypeDefinition(i));
     }
 }
 

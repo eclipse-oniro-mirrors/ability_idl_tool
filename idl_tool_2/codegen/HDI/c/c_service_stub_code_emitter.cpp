@@ -208,7 +208,7 @@ void CServiceStubCodeEmitter::EmitExternalMethodImpl(StringBuilder &sb)
 {
     EmitGetMethodImpl(sb);
     sb.Append("\n");
-    EmitGetInstanceMehtodImpl(sb);
+    EmitGetInstanceMethodImpl(sb);
     sb.Append("\n");
     EmitReleaseMethodImpl(sb);
     sb.Append("\n");
@@ -224,7 +224,7 @@ void CServiceStubCodeEmitter::EmitGetMethodImpl(StringBuilder &sb) const
     sb.Append("}\n");
 }
 
-void CServiceStubCodeEmitter::EmitGetInstanceMehtodImpl(StringBuilder &sb) const
+void CServiceStubCodeEmitter::EmitGetInstanceMethodImpl(StringBuilder &sb) const
 {
     sb.AppendFormat("struct %s *%sGetInstance(const char *serviceName, bool isStub)\n", interfaceName_.c_str(),
         interfaceName_.c_str());
@@ -272,7 +272,7 @@ void CServiceStubCodeEmitter::EmitExternalMethodImplVer(StringBuilder &sb)
     std::string verNum = StringHelper::Format("V%u_%u", ast_->GetMajorVer(), ast_->GetMinorVer());
     EmitGetMethodImplVer(verNum, sb);
     sb.Append("\n");
-    EmitGetInstanceMehtodImplVer(verNum, sb);
+    EmitGetInstanceMethodImplVer(verNum, sb);
     sb.Append("\n");
     EmitReleaseMethodImplVer(verNum, sb);
     sb.Append("\n");
@@ -289,7 +289,7 @@ void CServiceStubCodeEmitter::EmitGetMethodImplVer(const std::string &verNum, St
     sb.Append("}\n");
 }
 
-void CServiceStubCodeEmitter::EmitGetInstanceMehtodImplVer(const std::string &verNum, StringBuilder &sb) const
+void CServiceStubCodeEmitter::EmitGetInstanceMethodImplVer(const std::string &verNum, StringBuilder &sb) const
 {
     sb.AppendFormat("struct %s *%sGetInstance%s(const char *serviceName, bool isStub)\n", interfaceName_.c_str(),
         interfaceName_.c_str(), verNum.c_str());
