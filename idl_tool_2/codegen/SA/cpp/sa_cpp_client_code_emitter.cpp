@@ -335,7 +335,7 @@ void SaCppClientCodeEmitter::EmitInterfaceClientMethodAbilityAsync(StringBuilder
         clientName_.c_str(), baseName_.c_str());
     sb.Append(prefix).Append("{\n");
     sb.Append(prefix + TAB).Append("{\n");
-    sb.Append(prefix + TAB + TAB).Append("std::shared_lock<std::shared_mutex> lock(mutexLoadSA_);\n");
+    sb.Append(prefix + TAB + TAB).Append("std::unique_lock<std::shared_mutex> lock(mutexLoadSA_);\n");
     sb.Append(prefix + TAB + TAB).Append("if (!loadCallback_) {\n");
     sb.Append(prefix + TAB + TAB + TAB).Append("loadCallback_ = new LoadCallback(cb, *this);\n");
     sb.Append(prefix + TAB + TAB).Append("}");
