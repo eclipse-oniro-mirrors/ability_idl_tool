@@ -165,9 +165,12 @@ void SACodeGenerator::GenCppCode(const AutoPtr<AST> &ast, const std::string &out
             break;
         }
         case ASTFileType::AST_ICALLBACK: {
-            cppCodeEmitters_["interface"]->OutPut(ast, genPath_[ast->GetIdlFile()], mode);
-            cppCodeEmitters_["proxy"]->OutPut(ast, genPath_[ast->GetIdlFile()], mode);
-            cppCodeEmitters_["stub"]->OutPut(ast, genPath_[ast->GetIdlFile()], mode);
+            // A standalone callback has no importing interface to register its path.
+            auto path = genPath_.find(ast->GetIdlFile());
+            const std::string &callbackDir = path == genPath_.end() ? outDir : path->second;
+            cppCodeEmitters_["interface"]->OutPut(ast, callbackDir, mode);
+            cppCodeEmitters_["proxy"]->OutPut(ast, callbackDir, mode);
+            cppCodeEmitters_["stub"]->OutPut(ast, callbackDir, mode);
             break;
         }
         default:
