@@ -282,6 +282,10 @@ void CppInterfaceCodeEmitter::EmitInterfaceMethodCommandsWithExtends(StringBuild
         interface = interface->GetExtendsInterface();
     }
 
+    if (interface_->GetMethodNumber() == 0) {
+        return;
+    }
+
     sb.Append(prefix).AppendFormat("enum {\n");
     for (size_t i = 0; i < interface_->GetMethodNumber(); i++) {
         AutoPtr<ASTMethod> method = interface_->GetMethod(i);
