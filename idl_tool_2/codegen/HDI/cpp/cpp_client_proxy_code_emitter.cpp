@@ -924,7 +924,7 @@ void CppClientProxyCodeEmitter::EmitProxyStaticMethodBody(
         HdiTypeEmitter::dataParcelName_.c_str(), HdiTypeEmitter::replyParcelName_.c_str(), optionName_.c_str());
     sb.Append(prefix + TAB).AppendFormat("if (%s != HDF_SUCCESS) {\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB + TAB).AppendFormat(
-        "HDF_LOGE(\"%%{public}s failed, error code is %%{public}d\", __func__, %s);\n",
+        "HDF_LOGD(\"%%{public}s failed, error code is %%{public}d\", __func__, %s);\n",
         HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB + TAB).AppendFormat("return %s;\n", HdiTypeEmitter::errorCodeName_.c_str());
     sb.Append(prefix + TAB).Append("}\n");
